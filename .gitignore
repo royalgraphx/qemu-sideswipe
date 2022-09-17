@@ -39,3 +39,20 @@ Thumbs.db
 # Build Directory and contents #
 ################################
 build/
+/GNUmakefile
+*.pyc
+.sdk
+.stgit-*
+.git-submodule-status
+cscope.*
+tags
+TAGS
+GPATH
+GRTAGS
+GTAGS
+*~
+*.ast_raw
+*.depend_raw
+*.swp
+*.patch
+*.gcov
