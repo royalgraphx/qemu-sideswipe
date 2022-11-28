@@ -27,3 +27,8 @@ jobs:
           cd build
           sudo chmod +x ../build.sh
           ../build.sh
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3.1.1
+        with:
+          name: qemu-sideswipe
+          path: qemu-sideswipe.zip
