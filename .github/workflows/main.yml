@@ -18,6 +18,8 @@ jobs:
         run: |
           shellcheck -o all build.sh
           git update-index --chmod=+x build.sh
+          git update-index --chmod=+x tests/tcg/configure.sh
+          git update-index --chmod=+x scripts/git-submodule.sh
       - name: Run build script
         run: |
           mkdir build
