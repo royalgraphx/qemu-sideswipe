@@ -22,4 +22,6 @@ jobs:
         run: |
           mkdir build
           git config --global --add safe.directory /__w/qemu-sideswipe/build
-          ./build.sh
+          cd build
+          sudo chmod +x ../build.sh
+          ../build.sh
