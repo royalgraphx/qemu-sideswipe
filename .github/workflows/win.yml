@@ -6,7 +6,7 @@ on: [push]
 
 jobs:
   build32:
-    if: github.repository == 'stweil/qemu'
+    if: github.repository == 'royalgraphx/qemu-sideswipe'
     runs-on: [ubuntu-22.04]
     steps:
     - uses: actions/checkout@v2
@@ -18,7 +18,7 @@ jobs:
         path: dist
 
   build64:
-    if: github.repository == 'stweil/qemu'
+    if: github.repository == 'royalgraphx/qemu-sideswipe'
     runs-on: [ubuntu-22.04]
     steps:
     - uses: actions/checkout@v2
