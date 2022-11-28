@@ -53,6 +53,8 @@ jobs:
             mingw-w64-x86_64-python3-pyopenssl
             mingw-w64-x86_64-nasm
             mingw-w64-x86_64-gtk3
+            mingw-w64-x86_64-mesa
+            mingw-w64-x86_64-libepoxy
             git
             zip
       - name: Run build script
