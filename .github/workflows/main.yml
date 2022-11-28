@@ -32,3 +32,35 @@ jobs:
         with:
           name: qemu-sideswipe
           path: qemu-sideswipe.zip
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            make
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-hidapi
+            mingw-w64-x86_64-freetype
+            mingw-w64-x86_64-libpng
+            mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-SDL2_net
+            mingw-w64-x86_64-qt6
+            mingw-w64-x86_64-python3-pip
+            mingw-w64-x86_64-python3-pyopenssl
+            mingw-w64-x86_64-nasm
+            git
+            zip
+      - name: Run build script
+        run: |
+          mkdir build-msys
+          cd build-msys
+          msys2 -c '../build-msys.sh'
+      - name: Upload zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: qemu-sideswipe-w64
+          path: qemu-sideswipe-w64.zip
