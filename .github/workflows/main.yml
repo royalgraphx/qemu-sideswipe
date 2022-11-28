@@ -1,4 +1,4 @@
-name: Build project
+name: Build Project
 on:
   push:
     branches:
@@ -21,7 +21,6 @@ jobs:
       - name: Run build script
         run: |
           mkdir build
-          ls
           git config --global --add safe.directory /__w/qemu-sideswipe/build
           cd build
           sudo chmod +x ../build.sh
