@@ -55,6 +55,7 @@ jobs:
             mingw-w64-x86_64-gtk3
             mingw-w64-x86_64-mesa
             mingw-w64-x86_64-libepoxy
+            mingw-w64-x86_64-libusb
             git
             zip
       - name: Run build script
