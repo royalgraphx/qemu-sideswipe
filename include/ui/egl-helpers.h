@@ -2,7 +2,15 @@
 #define EGL_HELPERS_H
 
 #include <epoxy/gl.h>
+#ifdef CONFIG_EGL
 #include <epoxy/egl.h>
+#else
+typedef int EGLConfig;
+typedef int EGLContext;
+typedef int EGLDisplay;
+typedef int EGLNativeWindowType;
+typedef int EGLSurface;
+#endif
 #ifdef CONFIG_GBM
 #include <gbm.h>
 #endif

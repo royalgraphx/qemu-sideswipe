@@ -169,6 +169,13 @@ QEMUGLContext sdl2_gl_create_context(DisplayGLCtx *dgc,
 
 void sdl2_gl_destroy_context(DisplayGLCtx *dgc, QEMUGLContext ctx)
 {
+#ifdef CONFIG_DARWIN
+    /* Apple OpenGL FBO blit quirk
+     * Require SDL2 fix in https://github.com/libsdl-org/SDL/issues/4986
+     */
+    struct sdl2_console *scon = container_of(dgc, struct sdl2_console, dgc);
+    SDL_SetWindowPosition(scon->real_window, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED);
+#endif
     SDL_GLContext sdlctx = (SDL_GLContext)ctx;
 
     SDL_GL_DeleteContext(sdlctx);

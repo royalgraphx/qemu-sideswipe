@@ -59,13 +59,15 @@ if opengl.found()
   opengl_ss = ss.source_set()
   opengl_ss.add(gbm)
   opengl_ss.add(when: [opengl, pixman],
-               if_true: files('shader.c', 'console-gl.c', 'egl-helpers.c', 'egl-context.c'))
+               if_true: files('shader.c', 'console-gl.c', 'egl-helpers.c'))
+  opengl_ss.add(when: [opengl, pixman, egl],
+               if_true: files('egl-context.c'))
   ui_modules += {'opengl' : opengl_ss}
 endif
 
 if opengl.found() and gbm.found()
   egl_headless_ss = ss.source_set()
-  egl_headless_ss.add(when: [opengl, gbm, pixman],
+  egl_headless_ss.add(when: [opengl, gbm, pixman, egl],
                       if_true: files('egl-headless.c'))
   ui_modules += {'egl-headless' : egl_headless_ss}
 endif
@@ -102,8 +104,8 @@ if gtk.found()
     gtk_ss.add(files('gtk-clipboard.c'))
   endif
   gtk_ss.add(when: x11, if_true: files('x_keymap.c'))
-  gtk_ss.add(when: opengl, if_true: files('gtk-gl-area.c'))
-  gtk_ss.add(when: [x11, opengl], if_true: files('gtk-egl.c'))
+  gtk_ss.add(when: [opengl, egl], if_true: files('gtk-gl-area.c'))
+  gtk_ss.add(when: [x11, opengl, egl], if_true: files('gtk-egl.c'))
   ui_modules += {'gtk' : gtk_ss}
 endif
 

@@ -90,16 +90,6 @@ void sdl2_window_create(struct sdl2_console *scon)
     }
 #ifdef CONFIG_OPENGL
     if (scon->opengl) {
-#if defined(CONFIG_WIN32) || defined(CONFIG_DARWIN)
-        /* On Windows 10 & macOS, SDL2 window with SDL_WINDOW_OPENGL does not
-         * default to OpenGL backend.
-         */
-        SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
-#ifdef CONFIG_DARWIN
-        /* Apple OpenGL quirk */
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-#endif
-#endif
         flags |= SDL_WINDOW_OPENGL;
     }
 #endif
