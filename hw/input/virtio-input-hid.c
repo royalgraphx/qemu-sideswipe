@@ -458,7 +458,7 @@ static struct virtio_input_config virtio_tablet_config_v2[] = {
         .size      = 2,
         .u.bitmap  = {
             0,
-            (1 << (REL_WHEEL - 8))
+            0
         },
     },{
         .select    = VIRTIO_INPUT_CFG_ABS_INFO,
@@ -477,7 +477,7 @@ static struct virtio_input_config virtio_tablet_config_v2[] = {
 };
 
 static Property virtio_tablet_properties[] = {
-    DEFINE_PROP_BOOL("wheel-axis", VirtIOInputHID, wheel_axis, true),
+    DEFINE_PROP_BOOL("wheel-axis", VirtIOInputHID, wheel_axis, false),
     DEFINE_PROP_END_OF_LIST(),
 };
 
