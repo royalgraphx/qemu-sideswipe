@@ -28,6 +28,8 @@ jobs:
             ninja
             patch
             python
+            git
+            zip
       - name: Run build script
         run: |
           mkdir build
