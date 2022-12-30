@@ -6,8 +6,8 @@ on:
   pull_request:
 
 jobs:
-  build-windows:
-    runs-on: windows-2022
+  build-linux:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: msys2/setup-msys2@v2
