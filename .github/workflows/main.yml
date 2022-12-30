@@ -28,7 +28,7 @@ jobs:
             ninja
             patch
             python
-       - name: Run build script
+      - name: Run build script
         run: |
           mkdir build
           cd build
