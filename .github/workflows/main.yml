@@ -1,0 +1,40 @@
+name: Build Project
+on:
+  push:
+    branches:
+      - wx86_64
+  pull_request:
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+        with:
+          update: true
+          install: >-
+            make
+            mingw-w64-x86_64-diffutils
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-glib2
+            mingw-w64-x86_64-libslirp
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-pixman
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-virglrenderer
+            mingw-w64-x86_64-lzo2
+            ninja
+            patch
+            python
+       - name: Run build script
+        run: |
+          mkdir build
+          cd build
+          msys2 -c '../quick-build.sh'
+      - name: Upload zip
+        uses: actions/upload-artifact@v3
+        with:
+          name: qemu-sideswipe-w64
+          path: qemu-sideswipe-w64.zip
