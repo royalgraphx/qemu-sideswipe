@@ -105,9 +105,9 @@ jobs:
             mingw-w64-x86_64-spice-gtk
             mingw-w64-x86_64-gtk-vnc
             mingw-w64-x86_64-virt-viewer
-			      mingw-w64-x86_64-diffutils
-            mingw-w64-x86_64-make
-            mingw-w64-x86_64-pkgconf
+	    mingw-w64-x86_64-diffutils
+	    mingw-w64-x86_64-make
+	    mingw-w64-x86_64-pkgconf
             git
             zip
             ninja
