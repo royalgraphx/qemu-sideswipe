@@ -1,5 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2018 IBM Corp. */
+/* Copyright 2013-2016 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #define pr_fmt(fmt) "IPMI: " fmt
 #include <ccan/list/list.h>
@@ -18,7 +31,6 @@
 #include <opal-msg.h>
 #include <debug_descriptor.h>
 #include <occ.h>
-#include <timebase.h>
 
 /* OEM SEL fields */
 #define SEL_OEM_ID_0		0x55
@@ -33,7 +45,6 @@
 #define CMD_AMI_POWER		0x04
 #define CMD_AMI_PNOR_ACCESS	0x07
 #define CMD_AMI_OCC_RESET	0x0e
-#define CMD_HEARTBEAT		0xff
 
 /* XXX: Listed here for completeness, registered in libflash/ipmi-flash.c */
 #define CMD_OP_HIOMAP_EVENT	0x0f
@@ -49,7 +60,7 @@
 #define SEL_REC_TYPE_AMI_ESEL	0xDF
 
 /* OEM SEL generator ID for AMI */
-#define SEL_GENERATOR_ID_AMI	0x0020
+#define SEL_GENERATOR_ID_AMI	0x2000
 
 /* IPMI SEL version */
 #define SEL_EVM_VER_1		0x03
@@ -193,7 +204,7 @@ static void ipmi_init_esel_record(void)
 {
 	memset(&sel_record, 0, sizeof(struct sel_record));
 	sel_record.record_type = SEL_REC_TYPE_AMI_ESEL;
-	sel_record.generator_id = cpu_to_le16(SEL_GENERATOR_ID_AMI);
+	sel_record.generator_id = SEL_GENERATOR_ID_AMI;
 	sel_record.evm_ver = SEL_EVM_VER_2;
 	sel_record.sensor_type	= SENSOR_TYPE_SYS_EVENT;
 	sel_record.sensor_number =
@@ -325,7 +336,6 @@ static void ipmi_elog_poll(struct ipmi_msg *msg)
 
 	if (bmc_platform->sw->ipmi_oem_partial_add_esel == 0) {
 		prlog(PR_WARNING, "Dropped eSEL: BMC code is buggy/missing\n");
-		ipmi_sel_free_msg(msg);
 		return;
 	}
 
@@ -435,22 +445,10 @@ int ipmi_elog_commit(struct errorlog *elog_buf)
 
 	msg->error = ipmi_elog_error;
 	msg->req_size = 0;
-	if (elog_buf->event_severity == OPAL_ERROR_PANIC) {
+	if (elog_buf->event_severity == OPAL_ERROR_PANIC)
 		ipmi_queue_msg_sync(msg);
-
-		/*
-		 * eSEL logs are split into multiple smaller chunks and sent
-		 * to BMC. Lets wait until we finish sending all the chunks
-		 * to BMC.
-		 */
-		while (ipmi_sel_panic_msg.busy != false) {
-			if (msg->backend->poll)
-				msg->backend->poll();
-			time_wait_ms(10);
-		}
-	} else {
+	else
 		ipmi_queue_msg(msg);
-	}
 
 	return 0;
 }
@@ -510,8 +508,7 @@ static void sel_power(uint8_t power, void *context __unused)
 			prlog(PR_NOTICE, "Host not up, shutting down now\n");
 			platform.cec_power_down(IPMI_CHASSIS_PWR_DOWN);
 		} else {
-			opal_queue_msg(OPAL_MSG_SHUTDOWN, NULL, NULL,
-					cpu_to_be64(SOFT_OFF));
+			opal_queue_msg(OPAL_MSG_SHUTDOWN, NULL, NULL, SOFT_OFF);
 		}
 
 		break;
@@ -521,8 +518,7 @@ static void sel_power(uint8_t power, void *context __unused)
 			prlog(PR_NOTICE, "Host not up, rebooting now\n");
 			platform.cec_reboot();
 		} else {
-			opal_queue_msg(OPAL_MSG_SHUTDOWN, NULL, NULL,
-					cpu_to_be64(SOFT_REBOOT));
+			opal_queue_msg(OPAL_MSG_SHUTDOWN, NULL, NULL, SOFT_REBOOT);
 		}
 
 		break;
@@ -530,13 +526,6 @@ static void sel_power(uint8_t power, void *context __unused)
 		prlog(PR_WARNING, "requested bad power state: %02x\n",
 		      power);
 	}
-}
-
-static void sel_heartbeat(uint8_t heartbeat, void *context __unused)
-{
-	/* There is only one sub-command so no processing needed */
-	prlog(PR_DEBUG, "BMC issued heartbeat command: %02x\n",
-	      heartbeat);
 }
 
 static uint32_t occ_sensor_id_to_chip(uint8_t sensor, uint32_t *chip)
@@ -655,12 +644,6 @@ void ipmi_sel_init(void)
 	if (rc < 0) {
 		prerror("Failed to register SEL handler for %s",
 			stringify(CMD_AMI_PNOR_ACCESS));
-	}
-
-	rc = ipmi_sel_register(CMD_HEARTBEAT, sel_heartbeat, NULL);
-	if (rc < 0) {
-		prerror("Failed to register SEL handler for %s",
-			stringify(CMD_HEARTBEAT));
 	}
 }
 

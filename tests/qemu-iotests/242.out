@@ -12,11 +12,10 @@ virtual size: 1 MiB (1048576 bytes)
 cluster_size: 65536
 Format specific information:
     compat: 1.1
-    compression type: COMPRESSION_TYPE
+    compression type: zlib
     lazy refcounts: false
     refcount bits: 16
     corrupt: false
-    extended l2: false
 
 No bitmap in JSON format output
 
@@ -34,7 +33,7 @@ virtual size: 1 MiB (1048576 bytes)
 cluster_size: 65536
 Format specific information:
     compat: 1.1
-    compression type: COMPRESSION_TYPE
+    compression type: zlib
     lazy refcounts: false
     bitmaps:
         [0]:
@@ -43,7 +42,6 @@ Format specific information:
             granularity: 32768
     refcount bits: 16
     corrupt: false
-    extended l2: false
 
 The same bitmaps in JSON format:
 [
@@ -68,7 +66,7 @@ virtual size: 1 MiB (1048576 bytes)
 cluster_size: 65536
 Format specific information:
     compat: 1.1
-    compression type: COMPRESSION_TYPE
+    compression type: zlib
     lazy refcounts: false
     bitmaps:
         [0]:
@@ -82,7 +80,6 @@ Format specific information:
             granularity: 65536
     refcount bits: 16
     corrupt: false
-    extended l2: false
 
 The same bitmaps in JSON format:
 [
@@ -110,7 +107,7 @@ virtual size: 1 MiB (1048576 bytes)
 cluster_size: 65536
 Format specific information:
     compat: 1.1
-    compression type: COMPRESSION_TYPE
+    compression type: zlib
     lazy refcounts: false
     bitmaps:
         [0]:
@@ -126,7 +123,6 @@ Format specific information:
             granularity: 65536
     refcount bits: 16
     corrupt: false
-    extended l2: false
 
 The same bitmaps in JSON format:
 [
@@ -161,7 +157,7 @@ virtual size: 1 MiB (1048576 bytes)
 cluster_size: 65536
 Format specific information:
     compat: 1.1
-    compression type: COMPRESSION_TYPE
+    compression type: zlib
     lazy refcounts: false
     bitmaps:
         [0]:
@@ -171,6 +167,5 @@ Format specific information:
             granularity: 16384
     refcount bits: 16
     corrupt: false
-    extended l2: false
 
 Test complete

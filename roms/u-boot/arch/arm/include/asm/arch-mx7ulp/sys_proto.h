@@ -17,5 +17,4 @@ enum bt_mode {
 	SINGLE_BOOT		/* LP_BT = 0, DUAL_BT = 0 */
 };
 
-enum boot_device get_boot_device(void);
 #endif

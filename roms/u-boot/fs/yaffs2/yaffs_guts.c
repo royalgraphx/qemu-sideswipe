@@ -13,7 +13,6 @@
 
 #include "yportenv.h"
 #include "yaffs_trace.h"
-#include <dm/devres.h>
 
 #include "yaffs_guts.h"
 #include "yaffs_getblockinfo.h"

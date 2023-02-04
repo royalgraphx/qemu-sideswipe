@@ -1,5 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2018 IBM Corp. */
+/* Copyright 2013-2014 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef __PHB3_H
 #define __PHB3_H
@@ -122,7 +135,6 @@
 /* RBA Table : 256 bytes - Reject Bit Array
  *
  * 2048 interrupts, 1 bit each, indiates the reject state of interrupts
- * Not used (Murano / Venice DD1 only)
  */
 #define RBA_TABLE_SIZE		0x100
 
@@ -214,10 +226,11 @@ struct phb3 {
 	uint32_t		base_lsi;
 
 	/* SkiBoot owned in-memory tables */
-	__be16			*tbl_rtt;
-	uint8_t			*tbl_peltv;
-	__be64			*tbl_pest;
-	__be64			*tbl_ivt;
+	uint64_t		tbl_rtt;
+	uint64_t		tbl_peltv;
+	uint64_t		tbl_pest;
+	uint64_t		tbl_ivt;
+	uint64_t		tbl_rba;
 
 	bool			skip_perst; /* Skip first perst */
 	bool			has_link;
@@ -227,10 +240,10 @@ struct phb3 {
 	unsigned int		max_link_speed;
 	uint32_t		no_ecrc_devs;
 
-	__be16			rte_cache[RTT_TABLE_ENTRIES];
+	uint16_t		rte_cache[RTT_TABLE_ENTRIES];
 	uint8_t			peltv_cache[PELTV_TABLE_SIZE];
 	uint64_t		lxive_cache[8];
-	__be64			ive_cache[IVT_TABLE_ENTRIES];
+	uint64_t		ive_cache[IVT_TABLE_ENTRIES];
 	uint64_t		tve_cache[512];
 	uint64_t		m32d_cache[256];
 	uint64_t		m64b_cache[16];

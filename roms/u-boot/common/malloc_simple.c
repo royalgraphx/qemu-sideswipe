@@ -8,10 +8,8 @@
 #define LOG_CATEGORY LOGC_ALLOC
 
 #include <common.h>
-#include <log.h>
 #include <malloc.h>
 #include <mapmem.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 
 DECLARE_GLOBAL_DATA_PTR;

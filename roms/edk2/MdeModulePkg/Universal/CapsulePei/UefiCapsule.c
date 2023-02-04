@@ -1,7 +1,7 @@
 /** @file
   Capsule update PEIM for UEFI2.0
 
-Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 Copyright (c) 2017, AMD Incorporated. All rights reserved.<BR>
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -10,50 +10,31 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "Capsule.h"
 
-#define DEFAULT_SG_LIST_HEADS  (20)
-
 #ifdef MDE_CPU_IA32
 //
 // Global Descriptor Table (GDT)
 //
-GLOBAL_REMOVE_IF_UNREFERENCED IA32_SEGMENT_DESCRIPTOR  mGdtEntries[] = {
-  /* selector { Global Segment Descriptor                              } */
-  /* 0x00 */ {
-    { 0,      0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0 }
-  },                                                                      // null descriptor
-  /* 0x08 */ {
-    { 0xffff, 0, 0, 0x3, 1, 0, 1, 0xf, 0, 0, 1, 1, 0 }
-  },                                                                      // linear data segment descriptor
-  /* 0x10 */ {
-    { 0xffff, 0, 0, 0xf, 1, 0, 1, 0xf, 0, 0, 1, 1, 0 }
-  },                                                                      // linear code segment descriptor
-  /* 0x18 */ {
-    { 0xffff, 0, 0, 0x3, 1, 0, 1, 0xf, 0, 0, 1, 1, 0 }
-  },                                                                      // system data segment descriptor
-  /* 0x20 */ {
-    { 0xffff, 0, 0, 0xb, 1, 0, 1, 0xf, 0, 0, 1, 1, 0 }
-  },                                                                      // system code segment descriptor
-  /* 0x28 */ {
-    { 0,      0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0 }
-  },                                                                      // spare segment descriptor
-  /* 0x30 */ {
-    { 0xffff, 0, 0, 0x3, 1, 0, 1, 0xf, 0, 0, 1, 1, 0 }
-  },                                                                      // system data segment descriptor
-  /* 0x38 */ {
-    { 0xffff, 0, 0, 0xb, 1, 0, 1, 0xf, 0, 1, 0, 1, 0 }
-  },                                                                      // system code segment descriptor
-  /* 0x40 */ {
-    { 0,      0, 0, 0,   0, 0, 0, 0,   0, 0, 0, 0, 0 }
-  },                                                                      // spare segment descriptor
+GLOBAL_REMOVE_IF_UNREFERENCED IA32_SEGMENT_DESCRIPTOR mGdtEntries[] = {
+/* selector { Global Segment Descriptor                              } */
+/* 0x00 */  {{0,      0,  0,  0,    0,  0,  0,  0,    0,  0, 0,  0,  0}}, //null descriptor
+/* 0x08 */  {{0xffff, 0,  0,  0x3,  1,  0,  1,  0xf,  0,  0, 1,  1,  0}}, //linear data segment descriptor
+/* 0x10 */  {{0xffff, 0,  0,  0xf,  1,  0,  1,  0xf,  0,  0, 1,  1,  0}}, //linear code segment descriptor
+/* 0x18 */  {{0xffff, 0,  0,  0x3,  1,  0,  1,  0xf,  0,  0, 1,  1,  0}}, //system data segment descriptor
+/* 0x20 */  {{0xffff, 0,  0,  0xb,  1,  0,  1,  0xf,  0,  0, 1,  1,  0}}, //system code segment descriptor
+/* 0x28 */  {{0,      0,  0,  0,    0,  0,  0,  0,    0,  0, 0,  0,  0}}, //spare segment descriptor
+/* 0x30 */  {{0xffff, 0,  0,  0x3,  1,  0,  1,  0xf,  0,  0, 1,  1,  0}}, //system data segment descriptor
+/* 0x38 */  {{0xffff, 0,  0,  0xb,  1,  0,  1,  0xf,  0,  1, 0,  1,  0}}, //system code segment descriptor
+/* 0x40 */  {{0,      0,  0,  0,    0,  0,  0,  0,    0,  0, 0,  0,  0}}, //spare segment descriptor
 };
 
 //
 // IA32 Gdt register
 //
-GLOBAL_REMOVE_IF_UNREFERENCED CONST IA32_DESCRIPTOR  mGdt = {
+GLOBAL_REMOVE_IF_UNREFERENCED CONST IA32_DESCRIPTOR mGdt = {
   sizeof (mGdtEntries) - 1,
-  (UINTN)mGdtEntries
-};
+  (UINTN) mGdtEntries
+  };
+
 
 /**
   The function will check if 1G page is supported.
@@ -67,12 +48,12 @@ IsPage1GSupport (
   VOID
   )
 {
-  UINT32   RegEax;
-  UINT32   RegEdx;
-  BOOLEAN  Page1GSupport;
+  UINT32                                        RegEax;
+  UINT32                                        RegEdx;
+  BOOLEAN                                       Page1GSupport;
 
   Page1GSupport = FALSE;
-  if (PcdGetBool (PcdUse1GPageTable)) {
+  if (PcdGetBool(PcdUse1GPageTable)) {
     AsmCpuid (0x80000000, &RegEax, NULL, NULL, NULL);
     if (RegEax >= 0x80000001) {
       AsmCpuid (0x80000001, NULL, NULL, NULL, &RegEdx);
@@ -95,14 +76,14 @@ IsPage1GSupport (
 **/
 UINTN
 CalculatePageTableSize (
-  IN BOOLEAN  Page1GSupport
+  IN BOOLEAN                                    Page1GSupport
   )
 {
-  UINTN   ExtraPageTablePages;
-  UINTN   TotalPagesNum;
-  UINT8   PhysicalAddressBits;
-  UINT32  NumberOfPml4EntriesNeeded;
-  UINT32  NumberOfPdpEntriesNeeded;
+  UINTN                                         ExtraPageTablePages;
+  UINTN                                         TotalPagesNum;
+  UINT8                                         PhysicalAddressBits;
+  UINT32                                        NumberOfPml4EntriesNeeded;
+  UINT32                                        NumberOfPdpEntriesNeeded;
 
   //
   // Create 4G page table by default,
@@ -116,10 +97,10 @@ CalculatePageTableSize (
   //
   if (PhysicalAddressBits <= 39 ) {
     NumberOfPml4EntriesNeeded = 1;
-    NumberOfPdpEntriesNeeded  = (UINT32)LShiftU64 (1, (PhysicalAddressBits - 30));
+    NumberOfPdpEntriesNeeded = (UINT32)LShiftU64 (1, (PhysicalAddressBits - 30));
   } else {
     NumberOfPml4EntriesNeeded = (UINT32)LShiftU64 (1, (PhysicalAddressBits - 39));
-    NumberOfPdpEntriesNeeded  = 512;
+    NumberOfPdpEntriesNeeded = 512;
   }
 
   if (!Page1GSupport) {
@@ -127,7 +108,6 @@ CalculatePageTableSize (
   } else {
     TotalPagesNum = NumberOfPml4EntriesNeeded + 1;
   }
-
   TotalPagesNum += ExtraPageTablePages;
 
   return EFI_PAGES_TO_SIZE (TotalPagesNum);
@@ -143,24 +123,24 @@ CalculatePageTableSize (
 **/
 VOID
 Create4GPageTables (
-  IN EFI_PHYSICAL_ADDRESS  PageTablesAddress,
-  IN BOOLEAN               Page1GSupport
+  IN EFI_PHYSICAL_ADDRESS   PageTablesAddress,
+  IN BOOLEAN                Page1GSupport
   )
 {
-  UINT8                           PhysicalAddressBits;
-  EFI_PHYSICAL_ADDRESS            PageAddress;
-  UINTN                           IndexOfPml4Entries;
-  UINTN                           IndexOfPdpEntries;
-  UINTN                           IndexOfPageDirectoryEntries;
-  UINT32                          NumberOfPml4EntriesNeeded;
-  UINT32                          NumberOfPdpEntriesNeeded;
-  PAGE_MAP_AND_DIRECTORY_POINTER  *PageMapLevel4Entry;
-  PAGE_MAP_AND_DIRECTORY_POINTER  *PageMap;
-  PAGE_MAP_AND_DIRECTORY_POINTER  *PageDirectoryPointerEntry;
-  PAGE_TABLE_ENTRY                *PageDirectoryEntry;
-  UINTN                           BigPageAddress;
-  PAGE_TABLE_1G_ENTRY             *PageDirectory1GEntry;
-  UINT64                          AddressEncMask;
+  UINT8                                         PhysicalAddressBits;
+  EFI_PHYSICAL_ADDRESS                          PageAddress;
+  UINTN                                         IndexOfPml4Entries;
+  UINTN                                         IndexOfPdpEntries;
+  UINTN                                         IndexOfPageDirectoryEntries;
+  UINT32                                        NumberOfPml4EntriesNeeded;
+  UINT32                                        NumberOfPdpEntriesNeeded;
+  PAGE_MAP_AND_DIRECTORY_POINTER                *PageMapLevel4Entry;
+  PAGE_MAP_AND_DIRECTORY_POINTER                *PageMap;
+  PAGE_MAP_AND_DIRECTORY_POINTER                *PageDirectoryPointerEntry;
+  PAGE_TABLE_ENTRY                              *PageDirectoryEntry;
+  UINTN                                         BigPageAddress;
+  PAGE_TABLE_1G_ENTRY                           *PageDirectory1GEntry;
+  UINT64                                        AddressEncMask;
 
   //
   // Make sure AddressEncMask is contained to smallest supported address field.
@@ -178,21 +158,21 @@ Create4GPageTables (
   //
   if (PhysicalAddressBits <= 39 ) {
     NumberOfPml4EntriesNeeded = 1;
-    NumberOfPdpEntriesNeeded  = (UINT32)LShiftU64 (1, (PhysicalAddressBits - 30));
+    NumberOfPdpEntriesNeeded = (UINT32)LShiftU64 (1, (PhysicalAddressBits - 30));
   } else {
     NumberOfPml4EntriesNeeded = (UINT32)LShiftU64 (1, (PhysicalAddressBits - 39));
-    NumberOfPdpEntriesNeeded  = 512;
+    NumberOfPdpEntriesNeeded = 512;
   }
 
   //
   // Pre-allocate big pages to avoid later allocations.
   //
-  BigPageAddress = (UINTN)PageTablesAddress;
+  BigPageAddress = (UINTN) PageTablesAddress;
 
   //
   // By architecture only one PageMapLevel4 exists - so lets allocate storage for it.
   //
-  PageMap         = (VOID *)BigPageAddress;
+  PageMap         = (VOID *) BigPageAddress;
   BigPageAddress += SIZE_4KB;
 
   PageMapLevel4Entry = PageMap;
@@ -202,27 +182,27 @@ Create4GPageTables (
     // Each PML4 entry points to a page of Page Directory Pointer entires.
     // So lets allocate space for them and fill them in in the IndexOfPdpEntries loop.
     //
-    PageDirectoryPointerEntry = (VOID *)BigPageAddress;
-    BigPageAddress           += SIZE_4KB;
+    PageDirectoryPointerEntry = (VOID *) BigPageAddress;
+    BigPageAddress += SIZE_4KB;
 
     //
     // Make a PML4 Entry
     //
-    PageMapLevel4Entry->Uint64         = (UINT64)(UINTN)PageDirectoryPointerEntry | AddressEncMask;
+    PageMapLevel4Entry->Uint64 = (UINT64)(UINTN)PageDirectoryPointerEntry | AddressEncMask;
     PageMapLevel4Entry->Bits.ReadWrite = 1;
-    PageMapLevel4Entry->Bits.Present   = 1;
+    PageMapLevel4Entry->Bits.Present = 1;
 
     if (Page1GSupport) {
-      PageDirectory1GEntry = (VOID *)PageDirectoryPointerEntry;
+      PageDirectory1GEntry = (VOID *) PageDirectoryPointerEntry;
 
       for (IndexOfPageDirectoryEntries = 0; IndexOfPageDirectoryEntries < 512; IndexOfPageDirectoryEntries++, PageDirectory1GEntry++, PageAddress += SIZE_1GB) {
         //
         // Fill in the Page Directory entries
         //
-        PageDirectory1GEntry->Uint64         = (UINT64)PageAddress | AddressEncMask;
+        PageDirectory1GEntry->Uint64 = (UINT64)PageAddress | AddressEncMask;
         PageDirectory1GEntry->Bits.ReadWrite = 1;
-        PageDirectory1GEntry->Bits.Present   = 1;
-        PageDirectory1GEntry->Bits.MustBe1   = 1;
+        PageDirectory1GEntry->Bits.Present = 1;
+        PageDirectory1GEntry->Bits.MustBe1 = 1;
       }
     } else {
       for (IndexOfPdpEntries = 0; IndexOfPdpEntries < NumberOfPdpEntriesNeeded; IndexOfPdpEntries++, PageDirectoryPointerEntry++) {
@@ -230,31 +210,31 @@ Create4GPageTables (
         // Each Directory Pointer entries points to a page of Page Directory entires.
         // So allocate space for them and fill them in in the IndexOfPageDirectoryEntries loop.
         //
-        PageDirectoryEntry = (VOID *)BigPageAddress;
-        BigPageAddress    += SIZE_4KB;
+        PageDirectoryEntry = (VOID *) BigPageAddress;
+        BigPageAddress += SIZE_4KB;
 
         //
         // Fill in a Page Directory Pointer Entries
         //
-        PageDirectoryPointerEntry->Uint64         = (UINT64)(UINTN)PageDirectoryEntry | AddressEncMask;
+        PageDirectoryPointerEntry->Uint64 = (UINT64)(UINTN)PageDirectoryEntry | AddressEncMask;
         PageDirectoryPointerEntry->Bits.ReadWrite = 1;
-        PageDirectoryPointerEntry->Bits.Present   = 1;
+        PageDirectoryPointerEntry->Bits.Present = 1;
 
         for (IndexOfPageDirectoryEntries = 0; IndexOfPageDirectoryEntries < 512; IndexOfPageDirectoryEntries++, PageDirectoryEntry++, PageAddress += SIZE_2MB) {
           //
           // Fill in the Page Directory entries
           //
-          PageDirectoryEntry->Uint64         = (UINT64)PageAddress | AddressEncMask;
+          PageDirectoryEntry->Uint64 = (UINT64)PageAddress | AddressEncMask;
           PageDirectoryEntry->Bits.ReadWrite = 1;
-          PageDirectoryEntry->Bits.Present   = 1;
-          PageDirectoryEntry->Bits.MustBe1   = 1;
+          PageDirectoryEntry->Bits.Present = 1;
+          PageDirectoryEntry->Bits.MustBe1 = 1;
         }
       }
 
-      for ( ; IndexOfPdpEntries < 512; IndexOfPdpEntries++, PageDirectoryPointerEntry++) {
+      for (; IndexOfPdpEntries < 512; IndexOfPdpEntries++, PageDirectoryPointerEntry++) {
         ZeroMem (
           PageDirectoryPointerEntry,
-          sizeof (PAGE_MAP_AND_DIRECTORY_POINTER)
+          sizeof(PAGE_MAP_AND_DIRECTORY_POINTER)
           );
       }
     }
@@ -263,7 +243,7 @@ Create4GPageTables (
   //
   // For the PML4 entries we are not using fill in a null entry.
   //
-  for ( ; IndexOfPml4Entries < 512; IndexOfPml4Entries++, PageMapLevel4Entry++) {
+  for (; IndexOfPml4Entries < 512; IndexOfPml4Entries++, PageMapLevel4Entry++) {
     ZeroMem (
       PageMapLevel4Entry,
       sizeof (PAGE_MAP_AND_DIRECTORY_POINTER)
@@ -312,20 +292,21 @@ ReturnFunction (
 **/
 EFI_STATUS
 Thunk32To64 (
-  EFI_PHYSICAL_ADDRESS     PageTableAddress,
-  SWITCH_32_TO_64_CONTEXT  *Context,
-  SWITCH_64_TO_32_CONTEXT  *ReturnContext
+  EFI_PHYSICAL_ADDRESS          PageTableAddress,
+  SWITCH_32_TO_64_CONTEXT       *Context,
+  SWITCH_64_TO_32_CONTEXT       *ReturnContext
   )
 {
-  UINTN       SetJumpFlag;
-  EFI_STATUS  Status;
+  UINTN                       SetJumpFlag;
+  EFI_STATUS                  Status;
 
   //
   // Save return address, LongJump will return here then
   //
-  SetJumpFlag = SetJump ((BASE_LIBRARY_JUMP_BUFFER  *)(UINTN)Context->JumpBuffer);
+  SetJumpFlag = SetJump ((BASE_LIBRARY_JUMP_BUFFER  *) (UINTN) Context->JumpBuffer);
 
   if (SetJumpFlag == 0) {
+
     //
     // Build 4G Page Tables.
     //
@@ -339,7 +320,7 @@ Thunk32To64 (
     //
     // Write CR3
     //
-    AsmWriteCr3 ((UINTN)PageTableAddress);
+    AsmWriteCr3 ((UINTN) PageTableAddress);
 
     DEBUG ((
       DEBUG_INFO,
@@ -357,10 +338,10 @@ Thunk32To64 (
     // Transfer to long mode
     //
     AsmEnablePaging64 (
-      0x38,
-      (UINT64)Context->EntryPoint,
-      (UINT64)(UINTN)Context,
-      (UINT64)(UINTN)ReturnContext,
+       0x38,
+      (UINT64) Context->EntryPoint,
+      (UINT64)(UINTN) Context,
+      (UINT64)(UINTN) ReturnContext,
       Context->StackBufferBase + Context->StackBufferLength
       );
   }
@@ -369,8 +350,8 @@ Thunk32To64 (
   // Convert to 32-bit Status and return
   //
   Status = EFI_SUCCESS;
-  if ((UINTN)ReturnContext->ReturnStatus != 0) {
-    Status = ENCODE_ERROR ((UINTN)ReturnContext->ReturnStatus);
+  if ((UINTN) ReturnContext->ReturnStatus != 0) {
+    Status = ENCODE_ERROR ((UINTN) ReturnContext->ReturnStatus);
   }
 
   return Status;
@@ -392,31 +373,31 @@ Thunk32To64 (
 **/
 EFI_STATUS
 ModeSwitch (
-  IN EFI_CAPSULE_LONG_MODE_BUFFER  *LongModeBuffer,
-  IN COALESCE_ENTRY                CoalesceEntry,
-  IN EFI_PHYSICAL_ADDRESS          BlockListAddr,
-  IN MEMORY_RESOURCE_DESCRIPTOR    *MemoryResource,
-  IN OUT VOID                      **MemoryBase,
-  IN OUT UINTN                     *MemorySize
+  IN EFI_CAPSULE_LONG_MODE_BUFFER   *LongModeBuffer,
+  IN COALESCE_ENTRY                 CoalesceEntry,
+  IN EFI_PHYSICAL_ADDRESS           BlockListAddr,
+  IN MEMORY_RESOURCE_DESCRIPTOR     *MemoryResource,
+  IN OUT VOID                       **MemoryBase,
+  IN OUT UINTN                      *MemorySize
   )
 {
-  EFI_STATUS                Status;
-  EFI_PHYSICAL_ADDRESS      MemoryBase64;
-  UINT64                    MemorySize64;
-  EFI_PHYSICAL_ADDRESS      MemoryEnd64;
-  SWITCH_32_TO_64_CONTEXT   Context;
-  SWITCH_64_TO_32_CONTEXT   ReturnContext;
-  BASE_LIBRARY_JUMP_BUFFER  JumpBuffer;
-  EFI_PHYSICAL_ADDRESS      ReservedRangeBase;
-  EFI_PHYSICAL_ADDRESS      ReservedRangeEnd;
-  BOOLEAN                   Page1GSupport;
+  EFI_STATUS                           Status;
+  EFI_PHYSICAL_ADDRESS                 MemoryBase64;
+  UINT64                               MemorySize64;
+  EFI_PHYSICAL_ADDRESS                 MemoryEnd64;
+  SWITCH_32_TO_64_CONTEXT              Context;
+  SWITCH_64_TO_32_CONTEXT              ReturnContext;
+  BASE_LIBRARY_JUMP_BUFFER             JumpBuffer;
+  EFI_PHYSICAL_ADDRESS                 ReservedRangeBase;
+  EFI_PHYSICAL_ADDRESS                 ReservedRangeEnd;
+  BOOLEAN                              Page1GSupport;
 
   ZeroMem (&Context, sizeof (SWITCH_32_TO_64_CONTEXT));
   ZeroMem (&ReturnContext, sizeof (SWITCH_64_TO_32_CONTEXT));
 
-  MemoryBase64 = (UINT64)(UINTN)*MemoryBase;
-  MemorySize64 = (UINT64)(UINTN)*MemorySize;
-  MemoryEnd64  = MemoryBase64 + MemorySize64;
+  MemoryBase64  = (UINT64) (UINTN) *MemoryBase;
+  MemorySize64  = (UINT64) (UINTN) *MemorySize;
+  MemoryEnd64   = MemoryBase64 + MemorySize64;
 
   Page1GSupport = IsPage1GSupport ();
 
@@ -443,9 +424,8 @@ ModeSwitch (
       return EFI_OUT_OF_RESOURCES;
     }
   } else if (ReservedRangeBase < MemoryEnd64) {
-    if ((ReservedRangeEnd < MemoryEnd64) &&
-        (ReservedRangeBase - MemoryBase64 < MemoryEnd64 - ReservedRangeEnd))
-    {
+    if (ReservedRangeEnd < MemoryEnd64   &&
+        ReservedRangeBase - MemoryBase64 < MemoryEnd64 - ReservedRangeEnd) {
       MemoryBase64 = ReservedRangeEnd;
     } else {
       MemorySize64 = (UINT64)(UINTN)(ReservedRangeBase - MemoryBase64);
@@ -455,26 +435,26 @@ ModeSwitch (
   //
   // Initialize context jumping to 64-bit enviroment
   //
-  Context.JumpBuffer        = (EFI_PHYSICAL_ADDRESS)(UINTN)&JumpBuffer;
-  Context.StackBufferBase   = LongModeBuffer->StackBaseAddress;
-  Context.StackBufferLength = LongModeBuffer->StackSize;
-  Context.EntryPoint        = (EFI_PHYSICAL_ADDRESS)(UINTN)CoalesceEntry;
-  Context.BlockListAddr     = BlockListAddr;
-  Context.MemoryResource    = (EFI_PHYSICAL_ADDRESS)(UINTN)MemoryResource;
-  Context.MemoryBase64Ptr   = (EFI_PHYSICAL_ADDRESS)(UINTN)&MemoryBase64;
-  Context.MemorySize64Ptr   = (EFI_PHYSICAL_ADDRESS)(UINTN)&MemorySize64;
-  Context.Page1GSupport     = Page1GSupport;
-  Context.AddressEncMask    = PcdGet64 (PcdPteMemoryEncryptionAddressOrMask) & PAGING_1G_ADDRESS_MASK_64;
+  Context.JumpBuffer            = (EFI_PHYSICAL_ADDRESS)(UINTN)&JumpBuffer;
+  Context.StackBufferBase       = LongModeBuffer->StackBaseAddress;
+  Context.StackBufferLength     = LongModeBuffer->StackSize;
+  Context.EntryPoint            = (EFI_PHYSICAL_ADDRESS)(UINTN)CoalesceEntry;
+  Context.BlockListAddr         = BlockListAddr;
+  Context.MemoryResource        = (EFI_PHYSICAL_ADDRESS)(UINTN)MemoryResource;
+  Context.MemoryBase64Ptr       = (EFI_PHYSICAL_ADDRESS)(UINTN)&MemoryBase64;
+  Context.MemorySize64Ptr       = (EFI_PHYSICAL_ADDRESS)(UINTN)&MemorySize64;
+  Context.Page1GSupport         = Page1GSupport;
+  Context.AddressEncMask        = PcdGet64 (PcdPteMemoryEncryptionAddressOrMask) & PAGING_1G_ADDRESS_MASK_64;
 
   //
   // Prepare data for return back
   //
-  ReturnContext.ReturnCs         = 0x10;
-  ReturnContext.ReturnEntryPoint = (EFI_PHYSICAL_ADDRESS)(UINTN)ReturnFunction;
+  ReturnContext.ReturnCs           = 0x10;
+  ReturnContext.ReturnEntryPoint   = (EFI_PHYSICAL_ADDRESS)(UINTN)ReturnFunction;
   //
   // Will save the return status of processing capsule
   //
-  ReturnContext.ReturnStatus = 0;
+  ReturnContext.ReturnStatus       = 0;
 
   //
   // Save original GDT
@@ -484,11 +464,12 @@ ModeSwitch (
   Status = Thunk32To64 (LongModeBuffer->PageTableAddress, &Context, &ReturnContext);
 
   if (!EFI_ERROR (Status)) {
-    *MemoryBase = (VOID *)(UINTN)MemoryBase64;
-    *MemorySize = (UINTN)MemorySize64;
+    *MemoryBase = (VOID *) (UINTN) MemoryBase64;
+    *MemorySize = (UINTN) MemorySize64;
   }
 
   return Status;
+
 }
 
 /**
@@ -503,18 +484,18 @@ ModeSwitch (
 **/
 EFI_STATUS
 FindCapsuleCoalesceImage (
-  OUT EFI_PHYSICAL_ADDRESS  *CoalesceImageEntryPoint,
-  OUT UINT16                *CoalesceImageMachineType
+  OUT EFI_PHYSICAL_ADDRESS    *CoalesceImageEntryPoint,
+  OUT UINT16                  *CoalesceImageMachineType
   )
 {
-  EFI_STATUS             Status;
-  UINTN                  Instance;
-  EFI_PEI_LOAD_FILE_PPI  *LoadFile;
-  EFI_PEI_FV_HANDLE      VolumeHandle;
-  EFI_PEI_FILE_HANDLE    FileHandle;
-  EFI_PHYSICAL_ADDRESS   CoalesceImageAddress;
-  UINT64                 CoalesceImageSize;
-  UINT32                 AuthenticationState;
+  EFI_STATUS                           Status;
+  UINTN                                Instance;
+  EFI_PEI_LOAD_FILE_PPI                *LoadFile;
+  EFI_PEI_FV_HANDLE                    VolumeHandle;
+  EFI_PEI_FILE_HANDLE                  FileHandle;
+  EFI_PHYSICAL_ADDRESS                 CoalesceImageAddress;
+  UINT64                               CoalesceImageSize;
+  UINT32                               AuthenticationState;
 
   Instance = 0;
 
@@ -523,10 +504,9 @@ FindCapsuleCoalesceImage (
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
-    Status = PeiServicesFfsFindFileByName (PcdGetPtr (PcdCapsuleCoalesceFile), VolumeHandle, &FileHandle);
+    Status = PeiServicesFfsFindFileByName (PcdGetPtr(PcdCapsuleCoalesceFile), VolumeHandle, &FileHandle);
     if (!EFI_ERROR (Status)) {
-      Status = PeiServicesLocatePpi (&gEfiPeiLoadFilePpiGuid, 0, NULL, (VOID **)&LoadFile);
+      Status = PeiServicesLocatePpi (&gEfiPeiLoadFilePpiGuid, 0, NULL, (VOID **) &LoadFile);
       ASSERT_EFI_ERROR (Status);
 
       Status = LoadFile->LoadFile (
@@ -541,8 +521,7 @@ FindCapsuleCoalesceImage (
         DEBUG ((DEBUG_ERROR, "Unable to find PE32 section in CapsuleX64 image ffs %r!\n", Status));
         return Status;
       }
-
-      *CoalesceImageMachineType = PeCoffLoaderGetMachineType ((VOID *)(UINTN)CoalesceImageAddress);
+      *CoalesceImageMachineType = PeCoffLoaderGetMachineType ((VOID *) (UINTN) CoalesceImageAddress);
       break;
     } else {
       continue;
@@ -563,22 +542,22 @@ FindCapsuleCoalesceImage (
 **/
 EFI_STATUS
 GetLongModeContext (
-  OUT EFI_CAPSULE_LONG_MODE_BUFFER  *LongModeBuffer
+  OUT EFI_CAPSULE_LONG_MODE_BUFFER *LongModeBuffer
   )
 {
-  EFI_STATUS                       Status;
-  UINTN                            Size;
-  EFI_PEI_READ_ONLY_VARIABLE2_PPI  *PPIVariableServices;
+  EFI_STATUS   Status;
+  UINTN        Size;
+  EFI_PEI_READ_ONLY_VARIABLE2_PPI *PPIVariableServices;
 
   Status = PeiServicesLocatePpi (
              &gEfiPeiReadOnlyVariable2PpiGuid,
              0,
              NULL,
-             (VOID **)&PPIVariableServices
+             (VOID **) &PPIVariableServices
              );
   ASSERT_EFI_ERROR (Status);
 
-  Size   = sizeof (EFI_CAPSULE_LONG_MODE_BUFFER);
+  Size = sizeof (EFI_CAPSULE_LONG_MODE_BUFFER);
   Status = PPIVariableServices->GetVariable (
                                   PPIVariableServices,
                                   EFI_CAPSULE_LONG_MODE_BUFFER_NAME,
@@ -588,16 +567,13 @@ GetLongModeContext (
                                   LongModeBuffer
                                   );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Error Get LongModeBuffer variable %r!\n", Status));
+    DEBUG (( DEBUG_ERROR, "Error Get LongModeBuffer variable %r!\n", Status));
   }
-
   return Status;
 }
-
 #endif
 
 #if defined (MDE_CPU_IA32) || defined (MDE_CPU_X64)
-
 /**
   Get physical address bits.
 
@@ -609,21 +585,21 @@ GetPhysicalAddressBits (
   VOID
   )
 {
-  UINT32  RegEax;
-  UINT8   PhysicalAddressBits;
-  VOID    *Hob;
+  UINT32                        RegEax;
+  UINT8                         PhysicalAddressBits;
+  VOID                          *Hob;
 
   //
   // Get physical address bits supported.
   //
   Hob = GetFirstHob (EFI_HOB_TYPE_CPU);
   if (Hob != NULL) {
-    PhysicalAddressBits = ((EFI_HOB_CPU *)Hob)->SizeOfMemorySpace;
+    PhysicalAddressBits = ((EFI_HOB_CPU *) Hob)->SizeOfMemorySpace;
   } else {
     AsmCpuid (0x80000000, &RegEax, NULL, NULL, NULL);
     if (RegEax >= 0x80000008) {
       AsmCpuid (0x80000008, &RegEax, NULL, NULL, NULL);
-      PhysicalAddressBits = (UINT8)RegEax;
+      PhysicalAddressBits = (UINT8) RegEax;
     } else {
       PhysicalAddressBits = 36;
     }
@@ -639,7 +615,6 @@ GetPhysicalAddressBits (
 
   return PhysicalAddressBits;
 }
-
 #endif
 
 /**
@@ -650,14 +625,14 @@ GetPhysicalAddressBits (
 **/
 VOID
 SortMemoryResourceDescriptor (
-  IN OUT MEMORY_RESOURCE_DESCRIPTOR  *MemoryResource
+  IN OUT MEMORY_RESOURCE_DESCRIPTOR *MemoryResource
   )
 {
-  MEMORY_RESOURCE_DESCRIPTOR  *MemoryResourceEntry;
-  MEMORY_RESOURCE_DESCRIPTOR  *NextMemoryResourceEntry;
-  MEMORY_RESOURCE_DESCRIPTOR  TempMemoryResource;
+  MEMORY_RESOURCE_DESCRIPTOR        *MemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        *NextMemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        TempMemoryResource;
 
-  MemoryResourceEntry     = MemoryResource;
+  MemoryResourceEntry = MemoryResource;
   NextMemoryResourceEntry = MemoryResource + 1;
   while (MemoryResourceEntry->ResourceLength != 0) {
     while (NextMemoryResourceEntry->ResourceLength != 0) {
@@ -683,23 +658,22 @@ SortMemoryResourceDescriptor (
 **/
 VOID
 MergeMemoryResourceDescriptor (
-  IN OUT MEMORY_RESOURCE_DESCRIPTOR  *MemoryResource
+  IN OUT MEMORY_RESOURCE_DESCRIPTOR *MemoryResource
   )
 {
-  MEMORY_RESOURCE_DESCRIPTOR  *MemoryResourceEntry;
-  MEMORY_RESOURCE_DESCRIPTOR  *NewMemoryResourceEntry;
-  MEMORY_RESOURCE_DESCRIPTOR  *NextMemoryResourceEntry;
-  MEMORY_RESOURCE_DESCRIPTOR  *MemoryResourceEnd;
+  MEMORY_RESOURCE_DESCRIPTOR        *MemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        *NewMemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        *NextMemoryResourceEntry;
+  MEMORY_RESOURCE_DESCRIPTOR        *MemoryResourceEnd;
 
-  MemoryResourceEntry    = MemoryResource;
+  MemoryResourceEntry = MemoryResource;
   NewMemoryResourceEntry = MemoryResource;
   while (MemoryResourceEntry->ResourceLength != 0) {
     CopyMem (NewMemoryResourceEntry, MemoryResourceEntry, sizeof (MEMORY_RESOURCE_DESCRIPTOR));
     NextMemoryResourceEntry = MemoryResourceEntry + 1;
 
     while ((NextMemoryResourceEntry->ResourceLength != 0) &&
-           (NextMemoryResourceEntry->PhysicalStart == (MemoryResourceEntry->PhysicalStart + MemoryResourceEntry->ResourceLength)))
-    {
+           (NextMemoryResourceEntry->PhysicalStart == (MemoryResourceEntry->PhysicalStart + MemoryResourceEntry->ResourceLength))) {
       MemoryResourceEntry->ResourceLength += NextMemoryResourceEntry->ResourceLength;
       if (NewMemoryResourceEntry != MemoryResourceEntry) {
         NewMemoryResourceEntry->ResourceLength += NextMemoryResourceEntry->ResourceLength;
@@ -708,7 +682,7 @@ MergeMemoryResourceDescriptor (
       NextMemoryResourceEntry = NextMemoryResourceEntry + 1;
     }
 
-    MemoryResourceEntry    = NextMemoryResourceEntry;
+    MemoryResourceEntry = NextMemoryResourceEntry;
     NewMemoryResourceEntry = NewMemoryResourceEntry + 1;
   }
 
@@ -732,80 +706,69 @@ BuildMemoryResourceDescriptor (
   VOID
   )
 {
-  EFI_PEI_HOB_POINTERS         Hob;
-  UINTN                        Index;
-  EFI_HOB_RESOURCE_DESCRIPTOR  *ResourceDescriptor;
-  MEMORY_RESOURCE_DESCRIPTOR   *MemoryResource;
-  EFI_STATUS                   Status;
+  EFI_PEI_HOB_POINTERS          Hob;
+  UINTN                         Index;
+  EFI_HOB_RESOURCE_DESCRIPTOR   *ResourceDescriptor;
+  MEMORY_RESOURCE_DESCRIPTOR    *MemoryResource;
+  EFI_STATUS                    Status;
 
   //
   // Get the count of memory resource descriptor.
   //
-  Index   = 0;
+  Index = 0;
   Hob.Raw = GetFirstHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR);
   while (Hob.Raw != NULL) {
-    ResourceDescriptor = (EFI_HOB_RESOURCE_DESCRIPTOR *)Hob.Raw;
+    ResourceDescriptor = (EFI_HOB_RESOURCE_DESCRIPTOR *) Hob.Raw;
     if (ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
       Index++;
     }
-
     Hob.Raw = GET_NEXT_HOB (Hob);
     Hob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, Hob.Raw);
   }
 
   if (Index == 0) {
     DEBUG ((DEBUG_INFO | DEBUG_WARN, "No memory resource descriptor reported in HOB list before capsule Coalesce\n"));
- #if defined (MDE_CPU_IA32) || defined (MDE_CPU_X64)
+#if defined (MDE_CPU_IA32) || defined (MDE_CPU_X64)
     //
     // Allocate memory to hold memory resource descriptor,
     // include extra one NULL terminate memory resource descriptor.
     //
-    Status = PeiServicesAllocatePool ((1 + 1) * sizeof (MEMORY_RESOURCE_DESCRIPTOR), (VOID **)&MemoryResource);
+    Status = PeiServicesAllocatePool ((1 + 1) * sizeof (MEMORY_RESOURCE_DESCRIPTOR), (VOID **) &MemoryResource);
     ASSERT_EFI_ERROR (Status);
     ZeroMem (MemoryResource, (1 + 1) * sizeof (MEMORY_RESOURCE_DESCRIPTOR));
 
-    MemoryResource[0].PhysicalStart  = 0;
+    MemoryResource[0].PhysicalStart = 0;
     MemoryResource[0].ResourceLength = LShiftU64 (1, GetPhysicalAddressBits ());
-    DEBUG ((
-      DEBUG_INFO,
-      "MemoryResource[0x0] - Start(0x%0lx) Length(0x%0lx)\n",
-      MemoryResource[0x0].PhysicalStart,
-      MemoryResource[0x0].ResourceLength
-      ));
+    DEBUG ((DEBUG_INFO, "MemoryResource[0x0] - Start(0x%0lx) Length(0x%0lx)\n",
+                        MemoryResource[0x0].PhysicalStart, MemoryResource[0x0].ResourceLength));
     return MemoryResource;
- #else
+#else
     return NULL;
- #endif
+#endif
   }
 
   //
   // Allocate memory to hold memory resource descriptor,
   // include extra one NULL terminate memory resource descriptor.
   //
-  Status = PeiServicesAllocatePool ((Index + 1) * sizeof (MEMORY_RESOURCE_DESCRIPTOR), (VOID **)&MemoryResource);
+  Status = PeiServicesAllocatePool ((Index + 1) * sizeof (MEMORY_RESOURCE_DESCRIPTOR), (VOID **) &MemoryResource);
   ASSERT_EFI_ERROR (Status);
   ZeroMem (MemoryResource, (Index + 1) * sizeof (MEMORY_RESOURCE_DESCRIPTOR));
 
   //
   // Get the content of memory resource descriptor.
   //
-  Index   = 0;
+  Index = 0;
   Hob.Raw = GetFirstHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR);
   while (Hob.Raw != NULL) {
-    ResourceDescriptor = (EFI_HOB_RESOURCE_DESCRIPTOR *)Hob.Raw;
+    ResourceDescriptor = (EFI_HOB_RESOURCE_DESCRIPTOR *) Hob.Raw;
     if (ResourceDescriptor->ResourceType == EFI_RESOURCE_SYSTEM_MEMORY) {
-      DEBUG ((
-        DEBUG_INFO,
-        "MemoryResource[0x%x] - Start(0x%0lx) Length(0x%0lx)\n",
-        Index,
-        ResourceDescriptor->PhysicalStart,
-        ResourceDescriptor->ResourceLength
-        ));
-      MemoryResource[Index].PhysicalStart  = ResourceDescriptor->PhysicalStart;
+      DEBUG ((DEBUG_INFO, "MemoryResource[0x%x] - Start(0x%0lx) Length(0x%0lx)\n",
+                          Index, ResourceDescriptor->PhysicalStart, ResourceDescriptor->ResourceLength));
+      MemoryResource[Index].PhysicalStart = ResourceDescriptor->PhysicalStart;
       MemoryResource[Index].ResourceLength = ResourceDescriptor->ResourceLength;
       Index++;
     }
-
     Hob.Raw = GET_NEXT_HOB (Hob);
     Hob.Raw = GetNextHob (EFI_HOB_TYPE_RESOURCE_DESCRIPTOR, Hob.Raw);
   }
@@ -828,72 +791,18 @@ BuildMemoryResourceDescriptor (
 }
 
 /**
-  Check if the capsules are staged.
+  Checks for the presence of capsule descriptors.
+  Get capsule descriptors from variable CapsuleUpdateData, CapsuleUpdateData1, CapsuleUpdateData2...
+  and save to DescriptorBuffer.
 
-  @retval TRUE              The capsules are staged.
-  @retval FALSE             The capsules are not staged.
+  @param DescriptorBuffer        Pointer to the capsule descriptors
 
-**/
-BOOLEAN
-AreCapsulesStaged (
-  VOID
-  )
-{
-  EFI_STATUS                       Status;
-  UINTN                            Size;
-  EFI_PEI_READ_ONLY_VARIABLE2_PPI  *PPIVariableServices;
-  EFI_PHYSICAL_ADDRESS             CapsuleDataPtr64;
-
-  CapsuleDataPtr64 = 0;
-
-  Status = PeiServicesLocatePpi (
-             &gEfiPeiReadOnlyVariable2PpiGuid,
-             0,
-             NULL,
-             (VOID **)&PPIVariableServices
-             );
-
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to find ReadOnlyVariable2PPI\n"));
-    return FALSE;
-  }
-
-  //
-  // Check for Update capsule
-  //
-  Size   = sizeof (CapsuleDataPtr64);
-  Status = PPIVariableServices->GetVariable (
-                                  PPIVariableServices,
-                                  EFI_CAPSULE_VARIABLE_NAME,
-                                  &gEfiCapsuleVendorGuid,
-                                  NULL,
-                                  &Size,
-                                  (VOID *)&CapsuleDataPtr64
-                                  );
-
-  if (!EFI_ERROR (Status)) {
-    return TRUE;
-  }
-
-  return FALSE;
-}
-
-/**
-  Check all the variables for SG list heads and get the count and addresses.
-
-  @param ListLength               A pointer would return the SG list length.
-  @param HeadList                 A ponter to the capsule SG list.
-
-  @retval EFI_SUCCESS             a valid capsule is present
-  @retval EFI_NOT_FOUND           if a valid capsule is not present
-  @retval EFI_INVALID_PARAMETER   the input parameter is invalid
-  @retval EFI_OUT_OF_RESOURCES    fail to allocate memory
-
+  @retval EFI_SUCCESS     a valid capsule is present
+  @retval EFI_NOT_FOUND   if a valid capsule is not present
 **/
 EFI_STATUS
-GetScatterGatherHeadEntries (
-  OUT UINTN                 *ListLength,
-  OUT EFI_PHYSICAL_ADDRESS  **HeadList
+GetCapsuleDescriptors (
+  IN EFI_PHYSICAL_ADDRESS     *DescriptorBuffer
   )
 {
   EFI_STATUS                       Status;
@@ -906,9 +815,6 @@ GetScatterGatherHeadEntries (
   CHAR16                           *TempVarName;
   EFI_PHYSICAL_ADDRESS             CapsuleDataPtr64;
   EFI_PEI_READ_ONLY_VARIABLE2_PPI  *PPIVariableServices;
-  EFI_PHYSICAL_ADDRESS             *TempList;
-  EFI_PHYSICAL_ADDRESS             *EnlargedTempList;
-  UINTN                            TempListLength;
 
   Index             = 0;
   TempVarName       = NULL;
@@ -916,124 +822,86 @@ GetScatterGatherHeadEntries (
   ValidIndex        = 0;
   CapsuleDataPtr64  = 0;
 
-  if ((ListLength == NULL) || (HeadList == NULL)) {
-    DEBUG ((DEBUG_ERROR, "%a Invalid parameters.  Inputs can't be NULL\n", __FUNCTION__));
-    ASSERT (ListLength != NULL);
-    ASSERT (HeadList != NULL);
-    return EFI_INVALID_PARAMETER;
-  }
-
-  *ListLength = 0;
-  *HeadList   = NULL;
-
   Status = PeiServicesLocatePpi (
-             &gEfiPeiReadOnlyVariable2PpiGuid,
-             0,
-             NULL,
-             (VOID **)&PPIVariableServices
-             );
+              &gEfiPeiReadOnlyVariable2PpiGuid,
+              0,
+              NULL,
+              (VOID **) &PPIVariableServices
+              );
+  if (Status == EFI_SUCCESS) {
+    StrCpyS (CapsuleVarName, sizeof(CapsuleVarName)/sizeof(CHAR16), EFI_CAPSULE_VARIABLE_NAME);
+    TempVarName = CapsuleVarName + StrLen (CapsuleVarName);
+    Size = sizeof (CapsuleDataPtr64);
+    while (1) {
+      if (Index == 0) {
+        //
+        // For the first Capsule Image
+        //
+        Status = PPIVariableServices->GetVariable (
+                                        PPIVariableServices,
+                                        CapsuleVarName,
+                                        &gEfiCapsuleVendorGuid,
+                                        NULL,
+                                        &Size,
+                                        (VOID *) &CapsuleDataPtr64
+                                        );
+        if (EFI_ERROR (Status)) {
+          DEBUG ((DEBUG_INFO, "Capsule -- capsule variable not set\n"));
+          return EFI_NOT_FOUND;
+        }
+        //
+        // We have a chicken/egg situation where the memory init code needs to
+        // know the boot mode prior to initializing memory. For this case, our
+        // validate function will fail. We can detect if this is the case if blocklist
+        // pointer is null. In that case, return success since we know that the
+        // variable is set.
+        //
+        if (DescriptorBuffer == NULL) {
+          return EFI_SUCCESS;
+        }
+      } else {
+        UnicodeValueToStringS (
+          TempVarName,
+          sizeof (CapsuleVarName) - ((UINTN)TempVarName - (UINTN)CapsuleVarName),
+          0,
+          Index,
+          0
+          );
+        Status = PPIVariableServices->GetVariable (
+                                        PPIVariableServices,
+                                        CapsuleVarName,
+                                        &gEfiCapsuleVendorGuid,
+                                        NULL,
+                                        &Size,
+                                        (VOID *) &CapsuleDataPtr64
+                                        );
+        if (EFI_ERROR (Status)) {
+          break;
+        }
 
-  if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Failed to find ReadOnlyVariable2PPI\n"));
-    return Status;
-  }
-
-  //
-  // Allocate memory for sg list head
-  //
-  TempListLength = DEFAULT_SG_LIST_HEADS * sizeof (EFI_PHYSICAL_ADDRESS);
-  TempList       = AllocateZeroPool (TempListLength);
-  if (TempList == NULL) {
-    DEBUG ((DEBUG_ERROR, "Failed to allocate memory\n"));
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  //
-  // setup var name buffer for update capsules
-  //
-  StrCpyS (CapsuleVarName, sizeof (CapsuleVarName) / sizeof (CHAR16), EFI_CAPSULE_VARIABLE_NAME);
-  TempVarName = CapsuleVarName + StrLen (CapsuleVarName);
-  while (TRUE) {
-    if (Index != 0) {
-      UnicodeValueToStringS (
-        TempVarName,
-        (sizeof (CapsuleVarName) - ((UINTN)TempVarName - (UINTN)CapsuleVarName)),
-        0,
-        Index,
-        0
-        );
-    }
-
-    Size   = sizeof (CapsuleDataPtr64);
-    Status = PPIVariableServices->GetVariable (
-                                    PPIVariableServices,
-                                    CapsuleVarName,
-                                    &gEfiCapsuleVendorGuid,
-                                    NULL,
-                                    &Size,
-                                    (VOID *)&CapsuleDataPtr64
-                                    );
-
-    if (EFI_ERROR (Status)) {
-      if (Status != EFI_NOT_FOUND) {
-        DEBUG ((DEBUG_ERROR, "Unexpected error getting Capsule Update variable.  Status = %r\n"));
+        //
+        // If this BlockList has been linked before, skip this variable
+        //
+        Flag = FALSE;
+        for (TempIndex = 0; TempIndex < ValidIndex; TempIndex++) {
+          if (DescriptorBuffer[TempIndex] == CapsuleDataPtr64)  {
+            Flag = TRUE;
+            break;
+          }
+        }
+        if (Flag) {
+          Index ++;
+          continue;
+        }
       }
 
-      break;
+      //
+      // Cache BlockList which has been processed
+      //
+      DescriptorBuffer[ValidIndex++] = CapsuleDataPtr64;
+      Index ++;
     }
-
-    //
-    // If this BlockList has been linked before, skip this variable
-    //
-    Flag = FALSE;
-    for (TempIndex = 0; TempIndex < ValidIndex; TempIndex++) {
-      if (TempList[TempIndex] == CapsuleDataPtr64) {
-        Flag = TRUE;
-        break;
-      }
-    }
-
-    if (Flag) {
-      Index++;
-      continue;
-    }
-
-    //
-    // The TempList is full, enlarge it
-    //
-    if ((ValidIndex + 1) >= TempListLength) {
-      EnlargedTempList = AllocateZeroPool (TempListLength * 2);
-      if (EnlargedTempList == NULL) {
-        DEBUG ((DEBUG_ERROR, "Fail to allocate memory!\n"));
-        return EFI_OUT_OF_RESOURCES;
-      }
-
-      CopyMem (EnlargedTempList, TempList, TempListLength);
-      FreePool (TempList);
-      TempList        = EnlargedTempList;
-      TempListLength *= 2;
-    }
-
-    //
-    // add it to the cached list
-    //
-    TempList[ValidIndex++] = CapsuleDataPtr64;
-    Index++;
   }
-
-  if (ValidIndex == 0) {
-    DEBUG ((DEBUG_ERROR, "%a didn't find any SG lists in variables\n", __FUNCTION__));
-    return EFI_NOT_FOUND;
-  }
-
-  *HeadList = AllocateZeroPool ((ValidIndex + 1) * sizeof (EFI_PHYSICAL_ADDRESS));
-  if (*HeadList == NULL) {
-    DEBUG ((DEBUG_ERROR, "Failed to allocate memory\n"));
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  CopyMem (*HeadList, TempList, (ValidIndex) * sizeof (EFI_PHYSICAL_ADDRESS));
-  *ListLength = ValidIndex;
 
   return EFI_SUCCESS;
 }
@@ -1064,26 +932,33 @@ GetScatterGatherHeadEntries (
 EFI_STATUS
 EFIAPI
 CapsuleCoalesce (
-  IN     EFI_PEI_SERVICES  **PeiServices,
-  IN OUT VOID              **MemoryBase,
-  IN OUT UINTN             *MemorySize
+  IN     EFI_PEI_SERVICES            **PeiServices,
+  IN OUT VOID                        **MemoryBase,
+  IN OUT UINTN                       *MemorySize
   )
 {
-  EFI_STATUS                  Status;
-  EFI_BOOT_MODE               BootMode;
-  UINTN                       ListLength;
-  EFI_PHYSICAL_ADDRESS        *VariableArrayAddress;
-  MEMORY_RESOURCE_DESCRIPTOR  *MemoryResource;
+  UINTN                                Index;
+  UINTN                                Size;
+  UINTN                                VariableCount;
+  CHAR16                               CapsuleVarName[30];
+  CHAR16                               *TempVarName;
+  EFI_PHYSICAL_ADDRESS                 CapsuleDataPtr64;
+  EFI_STATUS                           Status;
+  EFI_BOOT_MODE                        BootMode;
+  EFI_PEI_READ_ONLY_VARIABLE2_PPI      *PPIVariableServices;
+  EFI_PHYSICAL_ADDRESS                 *VariableArrayAddress;
+  MEMORY_RESOURCE_DESCRIPTOR           *MemoryResource;
+#ifdef MDE_CPU_IA32
+  UINT16                               CoalesceImageMachineType;
+  EFI_PHYSICAL_ADDRESS                 CoalesceImageEntryPoint;
+  COALESCE_ENTRY                       CoalesceEntry;
+  EFI_CAPSULE_LONG_MODE_BUFFER         LongModeBuffer;
+#endif
 
- #ifdef MDE_CPU_IA32
-  UINT16                        CoalesceImageMachineType;
-  EFI_PHYSICAL_ADDRESS          CoalesceImageEntryPoint;
-  COALESCE_ENTRY                CoalesceEntry;
-  EFI_CAPSULE_LONG_MODE_BUFFER  LongModeBuffer;
- #endif
-
-  ListLength           = 0;
-  VariableArrayAddress = NULL;
+  Index                   = 0;
+  VariableCount           = 0;
+  CapsuleVarName[0]       = 0;
+  CapsuleDataPtr64        = 0;
 
   //
   // Someone should have already ascertained the boot mode. If it's not
@@ -1097,17 +972,80 @@ CapsuleCoalesce (
   }
 
   //
-  // Get SG list entries
+  // User may set the same ScatterGatherList with several different variables,
+  // so cache all ScatterGatherList for check later.
   //
-  Status = GetScatterGatherHeadEntries (&ListLength, &VariableArrayAddress);
-  if (EFI_ERROR (Status) || (VariableArrayAddress == NULL)) {
-    DEBUG ((DEBUG_ERROR, "%a failed to get Scatter Gather List Head Entries.  Status = %r\n", __FUNCTION__, Status));
+  Status = PeiServicesLocatePpi (
+              &gEfiPeiReadOnlyVariable2PpiGuid,
+              0,
+              NULL,
+              (VOID **) &PPIVariableServices
+              );
+  if (EFI_ERROR (Status)) {
+    goto Done;
+  }
+  Size = sizeof (CapsuleDataPtr64);
+  StrCpyS (CapsuleVarName, sizeof(CapsuleVarName)/sizeof(CHAR16), EFI_CAPSULE_VARIABLE_NAME);
+  TempVarName = CapsuleVarName + StrLen (CapsuleVarName);
+  while (TRUE) {
+    if (Index > 0) {
+      UnicodeValueToStringS (
+        TempVarName,
+        sizeof (CapsuleVarName) - ((UINTN)TempVarName - (UINTN)CapsuleVarName),
+        0,
+        Index,
+        0
+        );
+    }
+    Status = PPIVariableServices->GetVariable (
+                                    PPIVariableServices,
+                                    CapsuleVarName,
+                                    &gEfiCapsuleVendorGuid,
+                                    NULL,
+                                    &Size,
+                                    (VOID *) &CapsuleDataPtr64
+                                    );
+    if (EFI_ERROR (Status)) {
+      //
+      // There is no capsule variables, quit
+      //
+      DEBUG ((DEBUG_INFO,"Capsule variable Index = %d\n", Index));
+      break;
+    }
+    VariableCount++;
+    Index++;
+  }
+
+  DEBUG ((DEBUG_INFO,"Capsule variable count = %d\n", VariableCount));
+
+  //
+  // The last entry is the end flag.
+  //
+  Status = PeiServicesAllocatePool (
+             (VariableCount + 1) * sizeof (EFI_PHYSICAL_ADDRESS),
+             (VOID **)&VariableArrayAddress
+             );
+
+  if (Status != EFI_SUCCESS) {
+    DEBUG ((DEBUG_ERROR, "AllocatePages Failed!, Status = %x\n", Status));
+    goto Done;
+  }
+
+  ZeroMem (VariableArrayAddress, (VariableCount + 1) * sizeof (EFI_PHYSICAL_ADDRESS));
+
+  //
+  // Find out if we actually have a capsule.
+  // GetCapsuleDescriptors depends on variable PPI, so it should run in 32-bit environment.
+  //
+  Status = GetCapsuleDescriptors (VariableArrayAddress);
+  if (EFI_ERROR (Status)) {
+    DEBUG ((DEBUG_ERROR, "Fail to find capsule variables.\n"));
     goto Done;
   }
 
   MemoryResource = BuildMemoryResourceDescriptor ();
 
- #ifdef MDE_CPU_IA32
+#ifdef MDE_CPU_IA32
   if (FeaturePcdGet (PcdDxeIplSwitchToLongMode)) {
     //
     // Switch to 64-bit mode to process capsule data when:
@@ -1117,7 +1055,7 @@ CapsuleCoalesce (
     // In 64-bit mode, we can process capsule data above 4GB.
     //
     CoalesceImageEntryPoint = 0;
-    Status                  = GetLongModeContext (&LongModeBuffer);
+    Status = GetLongModeContext (&LongModeBuffer);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "Fail to find the variable for long mode context!\n"));
       Status = EFI_NOT_FOUND;
@@ -1130,23 +1068,21 @@ CapsuleCoalesce (
       Status = EFI_NOT_FOUND;
       goto Done;
     }
-
     ASSERT (CoalesceImageEntryPoint != 0);
-    CoalesceEntry = (COALESCE_ENTRY)(UINTN)CoalesceImageEntryPoint;
-    Status        = ModeSwitch (&LongModeBuffer, CoalesceEntry, (EFI_PHYSICAL_ADDRESS)(UINTN)VariableArrayAddress, MemoryResource, MemoryBase, MemorySize);
+    CoalesceEntry = (COALESCE_ENTRY) (UINTN) CoalesceImageEntryPoint;
+    Status = ModeSwitch (&LongModeBuffer, CoalesceEntry, (EFI_PHYSICAL_ADDRESS)(UINTN)VariableArrayAddress, MemoryResource, MemoryBase, MemorySize);
   } else {
     //
     // Capsule is processed in IA32 mode.
     //
     Status = CapsuleDataCoalesce (PeiServices, (EFI_PHYSICAL_ADDRESS *)(UINTN)VariableArrayAddress, MemoryResource, MemoryBase, MemorySize);
   }
-
- #else
+#else
   //
   // Process capsule directly.
   //
   Status = CapsuleDataCoalesce (PeiServices, (EFI_PHYSICAL_ADDRESS *)(UINTN)VariableArrayAddress, MemoryResource, MemoryBase, MemorySize);
- #endif
+#endif
 
   DEBUG ((DEBUG_INFO, "Capsule Coalesce Status = %r!\n", Status));
 
@@ -1178,16 +1114,13 @@ Done:
 EFI_STATUS
 EFIAPI
 CheckCapsuleUpdate (
-  IN EFI_PEI_SERVICES  **PeiServices
+  IN EFI_PEI_SERVICES           **PeiServices
   )
 {
-  if (AreCapsulesStaged ()) {
-    return EFI_SUCCESS;
-  } else {
-    return EFI_NOT_FOUND;
-  }
+  EFI_STATUS  Status;
+  Status = GetCapsuleDescriptors (NULL);
+  return Status;
 }
-
 /**
   This function will look at a capsule and determine if it's a test pattern.
   If it is, then it will verify it and emit an error message if corruption is detected.
@@ -1202,14 +1135,14 @@ CheckCapsuleUpdate (
 **/
 BOOLEAN
 CapsuleTestPattern (
-  IN EFI_PEI_SERVICES  **PeiServices,
-  IN VOID              *CapsuleBase
+  IN EFI_PEI_SERVICES                 **PeiServices,
+  IN VOID                             *CapsuleBase
   )
 {
-  UINT32   *TestPtr;
-  UINT32   TestCounter;
-  UINT32   TestSize;
-  BOOLEAN  RetValue;
+  UINT32  *TestPtr;
+  UINT32  TestCounter;
+  UINT32  TestSize;
+  BOOLEAN RetValue;
 
   RetValue = FALSE;
 
@@ -1217,7 +1150,7 @@ CapsuleTestPattern (
   // Look at the capsule data and determine if it's a test pattern. If it
   // is, then test it now.
   //
-  TestPtr = (UINT32 *)CapsuleBase;
+  TestPtr = (UINT32 *) CapsuleBase;
   //
   // 0x54534554 "TEST"
   //
@@ -1228,7 +1161,7 @@ CapsuleTestPattern (
     //
     // Skip over the signature and the size fields in the pattern data header
     //
-    TestPtr    += 2;
+    TestPtr += 2;
     TestCounter = 0;
     while (TestSize > 0) {
       if (*TestPtr != TestCounter) {
@@ -1267,35 +1200,32 @@ CapsuleTestPattern (
 EFI_STATUS
 EFIAPI
 CreateState (
-  IN EFI_PEI_SERVICES  **PeiServices,
-  IN VOID              *CapsuleBase,
-  IN UINTN             CapsuleSize
+  IN EFI_PEI_SERVICES                 **PeiServices,
+  IN VOID                             *CapsuleBase,
+  IN UINTN                            CapsuleSize
   )
 {
-  EFI_STATUS                     Status;
-  EFI_CAPSULE_PEIM_PRIVATE_DATA  *PrivateData;
-  UINTN                          Size;
-  EFI_PHYSICAL_ADDRESS           NewBuffer;
-  UINTN                          CapsuleNumber;
-  UINT32                         Index;
-  EFI_PHYSICAL_ADDRESS           BaseAddress;
-  UINT64                         Length;
+  EFI_STATUS                    Status;
+  EFI_CAPSULE_PEIM_PRIVATE_DATA *PrivateData;
+  UINTN                         Size;
+  EFI_PHYSICAL_ADDRESS          NewBuffer;
+  UINTN                         CapsuleNumber;
+  UINT32                        Index;
+  EFI_PHYSICAL_ADDRESS          BaseAddress;
+  UINT64                        Length;
 
-  PrivateData = (EFI_CAPSULE_PEIM_PRIVATE_DATA *)CapsuleBase;
+  PrivateData    = (EFI_CAPSULE_PEIM_PRIVATE_DATA *) CapsuleBase;
   if (PrivateData->Signature != EFI_CAPSULE_PEIM_PRIVATE_DATA_SIGNATURE) {
     return EFI_VOLUME_CORRUPTED;
   }
-
   if (PrivateData->CapsuleAllImageSize >= MAX_ADDRESS) {
     DEBUG ((DEBUG_ERROR, "CapsuleAllImageSize too big - 0x%lx\n", PrivateData->CapsuleAllImageSize));
     return EFI_OUT_OF_RESOURCES;
   }
-
   if (PrivateData->CapsuleNumber >= MAX_ADDRESS) {
     DEBUG ((DEBUG_ERROR, "CapsuleNumber too big - 0x%lx\n", PrivateData->CapsuleNumber));
     return EFI_OUT_OF_RESOURCES;
   }
-
   //
   // Capsule Number and Capsule Offset is in the tail of Capsule data.
   //
@@ -1314,12 +1244,11 @@ CreateState (
     DEBUG ((DEBUG_ERROR, "AllocatePages Failed!\n"));
     return Status;
   }
-
   //
   // Copy to our new buffer for DXE
   //
-  DEBUG ((DEBUG_INFO, "Capsule copy from 0x%8X to 0x%8X with size 0x%8X\n", (UINTN)((UINT8 *)PrivateData + sizeof (EFI_CAPSULE_PEIM_PRIVATE_DATA) + (CapsuleNumber - 1) * sizeof (UINT64)), (UINTN)NewBuffer, Size));
-  CopyMem ((VOID *)(UINTN)NewBuffer, (VOID *)(UINTN)((UINT8 *)PrivateData + sizeof (EFI_CAPSULE_PEIM_PRIVATE_DATA) + (CapsuleNumber - 1) * sizeof (UINT64)), Size);
+  DEBUG ((DEBUG_INFO, "Capsule copy from 0x%8X to 0x%8X with size 0x%8X\n", (UINTN)((UINT8 *)PrivateData + sizeof(EFI_CAPSULE_PEIM_PRIVATE_DATA) + (CapsuleNumber - 1) * sizeof(UINT64)), (UINTN) NewBuffer, Size));
+  CopyMem ((VOID *) (UINTN) NewBuffer, (VOID *) (UINTN) ((UINT8 *)PrivateData + sizeof(EFI_CAPSULE_PEIM_PRIVATE_DATA) + (CapsuleNumber - 1) * sizeof(UINT64)), Size);
   //
   // Check for test data pattern. If it is the test pattern, then we'll
   // test it and still create the HOB so that it can be used to verify
@@ -1328,15 +1257,15 @@ CreateState (
   // corrupted so nothing will happen.
   //
   DEBUG_CODE (
-    CapsuleTestPattern (PeiServices, (VOID *)(UINTN)NewBuffer);
-    );
+    CapsuleTestPattern (PeiServices, (VOID *) (UINTN) NewBuffer);
+  );
 
   //
   // Build the UEFI Capsule Hob for each capsule image.
   //
-  for (Index = 0; Index < CapsuleNumber; Index++) {
+  for (Index = 0; Index < CapsuleNumber; Index ++) {
     BaseAddress = NewBuffer + PrivateData->CapsuleOffset[Index];
-    Length      = ((EFI_CAPSULE_HEADER *)((UINTN)BaseAddress))->CapsuleImageSize;
+    Length      = ((EFI_CAPSULE_HEADER *)((UINTN) BaseAddress))->CapsuleImageSize;
 
     BuildCvHob (BaseAddress, Length);
   }
@@ -1344,16 +1273,16 @@ CreateState (
   return EFI_SUCCESS;
 }
 
-CONST EFI_PEI_CAPSULE_PPI  mCapsulePpi = {
+CONST EFI_PEI_CAPSULE_PPI        mCapsulePpi = {
   CapsuleCoalesce,
   CheckCapsuleUpdate,
   CreateState
 };
 
-CONST EFI_PEI_PPI_DESCRIPTOR  mUefiPpiListCapsule = {
+CONST EFI_PEI_PPI_DESCRIPTOR mUefiPpiListCapsule = {
   (EFI_PEI_PPI_DESCRIPTOR_PPI | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST),
   &gEfiPeiCapsulePpiGuid,
-  (EFI_PEI_CAPSULE_PPI *)&mCapsulePpi
+  (EFI_PEI_CAPSULE_PPI *) &mCapsulePpi
 };
 
 /**

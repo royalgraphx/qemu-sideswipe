@@ -21,6 +21,8 @@
 
 #ifndef CONFIG_SPL
 #define CONFIG_SYS_DDR_RAW_TIMING
+#define CONFIG_FSL_DDR_INTERACTIVE	/* Interactive debugging */
+#define CONFIG_FSL_DDR_BIST
 #define CONFIG_ECC_INIT_VIA_DDRCONTROLLER
 #define CONFIG_MEM_INIT_VALUE           0xdeadbeef
 #endif
@@ -35,6 +37,7 @@
 
 #ifdef CONFIG_SD_BOOT
 #define CONFIG_SYS_FSL_PBL_RCW board/freescale/ls1043ardb/ls1043ardb_rcw_sd.cfg
+#define CONFIG_CMD_SPL
 #define CONFIG_SYS_SPL_ARGS_ADDR	0x90000000
 #define CONFIG_SYS_MMCSD_RAW_MODE_KERNEL_SECTOR	0x10000
 #define CONFIG_SYS_MMCSD_RAW_MODE_ARGS_SECTOR	0x500
@@ -240,12 +243,44 @@
 /*
  * Environment
  */
+#ifndef SPL_NO_ENV
+#define CONFIG_ENV_OVERWRITE
+#endif
+
+#ifdef CONFIG_TFABOOT
+#define CONFIG_SYS_MMC_ENV_DEV		0
+
+#define CONFIG_ENV_SIZE			0x2000
+#define CONFIG_ENV_OFFSET		0x500000
+#define CONFIG_ENV_ADDR			(CONFIG_SYS_FLASH_BASE + 0x500000)
+#define CONFIG_ENV_SECT_SIZE		0x20000
+#else
+#if defined(CONFIG_NAND_BOOT)
+#define CONFIG_ENV_SIZE			0x2000
+#define CONFIG_ENV_OFFSET		(24 * CONFIG_SYS_NAND_BLOCK_SIZE)
+#elif defined(CONFIG_SD_BOOT)
+#define CONFIG_ENV_OFFSET		(3 * 1024 * 1024)
+#define CONFIG_SYS_MMC_ENV_DEV		0
+#define CONFIG_ENV_SIZE			0x2000
+#else
+#define CONFIG_ENV_ADDR			(CONFIG_SYS_FLASH_BASE + 0x300000)
+#define CONFIG_ENV_SECT_SIZE		0x20000
+#define CONFIG_ENV_SIZE			0x20000
+#endif
+#endif
 
 /* FMan */
 #ifndef SPL_NO_FMAN
 #define AQR105_IRQ_MASK			0x40000000
 
+#ifdef CONFIG_NET
+#define CONFIG_PHY_VITESSE
+#define CONFIG_PHY_REALTEK
+#endif
+
 #ifdef CONFIG_SYS_DPAA_FMAN
+#define CONFIG_FMAN_ENET
+
 #define RGMII_PHY1_ADDR			0x1
 #define RGMII_PHY2_ADDR			0x2
 
@@ -262,6 +297,9 @@
 
 /* SATA */
 #ifndef SPL_NO_SATA
+#ifndef CONFIG_CMD_EXT2
+#define CONFIG_CMD_EXT2
+#endif
 #define CONFIG_SYS_SCSI_MAX_SCSI_ID		2
 #define CONFIG_SYS_SCSI_MAX_LUN			2
 #define CONFIG_SYS_SCSI_MAX_DEVICE		(CONFIG_SYS_SCSI_MAX_SCSI_ID * \

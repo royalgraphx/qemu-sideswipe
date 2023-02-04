@@ -40,7 +40,6 @@ timers.TimersCommand()
 
 coroutine.CoroutineSPFunction()
 coroutine.CoroutinePCFunction()
-coroutine.CoroutineBt()
 
 # Default to silently passing through SIGUSR1, because QEMU sends it
 # to itself a lot.

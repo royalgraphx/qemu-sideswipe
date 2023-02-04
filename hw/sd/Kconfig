@@ -19,7 +19,3 @@ config SDHCI_PCI
     default y if PCI_DEVICES
     depends on PCI
     select SDHCI
-
-config CADENCE_SDHCI
-    bool
-    select SDHCI

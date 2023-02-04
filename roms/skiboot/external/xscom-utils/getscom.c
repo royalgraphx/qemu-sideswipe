@@ -1,8 +1,17 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * getscom
+/* Copyright 2014-2016 IBM Corp.
  *
- * Copyright 2014-2017 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * imitations under the License.
  */
 
 #include <stdio.h>
@@ -52,12 +61,6 @@ static void print_chip_info(uint32_t chip_id)
 		break;
 	case 0xd4:
 		name = "P9 (Cumulus) processor";
-		break;
-	case 0xd9:
-		name = "P9P (Axone) processor";
-		break;
-	case 0xda:
-		name = "P10 processor";
 		break;
 	case 0xe9:
 		name = "Centaur memory buffer";

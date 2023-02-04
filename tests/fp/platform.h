@@ -29,9 +29,9 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#include "qemu/compiler.h"
+#include "config-host.h"
 
-#if !HOST_BIG_ENDIAN
+#ifndef HOST_WORDS_BIGENDIAN
 #define LITTLEENDIAN 1
 /* otherwise do not define it */
 #endif

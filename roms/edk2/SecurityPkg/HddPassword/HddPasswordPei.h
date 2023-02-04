@@ -26,9 +26,10 @@
 
 #include "HddPasswordCommon.h"
 
+
 //
 // Time out value for ATA PassThru PPI
 //
-#define ATA_TIMEOUT  30000000
+#define ATA_TIMEOUT                          30000000
 
 #endif

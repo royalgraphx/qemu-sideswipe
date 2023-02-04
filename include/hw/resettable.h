@@ -17,10 +17,11 @@
 
 #define TYPE_RESETTABLE_INTERFACE "resettable"
 
-typedef struct ResettableClass ResettableClass;
-DECLARE_CLASS_CHECKERS(ResettableClass, RESETTABLE,
-                       TYPE_RESETTABLE_INTERFACE)
+#define RESETTABLE_CLASS(class) \
+    OBJECT_CLASS_CHECK(ResettableClass, (class), TYPE_RESETTABLE_INTERFACE)
 
+#define RESETTABLE_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(ResettableClass, (obj), TYPE_RESETTABLE_INTERFACE)
 
 typedef struct ResettableState ResettableState;
 
@@ -118,7 +119,7 @@ typedef struct ResettablePhases {
     ResettableHoldPhase hold;
     ResettableExitPhase exit;
 } ResettablePhases;
-struct ResettableClass {
+typedef struct ResettableClass {
     InterfaceClass parent_class;
 
     /* Phase methods */
@@ -132,7 +133,7 @@ struct ResettableClass {
 
     /* Hierarchy handling method */
     ResettableChildForeach child_foreach;
-};
+} ResettableClass;
 
 /**
  * ResettableState:

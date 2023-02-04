@@ -12,6 +12,11 @@
 #include "qemu/osdep.h"
 #include "fuse_i.h"
 #include "fuse_lowlevel.h"
+#include <assert.h>
+#include <errno.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 size_t fuse_buf_size(const struct fuse_bufvec *bufv)
 {
@@ -37,7 +42,7 @@ static ssize_t fuse_buf_writev(struct fuse_buf *out_buf,
     struct iovec *iov;
     int fd = out_buf->fd;
 
-    iov = g_try_new0(struct iovec, iovcnt);
+    iov = calloc(iovcnt, sizeof(struct iovec));
     if (!iov) {
         return -ENOMEM;
     }
@@ -61,7 +66,7 @@ static ssize_t fuse_buf_writev(struct fuse_buf *out_buf,
         res = -errno;
     }
 
-    g_free(iov);
+    free(iov);
     return res;
 }
 
@@ -240,10 +245,6 @@ static const struct fuse_buf *fuse_bufvec_current(struct fuse_bufvec *bufv)
 static int fuse_bufvec_advance(struct fuse_bufvec *bufv, size_t len)
 {
     const struct fuse_buf *buf = fuse_bufvec_current(bufv);
-
-    if (!buf) {
-        return 0;
-    }
 
     bufv->off += len;
     assert(bufv->off <= buf->size);

@@ -10,8 +10,6 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/at91_common.h>
 #include <asm/arch/at91_pmc.h>
@@ -35,7 +33,7 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 /* FIXME gpio code here need to handle through DM_GPIO */
-#if !CONFIG_IS_ENABLED(DM_SPI)
+#ifndef CONFIG_DM_SPI
 int spi_cs_is_valid(unsigned int bus, unsigned int cs)
 {
 	return bus == 0 && cs == 0;
@@ -110,7 +108,7 @@ void vinco_mci0_hw_init(void)
 	at91_periph_clk_enable(ATMEL_ID_MCI0);
 }
 
-int board_mmc_init(struct bd_info *bis)
+int board_mmc_init(bd_t *bis)
 {
 	/* Enable power for MCI0 interface */
 	at91_set_pio_output(AT91_PIO_PORTE, 7, 1);
@@ -168,7 +166,7 @@ int board_init(void)
 	/* adress of boot parameters */
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
 
-#if !CONFIG_IS_ENABLED(DM_SPI)
+#ifndef CONFIG_DM_SPI
 	vinco_spi0_hw_init();
 #endif
 
@@ -195,7 +193,7 @@ int dram_init(void)
 	return 0;
 }
 
-int board_eth_init(struct bd_info *bis)
+int board_eth_init(bd_t *bis)
 {
 	int rc = 0;
 

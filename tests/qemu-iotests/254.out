@@ -99,7 +99,8 @@ query-block: device = drive0, node-name = snap, dirty-bitmaps:
     "granularity": 65536,
     "name": "bitmap2",
     "persistent": true,
-    "recording": true
+    "recording": true,
+    "status": "active"
   },
   {
     "busy": false,
@@ -107,7 +108,8 @@ query-block: device = drive0, node-name = snap, dirty-bitmaps:
     "granularity": 65536,
     "name": "bitmap1",
     "persistent": true,
-    "recording": true
+    "recording": true,
+    "status": "active"
   },
   {
     "busy": false,
@@ -115,7 +117,8 @@ query-block: device = drive0, node-name = snap, dirty-bitmaps:
     "granularity": 65536,
     "name": "bitmap0",
     "persistent": false,
-    "recording": true
+    "recording": true,
+    "status": "active"
   }
 ]
 

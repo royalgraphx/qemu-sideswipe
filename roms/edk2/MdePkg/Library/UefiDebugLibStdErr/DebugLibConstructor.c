@@ -15,16 +15,16 @@
 //
 // BOOLEAN value to indicate if it is at the post ExitBootServices pahse
 //
-BOOLEAN  mPostEBS = FALSE;
+BOOLEAN     mPostEBS = FALSE;
 
-static EFI_EVENT  mExitBootServicesEvent;
+static EFI_EVENT   mExitBootServicesEvent;
 
 //
 // Pointer to SystemTable
 // This library instance may have a cycle consume with UefiBootServicesTableLib
 // because of the constructors.
 //
-EFI_SYSTEM_TABLE  *mDebugST;
+EFI_SYSTEM_TABLE      *mDebugST;
 
 /**
   This routine sets the mPostEBS for exit boot servies true
@@ -37,8 +37,8 @@ EFI_SYSTEM_TABLE  *mDebugST;
 VOID
 EFIAPI
 ExitBootServicesCallback (
-  EFI_EVENT  Event,
-  VOID       *Context
+  EFI_EVENT   Event,
+  VOID*       Context
   )
 {
   mPostEBS = TRUE;
@@ -57,43 +57,21 @@ ExitBootServicesCallback (
 **/
 EFI_STATUS
 EFIAPI
-DxeDebugLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+DxeDebugLibConstructor(
+  IN EFI_HANDLE                 ImageHandle,
+  IN EFI_SYSTEM_TABLE           *SystemTable
   )
 {
   mDebugST = SystemTable;
 
-  SystemTable->BootServices->CreateEvent (
-                               EVT_SIGNAL_EXIT_BOOT_SERVICES,
-                               TPL_NOTIFY,
-                               ExitBootServicesCallback,
-                               NULL,
-                               &mExitBootServicesEvent
-                               );
-
-  return EFI_SUCCESS;
-}
-
-/**
-  The destructor closes Exit Boot Services Event.
-
-  @param  ImageHandle   The firmware allocated handle for the EFI image.
-  @param  SystemTable   A pointer to the EFI System Table.
-
-  @retval EFI_SUCCESS   The destructor always returns EFI_SUCCESS.
-
-**/
-EFI_STATUS
-EFIAPI
-DxeDebugLibDestructor (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
-  )
-{
-  if (mExitBootServicesEvent != NULL) {
-    SystemTable->BootServices->CloseEvent (mExitBootServicesEvent);
-  }
+  SystemTable->BootServices->CreateEventEx (
+                                EVT_NOTIFY_SIGNAL,
+                                TPL_NOTIFY,
+                                ExitBootServicesCallback,
+                                NULL,
+                                &gEfiEventExitBootServicesGuid,
+                                &mExitBootServicesEvent
+                                );
 
   return EFI_SUCCESS;
 }

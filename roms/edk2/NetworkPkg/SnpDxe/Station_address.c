@@ -8,6 +8,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "Snp.h"
 
+
 /**
   Call UNDI to read the MAC address of the NIC and update the mode structure
   with the address.
@@ -20,44 +21,43 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 EFI_STATUS
 PxeGetStnAddr (
-  SNP_DRIVER  *Snp
+  SNP_DRIVER *Snp
   )
 {
   PXE_DB_STATION_ADDRESS  *Db;
 
-  Db               = Snp->Db;
-  Snp->Cdb.OpCode  = PXE_OPCODE_STATION_ADDRESS;
-  Snp->Cdb.OpFlags = PXE_OPFLAGS_STATION_ADDRESS_READ;
+  Db                  = Snp->Db;
+  Snp->Cdb.OpCode     = PXE_OPCODE_STATION_ADDRESS;
+  Snp->Cdb.OpFlags    = PXE_OPFLAGS_STATION_ADDRESS_READ;
 
-  Snp->Cdb.CPBaddr = PXE_CPBADDR_NOT_USED;
-  Snp->Cdb.CPBsize = PXE_CPBSIZE_NOT_USED;
+  Snp->Cdb.CPBaddr    = PXE_CPBADDR_NOT_USED;
+  Snp->Cdb.CPBsize    = PXE_CPBSIZE_NOT_USED;
 
-  Snp->Cdb.DBsize = (UINT16)sizeof (PXE_DB_STATION_ADDRESS);
-  Snp->Cdb.DBaddr = (UINT64)(UINTN)Db;
+  Snp->Cdb.DBsize     = (UINT16) sizeof (PXE_DB_STATION_ADDRESS);
+  Snp->Cdb.DBaddr     = (UINT64)(UINTN) Db;
 
-  Snp->Cdb.StatCode  = PXE_STATCODE_INITIALIZE;
-  Snp->Cdb.StatFlags = PXE_STATFLAGS_INITIALIZE;
-  Snp->Cdb.IFnum     = Snp->IfNum;
-  Snp->Cdb.Control   = PXE_CONTROL_LAST_CDB_IN_LIST;
+  Snp->Cdb.StatCode   = PXE_STATCODE_INITIALIZE;
+  Snp->Cdb.StatFlags  = PXE_STATFLAGS_INITIALIZE;
+  Snp->Cdb.IFnum      = Snp->IfNum;
+  Snp->Cdb.Control    = PXE_CONTROL_LAST_CDB_IN_LIST;
 
   //
   // Issue UNDI command and check result.
   //
-  DEBUG ((DEBUG_NET, "\nsnp->undi.station_addr()  "));
+  DEBUG ((EFI_D_NET, "\nsnp->undi.station_addr()  "));
 
-  (*Snp->IssueUndi32Command)((UINT64)(UINTN)&Snp->Cdb);
+  (*Snp->IssueUndi32Command) ((UINT64)(UINTN) &Snp->Cdb);
 
   if (Snp->Cdb.StatCode != PXE_STATCODE_SUCCESS) {
     DEBUG (
-      (DEBUG_ERROR,
-       "\nsnp->undi.station_addr()  %xh:%xh\n",
-       Snp->Cdb.StatFlags,
-       Snp->Cdb.StatCode)
+      (EFI_D_ERROR,
+      "\nsnp->undi.station_addr()  %xh:%xh\n",
+      Snp->Cdb.StatFlags,
+      Snp->Cdb.StatCode)
       );
 
     return EFI_DEVICE_ERROR;
   }
-
   //
   // Set new station address in SNP->Mode structure and return success.
   //
@@ -82,6 +82,7 @@ PxeGetStnAddr (
   return EFI_SUCCESS;
 }
 
+
 /**
   Call UNDI to set a new MAC address for the NIC.
 
@@ -94,21 +95,21 @@ PxeGetStnAddr (
 **/
 EFI_STATUS
 PxeSetStnAddr (
-  SNP_DRIVER       *Snp,
-  EFI_MAC_ADDRESS  *NewMacAddr
+  SNP_DRIVER      *Snp,
+  EFI_MAC_ADDRESS *NewMacAddr
   )
 {
-  PXE_CPB_STATION_ADDRESS  *Cpb;
-  PXE_DB_STATION_ADDRESS   *Db;
+  PXE_CPB_STATION_ADDRESS *Cpb;
+  PXE_DB_STATION_ADDRESS  *Db;
 
   Cpb             = Snp->Cpb;
   Db              = Snp->Db;
   Snp->Cdb.OpCode = PXE_OPCODE_STATION_ADDRESS;
 
   if (NewMacAddr == NULL) {
-    Snp->Cdb.OpFlags = PXE_OPFLAGS_STATION_ADDRESS_RESET;
-    Snp->Cdb.CPBsize = PXE_CPBSIZE_NOT_USED;
-    Snp->Cdb.CPBaddr = PXE_CPBADDR_NOT_USED;
+    Snp->Cdb.OpFlags  = PXE_OPFLAGS_STATION_ADDRESS_RESET;
+    Snp->Cdb.CPBsize  = PXE_CPBSIZE_NOT_USED;
+    Snp->Cdb.CPBaddr  = PXE_CPBADDR_NOT_USED;
   } else {
     Snp->Cdb.OpFlags = PXE_OPFLAGS_STATION_ADDRESS_WRITE;
     //
@@ -116,31 +117,31 @@ PxeSetStnAddr (
     //
     CopyMem (&Cpb->StationAddr, NewMacAddr, Snp->Mode.HwAddressSize);
 
-    Snp->Cdb.CPBsize = (UINT16)sizeof (PXE_CPB_STATION_ADDRESS);
-    Snp->Cdb.CPBaddr = (UINT64)(UINTN)Cpb;
+    Snp->Cdb.CPBsize  = (UINT16) sizeof (PXE_CPB_STATION_ADDRESS);
+    Snp->Cdb.CPBaddr  = (UINT64)(UINTN) Cpb;
   }
 
-  Snp->Cdb.DBsize = (UINT16)sizeof (PXE_DB_STATION_ADDRESS);
-  Snp->Cdb.DBaddr = (UINT64)(UINTN)Db;
+  Snp->Cdb.DBsize     = (UINT16) sizeof (PXE_DB_STATION_ADDRESS);
+  Snp->Cdb.DBaddr     = (UINT64)(UINTN) Db;
 
-  Snp->Cdb.StatCode  = PXE_STATCODE_INITIALIZE;
-  Snp->Cdb.StatFlags = PXE_STATFLAGS_INITIALIZE;
-  Snp->Cdb.IFnum     = Snp->IfNum;
-  Snp->Cdb.Control   = PXE_CONTROL_LAST_CDB_IN_LIST;
+  Snp->Cdb.StatCode   = PXE_STATCODE_INITIALIZE;
+  Snp->Cdb.StatFlags  = PXE_STATFLAGS_INITIALIZE;
+  Snp->Cdb.IFnum      = Snp->IfNum;
+  Snp->Cdb.Control    = PXE_CONTROL_LAST_CDB_IN_LIST;
 
   //
   // Issue UNDI command and check result.
   //
-  DEBUG ((DEBUG_NET, "\nsnp->undi.station_addr()  "));
+  DEBUG ((EFI_D_NET, "\nsnp->undi.station_addr()  "));
 
-  (*Snp->IssueUndi32Command)((UINT64)(UINTN)&Snp->Cdb);
+  (*Snp->IssueUndi32Command) ((UINT64)(UINTN) &Snp->Cdb);
 
   if (Snp->Cdb.StatCode != PXE_STATCODE_SUCCESS) {
     DEBUG (
-      (DEBUG_ERROR,
-       "\nsnp->undi.station_addr()  %xh:%xh\n",
-       Snp->Cdb.StatFlags,
-       Snp->Cdb.StatCode)
+      (EFI_D_ERROR,
+      "\nsnp->undi.station_addr()  %xh:%xh\n",
+      Snp->Cdb.StatFlags,
+      Snp->Cdb.StatCode)
       );
 
     //
@@ -148,7 +149,6 @@ PxeSetStnAddr (
     //
     return EFI_DEVICE_ERROR;
   }
-
   //
   // read the changed address and save it in SNP->Mode structure
   //
@@ -156,6 +156,7 @@ PxeSetStnAddr (
 
   return EFI_SUCCESS;
 }
+
 
 /**
   Modifies or resets the current station address, if supported.
@@ -192,9 +193,9 @@ PxeSetStnAddr (
 EFI_STATUS
 EFIAPI
 SnpUndi32StationAddress (
-  IN EFI_SIMPLE_NETWORK_PROTOCOL  *This,
-  IN BOOLEAN                      Reset,
-  IN EFI_MAC_ADDRESS              *New OPTIONAL
+  IN EFI_SIMPLE_NETWORK_PROTOCOL *This,
+  IN BOOLEAN                     Reset,
+  IN EFI_MAC_ADDRESS             *New OPTIONAL
   )
 {
   SNP_DRIVER  *Snp;
@@ -205,8 +206,7 @@ SnpUndi32StationAddress (
   // Check for invalid parameter combinations.
   //
   if ((This == NULL) ||
-      (!Reset && (New == NULL)))
-  {
+    (!Reset && (New == NULL))) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -218,16 +218,16 @@ SnpUndi32StationAddress (
   // Return error if the SNP is not initialized.
   //
   switch (Snp->Mode.State) {
-    case EfiSimpleNetworkInitialized:
-      break;
+  case EfiSimpleNetworkInitialized:
+    break;
 
-    case EfiSimpleNetworkStopped:
-      Status = EFI_NOT_STARTED;
-      goto ON_EXIT;
+  case EfiSimpleNetworkStopped:
+    Status = EFI_NOT_STARTED;
+    goto ON_EXIT;
 
-    default:
-      Status = EFI_DEVICE_ERROR;
-      goto ON_EXIT;
+  default:
+    Status = EFI_DEVICE_ERROR;
+    goto ON_EXIT;
   }
 
   if (Reset) {

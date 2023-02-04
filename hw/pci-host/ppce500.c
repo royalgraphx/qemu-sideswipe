@@ -24,7 +24,6 @@
 #include "qemu/bswap.h"
 #include "qemu/module.h"
 #include "hw/pci-host/ppce500.h"
-#include "qom/object.h"
 
 #ifdef DEBUG_PCI
 #define pci_debug(fmt, ...) fprintf(stderr, fmt, ## __VA_ARGS__)
@@ -92,7 +91,8 @@ struct pci_inbound {
 
 #define TYPE_PPC_E500_PCI_HOST_BRIDGE "e500-pcihost"
 
-OBJECT_DECLARE_SIMPLE_TYPE(PPCE500PCIState, PPC_E500_PCI_HOST_BRIDGE)
+#define PPC_E500_PCI_HOST_BRIDGE(obj) \
+    OBJECT_CHECK(PPCE500PCIState, (obj), TYPE_PPC_E500_PCI_HOST_BRIDGE)
 
 struct PPCE500PCIState {
     PCIHostState parent_obj;
@@ -114,7 +114,8 @@ struct PPCE500PCIState {
 };
 
 #define TYPE_PPC_E500_PCI_BRIDGE "e500-host-bridge"
-OBJECT_DECLARE_SIMPLE_TYPE(PPCE500PCIBridgeState, PPC_E500_PCI_BRIDGE)
+#define PPC_E500_PCI_BRIDGE(obj) \
+    OBJECT_CHECK(PPCE500PCIBridgeState, (obj), TYPE_PPC_E500_PCI_BRIDGE)
 
 struct PPCE500PCIBridgeState {
     /*< private >*/
@@ -124,6 +125,8 @@ struct PPCE500PCIBridgeState {
     MemoryRegion bar0;
 };
 
+typedef struct PPCE500PCIBridgeState PPCE500PCIBridgeState;
+typedef struct PPCE500PCIState PPCE500PCIState;
 
 static uint64_t pci_reg_read4(void *opaque, hwaddr addr,
                               unsigned size)
@@ -342,7 +345,7 @@ static const MemoryRegionOps e500_pci_reg_ops = {
 
 static int mpc85xx_pci_map_irq(PCIDevice *pci_dev, int pin)
 {
-    int devno = PCI_SLOT(pci_dev->devfn);
+    int devno = pci_dev->devfn >> 3;
     int ret;
 
     ret = ppce500_pci_map_irq_slot(devno, pin);
@@ -415,6 +418,7 @@ static const VMStateDescription vmstate_ppce500_pci = {
     }
 };
 
+#include "exec/address-spaces.h"
 
 static void e500_pcihost_bridge_realize(PCIDevice *d, Error **errp)
 {
@@ -505,7 +509,7 @@ static void e500_host_bridge_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo e500_host_bridge_info = {
-    .name          = TYPE_PPC_E500_PCI_BRIDGE,
+    .name          = "e500-host-bridge",
     .parent        = TYPE_PCI_DEVICE,
     .instance_size = sizeof(PPCE500PCIBridgeState),
     .class_init    = e500_host_bridge_class_init,

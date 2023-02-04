@@ -417,10 +417,6 @@ static int parse_termobj(struct parse_state *s,
         break;
     case 0x01: /* one */
         break;
-    case 0x06: /* AliasOp */
-        offset += parse_namestring(s, ptr + offset, "SourceObject");
-        offset += parse_namestring(s, ptr + offset, "AliasObject");
-        break;
     case 0x08: /* name op */
         offset += parse_namestring(s, ptr + offset, "name");
         offset += parse_termobj(s, ptr + offset);
@@ -519,8 +515,7 @@ static void parse_termlist(struct parse_state *s,
 }
 
 static struct acpi_device *acpi_dsdt_find(struct acpi_device *prev,
-                                          const u8 *aml1, int size1,
-                                          const u8 *aml2, int size2)
+                                          const u8 *aml, int size)
 {
     struct acpi_device *dev;
     struct hlist_node *node;
@@ -532,13 +527,11 @@ static struct acpi_device *acpi_dsdt_find(struct acpi_device *prev,
 
     for (; node != NULL; node = dev->node.next) {
         dev = container_of(node, struct acpi_device, node);
-        if (!aml1 && !aml2)
+        if (!aml)
             return dev;
         if (!dev->hid_aml)
             continue;
-        if (aml1 && memcmp(dev->hid_aml + 5, aml1, size1) == 0)
-            return dev;
-        if (aml2 && memcmp(dev->hid_aml + 5, aml2, size2) == 0)
+        if (memcmp(dev->hid_aml + 5, aml, size) == 0)
             return dev;
     }
     return NULL;
@@ -575,21 +568,19 @@ struct acpi_device *acpi_dsdt_find_string(struct acpi_device *prev,
 
     u8 aml[10];
     int len = snprintf((char*)aml, sizeof(aml), "\x0d%s", hid);
-    return acpi_dsdt_find(prev, aml, len, NULL, 0);
+    return acpi_dsdt_find(prev, aml, len);
 }
 
 struct acpi_device *acpi_dsdt_find_eisaid(struct acpi_device *prev, u16 eisaid)
 {
     if (!CONFIG_ACPI_PARSE)
         return NULL;
-    u8 aml1[] = {
+    u8 aml[] = {
         0x0c, 0x41, 0xd0,
         eisaid >> 8,
         eisaid & 0xff
     };
-    u8 aml2[10];
-    int len2 = snprintf((char*)aml2, sizeof(aml2), "\x0dPNP%04X", eisaid);
-    return acpi_dsdt_find(prev, aml1, 5, aml2, len2);
+    return acpi_dsdt_find(prev, aml, 5);
 }
 
 char *acpi_dsdt_name(struct acpi_device *dev)
@@ -660,9 +651,9 @@ void acpi_dsdt_parse(void)
 
     struct acpi_device *dev;
     dprintf(1, "ACPI: dumping dsdt devices\n");
-    for (dev = acpi_dsdt_find(NULL, NULL, 0, NULL, 0);
+    for (dev = acpi_dsdt_find(NULL, NULL, 0);
          dev != NULL;
-         dev = acpi_dsdt_find(dev, NULL, 0, NULL, 0)) {
+         dev = acpi_dsdt_find(dev, NULL, 0)) {
         dprintf(1, "    %s", acpi_dsdt_name(dev));
         if (dev->hid_aml)
             dprintf(1, ", hid");

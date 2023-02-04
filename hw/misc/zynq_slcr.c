@@ -23,7 +23,6 @@
 #include "qemu/module.h"
 #include "hw/registerfields.h"
 #include "hw/qdev-clock.h"
-#include "qom/object.h"
 
 #ifndef ZYNQ_SLCR_ERR_DEBUG
 #define ZYNQ_SLCR_ERR_DEBUG 0
@@ -182,10 +181,10 @@ REG32(DDRIOB, 0xb40)
 #define ZYNQ_SLCR_MMIO_SIZE     0x1000
 #define ZYNQ_SLCR_NUM_REGS      (ZYNQ_SLCR_MMIO_SIZE / 4)
 
-#define TYPE_ZYNQ_SLCR "xilinx-zynq_slcr"
-OBJECT_DECLARE_SIMPLE_TYPE(ZynqSLCRState, ZYNQ_SLCR)
+#define TYPE_ZYNQ_SLCR "xilinx,zynq_slcr"
+#define ZYNQ_SLCR(obj) OBJECT_CHECK(ZynqSLCRState, (obj), TYPE_ZYNQ_SLCR)
 
-struct ZynqSLCRState {
+typedef struct ZynqSLCRState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -195,7 +194,7 @@ struct ZynqSLCRState {
     Clock *ps_clk;
     Clock *uart0_ref_clk;
     Clock *uart1_ref_clk;
-};
+} ZynqSLCRState;
 
 /*
  * return the output frequency of ARM/DDR/IO pll
@@ -215,11 +214,6 @@ static uint64_t zynq_slcr_compute_pll(uint64_t input, uint32_t ctrl_reg)
     if (ctrl_reg & (R_xxx_PLL_CTRL_PLL_RESET_MASK |
                     R_xxx_PLL_CTRL_PLL_PWRDWN_MASK)) {
         return 0;
-    }
-
-    /* Consider zero feedback as maximum divide ratio possible */
-    if (!mult) {
-        mult = 1 << R_xxx_PLL_CTRL_PLL_FPDIV_LENGTH;
     }
 
     /* frequency multiplier -> period division */
@@ -269,21 +263,6 @@ static uint64_t zynq_slcr_compute_clock(const uint64_t periods[],
     zynq_slcr_compute_clock((plls), (state)->regs[reg], \
                             reg ## _ ## enable_field ## _SHIFT)
 
-static void zynq_slcr_compute_clocks_internal(ZynqSLCRState *s, uint64_t ps_clk)
-{
-    uint64_t io_pll = zynq_slcr_compute_pll(ps_clk, s->regs[R_IO_PLL_CTRL]);
-    uint64_t arm_pll = zynq_slcr_compute_pll(ps_clk, s->regs[R_ARM_PLL_CTRL]);
-    uint64_t ddr_pll = zynq_slcr_compute_pll(ps_clk, s->regs[R_DDR_PLL_CTRL]);
-
-    uint64_t uart_mux[4] = {io_pll, io_pll, arm_pll, ddr_pll};
-
-    /* compute uartX reference clocks */
-    clock_set(s->uart0_ref_clk,
-              ZYNQ_COMPUTE_CLK(s, uart_mux, R_UART_CLK_CTRL, CLKACT0));
-    clock_set(s->uart1_ref_clk,
-              ZYNQ_COMPUTE_CLK(s, uart_mux, R_UART_CLK_CTRL, CLKACT1));
-}
-
 /**
  * Compute and set the ouputs clocks periods.
  * But do not propagate them further. Connected clocks
@@ -298,7 +277,17 @@ static void zynq_slcr_compute_clocks(ZynqSLCRState *s)
         ps_clk = 0;
     }
 
-    zynq_slcr_compute_clocks_internal(s, ps_clk);
+    uint64_t io_pll = zynq_slcr_compute_pll(ps_clk, s->regs[R_IO_PLL_CTRL]);
+    uint64_t arm_pll = zynq_slcr_compute_pll(ps_clk, s->regs[R_ARM_PLL_CTRL]);
+    uint64_t ddr_pll = zynq_slcr_compute_pll(ps_clk, s->regs[R_DDR_PLL_CTRL]);
+
+    uint64_t uart_mux[4] = {io_pll, io_pll, arm_pll, ddr_pll};
+
+    /* compute uartX reference clocks */
+    clock_set(s->uart0_ref_clk,
+              ZYNQ_COMPUTE_CLK(s, uart_mux, R_UART_CLK_CTRL, CLKACT0));
+    clock_set(s->uart1_ref_clk,
+              ZYNQ_COMPUTE_CLK(s, uart_mux, R_UART_CLK_CTRL, CLKACT1));
 }
 
 /**
@@ -312,10 +301,9 @@ static void zynq_slcr_propagate_clocks(ZynqSLCRState *s)
     clock_propagate(s->uart1_ref_clk);
 }
 
-static void zynq_slcr_ps_clk_callback(void *opaque, ClockEvent event)
+static void zynq_slcr_ps_clk_callback(void *opaque)
 {
     ZynqSLCRState *s = (ZynqSLCRState *) opaque;
-
     zynq_slcr_compute_clocks(s);
     zynq_slcr_propagate_clocks(s);
 }
@@ -421,7 +409,7 @@ static void zynq_slcr_reset_hold(Object *obj)
     ZynqSLCRState *s = ZYNQ_SLCR(obj);
 
     /* will disable all output clocks */
-    zynq_slcr_compute_clocks_internal(s, 0);
+    zynq_slcr_compute_clocks(s);
     zynq_slcr_propagate_clocks(s);
 }
 
@@ -430,7 +418,7 @@ static void zynq_slcr_reset_exit(Object *obj)
     ZynqSLCRState *s = ZYNQ_SLCR(obj);
 
     /* will compute output clocks according to ps_clk and registers */
-    zynq_slcr_compute_clocks_internal(s, clock_get(s->ps_clk));
+    zynq_slcr_compute_clocks(s);
     zynq_slcr_propagate_clocks(s);
 }
 
@@ -582,7 +570,7 @@ static const MemoryRegionOps slcr_ops = {
 };
 
 static const ClockPortInitArray zynq_slcr_clocks = {
-    QDEV_CLOCK_IN(ZynqSLCRState, ps_clk, zynq_slcr_ps_clk_callback, ClockUpdate),
+    QDEV_CLOCK_IN(ZynqSLCRState, ps_clk, zynq_slcr_ps_clk_callback),
     QDEV_CLOCK_OUT(ZynqSLCRState, uart0_ref_clk),
     QDEV_CLOCK_OUT(ZynqSLCRState, uart1_ref_clk),
     QDEV_CLOCK_END

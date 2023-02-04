@@ -32,15 +32,14 @@
 #include "sysemu/dma.h"
 
 #include "hw/ide/internal.h"
-#include "qom/object.h"
 
 /***********************************************************/
 /* ISA IDE definitions */
 
 #define TYPE_ISA_IDE "isa-ide"
-OBJECT_DECLARE_SIMPLE_TYPE(ISAIDEState, ISA_IDE)
+#define ISA_IDE(obj) OBJECT_CHECK(ISAIDEState, (obj), TYPE_ISA_IDE)
 
-struct ISAIDEState {
+typedef struct ISAIDEState {
     ISADevice parent_obj;
 
     IDEBus    bus;
@@ -48,7 +47,7 @@ struct ISAIDEState {
     uint32_t  iobase2;
     uint32_t  isairq;
     qemu_irq  irq;
-};
+} ISAIDEState;
 
 static void isa_ide_reset(DeviceState *d)
 {
@@ -73,9 +72,9 @@ static void isa_ide_realizefn(DeviceState *dev, Error **errp)
     ISADevice *isadev = ISA_DEVICE(dev);
     ISAIDEState *s = ISA_IDE(dev);
 
-    ide_bus_init(&s->bus, sizeof(s->bus), dev, 0, 2);
+    ide_bus_new(&s->bus, sizeof(s->bus), dev, 0, 2);
     ide_init_ioport(&s->bus, isadev, s->iobase, s->iobase2);
-    s->irq = isa_get_irq(isadev, s->isairq);
+    isa_init_irq(isadev, &s->irq, s->isairq);
     ide_init2(&s->bus, s->irq);
     vmstate_register(VMSTATE_IF(dev), 0, &vmstate_ide_isa, s);
     ide_register_restart_cb(&s->bus);

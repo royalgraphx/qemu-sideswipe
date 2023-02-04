@@ -22,6 +22,7 @@ BootLogoEnableLogo (
   VOID
   );
 
+
 /**
   Use SystemTable ConOut to turn on video based Simple Text Out consoles. The
   Simple Text Out screens will now be synced up with all non-video output devices.
@@ -52,12 +53,12 @@ BootLogoDisableLogo (
 EFI_STATUS
 EFIAPI
 BootLogoUpdateProgress (
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  TitleForeground,
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  TitleBackground,
-  IN CHAR16                         *Title,
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  ProgressColor,
-  IN UINTN                          Progress,
-  IN UINTN                          PreviousValue
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL TitleForeground,
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL TitleBackground,
+  IN CHAR16                        *Title,
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL ProgressColor,
+  IN UINTN                         Progress,
+  IN UINTN                         PreviousValue
   );
 
 #endif

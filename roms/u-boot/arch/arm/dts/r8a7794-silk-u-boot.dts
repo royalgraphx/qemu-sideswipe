@@ -11,10 +11,3 @@
 &scif2 {
 	u-boot,dm-pre-reloc;
 };
-
-&qspi {
-	flash@0 {
-		spi-tx-bus-width = <1>;
-		spi-rx-bus-width = <1>;
-	};
-};

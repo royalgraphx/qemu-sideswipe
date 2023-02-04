@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: quick
 #
 # Test case for specifying runtime options of the wrong type to some
 # block drivers
@@ -21,7 +20,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"

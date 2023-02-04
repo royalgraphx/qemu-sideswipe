@@ -2,7 +2,7 @@
   MMI management.
 
   Copyright (c) 2009 - 2013, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
+  Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -20,11 +20,11 @@
 #define MMI_ENTRY_SIGNATURE  SIGNATURE_32('m','m','i','e')
 
 typedef struct {
-  UINTN         Signature;
-  LIST_ENTRY    AllEntries; // All entries
+  UINTN       Signature;
+  LIST_ENTRY  AllEntries;  // All entries
 
-  EFI_GUID      HandlerType; // Type of interrupt
-  LIST_ENTRY    MmiHandlers; // All handlers
+  EFI_GUID    HandlerType; // Type of interrupt
+  LIST_ENTRY  MmiHandlers; // All handlers
 } MMI_ENTRY;
 
 #define MMI_HANDLER_SIGNATURE  SIGNATURE_32('m','m','i','h')
@@ -65,8 +65,8 @@ MmCoreFindMmiEntry (
   MmiEntry = NULL;
   for (Link = mMmiEntryList.ForwardLink;
        Link != &mMmiEntryList;
-       Link = Link->ForwardLink)
-  {
+       Link = Link->ForwardLink) {
+
     Item = CR (Link, MMI_ENTRY, AllEntries, MMI_ENTRY_SIGNATURE);
     if (CompareGuid (&Item->HandlerType, HandlerType)) {
       //
@@ -97,7 +97,6 @@ MmCoreFindMmiEntry (
       InsertTailList (&mMmiEntryList, &MmiEntry->AllEntries);
     }
   }
-
   return MmiEntry;
 }
 
@@ -131,7 +130,7 @@ MmiManage (
   BOOLEAN      SuccessReturn;
   EFI_STATUS   Status;
 
-  Status        = EFI_NOT_FOUND;
+  Status = EFI_NOT_FOUND;
   SuccessReturn = FALSE;
   if (HandlerType == NULL) {
     //
@@ -143,7 +142,7 @@ MmiManage (
     //
     // Non-root MMI handler
     //
-    MmiEntry = MmCoreFindMmiEntry ((EFI_GUID *)HandlerType, FALSE);
+    MmiEntry = MmCoreFindMmiEntry ((EFI_GUID *) HandlerType, FALSE);
     if (MmiEntry == NULL) {
       //
       // There is no handler registered for this interrupt source
@@ -158,58 +157,56 @@ MmiManage (
     MmiHandler = CR (Link, MMI_HANDLER, Link, MMI_HANDLER_SIGNATURE);
 
     Status = MmiHandler->Handler (
-                           (EFI_HANDLE)MmiHandler,
-                           Context,
-                           CommBuffer,
-                           CommBufferSize
-                           );
+               (EFI_HANDLE) MmiHandler,
+               Context,
+               CommBuffer,
+               CommBufferSize
+               );
 
     switch (Status) {
-      case EFI_INTERRUPT_PENDING:
-        //
-        // If a handler returns EFI_INTERRUPT_PENDING and HandlerType is not NULL then
-        // no additional handlers will be processed and EFI_INTERRUPT_PENDING will be returned.
-        //
-        if (HandlerType != NULL) {
-          return EFI_INTERRUPT_PENDING;
-        }
+    case EFI_INTERRUPT_PENDING:
+      //
+      // If a handler returns EFI_INTERRUPT_PENDING and HandlerType is not NULL then
+      // no additional handlers will be processed and EFI_INTERRUPT_PENDING will be returned.
+      //
+      if (HandlerType != NULL) {
+        return EFI_INTERRUPT_PENDING;
+      }
+      break;
 
-        break;
+    case EFI_SUCCESS:
+      //
+      // If at least one of the handlers returns EFI_SUCCESS then the function will return
+      // EFI_SUCCESS. If a handler returns EFI_SUCCESS and HandlerType is not NULL then no
+      // additional handlers will be processed.
+      //
+      if (HandlerType != NULL) {
+        return EFI_SUCCESS;
+      }
+      SuccessReturn = TRUE;
+      break;
 
-      case EFI_SUCCESS:
-        //
-        // If at least one of the handlers returns EFI_SUCCESS then the function will return
-        // EFI_SUCCESS. If a handler returns EFI_SUCCESS and HandlerType is not NULL then no
-        // additional handlers will be processed.
-        //
-        if (HandlerType != NULL) {
-          return EFI_SUCCESS;
-        }
+    case EFI_WARN_INTERRUPT_SOURCE_QUIESCED:
+      //
+      // If at least one of the handlers returns EFI_WARN_INTERRUPT_SOURCE_QUIESCED
+      // then the function will return EFI_SUCCESS.
+      //
+      SuccessReturn = TRUE;
+      break;
 
-        SuccessReturn = TRUE;
-        break;
+    case EFI_WARN_INTERRUPT_SOURCE_PENDING:
+      //
+      // If all the handlers returned EFI_WARN_INTERRUPT_SOURCE_PENDING
+      // then EFI_WARN_INTERRUPT_SOURCE_PENDING will be returned.
+      //
+      break;
 
-      case EFI_WARN_INTERRUPT_SOURCE_QUIESCED:
-        //
-        // If at least one of the handlers returns EFI_WARN_INTERRUPT_SOURCE_QUIESCED
-        // then the function will return EFI_SUCCESS.
-        //
-        SuccessReturn = TRUE;
-        break;
-
-      case EFI_WARN_INTERRUPT_SOURCE_PENDING:
-        //
-        // If all the handlers returned EFI_WARN_INTERRUPT_SOURCE_PENDING
-        // then EFI_WARN_INTERRUPT_SOURCE_PENDING will be returned.
-        //
-        break;
-
-      default:
-        //
-        // Unexpected status code returned.
-        //
-        ASSERT (FALSE);
-        break;
+    default:
+      //
+      // Unexpected status code returned.
+      //
+      ASSERT (FALSE);
+      break;
     }
   }
 
@@ -223,7 +220,7 @@ MmiManage (
 /**
   Registers a handler to execute within MM.
 
-  @param  Handler        Handler service function pointer.
+  @param  Handler        Handler service funtion pointer.
   @param  HandlerType    Points to the handler type or NULL for root MMI handlers.
   @param  DispatchHandle On return, contains a unique handle which can be used to later unregister the handler function.
 
@@ -234,16 +231,16 @@ MmiManage (
 EFI_STATUS
 EFIAPI
 MmiHandlerRegister (
-  IN  EFI_MM_HANDLER_ENTRY_POINT  Handler,
-  IN  CONST EFI_GUID              *HandlerType  OPTIONAL,
-  OUT EFI_HANDLE                  *DispatchHandle
+  IN  EFI_MM_HANDLER_ENTRY_POINT    Handler,
+  IN  CONST EFI_GUID                *HandlerType  OPTIONAL,
+  OUT EFI_HANDLE                    *DispatchHandle
   )
 {
   MMI_HANDLER  *MmiHandler;
   MMI_ENTRY    *MmiEntry;
   LIST_ENTRY   *List;
 
-  if ((Handler == NULL) || (DispatchHandle == NULL)) {
+  if (Handler == NULL || DispatchHandle == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -253,19 +250,19 @@ MmiHandlerRegister (
   }
 
   MmiHandler->Signature = MMI_HANDLER_SIGNATURE;
-  MmiHandler->Handler   = Handler;
+  MmiHandler->Handler = Handler;
 
   if (HandlerType == NULL) {
     //
     // This is root MMI handler
     //
     MmiEntry = NULL;
-    List     = &mRootMmiHandlerList;
+    List = &mRootMmiHandlerList;
   } else {
     //
     // None root MMI handler
     //
-    MmiEntry = MmCoreFindMmiEntry ((EFI_GUID *)HandlerType, TRUE);
+    MmiEntry = MmCoreFindMmiEntry ((EFI_GUID *) HandlerType, TRUE);
     if (MmiEntry == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
@@ -276,7 +273,7 @@ MmiHandlerRegister (
   MmiHandler->MmiEntry = MmiEntry;
   InsertTailList (List, &MmiHandler->Link);
 
-  *DispatchHandle = (EFI_HANDLE)MmiHandler;
+  *DispatchHandle = (EFI_HANDLE) MmiHandler;
 
   return EFI_SUCCESS;
 }
@@ -299,7 +296,7 @@ MmiHandlerUnRegister (
   MMI_HANDLER  *MmiHandler;
   MMI_ENTRY    *MmiEntry;
 
-  MmiHandler = (MMI_HANDLER *)DispatchHandle;
+  MmiHandler = (MMI_HANDLER *) DispatchHandle;
 
   if (MmiHandler == NULL) {
     return EFI_INVALID_PARAMETER;

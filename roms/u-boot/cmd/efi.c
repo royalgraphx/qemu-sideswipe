@@ -8,10 +8,7 @@
 #include <command.h>
 #include <efi.h>
 #include <errno.h>
-#include <log.h>
 #include <malloc.h>
-#include <sort.h>
-#include <asm/global_data.h>
 
 static const char *const type_name[] = {
 	"reserved",
@@ -45,7 +42,6 @@ static struct attr_info {
 	{ EFI_MEMORY_NV, "non-volatile" },
 	{ EFI_MEMORY_MORE_RELIABLE, "higher reliability" },
 	{ EFI_MEMORY_RO, "read-only" },
-	{ EFI_MEMORY_SP, "specific purpose" },
 	{ EFI_MEMORY_RUNTIME, "needs runtime mapping" }
 };
 
@@ -72,19 +68,7 @@ static int h_cmp_entry(const void *v1, const void *v2)
 	return diff < 0 ? -1 : diff > 0 ? 1 : 0;
 }
 
-/**
- * efi_build_mem_table() - make a sorted copy of the memory table
- *
- * @map:	Pointer to EFI memory map table
- * @size:	Size of table in bytes
- * @skip_bs:	True to skip boot-time memory and merge it with conventional
- *		memory. This will significantly reduce the number of table
- *		entries.
- * Return:	pointer to the new table. It should be freed with free() by the
- *		caller.
- */
-static void *efi_build_mem_table(struct efi_entry_memmap *map, int size,
-				 bool skip_bs)
+void *efi_build_mem_table(struct efi_entry_memmap *map, int size, bool skip_bs)
 {
 	struct efi_mem_desc *desc, *end, *base, *dest, *prev;
 	int count;
@@ -105,13 +89,7 @@ static void *efi_build_mem_table(struct efi_entry_memmap *map, int size,
 	end = (struct efi_mem_desc *)((ulong)base + count * map->desc_size);
 	for (desc = base; desc < end; desc = efi_get_next_mem_desc(map, desc)) {
 		bool merge = true;
-		u32 type = desc->type;
-
-		if (type >= EFI_MAX_MEMORY_TYPE) {
-			printf("Memory map contains invalid entry type %u\n",
-			       type);
-			continue;
-		}
+		int type = desc->type;
 
 		if (skip_bs && is_boot_services(desc->type))
 			type = EFI_CONVENTIONAL_MEMORY;
@@ -138,7 +116,7 @@ static void *efi_build_mem_table(struct efi_entry_memmap *map, int size,
 	}
 
 	/* Mark the end */
-	dest->type = EFI_MAX_MEMORY_TYPE;
+	dest->type = EFI_TABLE_END;
 
 	return base;
 }
@@ -157,7 +135,7 @@ static void efi_print_mem_table(struct efi_entry_memmap *map,
 	/* Keep track of all the different attributes we have seen */
 	attr_seen_count = 0;
 	addr = 0;
-	for (upto = 0; desc->type != EFI_MAX_MEMORY_TYPE;
+	for (upto = 0; desc->type != EFI_TABLE_END;
 	     upto++, desc = efi_get_next_mem_desc(map, desc)) {
 		const char *name;
 		u64 size;
@@ -212,8 +190,7 @@ static void efi_print_mem_table(struct efi_entry_memmap *map,
 		printf("*Some areas are merged (use 'all' to see)\n");
 }
 
-static int do_efi_mem(struct cmd_tbl *cmdtp, int flag, int argc,
-		      char *const argv[])
+static int do_efi_mem(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	struct efi_mem_desc *desc;
 	struct efi_entry_memmap *map;
@@ -253,13 +230,13 @@ done:
 	return ret ? CMD_RET_FAILURE : 0;
 }
 
-static struct cmd_tbl efi_commands[] = {
+static cmd_tbl_t efi_commands[] = {
 	U_BOOT_CMD_MKENT(mem, 1, 1, do_efi_mem, "", ""),
 };
 
-static int do_efi(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+static int do_efi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	struct cmd_tbl *efi_cmd;
+	cmd_tbl_t *efi_cmd;
 	int ret;
 
 	if (argc < 2)

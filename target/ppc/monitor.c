@@ -29,10 +29,9 @@
 #include "monitor/hmp-target.h"
 #include "monitor/hmp.h"
 
-static target_long monitor_get_ccr(Monitor *mon, const struct MonitorDef *md,
-                                   int val)
+static target_long monitor_get_ccr(const struct MonitorDef *md, int val)
 {
-    CPUArchState *env = mon_get_cpu_env(mon);
+    CPUArchState *env = mon_get_cpu_env();
     unsigned int u;
     int i;
 
@@ -44,46 +43,27 @@ static target_long monitor_get_ccr(Monitor *mon, const struct MonitorDef *md,
     return u;
 }
 
-static target_long monitor_get_xer(Monitor *mon, const struct MonitorDef *md,
-                                   int val)
+static target_long monitor_get_decr(const struct MonitorDef *md, int val)
 {
-    CPUArchState *env = mon_get_cpu_env(mon);
-    return cpu_read_xer(env);
-}
-
-static target_long monitor_get_decr(Monitor *mon, const struct MonitorDef *md,
-                                    int val)
-{
-    CPUArchState *env = mon_get_cpu_env(mon);
-    if (!env->tb_env) {
-        return 0;
-    }
+    CPUArchState *env = mon_get_cpu_env();
     return cpu_ppc_load_decr(env);
 }
 
-static target_long monitor_get_tbu(Monitor *mon, const struct MonitorDef *md,
-                                   int val)
+static target_long monitor_get_tbu(const struct MonitorDef *md, int val)
 {
-    CPUArchState *env = mon_get_cpu_env(mon);
-    if (!env->tb_env) {
-        return 0;
-    }
+    CPUArchState *env = mon_get_cpu_env();
     return cpu_ppc_load_tbu(env);
 }
 
-static target_long monitor_get_tbl(Monitor *mon, const struct MonitorDef *md,
-                                   int val)
+static target_long monitor_get_tbl(const struct MonitorDef *md, int val)
 {
-    CPUArchState *env = mon_get_cpu_env(mon);
-    if (!env->tb_env) {
-        return 0;
-    }
+    CPUArchState *env = mon_get_cpu_env();
     return cpu_ppc_load_tbl(env);
 }
 
 void hmp_info_tlb(Monitor *mon, const QDict *qdict)
 {
-    CPUArchState *env1 = mon_get_cpu_env(mon);
+    CPUArchState *env1 = mon_get_cpu_env();
 
     if (!env1) {
         monitor_printf(mon, "No CPU available\n");
@@ -101,7 +81,7 @@ const MonitorDef monitor_defs[] = {
     { "decr", 0, &monitor_get_decr, },
     { "ccr|cr", 0, &monitor_get_ccr, },
     /* Machine state register */
-    { "xer", 0, &monitor_get_xer },
+    { "xer", offsetof(CPUPPCState, xer) },
     { "msr", offsetof(CPUPPCState, msr) },
     { "tbu", 0, &monitor_get_tbu, },
     { "tbl", 0, &monitor_get_tbl, },

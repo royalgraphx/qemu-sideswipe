@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# group: rw quick
 #
 # Very specific tests for adjacent commit/stream block jobs
 #
@@ -18,10 +17,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Creator/Owner: Hanna Reitz <hreitz@redhat.com>
+# Creator/Owner: Max Reitz <mreitz@redhat.com>
 
 import iotests
-from iotests import log, qemu_img, qemu_io, \
+from iotests import log, qemu_img, qemu_io_silent, \
         filter_qmp_testfiles, filter_qmp_imgfmt
 
 # Returns a node for blockdev-add
@@ -75,25 +74,26 @@ def test_concurrent_finish(write_to_stream_node):
 
         # It is important to use raw for the base layer (so that
         # permissions are just handed through to the protocol layer)
-        qemu_img('create', '-f', 'raw', node0_path, '64M')
+        assert qemu_img('create', '-f', 'raw', node0_path, '64M') == 0
 
         stream_throttle=None
         commit_throttle=None
 
         for path in [node1_path, node2_path, node3_path, node4_path]:
-            qemu_img('create', '-f', iotests.imgfmt, path, '64M')
+            assert qemu_img('create', '-f', iotests.imgfmt, path, '64M') == 0
 
         if write_to_stream_node:
             # This is what (most of the time) makes commit finish
             # earlier and then pull in stream
-            qemu_io(node2_path,
-                    '-c', 'write %iK 64K' % (65536 - 192),
-                    '-c', 'write %iK 64K' % (65536 -  64))
+            assert qemu_io_silent(node2_path,
+                                  '-c', 'write %iK 64K' % (65536 - 192),
+                                  '-c', 'write %iK 64K' % (65536 -  64)) == 0
 
             stream_throttle='tg'
         else:
             # And this makes stream finish earlier
-            qemu_io(node1_path, '-c', 'write %iK 64K' % (65536 - 64))
+            assert qemu_io_silent(node1_path,
+                                  '-c', 'write %iK 64K' % (65536 - 64)) == 0
 
             commit_throttle='tg'
 
@@ -102,9 +102,9 @@ def test_concurrent_finish(write_to_stream_node):
         vm.qmp_log('object-add',
                    qom_type='throttle-group',
                    id='tg',
-                   limits={
-                       'iops-write': 1,
-                       'iops-write-max': 1
+                   props={
+                       'x-iops-write': 1,
+                       'x-iops-write-max': 1
                    })
 
         vm.qmp_log('blockdev-add',

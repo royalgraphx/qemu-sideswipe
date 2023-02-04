@@ -15,7 +15,7 @@ struct target_ipc_perm {
 
 struct target_semid64_ds {
   struct target_ipc_perm sem_perm;
-#if TARGET_BIG_ENDIAN
+#ifdef TARGET_WORDS_BIGENDIAN
   abi_ulong __unused1;
   abi_ulong sem_otime;
   abi_ulong __unused2;

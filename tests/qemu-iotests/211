@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# group: rw quick
 #
 # Test VDI and file image creation
 #
@@ -59,7 +58,7 @@ with iotests.FilePath('t.vdi') as disk_path, \
     vm.shutdown()
 
     iotests.img_info_log(disk_path)
-    iotests.log(iotests.qemu_img_map(disk_path))
+    iotests.log(iotests.qemu_img_pipe('map', '--output=json', disk_path))
 
     #
     # Successful image creation (explicit defaults)
@@ -83,7 +82,7 @@ with iotests.FilePath('t.vdi') as disk_path, \
     vm.shutdown()
 
     iotests.img_info_log(disk_path)
-    iotests.log(iotests.qemu_img_map(disk_path))
+    iotests.log(iotests.qemu_img_pipe('map', '--output=json', disk_path))
 
     #
     # Successful image creation (with non-default options)
@@ -107,7 +106,7 @@ with iotests.FilePath('t.vdi') as disk_path, \
     vm.shutdown()
 
     iotests.img_info_log(disk_path)
-    iotests.log(iotests.qemu_img_map(disk_path))
+    iotests.log(iotests.qemu_img_pipe('map', '--output=json', disk_path))
 
     #
     # Invalid BlockdevRef

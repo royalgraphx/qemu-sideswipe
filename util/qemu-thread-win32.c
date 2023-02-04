@@ -12,6 +12,7 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "qemu/thread.h"
 #include "qemu/notify.h"
 #include "qemu-thread-common.h"
@@ -19,39 +20,12 @@
 
 static bool name_threads;
 
-typedef HRESULT (WINAPI *pSetThreadDescription) (HANDLE hThread,
-                                                 PCWSTR lpThreadDescription);
-static pSetThreadDescription SetThreadDescriptionFunc;
-static HMODULE kernel32_module;
-
-static bool load_set_thread_description(void)
-{
-    static gsize _init_once = 0;
-
-    if (g_once_init_enter(&_init_once)) {
-        kernel32_module = LoadLibrary("kernel32.dll");
-        if (kernel32_module) {
-            SetThreadDescriptionFunc =
-                (pSetThreadDescription)GetProcAddress(kernel32_module,
-                                                      "SetThreadDescription");
-            if (!SetThreadDescriptionFunc) {
-                FreeLibrary(kernel32_module);
-            }
-        }
-        g_once_init_leave(&_init_once, 1);
-    }
-
-    return !!SetThreadDescriptionFunc;
-}
-
 void qemu_thread_naming(bool enable)
 {
+    /* But note we don't actually name them on Windows yet */
     name_threads = enable;
 
-    if (enable && !load_set_thread_description()) {
-        fprintf(stderr, "qemu: thread naming not supported on this host\n");
-        name_threads = false;
-    }
+    fprintf(stderr, "qemu: thread naming not supported on this host\n");
 }
 
 static void error_exit(int err, const char *msg)
@@ -131,7 +105,7 @@ int qemu_rec_mutex_trylock_impl(QemuRecMutex *mutex, const char *file, int line)
     return !TryEnterCriticalSection(&mutex->lock);
 }
 
-void qemu_rec_mutex_unlock_impl(QemuRecMutex *mutex, const char *file, int line)
+void qemu_rec_mutex_unlock(QemuRecMutex *mutex)
 {
     assert(mutex->initialized);
     LeaveCriticalSection(&mutex->lock);
@@ -276,8 +250,8 @@ void qemu_event_set(QemuEvent *ev)
      * ev->value we need a full memory barrier here.
      */
     smp_mb();
-    if (qatomic_read(&ev->value) != EV_SET) {
-        if (qatomic_xchg(&ev->value, EV_SET) == EV_BUSY) {
+    if (atomic_read(&ev->value) != EV_SET) {
+        if (atomic_xchg(&ev->value, EV_SET) == EV_BUSY) {
             /* There were waiters, wake them up.  */
             SetEvent(ev->event);
         }
@@ -289,13 +263,13 @@ void qemu_event_reset(QemuEvent *ev)
     unsigned value;
 
     assert(ev->initialized);
-    value = qatomic_read(&ev->value);
+    value = atomic_read(&ev->value);
     smp_mb_acquire();
     if (value == EV_SET) {
         /* If there was a concurrent reset (or even reset+wait),
          * do nothing.  Otherwise change EV_SET->EV_FREE.
          */
-        qatomic_or(&ev->value, EV_FREE);
+        atomic_or(&ev->value, EV_FREE);
     }
 }
 
@@ -304,7 +278,7 @@ void qemu_event_wait(QemuEvent *ev)
     unsigned value;
 
     assert(ev->initialized);
-    value = qatomic_read(&ev->value);
+    value = atomic_read(&ev->value);
     smp_mb_acquire();
     if (value != EV_SET) {
         if (value == EV_FREE) {
@@ -315,10 +289,10 @@ void qemu_event_wait(QemuEvent *ev)
             ResetEvent(ev->event);
 
             /* Tell qemu_event_set that there are waiters.  No need to retry
-             * because there cannot be a concurrent busy->free transition.
+             * because there cannot be a concurent busy->free transition.
              * After the CAS, the event will be either set or busy.
              */
-            if (qatomic_cmpxchg(&ev->value, EV_FREE, EV_BUSY) == EV_SET) {
+            if (atomic_cmpxchg(&ev->value, EV_FREE, EV_BUSY) == EV_SET) {
                 value = EV_SET;
             } else {
                 value = EV_BUSY;
@@ -427,25 +401,6 @@ void *qemu_thread_join(QemuThread *thread)
     return ret;
 }
 
-static bool set_thread_description(HANDLE h, const char *name)
-{
-    HRESULT hr;
-    g_autofree wchar_t *namew = NULL;
-
-    if (!load_set_thread_description()) {
-        return false;
-    }
-
-    namew = g_utf8_to_utf16(name, -1, NULL, NULL, NULL);
-    if (!namew) {
-        return false;
-    }
-
-    hr = SetThreadDescriptionFunc(h, namew);
-
-    return SUCCEEDED(hr);
-}
-
 void qemu_thread_create(QemuThread *thread, const char *name,
                        void *(*start_routine)(void *),
                        void *arg, int mode)
@@ -469,24 +424,8 @@ void qemu_thread_create(QemuThread *thread, const char *name,
     if (!hThread) {
         error_exit(GetLastError(), __func__);
     }
-    if (name_threads && name && !set_thread_description(hThread, name)) {
-        fprintf(stderr, "qemu: failed to set thread description: %s\n", name);
-    }
     CloseHandle(hThread);
-
     thread->data = data;
-}
-
-int qemu_thread_set_affinity(QemuThread *thread, unsigned long *host_cpus,
-                             unsigned long nbits)
-{
-    return -ENOSYS;
-}
-
-int qemu_thread_get_affinity(QemuThread *thread, unsigned long **host_cpus,
-                             unsigned long *nbits)
-{
-    return -ENOSYS;
 }
 
 void qemu_thread_get_self(QemuThread *thread)

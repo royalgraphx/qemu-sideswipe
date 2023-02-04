@@ -8,10 +8,6 @@
 #include <config.h>
 #include <common.h>
 #include <dm.h>
-#include <env.h>
-#include <fastboot.h>
-#include <init.h>
-#include <asm/global_data.h>
 #include <linux/ctype.h>
 #include <linux/usb/musb.h>
 #include <asm/omap_musb.h>
@@ -31,16 +27,16 @@ const omap3_sysinfo sysinfo = {
 	.nand_string = "MMC"
 };
 
-static const struct ns16550_plat serial_omap_plat = {
+static const struct ns16550_platdata serial_omap_platdata = {
 	.base = OMAP34XX_UART3,
 	.reg_shift = 2,
 	.clock = V_NS16550_CLK,
 	.fcr = UART_FCR_DEFVAL,
 };
 
-U_BOOT_DRVINFO(sniper_serial) = {
+U_BOOT_DEVICE(sniper_serial) = {
 	.name = "ns16550_serial",
-	.plat = &serial_omap_plat
+	.platdata = &serial_omap_platdata
 };
 
 static struct musb_hdrc_config musb_config = {
@@ -177,15 +173,12 @@ void reset_misc(void)
 	omap_reboot_mode_store(reboot_mode);
 }
 
-int fastboot_set_reboot_flag(enum fastboot_reboot_reason reason)
+int fastboot_set_reboot_flag(void)
 {
-	if (reason != FASTBOOT_REBOOT_REASON_BOOTLOADER)
-		return -ENOTSUPP;
-
 	return omap_reboot_mode_store("b");
 }
 
-int board_mmc_init(struct bd_info *bis)
+int board_mmc_init(bd_t *bis)
 {
 	return omap_mmc_init(1, 0, 0, -1, -1);
 }

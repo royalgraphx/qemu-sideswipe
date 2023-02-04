@@ -30,10 +30,9 @@ SECTIONS
                 *(.sti.text.inq_conf)
                 *(.sti.text.set_cm_entry)
                 *(.sti.text.dma_ctrl)
+                *(.sti.textend)
                 *(.sti.text)
                 *(.sti.data)
-                *(.sti.font)
-                *(.sti.text.end)
                 . = ALIGN(4096);
                 _sti_rom_end = .;
         }

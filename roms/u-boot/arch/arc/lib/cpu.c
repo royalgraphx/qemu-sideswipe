@@ -4,13 +4,9 @@
  */
 
 #include <common.h>
-#include <init.h>
 #include <malloc.h>
-#include <vsprintf.h>
 #include <asm/arcregs.h>
 #include <asm/cache.h>
-#include <asm/global_data.h>
-#include <linux/bitops.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -23,6 +19,13 @@ int arch_cpu_init(void)
 
 	cache_init();
 
+	return 0;
+}
+
+int arch_early_init_r(void)
+{
+	gd->bd->bi_memstart = CONFIG_SYS_SDRAM_BASE;
+	gd->bd->bi_memsize = CONFIG_SYS_SDRAM_SIZE;
 	return 0;
 }
 
@@ -84,7 +87,7 @@ const char *arc_em_version(int arcver, char *name, int name_len)
 	bool xymem = ARC_FEATURE_EXISTS(ARC_AUX_XY_BUILD);
 	int i;
 
-	for (i = 0; i < sizeof(em_versions) / sizeof(struct em_template_t); i++) {
+	for (i = 0; i++ < sizeof(em_versions) / sizeof(struct em_template_t);) {
 		if (em_versions[i].cache == cache &&
 		    em_versions[i].dsp == dsp &&
 		    em_versions[i].xymem == xymem) {
@@ -144,7 +147,7 @@ const char *arc_hs_version(int arcver, char *name, int name_len)
 	bool dual_issue = arcver == 0x54 ? true : false;
 	int i;
 
-	for (i = 0; i < sizeof(hs_versions) / sizeof(struct hs_template_t); i++) {
+	for (i = 0; i++ < sizeof(hs_versions) / sizeof(struct hs_template_t);) {
 		if (hs_versions[i].cache == cache &&
 		    hs_versions[i].mmu == mmu &&
 		    hs_versions[i].dual_issue == dual_issue &&

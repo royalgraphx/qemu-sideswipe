@@ -30,7 +30,7 @@
  * Structure of an internet header, naked of options.
  */
 struct ip {
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
     uint8_t ip_v:4,         /* version */
             ip_hl:4;        /* header length */
 #else

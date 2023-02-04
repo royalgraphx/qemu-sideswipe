@@ -10,10 +10,11 @@
   We don't advocate putting compiler specifics in libraries or drivers but there
   is no other way to make this work.
 
-  Copyright (c) 2006 - 2021, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 
 #include "BaseIoLibIntrinsicInternal.h"
 
@@ -31,22 +32,16 @@
   @return The value read.
 
 **/
+__inline__
 UINT8
 EFIAPI
 IoRead8 (
-  IN      UINTN  Port
+  IN      UINTN                     Port
   )
 {
-  UINT8    Data;
-  BOOLEAN  Flag;
+  UINT8   Data;
 
-  Flag = FilterBeforeIoRead (FilterWidth8, Port, &Data);
-  if (Flag) {
-    __asm__ __volatile__ ("inb %w1,%b0" : "=a" (Data) : "d" ((UINT16)Port));
-  }
-
-  FilterAfterIoRead (FilterWidth8, Port, &Data);
-
+  __asm__ __volatile__ ("inb %w1,%b0" : "=a" (Data) : "d" ((UINT16)Port));
   return Data;
 }
 
@@ -65,23 +60,16 @@ IoRead8 (
   @return The value written the I/O port.
 
 **/
+__inline__
 UINT8
 EFIAPI
 IoWrite8 (
-  IN      UINTN  Port,
-  IN      UINT8  Value
+  IN      UINTN                     Port,
+  IN      UINT8                     Value
   )
 {
-  BOOLEAN  Flag;
-
-  Flag = FilterBeforeIoWrite (FilterWidth8, Port, &Value);
-  if (Flag) {
-    __asm__ __volatile__ ("outb %b0,%w1" : : "a" (Value), "d" ((UINT16)Port));
-  }
-
-  FilterAfterIoWrite (FilterWidth8, Port, &Value);
-
-  return Value;
+  __asm__ __volatile__ ("outb %b0,%w1" : : "a" (Value), "d" ((UINT16)Port));
+  return Value;;
 }
 
 /**
@@ -99,24 +87,17 @@ IoWrite8 (
   @return The value read.
 
 **/
+__inline__
 UINT16
 EFIAPI
 IoRead16 (
-  IN      UINTN  Port
+  IN      UINTN                     Port
   )
 {
   UINT16   Data;
-  BOOLEAN  Flag;
 
   ASSERT ((Port & 1) == 0);
-
-  Flag = FilterBeforeIoRead (FilterWidth16, Port, &Data);
-  if (Flag) {
-    __asm__ __volatile__ ("inw %w1,%w0" : "=a" (Data) : "d" ((UINT16)Port));
-  }
-
-  FilterAfterIoRead (FilterWidth16, Port, &Data);
-
+  __asm__ __volatile__ ("inw %w1,%w0" : "=a" (Data) : "d" ((UINT16)Port));
   return Data;
 }
 
@@ -136,25 +117,17 @@ IoRead16 (
   @return The value written the I/O port.
 
 **/
+__inline__
 UINT16
 EFIAPI
 IoWrite16 (
-  IN      UINTN   Port,
-  IN      UINT16  Value
+  IN      UINTN                     Port,
+  IN      UINT16                    Value
   )
 {
-  BOOLEAN  Flag;
-
   ASSERT ((Port & 1) == 0);
-
-  Flag = FilterBeforeIoWrite (FilterWidth16, Port, &Value);
-  if (Flag) {
-    __asm__ __volatile__ ("outw %w0,%w1" : : "a" (Value), "d" ((UINT16)Port));
-  }
-
-  FilterAfterIoWrite (FilterWidth16, Port, &Value);
-
-  return Value;
+  __asm__ __volatile__ ("outw %w0,%w1" : : "a" (Value), "d" ((UINT16)Port));
+  return Value;;
 }
 
 /**
@@ -172,24 +145,17 @@ IoWrite16 (
   @return The value read.
 
 **/
+__inline__
 UINT32
 EFIAPI
 IoRead32 (
-  IN      UINTN  Port
+  IN      UINTN                     Port
   )
 {
   UINT32   Data;
-  BOOLEAN  Flag;
 
   ASSERT ((Port & 3) == 0);
-
-  Flag = FilterBeforeIoRead (FilterWidth32, Port, &Data);
-  if (Flag) {
-    __asm__ __volatile__ ("inl %w1,%0" : "=a" (Data) : "d" ((UINT16)Port));
-  }
-
-  FilterAfterIoRead (FilterWidth32, Port, &Data);
-
+  __asm__ __volatile__ ("inl %w1,%0" : "=a" (Data) : "d" ((UINT16)Port));
   return Data;
 }
 
@@ -209,23 +175,16 @@ IoRead32 (
   @return The value written the I/O port.
 
 **/
+__inline__
 UINT32
 EFIAPI
 IoWrite32 (
-  IN      UINTN   Port,
-  IN      UINT32  Value
+  IN      UINTN                     Port,
+  IN      UINT32                    Value
   )
 {
-  BOOLEAN  Flag;
-
   ASSERT ((Port & 3) == 0);
-
-  Flag = FilterBeforeIoWrite (FilterWidth32, Port, &Value);
-  if (Flag) {
-    __asm__ __volatile__ ("outl %0,%w1" : : "a" (Value), "d" ((UINT16)Port));
-  }
-
-  FilterAfterIoWrite (FilterWidth32, Port, &Value);
-
+  __asm__ __volatile__ ("outl %0,%w1" : : "a" (Value), "d" ((UINT16)Port));
   return Value;
 }
+

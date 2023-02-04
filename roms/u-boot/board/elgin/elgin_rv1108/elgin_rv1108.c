@@ -5,19 +5,17 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <syscon.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
-#include <asm/arch-rockchip/clock.h>
-#include <asm/arch-rockchip/grf_rv1108.h>
-#include <asm/arch-rockchip/hardware.h>
+#include <fdtdec.h>
+#include <asm/arch/grf_rv1108.h>
+#include <asm/arch/hardware.h>
 #include <asm/gpio.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int board_early_init_f(void)
+int mach_cpu_init(void)
 {
+	int node;
 	struct rv1108_grf *grf;
 	enum {
 		GPIO3C3_SHIFT           = 6,
@@ -37,7 +35,8 @@ int board_early_init_f(void)
 		GPIO2D1_UART2_SIN_M0,
 	};
 
-	grf = syscon_get_first_range(ROCKCHIP_SYSCON_GRF);
+	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, "rockchip,rv1108-grf");
+	grf = (struct rv1108_grf *)fdtdec_get_addr(gd->fdt_blob, node, "reg");
 
 	/* Elgin board use UART2 m0 for debug*/
 	rk_clrsetreg(&grf->gpio2d_iomux,
@@ -51,7 +50,7 @@ int board_early_init_f(void)
 
 #define MODEM_ENABLE_GPIO 111
 
-int rk_board_late_init(void)
+int board_init(void)
 {
 	gpio_request(MODEM_ENABLE_GPIO, "modem_enable");
 	gpio_direction_output(MODEM_ENABLE_GPIO, 0);

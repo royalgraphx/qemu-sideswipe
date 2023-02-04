@@ -16,6 +16,7 @@
 #include <Ppi/ReadOnlyVariable2.h>
 #include <Guid/DebugMask.h>
 
+
 /**
   The constructor reads variable and sets HOB
 
@@ -28,15 +29,15 @@
 EFI_STATUS
 EFIAPI
 PeiDebugPrintHobLibConstructor (
-  IN EFI_PEI_FILE_HANDLE     FileHandle,
-  IN CONST EFI_PEI_SERVICES  **PeiServices
+  IN EFI_PEI_FILE_HANDLE        FileHandle,
+  IN CONST EFI_PEI_SERVICES     **PeiServices
   )
 {
-  EFI_STATUS                       Status;
-  EFI_PEI_READ_ONLY_VARIABLE2_PPI  *Variable;
-  UINTN                            Size;
-  UINT64                           GlobalErrorLevel;
-  UINT32                           HobErrorLevel;
+  EFI_STATUS                      Status;
+  EFI_PEI_READ_ONLY_VARIABLE2_PPI *Variable;
+  UINTN                           Size;
+  UINT64                          GlobalErrorLevel;
+  UINT32                          HobErrorLevel;
 
   Status = PeiServicesLocatePpi (
              &gEfiPeiReadOnlyVariable2PpiGuid,
@@ -45,7 +46,7 @@ PeiDebugPrintHobLibConstructor (
              (VOID **)&Variable
              );
   if (!EFI_ERROR (Status)) {
-    Size   = sizeof (GlobalErrorLevel);
+    Size = sizeof (GlobalErrorLevel);
     Status = Variable->GetVariable (
                          Variable,
                          DEBUG_MASK_VARIABLE_NAME,

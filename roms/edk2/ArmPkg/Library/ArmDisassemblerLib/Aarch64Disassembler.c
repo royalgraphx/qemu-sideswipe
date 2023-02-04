@@ -13,7 +13,7 @@
 #include <Library/ArmDisassemblerLib.h>
 
 /**
-  Place a disassembly of **OpCodePtr into buffer, and update OpCodePtr to
+  Place a disassembly of of **OpCodePtr into buffer, and update OpCodePtr to
   point to next instruction.
 
   @param  OpCodePtrPtr  Pointer to pointer of instruction to disassemble.
@@ -26,12 +26,12 @@
 **/
 VOID
 DisassembleInstruction (
-  IN  UINT8      **OpCodePtr,
-  IN  BOOLEAN    Thumb,
-  IN  BOOLEAN    Extended,
-  IN OUT UINT32  *ItBlock,
-  OUT CHAR8      *Buf,
-  OUT UINTN      Size
+  IN  UINT8     **OpCodePtr,
+  IN  BOOLEAN   Thumb,
+  IN  BOOLEAN   Extended,
+  IN OUT UINT32 *ItBlock,
+  OUT CHAR8     *Buf,
+  OUT UINTN     Size
   )
 {
   // Not yet supported for AArch64.

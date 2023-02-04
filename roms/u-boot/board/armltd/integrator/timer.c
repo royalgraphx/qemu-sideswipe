@@ -18,8 +18,6 @@
 
 #include <common.h>
 #include <div64.h>
-#include <time.h>
-#include <linux/delay.h>
 
 #ifdef CONFIG_ARCH_CINTEGRATOR
 #define DIV_CLOCK_INIT	1
@@ -125,7 +123,7 @@ ulong get_timer (ulong base_ticks)
 }
 
 /* delay usec useconds */
-void __udelay(unsigned long usec)
+void __udelay (unsigned long usec)
 {
 	ulong tmo, tmp;
 
@@ -154,7 +152,7 @@ unsigned long long get_ticks(void)
  * Return the timebase clock frequency
  * i.e. how often the timer decrements
  */
-ulong get_tbclk(void)
+ulong get_tbclk (void)
 {
 	unsigned long long tmp = CONFIG_SYS_HZ_CLOCK;
 

@@ -1,5 +1,5 @@
 /** @file
-  Report Status Code Library for MM Phase.
+  Report Status Code Library for SMM Phase.
 
   Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -8,7 +8,7 @@
 
 #include <Library/ReportStatusCodeLib.h>
 #include <Library/DebugLib.h>
-#include <Library/MmServicesTableLib.h>
+#include <Library/SmmServicesTableLib.h>
 #include <Library/BaseLib.h>
 #include <Library/BaseMemoryLib.h>
 #include <Library/PcdLib.h>
@@ -16,12 +16,11 @@
 
 #include <Guid/StatusCodeDataTypeId.h>
 #include <Guid/StatusCodeDataTypeDebug.h>
-#include <Protocol/MmStatusCode.h>
+#include <Protocol/SmmStatusCode.h>
 
-#include "ReportStatusCodeLib.h"
+EFI_SMM_REPORT_STATUS_CODE     mReportStatusCode = NULL;
+EFI_SMM_STATUS_CODE_PROTOCOL   *mStatusCodeProtocol = NULL;
 
-EFI_MM_REPORT_STATUS_CODE    mReportStatusCode    = NULL;
-EFI_MM_STATUS_CODE_PROTOCOL  *mStatusCodeProtocol = NULL;
 
 /**
   Locate the report status code service.
@@ -30,18 +29,17 @@ EFI_MM_STATUS_CODE_PROTOCOL  *mStatusCodeProtocol = NULL;
             NULL is returned if no status code service is available.
 
 **/
-EFI_MM_REPORT_STATUS_CODE
+EFI_SMM_REPORT_STATUS_CODE
 InternalGetReportStatusCode (
   VOID
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                    Status;
 
-  Status = InternalLocateProtocol (&gEfiMmStatusCodeProtocolGuid, NULL, (VOID **)&mStatusCodeProtocol);
-  if (!EFI_ERROR (Status) && (mStatusCodeProtocol != NULL)) {
+  Status = gSmst->SmmLocateProtocol (&gEfiSmmStatusCodeProtocolGuid, NULL, (VOID**)&mStatusCodeProtocol);
+  if (!EFI_ERROR (Status) && mStatusCodeProtocol != NULL) {
     return mStatusCodeProtocol->ReportStatusCode;
   }
-
   return NULL;
 }
 
@@ -69,17 +67,16 @@ InternalGetReportStatusCode (
 **/
 EFI_STATUS
 InternalReportStatusCode (
-  IN EFI_STATUS_CODE_TYPE   Type,
-  IN EFI_STATUS_CODE_VALUE  Value,
-  IN UINT32                 Instance,
-  IN CONST EFI_GUID         *CallerId OPTIONAL,
-  IN EFI_STATUS_CODE_DATA   *Data     OPTIONAL
+  IN EFI_STATUS_CODE_TYPE     Type,
+  IN EFI_STATUS_CODE_VALUE    Value,
+  IN UINT32                   Instance,
+  IN CONST EFI_GUID           *CallerId OPTIONAL,
+  IN EFI_STATUS_CODE_DATA     *Data     OPTIONAL
   )
 {
-  if ((ReportProgressCodeEnabled () && (((Type) & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE)) ||
-      (ReportErrorCodeEnabled () && (((Type) & EFI_STATUS_CODE_TYPE_MASK) == EFI_ERROR_CODE)) ||
-      (ReportDebugCodeEnabled () && (((Type) & EFI_STATUS_CODE_TYPE_MASK) == EFI_DEBUG_CODE)))
-  {
+  if ((ReportProgressCodeEnabled() && ((Type) & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE) ||
+      (ReportErrorCodeEnabled() && ((Type) & EFI_STATUS_CODE_TYPE_MASK) == EFI_ERROR_CODE) ||
+      (ReportDebugCodeEnabled() && ((Type) & EFI_STATUS_CODE_TYPE_MASK) == EFI_DEBUG_CODE)) {
     //
     // If mReportStatusCode is NULL, then check if status code service is available in system.
     //
@@ -93,11 +90,12 @@ InternalReportStatusCode (
     //
     // A status code service is present in system, so pass in all the parameters to the service.
     //
-    return (*mReportStatusCode)(mStatusCodeProtocol, Type, Value, Instance, (EFI_GUID *)CallerId, Data);
+    return (*mReportStatusCode) (mStatusCodeProtocol, Type, Value, Instance, (EFI_GUID *)CallerId, Data);
   }
 
   return EFI_UNSUPPORTED;
 }
+
 
 /**
   Converts a status code to an 8-bit POST code value.
@@ -137,15 +135,14 @@ CodeTypeToPostCode (
   // Convert Value to an 8 bit post code
   //
   if (((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_PROGRESS_CODE) ||
-      ((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_ERROR_CODE))
-  {
-    *PostCode = (UINT8)((((Value & EFI_STATUS_CODE_CLASS_MASK) >> 24) << 5) |
-                        (((Value & EFI_STATUS_CODE_SUBCLASS_MASK) >> 16) & 0x1f));
+      ((CodeType & EFI_STATUS_CODE_TYPE_MASK) == EFI_ERROR_CODE)       ) {
+    *PostCode  = (UINT8) ((((Value & EFI_STATUS_CODE_CLASS_MASK) >> 24) << 5) |
+                          (((Value & EFI_STATUS_CODE_SUBCLASS_MASK) >> 16) & 0x1f));
     return TRUE;
   }
-
   return FALSE;
 }
+
 
 /**
   Extracts ASSERT() information from a status code structure.
@@ -200,17 +197,16 @@ ReportStatusCodeExtractAssertInfo (
 
   if (((CodeType & EFI_STATUS_CODE_TYPE_MASK)      == EFI_ERROR_CODE) &&
       ((CodeType & EFI_STATUS_CODE_SEVERITY_MASK)  == EFI_ERROR_UNRECOVERED) &&
-      ((Value    & EFI_STATUS_CODE_OPERATION_MASK) == EFI_SW_EC_ILLEGAL_SOFTWARE_STATE))
-  {
+      ((Value    & EFI_STATUS_CODE_OPERATION_MASK) == EFI_SW_EC_ILLEGAL_SOFTWARE_STATE)) {
     AssertData   = (EFI_DEBUG_ASSERT_DATA *)(Data + 1);
     *Filename    = (CHAR8 *)(AssertData + 1);
     *Description = *Filename + AsciiStrLen (*Filename) + 1;
     *LineNumber  = AssertData->LineNumber;
     return TRUE;
   }
-
   return FALSE;
 }
+
 
 /**
   Extracts DEBUG() information from a status code structure.
@@ -280,11 +276,12 @@ ReportStatusCodeExtractDebugInfo (
   // 64-bit aligned is a must, otherwise retrieving 64-bit parameter from BASE_LIST will
   // cause unalignment exception.
   //
-  *Marker = (BASE_LIST)(DebugInfo + 1);
+  *Marker = (BASE_LIST) (DebugInfo + 1);
   *Format = (CHAR8 *)(((UINT64 *)*Marker) + 12);
 
   return TRUE;
 }
+
 
 /**
   Reports a status code.
@@ -316,6 +313,7 @@ ReportStatusCode (
 {
   return InternalReportStatusCode (Type, Value, 0, &gEfiCallerIdGuid, NULL);
 }
+
 
 /**
   Reports a status code with an extended data buffer.
@@ -371,6 +369,7 @@ ReportStatusCodeWithExtendedData (
            ExtendedDataSize
            );
 }
+
 
 /**
   Reports a status code with full parameters.
@@ -443,12 +442,11 @@ ReportStatusCodeEx (
   //
   // Fill in the extended data header
   //
-  StatusCodeData->HeaderSize = (UINT16)sizeof (EFI_STATUS_CODE_DATA);
-  StatusCodeData->Size       = (UINT16)ExtendedDataSize;
+  StatusCodeData->HeaderSize = (UINT16) sizeof (EFI_STATUS_CODE_DATA);
+  StatusCodeData->Size = (UINT16) ExtendedDataSize;
   if (ExtendedDataGuid == NULL) {
     ExtendedDataGuid = &gEfiStatusCodeSpecificDataGuid;
   }
-
   CopyGuid (&StatusCodeData->Type, ExtendedDataGuid);
 
   //
@@ -464,7 +462,6 @@ ReportStatusCodeEx (
   if (CallerId == NULL) {
     CallerId = &gEfiCallerIdGuid;
   }
-
   Status = InternalReportStatusCode (Type, Value, Instance, CallerId, StatusCodeData);
 
   //
@@ -474,6 +471,7 @@ ReportStatusCodeEx (
 
   return Status;
 }
+
 
 /**
   Returns TRUE if status codes of type EFI_PROGRESS_CODE are enabled
@@ -493,8 +491,9 @@ ReportProgressCodeEnabled (
   VOID
   )
 {
-  return (BOOLEAN)((PcdGet8 (PcdReportStatusCodePropertyMask) & REPORT_STATUS_CODE_PROPERTY_PROGRESS_CODE_ENABLED) != 0);
+  return (BOOLEAN) ((PcdGet8 (PcdReportStatusCodePropertyMask) & REPORT_STATUS_CODE_PROPERTY_PROGRESS_CODE_ENABLED) != 0);
 }
+
 
 /**
   Returns TRUE if status codes of type EFI_ERROR_CODE are enabled
@@ -514,8 +513,9 @@ ReportErrorCodeEnabled (
   VOID
   )
 {
-  return (BOOLEAN)((PcdGet8 (PcdReportStatusCodePropertyMask) & REPORT_STATUS_CODE_PROPERTY_ERROR_CODE_ENABLED) != 0);
+  return (BOOLEAN) ((PcdGet8 (PcdReportStatusCodePropertyMask) & REPORT_STATUS_CODE_PROPERTY_ERROR_CODE_ENABLED) != 0);
 }
+
 
 /**
   Returns TRUE if status codes of type EFI_DEBUG_CODE are enabled
@@ -535,5 +535,5 @@ ReportDebugCodeEnabled (
   VOID
   )
 {
-  return (BOOLEAN)((PcdGet8 (PcdReportStatusCodePropertyMask) & REPORT_STATUS_CODE_PROPERTY_DEBUG_CODE_ENABLED) != 0);
+  return (BOOLEAN) ((PcdGet8 (PcdReportStatusCodePropertyMask) & REPORT_STATUS_CODE_PROPERTY_DEBUG_CODE_ENABLED) != 0);
 }

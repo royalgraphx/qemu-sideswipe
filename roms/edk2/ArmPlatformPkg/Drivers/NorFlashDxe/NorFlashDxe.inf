@@ -2,7 +2,7 @@
 #
 #  Component description file for NorFlashDxe module
 #
-#  Copyright (c) 2011 - 2021, Arm Limited. All rights reserved.<BR>
+#  Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -17,10 +17,8 @@
   ENTRY_POINT                    = NorFlashInitialise
 
 [Sources.common]
-  NorFlash.c
-  NorFlash.h
   NorFlashDxe.c
-  NorFlashFvb.c
+  NorFlashFvbDxe.c
   NorFlashBlockIoDxe.c
 
 [Packages]
@@ -55,13 +53,10 @@
   gEfiDiskIoProtocolGuid
 
 [Pcd.common]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase64
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableBase
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase64
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingBase
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwWorkingSize
-  gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase64
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareBase
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize
 

@@ -22,7 +22,7 @@
 
 #include "DynamicTableFactory.h"
 
-extern EDKII_DYNAMIC_TABLE_FACTORY_INFO  TableFactoryInfo;
+extern EDKII_DYNAMIC_TABLE_FACTORY_INFO TableFactoryInfo;
 
 /** Return a pointer to the ACPI table generator.
 
@@ -40,13 +40,13 @@ extern EDKII_DYNAMIC_TABLE_FACTORY_INFO  TableFactoryInfo;
 EFI_STATUS
 EFIAPI
 GetAcpiTableGenerator (
-  IN  CONST EDKII_DYNAMIC_TABLE_FACTORY_PROTOCOL  *CONST  This,
+  IN  CONST EDKII_DYNAMIC_TABLE_FACTORY_PROTOCOL  * CONST This,
   IN  CONST ACPI_TABLE_GENERATOR_ID                       GeneratorId,
-  OUT CONST ACPI_TABLE_GENERATOR                 **CONST  Generator
+  OUT CONST ACPI_TABLE_GENERATOR                 ** CONST Generator
   )
 {
-  UINT16                            TableId;
-  EDKII_DYNAMIC_TABLE_FACTORY_INFO  *FactoryInfo;
+  UINT16                           TableId;
+  EDKII_DYNAMIC_TABLE_FACTORY_INFO * FactoryInfo;
 
   ASSERT (This != NULL);
 
@@ -63,13 +63,12 @@ GetAcpiTableGenerator (
   }
 
   *Generator = NULL;
-  TableId    = GET_TABLE_ID (GeneratorId);
+  TableId = GET_TABLE_ID (GeneratorId);
   if (IS_GENERATOR_NAMESPACE_STD (GeneratorId)) {
     if (TableId >= EStdAcpiTableIdMax) {
       ASSERT (TableId < EStdAcpiTableIdMax);
       return EFI_INVALID_PARAMETER;
     }
-
     if (FactoryInfo->StdAcpiTableGeneratorList[TableId] != NULL) {
       *Generator = FactoryInfo->StdAcpiTableGeneratorList[TableId];
     } else {
@@ -80,14 +79,12 @@ GetAcpiTableGenerator (
       ASSERT (TableId <= FixedPcdGet16 (PcdMaxCustomACPIGenerators));
       return EFI_INVALID_PARAMETER;
     }
-
     if (FactoryInfo->CustomAcpiTableGeneratorList[TableId] != NULL) {
       *Generator = FactoryInfo->CustomAcpiTableGeneratorList[TableId];
     } else {
       return EFI_NOT_FOUND;
     }
   }
-
   return EFI_SUCCESS;
 }
 
@@ -108,7 +105,7 @@ GetAcpiTableGenerator (
 EFI_STATUS
 EFIAPI
 RegisterAcpiTableGenerator (
-  IN  CONST ACPI_TABLE_GENERATOR                *CONST  Generator
+  IN  CONST ACPI_TABLE_GENERATOR                * CONST Generator
   )
 {
   UINT16  TableId;
@@ -135,7 +132,6 @@ RegisterAcpiTableGenerator (
       ASSERT (TableId < EStdAcpiTableIdMax);
       return EFI_INVALID_PARAMETER;
     }
-
     if (TableFactoryInfo.StdAcpiTableGeneratorList[TableId] == NULL) {
       TableFactoryInfo.StdAcpiTableGeneratorList[TableId] = Generator;
     } else {
@@ -146,14 +142,12 @@ RegisterAcpiTableGenerator (
       ASSERT (TableId <= FixedPcdGet16 (PcdMaxCustomACPIGenerators));
       return EFI_INVALID_PARAMETER;
     }
-
     if (TableFactoryInfo.CustomAcpiTableGeneratorList[TableId] == NULL) {
       TableFactoryInfo.CustomAcpiTableGeneratorList[TableId] = Generator;
     } else {
       return EFI_ALREADY_STARTED;
     }
   }
-
   return EFI_SUCCESS;
 }
 
@@ -172,7 +166,7 @@ RegisterAcpiTableGenerator (
 EFI_STATUS
 EFIAPI
 DeregisterAcpiTableGenerator (
-  IN  CONST ACPI_TABLE_GENERATOR                *CONST  Generator
+  IN  CONST ACPI_TABLE_GENERATOR                * CONST Generator
   )
 {
   UINT16  TableId;
@@ -197,12 +191,10 @@ DeregisterAcpiTableGenerator (
       ASSERT (TableId < EStdAcpiTableIdMax);
       return EFI_INVALID_PARAMETER;
     }
-
     if (TableFactoryInfo.StdAcpiTableGeneratorList[TableId] != NULL) {
       if (Generator != TableFactoryInfo.StdAcpiTableGeneratorList[TableId]) {
         return EFI_INVALID_PARAMETER;
       }
-
       TableFactoryInfo.StdAcpiTableGeneratorList[TableId] = NULL;
     } else {
       return EFI_NOT_FOUND;
@@ -212,14 +204,11 @@ DeregisterAcpiTableGenerator (
       ASSERT (TableId <= FixedPcdGet16 (PcdMaxCustomACPIGenerators));
       return EFI_INVALID_PARAMETER;
     }
-
     if (TableFactoryInfo.CustomAcpiTableGeneratorList[TableId] != NULL) {
       if (Generator !=
-          TableFactoryInfo.CustomAcpiTableGeneratorList[TableId])
-      {
+          TableFactoryInfo.CustomAcpiTableGeneratorList[TableId]) {
         return EFI_INVALID_PARAMETER;
       }
-
       TableFactoryInfo.CustomAcpiTableGeneratorList[TableId] = NULL;
     } else {
       return EFI_NOT_FOUND;

@@ -26,6 +26,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 typedef struct _EFI_PKCS7_VERIFY_PROTOCOL EFI_PKCS7_VERIFY_PROTOCOL;
 
+
 /**
   Processes a buffer containing binary DER-encoded PKCS7 signature.
   The signed data content may be embedded within the buffer or separated. Funtion
@@ -114,7 +115,7 @@ typedef struct _EFI_PKCS7_VERIFY_PROTOCOL EFI_PKCS7_VERIFY_PROTOCOL;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PKCS7_VERIFY_BUFFER)(
+(EFIAPI *EFI_PKCS7_VERIFY_BUFFER) (
   IN EFI_PKCS7_VERIFY_PROTOCOL    *This,
   IN VOID                         *SignedData,
   IN UINTN                        SignedDataSize,
@@ -195,7 +196,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PKCS7_VERIFY_SIGNATURE)(
+(EFIAPI *EFI_PKCS7_VERIFY_SIGNATURE) (
   IN EFI_PKCS7_VERIFY_PROTOCOL   *This,
   IN VOID                        *Signature,
   IN UINTN                       SignatureSize,
@@ -213,10 +214,10 @@ EFI_STATUS
 /// Support of other hash algorithms is optional.
 ///
 struct _EFI_PKCS7_VERIFY_PROTOCOL {
-  EFI_PKCS7_VERIFY_BUFFER       VerifyBuffer;
-  EFI_PKCS7_VERIFY_SIGNATURE    VerifySignature;
+  EFI_PKCS7_VERIFY_BUFFER         VerifyBuffer;
+  EFI_PKCS7_VERIFY_SIGNATURE      VerifySignature;
 };
 
-extern EFI_GUID  gEfiPkcs7VerifyProtocolGuid;
+extern EFI_GUID gEfiPkcs7VerifyProtocolGuid;
 
 #endif

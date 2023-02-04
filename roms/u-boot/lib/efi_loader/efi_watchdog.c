@@ -13,9 +13,7 @@
 
 static struct efi_event *watchdog_timer_event;
 
-/**
- * efi_watchdog_timer_notify() - resets system upon watchdog event
- *
+/*
  * Reset the system when the watchdog event is notified.
  *
  * @event:	the watchdog event
@@ -33,13 +31,13 @@ static void EFIAPI efi_watchdog_timer_notify(struct efi_event *event,
 	EFI_EXIT(EFI_UNSUPPORTED);
 }
 
-/**
- * efi_set_watchdog() - resets the watchdog timer
+/*
+ * Reset the watchdog timer.
  *
  * This function is used by the SetWatchdogTimer service.
  *
  * @timeout:		seconds before reset by watchdog
- * Return:		status code
+ * @return:		status code
  */
 efi_status_t efi_set_watchdog(unsigned long timeout)
 {
@@ -55,12 +53,10 @@ efi_status_t efi_set_watchdog(unsigned long timeout)
 	return r;
 }
 
-/**
- * efi_watchdog_register() - initializes the EFI watchdog
+/*
+ * Initialize the EFI watchdog.
  *
- * This function is called by efi_init_obj_list().
- *
- * Return:	status code
+ * This function is called by efi_init_obj_list()
  */
 efi_status_t efi_watchdog_register(void)
 {

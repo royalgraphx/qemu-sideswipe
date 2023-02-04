@@ -1,7 +1,7 @@
 @REM @file
 @REM   Windows batch file to setup a WORKSPACE environment
 @REM
-@REM Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+@REM Copyright (c) 2006 - 2016, Intel Corporation. All rights reserved.<BR>
 @REM (C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 @REM SPDX-License-Identifier: BSD-2-Clause-Patent
 @REM
@@ -83,6 +83,18 @@ if exist %EDK_BASETOOLS% (
 :checkNt32Flag
 if exist %EDK_TOOLS_PATH%\Source set BASE_TOOLS_PATH=%EDK_TOOLS_PATH%
 
+@REM The Nt32 Emulation Platform requires Microsoft Libraries
+@REM and headers to interface with Windows.
+if /I "%1"=="--nt32" (
+  if /I "%2"=="X64" (
+    shift
+    call "%BASE_TOOLS_PATH%\Scripts\SetVisualStudio.bat"
+  ) else (
+    call "%BASE_TOOLS_PATH%\get_vsvars.bat"
+  )
+  shift
+)
+
 :checkBaseTools
 IF NOT EXIST "%EDK_TOOLS_PATH%\toolsetup.bat" goto BadBaseTools
 call %EDK_TOOLS_PATH%\toolsetup.bat %*
@@ -113,18 +125,6 @@ if not defined NASM_PREFIX (
     @if not exist "C:\nasm\nasm.exe" echo   Attempting to build modules that require NASM will fail.
 )
 
-:check_CLANGPDB
-@REM In Windows, set CLANG_HOST_BIN=n to use nmake command
-@set CLANG_HOST_BIN=n
-if not defined CLANG_BIN (
-    @echo.
-    @echo !!! WARNING !!! CLANG_BIN environment variable is not set
-    @if exist "C:\Program Files\LLVM\bin\clang.exe" (
-        @set "CLANG_BIN=C:\Program Files\LLVM\bin\"
-        @echo   Found LLVM, setting CLANG_BIN environment variable to C:\Program Files\LLVM\bin\
-    )
-)
-
 :check_cygwin
 if defined CYGWIN_HOME (
   if not exist "%CYGWIN_HOME%" (
@@ -145,25 +145,24 @@ if defined CYGWIN_HOME (
 :cygwin_done
 if /I "%1"=="Rebuild" shift
 if /I "%1"=="ForceRebuild" shift
-if /I "%1"=="VS2019" shift
-if /I "%1"=="VS2017" shift
-if /I "%1"=="VS2015" shift
-if /I "%1"=="VS2013" shift
-if /I "%1"=="VS2012" shift
 if "%1"=="" goto end
 
 :Usage
   @echo.
-  @echo  Usage: "%0 [-h | -help | --help | /h | /help | /?] [Reconfig] [Rebuild] [ForceRebuild] [VS2019] [VS2017] [VS2015] [VS2013] [VS2012]"
+  @echo  Usage: "%0 [-h | -help | --help | /h | /help | /?] [--nt32 [X64]] [Reconfig] [Rebuild] [ForceRebuild]"
+  @echo         --nt32 [X64]   If a compiler tool chain is not available in the
+  @echo                        environment, call a script to attempt to set one up.
+  @echo                        This flag is only required if building the
+  @echo                        Nt32Pkg/Nt32Pkg.dsc system emulator.
+  @echo                        If the X64 argument is set, and a compiler tool chain is
+  @echo                        not available, attempt to set up a tool chain that will
+  @echo                        create X64 binaries. Setting these two options have the
+  @echo                        potential side effect of changing tool chains used for a
+  @echo                        rebuild.
   @echo.
   @echo         Reconfig       Reinstall target.txt, tools_def.txt and build_rule.txt.
   @echo         Rebuild        Perform incremental rebuild of BaseTools binaries.
   @echo         ForceRebuild   Force a full rebuild of BaseTools binaries.
-  @echo         VS2012         Set the env for VS2012 build.
-  @echo         VS2013         Set the env for VS2013 build.
-  @echo         VS2015         Set the env for VS2015 build.
-  @echo         VS2017         Set the env for VS2017 build.
-  @echo         VS2019         Set the env for VS2019 build.
   @echo.
   @echo  Note that target.template, tools_def.template and build_rules.template
   @echo  will only be copied to target.txt, tools_def.txt and build_rule.txt

@@ -37,8 +37,7 @@
 
 typedef struct OrIRQState qemu_or_irq;
 
-DECLARE_INSTANCE_CHECKER(qemu_or_irq, OR_IRQ,
-                         TYPE_OR_IRQ)
+#define OR_IRQ(obj) OBJECT_CHECK(qemu_or_irq, (obj), TYPE_OR_IRQ)
 
 struct OrIRQState {
     DeviceState parent_obj;

@@ -25,12 +25,10 @@
 #include "qemu/osdep.h"
 #include "hw/irq.h"
 #include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
 #include "hw/sysbus.h"
 #include "chardev/char-fe.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 #define D(x)
 
@@ -50,12 +48,11 @@
 #define STAT_TR_IDLE 22
 #define STAT_TR_RDY  24
 
-#define TYPE_ETRAX_FS_SERIAL "etraxfs-serial"
-typedef struct ETRAXSerial ETRAXSerial;
-DECLARE_INSTANCE_CHECKER(ETRAXSerial, ETRAX_SERIAL,
-                         TYPE_ETRAX_FS_SERIAL)
+#define TYPE_ETRAX_FS_SERIAL "etraxfs,serial"
+#define ETRAX_SERIAL(obj) \
+    OBJECT_CHECK(ETRAXSerial, (obj), TYPE_ETRAX_FS_SERIAL)
 
-struct ETRAXSerial {
+typedef struct ETRAXSerial {
     SysBusDevice parent_obj;
 
     MemoryRegion mmio;
@@ -70,7 +67,7 @@ struct ETRAXSerial {
 
     /* Control registers.  */
     uint32_t regs[R_MAX];
-};
+} ETRAXSerial;
 
 static void ser_update_irq(ETRAXSerial *s)
 {

@@ -26,6 +26,5 @@
 #define SC_MISC_REL_CONTAINER	2U	/* Release container */
 
 typedef u8 sc_misc_boot_status_t;
-typedef u8 sc_misc_temp_t;
 
 #endif /* SC_MISC_API_H */

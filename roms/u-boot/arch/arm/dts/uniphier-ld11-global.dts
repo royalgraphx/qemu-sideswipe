@@ -30,7 +30,6 @@
 		i2c3 = &i2c3;
 		i2c4 = &i2c4;
 		i2c5 = &i2c5;
-		ethernet0 = &eth;
 	};
 
 	memory@80000000 {
@@ -133,7 +132,7 @@
 	};
 
 	eeprom@50 {
-		compatible = "st,24c64", "atmel,24c64";
+		compatible = "st,24c64", "atmel,24c64", "i2c-eeprom";
 		reg = <0x50>;
 		pagesize = <32>;
 	};
@@ -157,7 +156,7 @@
 };
 
 &mdio {
-	ethphy: ethernet-phy@1 {
+	ethphy: ethphy@1 {
 		reg = <1>;
 	};
 };

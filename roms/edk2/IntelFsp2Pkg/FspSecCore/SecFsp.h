@@ -31,7 +31,7 @@
 
 **/
 UINT64
-FspGetExceptionHandler (
+FspGetExceptionHandler(
   IN  UINT64  IdtEntryTemplate
   );
 
@@ -47,10 +47,11 @@ FspGetExceptionHandler (
 **/
 VOID
 FspGlobalDataInit (
-  IN OUT  FSP_GLOBAL_DATA  *PeiFspData,
-  IN UINT32                BootLoaderStack,
-  IN UINT8                 ApiIdx
+  IN OUT  FSP_GLOBAL_DATA    *PeiFspData,
+  IN UINT32                   BootLoaderStack,
+  IN UINT8                    ApiIdx
   );
+
 
 /**
 
@@ -61,8 +62,9 @@ FspGlobalDataInit (
 **/
 VOID
 FspDataPointerFixUp (
-  IN UINT32  OffsetGap
+  IN UINT32   OffsetGap
   );
+
 
 /**
   This interface returns the base address of FSP binary.

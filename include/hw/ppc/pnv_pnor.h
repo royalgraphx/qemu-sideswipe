@@ -6,11 +6,8 @@
  * This code is licensed under the GPL version 2 or later. See the
  * COPYING file in the top-level directory.
  */
-
-#ifndef PPC_PNV_PNOR_H
-#define PPC_PNV_PNOR_H
-
-#include "qom/object.h"
+#ifndef _PPC_PNV_PNOR_H
+#define _PPC_PNV_PNOR_H
 
 /*
  * PNOR offset on the LPC FW address space
@@ -18,9 +15,9 @@
 #define PNOR_SPI_OFFSET         0x0c000000UL
 
 #define TYPE_PNV_PNOR  "pnv-pnor"
-OBJECT_DECLARE_SIMPLE_TYPE(PnvPnor, PNV_PNOR)
+#define PNV_PNOR(obj)  OBJECT_CHECK(PnvPnor, (obj), TYPE_PNV_PNOR)
 
-struct PnvPnor {
+typedef struct PnvPnor {
     SysBusDevice   parent_obj;
 
     BlockBackend   *blk;
@@ -28,6 +25,6 @@ struct PnvPnor {
     uint8_t        *storage;
     int64_t        size;
     MemoryRegion   mmio;
-};
+} PnvPnor;
 
-#endif /* PPC_PNV_PNOR_H */
+#endif /* _PPC_PNV_PNOR_H */

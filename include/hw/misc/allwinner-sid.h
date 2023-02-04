@@ -30,14 +30,15 @@
  */
 
 #define TYPE_AW_SID    "allwinner-sid"
-OBJECT_DECLARE_SIMPLE_TYPE(AwSidState, AW_SID)
+#define AW_SID(obj) \
+    OBJECT_CHECK(AwSidState, (obj), TYPE_AW_SID)
 
 /** @} */
 
 /**
  * Allwinner Security ID object instance state
  */
-struct AwSidState {
+typedef struct AwSidState {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
@@ -54,6 +55,6 @@ struct AwSidState {
     /** Stores the emulated device identifier */
     QemuUUID identifier;
 
-};
+} AwSidState;
 
 #endif /* HW_MISC_ALLWINNER_SID_H */

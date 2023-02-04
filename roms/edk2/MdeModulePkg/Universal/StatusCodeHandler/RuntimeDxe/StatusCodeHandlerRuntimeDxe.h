@@ -33,7 +33,7 @@
 //
 // Define the maximum message length
 //
-#define MAX_DEBUG_MESSAGE_LENGTH  0x100
+#define MAX_DEBUG_MESSAGE_LENGTH 0x100
 
 extern RUNTIME_MEMORY_STATUSCODE_HEADER  *mRtMemoryStatusCodeTable;
 
@@ -47,6 +47,7 @@ EFI_STATUS
 EfiSerialStatusCodeInitializeWorker (
   VOID
   );
+
 
 /**
   Convert status code value and extended data to readable ASCII string, send string to serial I/O device.
@@ -70,11 +71,11 @@ EfiSerialStatusCodeInitializeWorker (
 EFI_STATUS
 EFIAPI
 SerialStatusCodeReportWorker (
-  IN EFI_STATUS_CODE_TYPE   CodeType,
-  IN EFI_STATUS_CODE_VALUE  Value,
-  IN UINT32                 Instance,
-  IN EFI_GUID               *CallerId,
-  IN EFI_STATUS_CODE_DATA   *Data OPTIONAL
+  IN EFI_STATUS_CODE_TYPE     CodeType,
+  IN EFI_STATUS_CODE_VALUE    Value,
+  IN UINT32                   Instance,
+  IN EFI_GUID                 *CallerId,
+  IN EFI_STATUS_CODE_DATA     *Data OPTIONAL
   );
 
 /**
@@ -110,22 +111,11 @@ RtMemoryStatusCodeInitializeWorker (
 EFI_STATUS
 EFIAPI
 RtMemoryStatusCodeReportWorker (
-  IN EFI_STATUS_CODE_TYPE   CodeType,
-  IN EFI_STATUS_CODE_VALUE  Value,
-  IN UINT32                 Instance,
-  IN EFI_GUID               *CallerId,
-  IN EFI_STATUS_CODE_DATA   *Data OPTIONAL
-  );
-
-/**
-  Unregister status code callback functions only available at boot time from
-  report status code router when exiting boot services.
-
-**/
-VOID
-EFIAPI
-UnregisterSerialBootTimeHandlers (
-  VOID
+  IN EFI_STATUS_CODE_TYPE               CodeType,
+  IN EFI_STATUS_CODE_VALUE              Value,
+  IN UINT32                             Instance,
+  IN EFI_GUID                           *CallerId,
+  IN EFI_STATUS_CODE_DATA               *Data OPTIONAL
   );
 
 #endif

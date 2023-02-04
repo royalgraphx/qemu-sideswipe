@@ -7,7 +7,7 @@
 #ifndef __CONFIG_KEYMILE_H
 #define __CONFIG_KEYMILE_H
 
-#include <linux/stringify.h>
+#undef	CONFIG_WATCHDOG		/* disable platform specific watchdog */
 
 /*
  * Miscellaneous configurable options
@@ -27,14 +27,28 @@
 #define CONFIG_LOADS_ECHO
 #define CONFIG_SYS_LOADS_BAUD_CHANGE
 
+
+/* Support the IVM EEprom */
+#define	CONFIG_SYS_IVM_EEPROM_ADR	0x50
+#define CONFIG_SYS_IVM_EEPROM_MAX_LEN	0x400
+#define CONFIG_SYS_IVM_EEPROM_PAGE_LEN	0x100
+
 /*
  * BOOTP options
  */
 #define CONFIG_BOOTP_BOOTFILESIZE
 
+/* UBI Support for all Keymile boards */
+#define CONFIG_MTD_CONCAT
+
 #ifndef CONFIG_KM_DEF_ENV_BOOTPARAMS
 #define CONFIG_KM_DEF_ENV_BOOTPARAMS \
 	"actual_bank=0\0"
+#endif
+
+#ifndef CONFIG_KM_DEF_NETDEV
+#define CONFIG_KM_DEF_NETDEV	\
+	"netdev=eth0\0"
 #endif
 
 #ifndef CONFIG_KM_UBI_PARTITION_NAME_BOOT
@@ -87,12 +101,12 @@
 		"set_fdthigh cramfsloadkernel flashargs add_default "	\
 		"addpanic boot\0"					\
 	"develop="							\
-		"tftp ${load_addr_r} scripts/develop-${arch}.txt && "	\
-		"env import -t ${load_addr_r} ${filesize} && "		\
+		"tftp 200000 scripts/develop-${arch}.txt && "		\
+		"env import -t 200000 ${filesize} && "			\
 		"run setup_debug_env\0"					\
 	"ramfs="							\
-		"tftp ${load_addr_r} scripts/ramfs-${arch}.txt && "	\
-		"env import -t ${load_addr_r} ${filesize} && "		\
+		"tftp 200000 scripts/ramfs-${arch}.txt && "		\
+		"env import -t 200000 ${filesize} && "			\
 		"run setup_debug_env\0"					\
 	""
 
@@ -140,7 +154,8 @@
 #define CONFIG_KM_DEF_ENV_FLASH_BOOT					\
 	"cramfsaddr=" __stringify(CONFIG_KM_CRAMFS_ADDR) "\0"		\
 	"cramfsloadkernel=cramfsload ${load_addr_r} ${uimage}\0"	\
-	"ubicopy=ubi read ${cramfsaddr} bootfs${boot_bank}\0"		\
+	"ubicopy=ubi read "__stringify(CONFIG_KM_CRAMFS_ADDR)		\
+			" bootfs${boot_bank}\0"				\
 	"uimage=" CONFIG_KM_UIMAGE_NAME					\
 	CONFIG_KM_DEV_ENV_FLASH_BOOT_UBI
 
@@ -156,13 +171,12 @@
 	"pnvramsize=" __stringify(CONFIG_KM_PNVRAM) "\0"		\
 	"testbootcmd=setenv boot_bank ${test_bank}; "			\
 		"run ${subbootcmds}; reset\0"				\
-	"env_version=1\0"						\
 	""
 
 #ifndef CONFIG_KM_DEF_ENV
 #define CONFIG_KM_DEF_ENV	\
 	CONFIG_KM_DEF_ENV_BOOTPARAMS					\
-	"netdev=" __stringify(CONFIG_KM_DEF_NETDEV) "\0"		\
+	CONFIG_KM_DEF_NETDEV						\
 	CONFIG_KM_DEF_ENV_CPU						\
 	CONFIG_KM_DEF_ENV_BOOTTARGETS					\
 	CONFIG_KM_DEF_ENV_BOOTARGS					\
@@ -181,9 +195,9 @@
 	"cramfsloadfdt="						\
 		"cramfsload ${fdt_addr_r} "				\
 		"fdt_0x${IVM_BoardId}_0x${IVM_HWKey}.dtb\0"		\
-	"fdt_addr_r=" __stringify(CONFIG_KM_FDT_ADDR) "\0"		\
+	"fdt_addr_r="__stringify(CONFIG_KM_FDT_ADDR) "\0"		\
 	"init=/sbin/init-overlay.sh\0"					\
-	"load_addr_r=" __stringify(CONFIG_KM_KERNEL_ADDR) "\0"		\
+	"load_addr_r="__stringify(CONFIG_KM_KERNEL_ADDR) "\0"		\
 	"load=tftpboot ${load_addr_r} ${u-boot}\0"			\
 	"mtdids=" CONFIG_MTDIDS_DEFAULT "\0"					\
 	"mtdparts=" CONFIG_MTDPARTS_DEFAULT "\0"				\

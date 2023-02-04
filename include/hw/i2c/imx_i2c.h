@@ -22,10 +22,9 @@
 #define IMX_I2C_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define TYPE_IMX_I2C "imx.i2c"
-OBJECT_DECLARE_SIMPLE_TYPE(IMXI2CState, IMX_I2C)
+#define IMX_I2C(obj) OBJECT_CHECK(IMXI2CState, (obj), TYPE_IMX_I2C)
 
 #define IMX_I2C_MEM_SIZE           0x14
 
@@ -66,7 +65,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(IMXI2CState, IMX_I2C)
 
 #define ADDR_RESET                 0xFF00
 
-struct IMXI2CState {
+typedef struct IMXI2CState {
     /*< private >*/
     SysBusDevice parent_obj;
 
@@ -83,6 +82,6 @@ struct IMXI2CState {
     uint16_t i2sr;
     uint16_t i2dr_read;
     uint16_t i2dr_write;
-};
+} IMXI2CState;
 
 #endif /* IMX_I2C_H */

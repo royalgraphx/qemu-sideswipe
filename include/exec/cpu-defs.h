@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,6 +25,9 @@
 
 #include "qemu/host-utils.h"
 #include "qemu/thread.h"
+#ifdef CONFIG_TCG
+#include "tcg-target.h"
+#endif
 #ifndef CONFIG_USER_ONLY
 #include "exec/hwaddr.h"
 #endif
@@ -53,9 +56,6 @@
 # else
 #  error TARGET_PAGE_BITS must be defined in cpu-param.h
 # endif
-#endif
-#ifndef TARGET_TB_PCREL
-# define TARGET_TB_PCREL 0
 #endif
 
 #define TARGET_LONG_SIZE (TARGET_LONG_BITS / 8)
@@ -111,7 +111,6 @@ typedef uint64_t target_ulong;
 #  endif
 # endif
 
-/* Minimalized TLB entry for use by TCG fast path. */
 typedef struct CPUTLBEntry {
     /* bit TARGET_LONG_BITS to TARGET_PAGE_BITS : virtual address
        bit TARGET_PAGE_BITS-1..4  : Nonzero for accesses that should not
@@ -135,14 +134,14 @@ typedef struct CPUTLBEntry {
 
 QEMU_BUILD_BUG_ON(sizeof(CPUTLBEntry) != (1 << CPU_TLB_ENTRY_BITS));
 
-/*
- * The full TLB entry, which is not accessed by generated TCG code,
- * so the layout is not as critical as that of CPUTLBEntry. This is
- * also why we don't want to combine the two structs.
+/* The IOTLB is not accessed directly inline by generated TCG code,
+ * so the CPUIOTLBEntry layout is not as critical as that of the
+ * CPUTLBEntry. (This is also why we don't want to combine the two
+ * structs into one.)
  */
-typedef struct CPUTLBEntryFull {
+typedef struct CPUIOTLBEntry {
     /*
-     * @xlat_section contains:
+     * @addr contains:
      *  - in the lower TARGET_PAGE_BITS, a physical section number
      *  - with the lower TARGET_PAGE_BITS masked off, an offset which
      *    must be added to the virtual address to obtain:
@@ -150,32 +149,9 @@ typedef struct CPUTLBEntryFull {
      *       number is PHYS_SECTION_NOTDIRTY or PHYS_SECTION_ROM)
      *     + the offset within the target MemoryRegion (otherwise)
      */
-    hwaddr xlat_section;
-
-    /*
-     * @phys_addr contains the physical address in the address space
-     * given by cpu_asidx_from_attrs(cpu, @attrs).
-     */
-    hwaddr phys_addr;
-
-    /* @attrs contains the memory transaction attributes for the page. */
+    hwaddr addr;
     MemTxAttrs attrs;
-
-    /* @prot contains the complete protections for the page. */
-    uint8_t prot;
-
-    /* @lg_page_size contains the log2 of the page size. */
-    uint8_t lg_page_size;
-
-    /*
-     * Allow target-specific additions to this structure.
-     * This may be used to cache items from the guest cpu
-     * page tables for later use by the implementation.
-     */
-#ifdef TARGET_PAGE_ENTRY_EXTRA
-    TARGET_PAGE_ENTRY_EXTRA
-#endif
-} CPUTLBEntryFull;
+} CPUIOTLBEntry;
 
 /*
  * Data elements that are per MMU mode, minus the bits accessed by
@@ -199,8 +175,9 @@ typedef struct CPUTLBDesc {
     size_t vindex;
     /* The tlb victim table, in two parts.  */
     CPUTLBEntry vtable[CPU_VTLB_SIZE];
-    CPUTLBEntryFull vfulltlb[CPU_VTLB_SIZE];
-    CPUTLBEntryFull *fulltlb;
+    CPUIOTLBEntry viotlb[CPU_VTLB_SIZE];
+    /* The iotlb.  */
+    CPUIOTLBEntry *iotlb;
 } CPUTLBDesc;
 
 /*

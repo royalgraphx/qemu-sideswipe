@@ -17,10 +17,10 @@
  */
 
 #include "qemu/osdep.h"
-#include "../libqtest.h"
+#include "libqtest.h"
 #include "qemu/module.h"
-#include "libqos-malloc.h"
-#include "qgraph.h"
+#include "libqos/malloc.h"
+#include "libqos/qgraph.h"
 #include "sdhci.h"
 
 typedef struct QXilinxZynqA9Machine QXilinxZynqA9Machine;

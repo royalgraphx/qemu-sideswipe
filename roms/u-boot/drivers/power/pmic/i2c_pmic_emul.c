@@ -8,8 +8,6 @@
 #include <errno.h>
 #include <dm.h>
 #include <i2c.h>
-#include <log.h>
-#include <malloc.h>
 #include <power/pmic.h>
 #include <power/sandbox_pmic.h>
 
@@ -30,7 +28,7 @@ struct sandbox_i2c_pmic_plat_data {
 static int sandbox_i2c_pmic_read_data(struct udevice *emul, uchar chip,
 				      uchar *buffer, int len)
 {
-	struct sandbox_i2c_pmic_plat_data *plat = dev_get_plat(emul);
+	struct sandbox_i2c_pmic_plat_data *plat = dev_get_platdata(emul);
 
 	if (plat->rw_idx + len > plat->buf_size) {
 		pr_err("Request exceeds PMIC register range! Max register: %#x",
@@ -50,7 +48,7 @@ static int sandbox_i2c_pmic_write_data(struct udevice *emul, uchar chip,
 				       uchar *buffer, int len,
 				       bool next_is_read)
 {
-	struct sandbox_i2c_pmic_plat_data *plat = dev_get_plat(emul);
+	struct sandbox_i2c_pmic_plat_data *plat = dev_get_platdata(emul);
 
 	/* Probe only */
 	if (!len)
@@ -103,25 +101,16 @@ static int sandbox_i2c_pmic_xfer(struct udevice *emul, struct i2c_msg *msg,
 	return ret;
 }
 
-static int sandbox_i2c_pmic_of_to_plat(struct udevice *emul)
+static int sandbox_i2c_pmic_ofdata_to_platdata(struct udevice *emul)
 {
-	struct sandbox_i2c_pmic_plat_data *plat = dev_get_plat(emul);
+	struct sandbox_i2c_pmic_plat_data *plat = dev_get_platdata(emul);
 	struct udevice *pmic_dev = i2c_emul_get_device(emul);
+	struct uc_pmic_priv *priv = dev_get_uclass_priv(pmic_dev);
+	const u8 *reg_defaults;
 
 	debug("%s:%d Setting PMIC default registers\n", __func__, __LINE__);
 	plat->reg_count = pmic_reg_count(pmic_dev);
-
-	return 0;
-}
-
-static int sandbox_i2c_pmic_probe(struct udevice *emul)
-{
-	struct sandbox_i2c_pmic_plat_data *plat = dev_get_plat(emul);
-	struct udevice *pmic_dev = i2c_emul_get_device(emul);
-	struct uc_pmic_priv *upriv = dev_get_uclass_priv(pmic_dev);
-	const u8 *reg_defaults;
-
-	plat->trans_len = upriv->trans_len;
+	plat->trans_len = priv->trans_len;
 	plat->buf_size = plat->reg_count * plat->trans_len;
 
 	plat->reg = calloc(1, plat->buf_size);
@@ -159,8 +148,7 @@ U_BOOT_DRIVER(sandbox_i2c_pmic_emul) = {
 	.name		= "sandbox_i2c_pmic_emul",
 	.id		= UCLASS_I2C_EMUL,
 	.of_match	= sandbox_i2c_pmic_ids,
-	.of_to_plat = sandbox_i2c_pmic_of_to_plat,
-	.probe		= sandbox_i2c_pmic_probe,
-	.plat_auto	= sizeof(struct sandbox_i2c_pmic_plat_data),
+	.ofdata_to_platdata = sandbox_i2c_pmic_ofdata_to_platdata,
+	.platdata_auto_alloc_size = sizeof(struct sandbox_i2c_pmic_plat_data),
 	.ops		= &sandbox_i2c_pmic_emul_ops,
 };

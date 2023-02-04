@@ -31,20 +31,27 @@
 
 #define TYPE_NVRAM "nvram"
 
-typedef struct NvramClass NvramClass;
-DECLARE_CLASS_CHECKERS(NvramClass, NVRAM,
-                       TYPE_NVRAM)
+#define NVRAM_CLASS(klass) \
+    OBJECT_CLASS_CHECK(NvramClass, (klass), TYPE_NVRAM)
+#define NVRAM_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(NvramClass, (obj), TYPE_NVRAM)
 #define NVRAM(obj) \
     INTERFACE_CHECK(Nvram, (obj), TYPE_NVRAM)
 
 typedef struct Nvram Nvram;
 
-struct NvramClass {
+typedef struct NvramClass {
     InterfaceClass parent;
 
     uint32_t (*read)(Nvram *obj, uint32_t addr);
     void (*write)(Nvram *obj, uint32_t addr, uint32_t val);
     void (*toggle_lock)(Nvram *obj, int lock);
-};
+} NvramClass;
 
-#endif /* HW_RTC_M48T59_H */
+Nvram *m48t59_init_isa(ISABus *bus, uint32_t io_base, uint16_t size,
+                       int base_year, int type);
+Nvram *m48t59_init(qemu_irq IRQ, hwaddr mem_base,
+                   uint32_t io_base, uint16_t size, int base_year,
+                   int type);
+
+#endif /* HW_M48T59_H */

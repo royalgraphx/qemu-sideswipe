@@ -52,12 +52,12 @@ HFileImageBackup (
 
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
-  @retval EFI_LOAD_ERROR        A load error occurred.
+  @retval EFI_LOAD_ERROR        A load error occured.
 **/
 EFI_STATUS
 HFileImageRead (
   IN CONST CHAR16  *FileName,
-  IN BOOLEAN       Recover
+  IN BOOLEAN Recover
   );
 
 /**
@@ -67,11 +67,11 @@ HFileImageRead (
 
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
-  @retval EFI_LOAD_ERROR        A load error occurred.
+  @retval EFI_LOAD_ERROR        A load error occured.
 **/
 EFI_STATUS
 HFileImageSave (
-  IN CHAR16  *FileName
+  IN CHAR16 *FileName
   );
 
 #endif

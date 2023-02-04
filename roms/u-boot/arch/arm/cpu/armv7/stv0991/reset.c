@@ -5,11 +5,9 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
 #include <asm/io.h>
 #include <asm/arch/stv0991_wdru.h>
-#include <linux/delay.h>
-void reset_cpu(void)
+void reset_cpu(ulong ignored)
 {
 	puts("System is going to reboot ...\n");
 	/*

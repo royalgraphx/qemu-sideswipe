@@ -7,11 +7,7 @@
  */
 
 #include <common.h>
-#include <clock_legacy.h>
-#include <env.h>
-#include <log.h>
-#include <time.h>
-#include <asm/global_data.h>
+#include <environment.h>
 #include <linux/libfdt.h>
 #include <fdt_support.h>
 #include <asm/processor.h>
@@ -598,7 +594,7 @@ static void fdt_fixup_l2_switch(void *blob)
 #define fdt_fixup_l2_switch(x)
 #endif
 
-void ft_cpu_setup(void *blob, struct bd_info *bd)
+void ft_cpu_setup(void *blob, bd_t *bd)
 {
 	int off;
 	int val;
@@ -673,10 +669,10 @@ void ft_cpu_setup(void *blob, struct bd_info *bd)
 		"clock-frequency", get_bus_freq(0), 1);
 #endif
 
-	fdt_fixup_memory(blob, (u64)gd->ram_base, (u64)gd->ram_size);
+	fdt_fixup_memory(blob, (u64)bd->bi_memstart, (u64)bd->bi_memsize);
 
 #ifdef CONFIG_MP
-	ft_fixup_cpu(blob, (u64)gd->ram_base + (u64)gd->ram_size);
+	ft_fixup_cpu(blob, (u64)bd->bi_memstart + (u64)bd->bi_memsize);
 	ft_fixup_num_cores(blob);
 #endif
 

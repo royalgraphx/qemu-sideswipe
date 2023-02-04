@@ -9,10 +9,12 @@
 
 #include <PiPei.h>
 
+
 EFI_PEI_PPI_DESCRIPTOR *
 GetThunkPpiList (
   VOID
   );
+
 
 EFI_STATUS
 EFIAPI
@@ -21,3 +23,5 @@ AddThunkPpi (
   IN  EFI_GUID  *Guid,
   IN  VOID      *Ppi
   );
+
+

@@ -6,20 +6,22 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 #include "BootMaintenanceManager.h"
 #include "BootMaintenanceManagerCustomizedUiSupport.h"
 
-#define UI_HII_DRIVER_LIST_SIZE  0x8
+#define UI_HII_DRIVER_LIST_SIZE               0x8
 
 typedef struct {
-  EFI_STRING_ID    PromptId;
-  EFI_STRING_ID    HelpId;
-  EFI_STRING_ID    DevicePathId;
-  EFI_GUID         FormSetGuid;
-  BOOLEAN          EmptyLineAfter;
+  EFI_STRING_ID   PromptId;
+  EFI_STRING_ID   HelpId;
+  EFI_STRING_ID   DevicePathId;
+  EFI_GUID        FormSetGuid;
+  BOOLEAN         EmptyLineAfter;
 } UI_HII_DRIVER_INSTANCE;
 
-STATIC UI_HII_DRIVER_INSTANCE  *gHiiDriverList;
+STATIC UI_HII_DRIVER_INSTANCE       *gHiiDriverList;
+
 
 /**
   Create the dynamic item to allow user to set the "BootNext" vaule.
@@ -29,16 +31,16 @@ STATIC UI_HII_DRIVER_INSTANCE  *gHiiDriverList;
 
 **/
 VOID
-BmmCreateBootNextMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
+BmmCreateBootNextMenu(
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN VOID                        *StartOpCodeHandle
   )
 {
-  BM_MENU_ENTRY    *NewMenuEntry;
-  BM_LOAD_CONTEXT  *NewLoadContext;
-  UINT16           Index;
-  VOID             *OptionsOpCodeHandle;
-  UINT32           BootNextIndex;
+  BM_MENU_ENTRY   *NewMenuEntry;
+  BM_LOAD_CONTEXT *NewLoadContext;
+  UINT16          Index;
+  VOID            *OptionsOpCodeHandle;
+  UINT32          BootNextIndex;
 
   if (BootOptionMenu.MenuNumber == 0) {
     return;
@@ -50,8 +52,8 @@ BmmCreateBootNextMenu (
   ASSERT (OptionsOpCodeHandle != NULL);
 
   for (Index = 0; Index < BootOptionMenu.MenuNumber; Index++) {
-    NewMenuEntry   = BOpt_GetMenuEntry (&BootOptionMenu, Index);
-    NewLoadContext = (BM_LOAD_CONTEXT *)NewMenuEntry->VariableContext;
+    NewMenuEntry    = BOpt_GetMenuEntry (&BootOptionMenu, Index);
+    NewLoadContext  = (BM_LOAD_CONTEXT *) NewMenuEntry->VariableContext;
 
     if (NewLoadContext->IsBootNext) {
       HiiCreateOneOfOptionOpCode (
@@ -93,7 +95,7 @@ BmmCreateBootNextMenu (
 
   HiiCreateOneOfOpCode (
     StartOpCodeHandle,
-    (EFI_QUESTION_ID)BOOT_NEXT_QUESTION_ID,
+    (EFI_QUESTION_ID) BOOT_NEXT_QUESTION_ID,
     VARSTORE_ID_BOOT_MAINT,
     BOOT_NEXT_VAR_OFFSET,
     STRING_TOKEN (STR_BOOT_NEXT),
@@ -105,6 +107,7 @@ BmmCreateBootNextMenu (
     );
 
   HiiFreeOpCodeHandle (OptionsOpCodeHandle);
+
 }
 
 /**
@@ -116,17 +119,17 @@ BmmCreateBootNextMenu (
 **/
 VOID
 BmmCreateTimeOutMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN VOID                        *StartOpCodeHandle
   )
 {
   HiiCreateNumericOpCode (
     StartOpCodeHandle,
-    (EFI_QUESTION_ID)FORM_TIME_OUT_ID,
+    (EFI_QUESTION_ID) FORM_TIME_OUT_ID,
     VARSTORE_ID_BOOT_MAINT,
     BOOT_TIME_OUT_VAR_OFFSET,
-    STRING_TOKEN (STR_NUM_AUTO_BOOT),
-    STRING_TOKEN (STR_HLP_AUTO_BOOT),
+    STRING_TOKEN(STR_NUM_AUTO_BOOT),
+    STRING_TOKEN(STR_HLP_AUTO_BOOT),
     EFI_IFR_FLAG_CALLBACK,
     EFI_IFR_NUMERIC_SIZE_2 | EFI_IFR_DISPLAY_UINT_DEC,
     0,
@@ -145,8 +148,8 @@ BmmCreateTimeOutMenu (
 **/
 VOID
 BmmCreateBootOptionMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN VOID                        *StartOpCodeHandle
   )
 {
   HiiCreateGotoOpCode (
@@ -168,8 +171,8 @@ BmmCreateBootOptionMenu (
 **/
 VOID
 BmmCreateDriverOptionMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN VOID                        *StartOpCodeHandle
   )
 {
   HiiCreateGotoOpCode (
@@ -191,8 +194,8 @@ BmmCreateDriverOptionMenu (
 **/
 VOID
 BmmCreateComOptionMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN VOID                        *StartOpCodeHandle
   )
 {
   HiiCreateGotoOpCode (
@@ -214,8 +217,8 @@ BmmCreateComOptionMenu (
 **/
 VOID
 BmmCreateBootFromFileMenu (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN VOID                        *StartOpCodeHandle
   )
 {
   HiiCreateGotoOpCode (
@@ -237,8 +240,8 @@ BmmCreateBootFromFileMenu (
 **/
 VOID
 BmmCreateEmptyLine (
-  IN EFI_HII_HANDLE  HiiHandle,
-  IN VOID            *StartOpCodeHandle
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN VOID                        *StartOpCodeHandle
   )
 {
   HiiCreateSubTitleOpCode (StartOpCodeHandle, STRING_TOKEN (STR_NULL_STRING), 0, 0, 0);
@@ -255,11 +258,11 @@ BmmCreateEmptyLine (
 **/
 CHAR16 *
 ExtractDevicePathFromHandle (
-  IN      EFI_HII_HANDLE  Handle
+  IN      EFI_HII_HANDLE      Handle
   )
 {
-  EFI_STATUS  Status;
-  EFI_HANDLE  DriverHandle;
+  EFI_STATUS                       Status;
+  EFI_HANDLE                       DriverHandle;
 
   ASSERT (Handle != NULL);
 
@@ -272,7 +275,7 @@ ExtractDevicePathFromHandle (
     return NULL;
   }
 
-  return ConvertDevicePathToText (DevicePathFromHandle (DriverHandle), FALSE, FALSE);
+  return ConvertDevicePathToText(DevicePathFromHandle (DriverHandle), FALSE, FALSE);
 }
 
 /**
@@ -289,49 +292,49 @@ ExtractDevicePathFromHandle (
 **/
 BOOLEAN
 IsRequiredDriver (
-  IN  EFI_HII_HANDLE  HiiHandle,
-  IN  EFI_GUID        *Guid,
-  OUT EFI_STRING_ID   *PromptId,
-  OUT EFI_STRING_ID   *HelpId,
-  OUT VOID            *FormsetGuid
+  IN  EFI_HII_HANDLE              HiiHandle,
+  IN  EFI_GUID                    *Guid,
+  OUT EFI_STRING_ID               *PromptId,
+  OUT EFI_STRING_ID               *HelpId,
+  OUT VOID                        *FormsetGuid
   )
 {
-  EFI_STATUS        Status;
-  UINT8             ClassGuidNum;
-  EFI_GUID          *ClassGuid;
-  EFI_IFR_FORM_SET  *Buffer;
-  UINTN             BufferSize;
-  UINT8             *Ptr;
-  UINTN             TempSize;
-  BOOLEAN           RetVal;
+  EFI_STATUS                  Status;
+  UINT8                       ClassGuidNum;
+  EFI_GUID                    *ClassGuid;
+  EFI_IFR_FORM_SET            *Buffer;
+  UINTN                       BufferSize;
+  UINT8                       *Ptr;
+  UINTN                       TempSize;
+  BOOLEAN                     RetVal;
 
-  Status = HiiGetFormSetFromHiiHandle (HiiHandle, &Buffer, &BufferSize);
+  Status = HiiGetFormSetFromHiiHandle(HiiHandle, &Buffer,&BufferSize);
   if (EFI_ERROR (Status)) {
     return FALSE;
   }
 
-  RetVal   = FALSE;
+  RetVal = FALSE;
   TempSize = 0;
-  Ptr      = (UINT8 *)Buffer;
-  while (TempSize < BufferSize) {
-    TempSize += ((EFI_IFR_OP_HEADER *)Ptr)->Length;
+  Ptr = (UINT8 *) Buffer;
+  while(TempSize < BufferSize)  {
+    TempSize += ((EFI_IFR_OP_HEADER *) Ptr)->Length;
 
-    if (((EFI_IFR_OP_HEADER *)Ptr)->Length <= OFFSET_OF (EFI_IFR_FORM_SET, Flags)) {
-      Ptr += ((EFI_IFR_OP_HEADER *)Ptr)->Length;
+    if (((EFI_IFR_OP_HEADER *) Ptr)->Length <= OFFSET_OF (EFI_IFR_FORM_SET, Flags)){
+      Ptr += ((EFI_IFR_OP_HEADER *) Ptr)->Length;
       continue;
     }
 
-    ClassGuidNum = (UINT8)(((EFI_IFR_FORM_SET *)Ptr)->Flags & 0x3);
-    ClassGuid    = (EFI_GUID *)(VOID *)(Ptr + sizeof (EFI_IFR_FORM_SET));
+    ClassGuidNum = (UINT8) (((EFI_IFR_FORM_SET *)Ptr)->Flags & 0x3);
+    ClassGuid = (EFI_GUID *) (VOID *)(Ptr + sizeof (EFI_IFR_FORM_SET));
     while (ClassGuidNum-- > 0) {
-      if (!CompareGuid (Guid, ClassGuid)) {
-        ClassGuid++;
+      if (!CompareGuid (Guid, ClassGuid)){
+        ClassGuid ++;
         continue;
       }
 
       *PromptId = ((EFI_IFR_FORM_SET *)Ptr)->FormSetTitle;
-      *HelpId   = ((EFI_IFR_FORM_SET *)Ptr)->Help;
-      CopyMem (FormsetGuid, &((EFI_IFR_FORM_SET *)Ptr)->Guid, sizeof (EFI_GUID));
+      *HelpId = ((EFI_IFR_FORM_SET *)Ptr)->Help;
+      CopyMem (FormsetGuid, &((EFI_IFR_FORM_SET *) Ptr)->Guid, sizeof (EFI_GUID));
       RetVal = TRUE;
     }
   }
@@ -355,23 +358,23 @@ IsRequiredDriver (
 **/
 EFI_STATUS
 BmmListThirdPartyDrivers (
-  IN EFI_HII_HANDLE          HiiHandle,
-  IN EFI_GUID                *ClassGuid,
-  IN DRIVER_SPECIAL_HANDLER  SpecialHandlerFn,
-  IN VOID                    *StartOpCodeHandle
+  IN EFI_HII_HANDLE              HiiHandle,
+  IN EFI_GUID                    *ClassGuid,
+  IN DRIVER_SPECIAL_HANDLER      SpecialHandlerFn,
+  IN VOID                        *StartOpCodeHandle
   )
 {
-  UINTN                   Index;
-  EFI_STRING              String;
-  EFI_STRING_ID           Token;
-  EFI_STRING_ID           TokenHelp;
-  EFI_HII_HANDLE          *HiiHandles;
-  CHAR16                  *DevicePathStr;
-  UINTN                   Count;
-  UINTN                   CurrentSize;
-  UI_HII_DRIVER_INSTANCE  *DriverListPtr;
-  EFI_STRING              NewName;
-  BOOLEAN                 EmptyLineAfter;
+  UINTN                       Index;
+  EFI_STRING                  String;
+  EFI_STRING_ID               Token;
+  EFI_STRING_ID               TokenHelp;
+  EFI_HII_HANDLE              *HiiHandles;
+  CHAR16                      *DevicePathStr;
+  UINTN                       Count;
+  UINTN                       CurrentSize;
+  UI_HII_DRIVER_INSTANCE      *DriverListPtr;
+  EFI_STRING                  NewName;
+  BOOLEAN                     EmptyLineAfter;
 
   if (gHiiDriverList != NULL) {
     FreePool (gHiiDriverList);
@@ -383,7 +386,7 @@ BmmListThirdPartyDrivers (
   gHiiDriverList = AllocateZeroPool (UI_HII_DRIVER_LIST_SIZE * sizeof (UI_HII_DRIVER_INSTANCE));
   ASSERT (gHiiDriverList != NULL);
   DriverListPtr = gHiiDriverList;
-  CurrentSize   = UI_HII_DRIVER_LIST_SIZE;
+  CurrentSize = UI_HII_DRIVER_LIST_SIZE;
 
   for (Index = 0, Count = 0; HiiHandles[Index] != NULL; Index++) {
     if (!IsRequiredDriver (HiiHandles[Index], ClassGuid, &Token, &TokenHelp, &gHiiDriverList[Count].FormSetGuid)) {
@@ -401,11 +404,10 @@ BmmListThirdPartyDrivers (
       EmptyLineAfter = FALSE;
       if (SpecialHandlerFn (String, &NewName, &EmptyLineAfter)) {
         FreePool (String);
-        String                              = NewName;
+        String = NewName;
         DriverListPtr[Count].EmptyLineAfter = EmptyLineAfter;
       }
     }
-
     DriverListPtr[Count].PromptId = HiiSetString (HiiHandle, 0, String, NULL);
     FreePool (String);
 
@@ -414,12 +416,11 @@ BmmListThirdPartyDrivers (
       String = HiiGetString (HiiHandle, STRING_TOKEN (STR_MISSING_STRING), NULL);
       ASSERT (String != NULL);
     }
-
     DriverListPtr[Count].HelpId = HiiSetString (HiiHandle, 0, String, NULL);
     FreePool (String);
 
-    DevicePathStr = ExtractDevicePathFromHandle (HiiHandles[Index]);
-    if (DevicePathStr != NULL) {
+    DevicePathStr = ExtractDevicePathFromHandle(HiiHandles[Index]);
+    if (DevicePathStr != NULL){
       DriverListPtr[Count].DevicePathId = HiiSetString (HiiHandle, 0, DevicePathStr, NULL);
       FreePool (DevicePathStr);
     } else {
@@ -436,7 +437,7 @@ BmmListThirdPartyDrivers (
                         );
       ASSERT (DriverListPtr != NULL);
       gHiiDriverList = DriverListPtr;
-      CurrentSize   += UI_HII_DRIVER_LIST_SIZE;
+      CurrentSize += UI_HII_DRIVER_LIST_SIZE;
     }
   }
 
@@ -454,14 +455,15 @@ BmmListThirdPartyDrivers (
       0,
       &gHiiDriverList[Index].FormSetGuid,
       gHiiDriverList[Index].DevicePathId
-      );
+    );
 
     if (gHiiDriverList[Index].EmptyLineAfter) {
       BmmCreateEmptyLine (HiiHandle, StartOpCodeHandle);
     }
 
-    Index++;
+    Index ++;
   }
 
   return EFI_SUCCESS;
 }
+

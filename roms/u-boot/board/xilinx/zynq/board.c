@@ -5,93 +5,89 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <log.h>
 #include <dm/uclass.h>
-#include <env.h>
-#include <env_internal.h>
 #include <fdtdec.h>
 #include <fpga.h>
-#include <malloc.h>
 #include <mmc.h>
 #include <watchdog.h>
 #include <wdt.h>
 #include <zynqpl.h>
-#include <asm/global_data.h>
 #include <asm/arch/hardware.h>
 #include <asm/arch/sys_proto.h>
-#include "../common/board.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_WDT)
+static struct udevice *watchdog_dev;
+#endif
+
+#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_BOARD_EARLY_INIT_F)
+int board_early_init_f(void)
+{
+# if defined(CONFIG_WDT)
+	/* bss is not cleared at time when watchdog_reset() is called */
+	watchdog_dev = NULL;
+# endif
+
+	return 0;
+}
+#endif
+
 int board_init(void)
 {
-	if (IS_ENABLED(CONFIG_SPL_BUILD))
-		printf("Silicon version:\t%d\n", zynq_get_silicon_version());
+#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_WDT)
+	if (uclass_get_device_by_seq(UCLASS_WDT, 0, &watchdog_dev)) {
+		debug("Watchdog: Not found by seq!\n");
+		if (uclass_get_device(UCLASS_WDT, 0, &watchdog_dev)) {
+			puts("Watchdog: Not found!\n");
+			return 0;
+		}
+	}
+
+	wdt_start(watchdog_dev, 0, 0);
+	puts("Watchdog: Started\n");
+# endif
 
 	return 0;
 }
 
 int board_late_init(void)
 {
-	int env_targets_len = 0;
-	const char *mode;
-	char *new_targets;
-	char *env_targets;
-
-	if (!(gd->flags & GD_FLG_ENV_DEFAULT)) {
-		debug("Saved variables - Skipping\n");
-		return 0;
-	}
-
-	if (!CONFIG_IS_ENABLED(ENV_VARS_UBOOT_RUNTIME_CONFIG))
-		return 0;
-
 	switch ((zynq_slcr_get_boot_mode()) & ZYNQ_BM_MASK) {
 	case ZYNQ_BM_QSPI:
-		mode = "qspi";
 		env_set("modeboot", "qspiboot");
 		break;
 	case ZYNQ_BM_NAND:
-		mode = "nand";
 		env_set("modeboot", "nandboot");
 		break;
 	case ZYNQ_BM_NOR:
-		mode = "nor";
 		env_set("modeboot", "norboot");
 		break;
 	case ZYNQ_BM_SD:
-		mode = "mmc0";
 		env_set("modeboot", "sdboot");
 		break;
 	case ZYNQ_BM_JTAG:
-		mode = "jtag pxe dhcp";
 		env_set("modeboot", "jtagboot");
 		break;
 	default:
-		mode = "";
 		env_set("modeboot", "");
 		break;
 	}
 
-	/*
-	 * One terminating char + one byte for space between mode
-	 * and default boot_targets
-	 */
-	env_targets = env_get("boot_targets");
-	if (env_targets)
-		env_targets_len = strlen(env_targets);
+	return 0;
+}
 
-	new_targets = calloc(1, strlen(mode) + env_targets_len + 2);
-	if (!new_targets)
-		return -ENOMEM;
+int zynq_board_read_rom_ethaddr(unsigned char *ethaddr)
+{
+#if defined(CONFIG_ZYNQ_GEM_EEPROM_ADDR) && \
+    defined(CONFIG_ZYNQ_GEM_I2C_MAC_OFFSET)
+	if (eeprom_read(CONFIG_ZYNQ_GEM_EEPROM_ADDR,
+			CONFIG_ZYNQ_GEM_I2C_MAC_OFFSET,
+			ethaddr, 6))
+		printf("I2C EEPROM MAC address read failed\n");
+#endif
 
-	sprintf(new_targets, "%s %s", mode,
-		env_targets ? env_targets : "");
-
-	env_set("boot_targets", new_targets);
-
-	return board_late_init_xilinx();
+	return 0;
 }
 
 #if !defined(CONFIG_SYS_SDRAM_BASE) && !defined(CONFIG_SYS_SDRAM_SIZE)
@@ -121,33 +117,24 @@ int dram_init(void)
 }
 #endif
 
-enum env_location env_get_location(enum env_operation op, int prio)
+#if defined(CONFIG_WATCHDOG)
+/* Called by macro WATCHDOG_RESET */
+void watchdog_reset(void)
 {
-	u32 bootmode = zynq_slcr_get_boot_mode() & ZYNQ_BM_MASK;
+# if !defined(CONFIG_SPL_BUILD)
+	static ulong next_reset;
+	ulong now;
 
-	if (prio)
-		return ENVL_UNKNOWN;
+	if (!watchdog_dev)
+		return;
 
-	switch (bootmode) {
-	case ZYNQ_BM_SD:
-		if (IS_ENABLED(CONFIG_ENV_IS_IN_FAT))
-			return ENVL_FAT;
-		if (IS_ENABLED(CONFIG_ENV_IS_IN_EXT4))
-			return ENVL_EXT4;
-		return ENVL_UNKNOWN;
-	case ZYNQ_BM_NAND:
-		if (IS_ENABLED(CONFIG_ENV_IS_IN_NAND))
-			return ENVL_NAND;
-		if (IS_ENABLED(CONFIG_ENV_IS_IN_UBI))
-			return ENVL_UBI;
-		return ENVL_UNKNOWN;
-	case ZYNQ_BM_NOR:
-	case ZYNQ_BM_QSPI:
-		if (IS_ENABLED(CONFIG_ENV_IS_IN_SPI_FLASH))
-			return ENVL_SPI_FLASH;
-		return ENVL_UNKNOWN;
-	case ZYNQ_BM_JTAG:
-	default:
-		return ENVL_NOWHERE;
+	now = timer_get_us();
+
+	/* Do not reset the watchdog too often */
+	if (now > next_reset) {
+		wdt_reset(watchdog_dev);
+		next_reset = now + 1000;
 	}
+# endif
 }
+#endif

@@ -26,7 +26,6 @@
  * of AES key), eg. '-a aabbccddeeff00112233445566778899'.
  */
 
-#include <env.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <stdio.h>

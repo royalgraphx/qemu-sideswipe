@@ -14,8 +14,6 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/prcm.h>
 #include <asm/arch/sys_proto.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
 
 #ifdef CONFIG_SPL_BUILD
 void clock_init_safe(void)
@@ -120,7 +118,7 @@ void clock_set_pll1(unsigned int clk)
 	if (clk > 1152000000) {
 		k = 2;
 	} else if (clk > 768000000) {
-		k = 4;
+		k = 3;
 		m = 2;
 	}
 

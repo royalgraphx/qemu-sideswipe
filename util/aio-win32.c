@@ -16,8 +16,8 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "block/block.h"
-#include "qemu/main-loop.h"
 #include "qemu/queue.h"
 #include "qemu/sockets.h"
 #include "qapi/error.h"
@@ -37,16 +37,6 @@ struct AioHandler {
 
 static void aio_remove_fd_handler(AioContext *ctx, AioHandler *node)
 {
-    /*
-     * If the GSource is in the process of being destroyed then
-     * g_source_remove_poll() causes an assertion failure.  Skip
-     * removal in that case, because glib cleans up its state during
-     * destruction anyway.
-     */
-    if (!g_source_is_destroyed(&ctx->source)) {
-        g_source_remove_poll(&ctx->source, &node->pfd);
-    }
-
     /* If aio_poll is in progress, just mark the node as deleted */
     if (qemu_lockcnt_count(&ctx->list_lock)) {
         node->deleted = 1;
@@ -67,7 +57,6 @@ void aio_set_fd_handler(AioContext *ctx,
                         IOHandler *io_read,
                         IOHandler *io_write,
                         AioPollFn *io_poll,
-                        IOHandler *io_poll_ready,
                         void *opaque)
 {
     /* fd is a SOCKET in our case */
@@ -136,8 +125,7 @@ void aio_set_event_notifier(AioContext *ctx,
                             EventNotifier *e,
                             bool is_external,
                             EventNotifierHandler *io_notify,
-                            AioPollFn *io_poll,
-                            EventNotifierHandler *io_poll_ready)
+                            AioPollFn *io_poll)
 {
     AioHandler *node;
 
@@ -151,6 +139,8 @@ void aio_set_event_notifier(AioContext *ctx,
     /* Are we deleting the fd handler? */
     if (!io_notify) {
         if (node) {
+            g_source_remove_poll(&ctx->source, &node->pfd);
+
             aio_remove_fd_handler(ctx, node);
         }
     } else {
@@ -326,22 +316,17 @@ void aio_dispatch(AioContext *ctx)
 bool aio_poll(AioContext *ctx, bool blocking)
 {
     AioHandler *node;
-    HANDLE events[MAXIMUM_WAIT_OBJECTS];
+    HANDLE events[MAXIMUM_WAIT_OBJECTS + 1];
     bool progress, have_select_revents, first;
-    unsigned count;
+    int count;
     int timeout;
 
     /*
      * There cannot be two concurrent aio_poll calls for the same AioContext (or
      * an aio_poll concurrent with a GSource prepare/check/dispatch callback).
      * We rely on this below to avoid slow locked accesses to ctx->notify_me.
-     *
-     * aio_poll() may only be called in the AioContext's thread. iohandler_ctx
-     * is special in that it runs in the main thread, but that thread's context
-     * is qemu_aio_context.
      */
-    assert(in_aio_context_home_thread(ctx == iohandler_get_aio_context() ?
-                                      qemu_get_aio_context() : ctx));
+    assert(in_aio_context_home_thread(ctx));
     progress = false;
 
     /* aio_notify can avoid the expensive event_notifier_set if
@@ -352,7 +337,7 @@ bool aio_poll(AioContext *ctx, bool blocking)
      * so disable the optimization now.
      */
     if (blocking) {
-        qatomic_set(&ctx->notify_me, qatomic_read(&ctx->notify_me) + 2);
+        atomic_set(&ctx->notify_me, atomic_read(&ctx->notify_me) + 2);
         /*
          * Write ctx->notify_me before computing the timeout
          * (reading bottom half flags, etc.).  Pairs with
@@ -369,7 +354,6 @@ bool aio_poll(AioContext *ctx, bool blocking)
     QLIST_FOREACH_RCU(node, &ctx->aio_handlers, node) {
         if (!node->deleted && node->io_notify
             && aio_node_check(ctx, node->is_external)) {
-            assert(count < MAXIMUM_WAIT_OBJECTS);
             events[count++] = event_notifier_get_handle(node->e);
         }
     }
@@ -392,8 +376,7 @@ bool aio_poll(AioContext *ctx, bool blocking)
         ret = WaitForMultipleObjects(count, events, FALSE, timeout);
         if (blocking) {
             assert(first);
-            qatomic_store_release(&ctx->notify_me,
-                                  qatomic_read(&ctx->notify_me) - 2);
+            atomic_store_release(&ctx->notify_me, atomic_read(&ctx->notify_me) - 2);
             aio_notify_accept(ctx);
         }
 
@@ -441,9 +424,4 @@ void aio_context_set_poll_params(AioContext *ctx, int64_t max_ns,
     if (max_ns) {
         error_setg(errp, "AioContext polling is not implemented on Windows");
     }
-}
-
-void aio_context_set_aio_params(AioContext *ctx, int64_t max_batch,
-                                Error **errp)
-{
 }

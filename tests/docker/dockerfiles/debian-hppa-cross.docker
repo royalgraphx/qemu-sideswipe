@@ -1,14 +1,12 @@
 #
 # Docker cross-compiler target
 #
-# This docker target builds on the Debian Bullseye base image.
+# This docker target builds on the debian Buster base image.
 #
-FROM docker.io/library/debian:11-slim
+FROM qemu/debian10
 
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt-get install -y eatmydata && \
-    eatmydata apt-get dist-upgrade -y && \
-    eatmydata apt-get install --no-install-recommends -y \
+RUN apt update && \
+    DEBIAN_FRONTEND=noninteractive eatmydata \
+    apt install -y --no-install-recommends \
         gcc-hppa-linux-gnu \
         libc6-dev-hppa-cross

@@ -3,7 +3,7 @@
 #
 # Report some MMIO/IO resources to dxe core, extract smbios and acpi tables
 #
-#  Copyright (c) 2014 - 2021, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2014 - 2019, Intel Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -42,6 +42,9 @@
   HobLib
 
 [Guids]
+  gEfiAcpiTableGuid
+  gEfiSmbiosTableGuid
+  gUefiSystemTableInfoGuid
   gUefiAcpiBoardInfoGuid
   gEfiGraphicsInfoHobGuid
 
@@ -50,8 +53,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetupVideoHorizontalResolution
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetupVideoVerticalResolution
-  gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress
-  gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseSize
 
 [Depex]
   TRUE

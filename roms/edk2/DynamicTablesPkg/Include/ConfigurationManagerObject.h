@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2017 - 2022, ARM Limited. All rights reserved.
+  Copyright (c) 2017 - 2019, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -63,43 +63,24 @@ Object ID's in the ARM Namespace:
   10 - Serial Debug Port Info
   11 - Generic Timer Info
   12 - Platform GT Block Info
-  13 - Generic Timer Block Frame Info
-  14 - Platform Generic Watchdog
-  15 - PCI Configuration Space Info
-  16 - Hypervisor Vendor Id
-  17 - Fixed feature flags for FADT
-  18 - ITS Group
-  19 - Named Component
-  20 - Root Complex
-  21 - SMMUv1 or SMMUv2
-  22 - SMMUv3
-  23 - PMCG
-  24 - GIC ITS Identifier Array
-  25 - ID Mapping Array
-  26 - SMMU Interrupt Array
-  27 - Processor Hierarchy Info
-  28 - Cache Info
-  29 - Processor Hierarchy Node ID Info
-  30 - CM Object Reference
+  13 - Platform Generic Watchdog
+  14 - PCI Configuration Space Info
+  15 - Hypervisor Vendor Id
+  16 - Fixed feature flags for FADT
 */
-typedef UINT32 CM_OBJECT_ID;
-
-//
-// Helper macro to format a CM_OBJECT_ID.
-//
-#define FMT_CM_OBJECT_ID  "0x%lx"
+typedef UINT32  CM_OBJECT_ID;
 
 /** A mask for Object ID
 */
-#define OBJECT_ID_MASK  0xFF
+#define OBJECT_ID_MASK            0xFF
 
 /** A mask for Namespace ID
 */
-#define NAMESPACE_ID_MASK  0xF
+#define NAMESPACE_ID_MASK         0xF
 
 /** Starting bit position for Namespace ID
 */
-#define NAMESPACE_ID_BIT_SHIFT  28
+#define NAMESPACE_ID_BIT_SHIFT    28
 
 /** The EOBJECT_NAMESPACE_ID enum describes the defined namespaces
     for the Configuration Manager Objects.
@@ -118,16 +99,16 @@ typedef enum ObjectNameSpaceID {
 */
 typedef struct CmObjDescriptor {
   /// Object Id
-  CM_OBJECT_ID    ObjectId;
+  CM_OBJECT_ID  ObjectId;
 
   /// Size of the described Object or Object List
-  UINT32          Size;
+  UINT32        Size;
 
   /// Pointer to the described Object or Object List
-  VOID            *Data;
+  VOID        * Data;
 
   /// Count of objects in the list
-  UINT32          Count;
+  UINT32        Count;
 } CM_OBJ_DESCRIPTOR;
 
 #pragma pack()
@@ -148,7 +129,7 @@ typedef struct CmObjDescriptor {
 
   @retval Returns the Object ID corresponding to the CmObjectID.
 **/
-#define GET_CM_OBJECT_ID(CmObjectId)  ((CmObjectId) & OBJECT_ID_MASK)
+#define GET_CM_OBJECT_ID(CmObjectId)    ((CmObjectId) & OBJECT_ID_MASK)
 
 /** This macro returns a Configuration Manager Object ID
     from the NameSpace ID and the ObjectID.

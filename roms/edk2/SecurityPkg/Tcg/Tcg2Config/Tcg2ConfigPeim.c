@@ -6,6 +6,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 #include <PiPei.h>
 
 #include <Guid/TpmInstance.h>
@@ -22,11 +23,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Protocol/Tcg2Protocol.h>
 
 #include "Tcg2ConfigNvData.h"
-#include "Tcg2Internal.h"
 
 TPM_INSTANCE_ID  mTpmInstanceId[] = TPM_INSTANCE_ID_LIST;
 
-CONST EFI_PEI_PPI_DESCRIPTOR  gTpmSelectedPpi = {
+CONST EFI_PEI_PPI_DESCRIPTOR gTpmSelectedPpi = {
   (EFI_PEI_PPI_DESCRIPTOR_PPI | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST),
   &gEfiTpmDeviceSelectedGuid,
   NULL
@@ -47,7 +47,7 @@ EFI_PEI_PPI_DESCRIPTOR  mTpmInitializationDonePpiList = {
 **/
 UINT8
 DetectTpmDevice (
-  IN UINT8  SetupTpmDevice
+  IN UINT8 SetupTpmDevice
   );
 
 /**
@@ -56,7 +56,7 @@ DetectTpmDevice (
   @param  FileHandle  Handle of the file being invoked.
   @param  PeiServices Describes the list of possible PEI Services.
 
-  @retval EFI_SUCCESS            Convert variable to PCD successfully.
+  @retval EFI_SUCCES             Convert variable to PCD successfully.
   @retval Others                 Fail to convert variable to PCD.
 **/
 EFI_STATUS
@@ -66,18 +66,18 @@ Tcg2ConfigPeimEntryPoint (
   IN CONST EFI_PEI_SERVICES     **PeiServices
   )
 {
-  UINTN                            Size;
-  EFI_STATUS                       Status;
-  EFI_STATUS                       Status2;
-  EFI_PEI_READ_ONLY_VARIABLE2_PPI  *VariablePpi;
-  TCG2_CONFIGURATION               Tcg2Configuration;
-  UINTN                            Index;
-  UINT8                            TpmDevice;
+  UINTN                           Size;
+  EFI_STATUS                      Status;
+  EFI_STATUS                      Status2;
+  EFI_PEI_READ_ONLY_VARIABLE2_PPI *VariablePpi;
+  TCG2_CONFIGURATION              Tcg2Configuration;
+  UINTN                           Index;
+  UINT8                           TpmDevice;
 
-  Status = PeiServicesLocatePpi (&gEfiPeiReadOnlyVariable2PpiGuid, 0, NULL, (VOID **)&VariablePpi);
+  Status = PeiServicesLocatePpi (&gEfiPeiReadOnlyVariable2PpiGuid, 0, NULL, (VOID **) &VariablePpi);
   ASSERT_EFI_ERROR (Status);
 
-  Size   = sizeof (Tcg2Configuration);
+  Size = sizeof(Tcg2Configuration);
   Status = VariablePpi->GetVariable (
                           VariablePpi,
                           TCG2_STORAGE_NAME,
@@ -90,7 +90,7 @@ Tcg2ConfigPeimEntryPoint (
     //
     // Variable not ready, set default value
     //
-    Tcg2Configuration.TpmDevice = TPM_DEVICE_DEFAULT;
+    Tcg2Configuration.TpmDevice           = TPM_DEVICE_DEFAULT;
   }
 
   //
@@ -103,11 +103,11 @@ Tcg2ConfigPeimEntryPoint (
   //
   // Although we have SetupVariable info, we still need detect TPM device manually.
   //
-  DEBUG ((DEBUG_INFO, "Tcg2Configuration.TpmDevice from Setup: %x\n", Tcg2Configuration.TpmDevice));
+  DEBUG ((EFI_D_INFO, "Tcg2Configuration.TpmDevice from Setup: %x\n", Tcg2Configuration.TpmDevice));
 
   if (PcdGetBool (PcdTpmAutoDetection)) {
     TpmDevice = DetectTpmDevice (Tcg2Configuration.TpmDevice);
-    DEBUG ((DEBUG_INFO, "TpmDevice final: %x\n", TpmDevice));
+    DEBUG ((EFI_D_INFO, "TpmDevice final: %x\n", TpmDevice));
     if (TpmDevice != TPM_DEVICE_NULL) {
       Tcg2Configuration.TpmDevice = TpmDevice;
     }
@@ -117,18 +117,18 @@ Tcg2ConfigPeimEntryPoint (
 
   //
   // Convert variable to PCD.
-  // This is work-around because there is no guarantee DynamicHiiPcd can return correct value in DXE phase.
+  // This is work-around because there is no gurantee DynamicHiiPcd can return correct value in DXE phase.
   // Using DynamicPcd instead.
   //
   // NOTE: Tcg2Configuration variable contains the desired TpmDevice type,
   // while PcdTpmInstanceGuid PCD contains the real detected TpmDevice type
   //
-  for (Index = 0; Index < sizeof (mTpmInstanceId)/sizeof (mTpmInstanceId[0]); Index++) {
+  for (Index = 0; Index < sizeof(mTpmInstanceId)/sizeof(mTpmInstanceId[0]); Index++) {
     if (TpmDevice == mTpmInstanceId[Index].TpmDevice) {
-      Size   = sizeof (mTpmInstanceId[Index].TpmInstanceGuid);
+      Size = sizeof(mTpmInstanceId[Index].TpmInstanceGuid);
       Status = PcdSetPtrS (PcdTpmInstanceGuid, &Size, &mTpmInstanceId[Index].TpmInstanceGuid);
       ASSERT_EFI_ERROR (Status);
-      DEBUG ((DEBUG_INFO, "TpmDevice PCD: %g\n", &mTpmInstanceId[Index].TpmInstanceGuid));
+      DEBUG ((EFI_D_INFO, "TpmDevice PCD: %g\n", &mTpmInstanceId[Index].TpmInstanceGuid));
       break;
     }
   }
@@ -140,11 +140,11 @@ Tcg2ConfigPeimEntryPoint (
   ASSERT_EFI_ERROR (Status);
 
   //
-  // Even if no TPM is selected or detected, we still need install TpmInitializationDonePpi.
+  // Even if no TPM is selected or detected, we still need intall TpmInitializationDonePpi.
   // Because TcgPei or Tcg2Pei will not run, but we still need a way to notify other driver.
   // Other driver can know TPM initialization state by TpmInitializedPpi.
   //
-  if (CompareGuid (PcdGetPtr (PcdTpmInstanceGuid), &gEfiTpmDeviceInstanceNoneGuid)) {
+  if (CompareGuid (PcdGetPtr(PcdTpmInstanceGuid), &gEfiTpmDeviceInstanceNoneGuid)) {
     Status2 = PeiServicesInstallPpi (&mTpmInitializationDonePpiList);
     ASSERT_EFI_ERROR (Status2);
   }

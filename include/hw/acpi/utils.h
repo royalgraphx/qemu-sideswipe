@@ -4,5 +4,6 @@
 #include "hw/nvram/fw_cfg.h"
 
 MemoryRegion *acpi_add_rom_blob(FWCfgCallback update, void *opaque,
-                                GArray *blob, const char *name);
+                                GArray *blob, const char *name,
+                                uint64_t max_size);
 #endif

@@ -5,7 +5,7 @@
  */
 
 #ifndef SPARC_CPU_PARAM_H
-#define SPARC_CPU_PARAM_H
+#define SPARC_CPU_PARAM_H 1
 
 #ifdef TARGET_SPARC64
 # define TARGET_LONG_BITS 64

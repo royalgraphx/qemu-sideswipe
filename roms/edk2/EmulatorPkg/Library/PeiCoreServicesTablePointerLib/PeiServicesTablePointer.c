@@ -29,7 +29,7 @@ CONST EFI_PEI_SERVICES  **gPeiServices;
 VOID
 EFIAPI
 SetPeiServicesTablePointer (
-  IN CONST EFI_PEI_SERVICES  **PeiServicesTablePointer
+  IN CONST EFI_PEI_SERVICES ** PeiServicesTablePointer
   )
 {
   ASSERT (PeiServicesTablePointer != NULL);
@@ -58,6 +58,7 @@ GetPeiServicesTablePointer (
   return gPeiServices;
 }
 
+
 /**
   The constructor function caches the pointer to PEI services.
 
@@ -73,8 +74,8 @@ GetPeiServicesTablePointer (
 EFI_STATUS
 EFIAPI
 PeiServicesTablePointerLibConstructor (
-  IN EFI_PEI_FILE_HANDLE     FileHandle,
-  IN CONST EFI_PEI_SERVICES  **PeiServices
+  IN EFI_PEI_FILE_HANDLE        FileHandle,
+  IN CONST EFI_PEI_SERVICES     **PeiServices
   )
 {
   gPeiServices = PeiServices;
@@ -107,3 +108,4 @@ MigratePeiServicesTablePointer (
   //
   return;
 }
+

@@ -23,9 +23,8 @@
 #define NRF51_NVM_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 #define TYPE_NRF51_NVM "nrf51_soc.nvm"
-OBJECT_DECLARE_SIMPLE_TYPE(NRF51NVMState, NRF51_NVM)
+#define NRF51_NVM(obj) OBJECT_CHECK(NRF51NVMState, (obj), TYPE_NRF51_NVM)
 
 #define NRF51_UICR_FIXTURE_SIZE 64
 
@@ -45,7 +44,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(NRF51NVMState, NRF51_NVM)
 
 #define NRF51_UICR_SIZE         0x100
 
-struct NRF51NVMState {
+typedef struct NRF51NVMState {
     SysBusDevice parent_obj;
 
     MemoryRegion mmio;
@@ -59,7 +58,7 @@ struct NRF51NVMState {
 
     uint32_t config;
 
-};
+} NRF51NVMState;
 
 
 #endif

@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Copyright (c) 2008 - 2011, Apple Inc. All rights reserved.<BR>
-# Copyright (c) 2010 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2010 - 2015, Intel Corporation. All rights reserved.<BR>
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -60,9 +60,9 @@ case `uname` in
         CLANG_VER=$(clang -ccc-host-triple x86_64-pc-win32-macho 2>&1 >/dev/null) || true
         if [[ "$CLANG_VER" == *-ccc-host-triple* ]]
         then
-        # only older versions of Xcode support -ccc-host-triple, for newer versions
+        # only older versions of Xcode support -ccc-host-tripe, for newer versions
         # it is -target
-          HOST_TOOLS=XCODE5
+          HOST_TOOLS=XCODE32
           TARGET_TOOLS=XCODE5
         else
           HOST_TOOLS=XCODE32
@@ -188,7 +188,7 @@ do
 done
 
 PLATFORMFILE=$WORKSPACE/EmulatorPkg/EmulatorPkg.dsc
-BUILD_DIR="$BUILD_OUTPUT_DIR/${BUILDTARGET}_$TARGET_TOOLS"
+BUILD_DIR=$BUILD_OUTPUT_DIR/DEBUG_"$TARGET_TOOLS"
 BUILD_ROOT_ARCH=$BUILD_DIR/$PROCESSOR
 
 if  [[ ! -f `which build` || ! -f `which GenFv` ]];
@@ -209,12 +209,21 @@ fi
 if [[ "$RUN_EMULATOR" == "yes" ]]; then
   case `uname` in
     Darwin*)
-      cd $BUILD_ROOT_ARCH
-      /usr/bin/lldb \
-        -o "command script import $WORKSPACE/EmulatorPkg/Unix/lldbefi.py" \
-        -o 'script lldb.debugger.SetAsync(True)' \
-        -o "run" ./Host
-      exit $?
+      #
+      # On Darwin we can't use dlopen, so we have to load the real PE/COFF images.
+      # This .gdbinit script sets a breakpoint that loads symbols for the PE/COFFEE
+      # images that get loaded in Host
+      #
+      if [[ "$CLANG_VER" == *-ccc-host-triple* ]]
+      then
+      # only older versions of Xcode support -ccc-host-tripe, for newer versions
+      # it is -target
+        cp $WORKSPACE/EmulatorPkg/Unix/lldbefi.py $BUILD_OUTPUT_DIR/DEBUG_"$TARGET_TOOLS"/$PROCESSOR
+        cd $BUILD_ROOT_ARCH; /usr/bin/lldb --source $WORKSPACE/EmulatorPkg/Unix/lldbinit Host
+        exit $? 
+      else
+        cp $WORKSPACE/EmulatorPkg/Unix/.gdbinit $BUILD_OUTPUT_DIR/DEBUG_"$TARGET_TOOLS"/$PROCESSOR
+      fi
       ;;
   esac
 
@@ -224,13 +233,13 @@ fi
 
 case $CLEAN_TYPE in
   clean)
-    build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc -a $PROCESSOR -b $BUILDTARGET -t $HOST_TOOLS -n 3 clean
+    build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc -a $PROCESSOR -b $BUILDTARGET -t $HOST_TOOLS -D UNIX_SEC_BUILD -n 3 clean
     build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc -a $PROCESSOR -b $BUILDTARGET -t $TARGET_TOOLS -n 3 clean
     exit $?
     ;;
   cleanall)
     make -C $WORKSPACE/BaseTools clean
-    build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc -a $PROCESSOR -b $BUILDTARGET -t $HOST_TOOLS -n 3 clean
+    build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc -a $PROCESSOR -b $BUILDTARGET -t $HOST_TOOLS -D UNIX_SEC_BUILD -n 3 clean
     build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc -a $PROCESSOR -b $BUILDTARGET -t $TARGET_TOOLS -n 3 clean
     build -p $WORKSPACE/ShellPkg/ShellPkg.dsc -a IA32 -b $BUILDTARGET -t $TARGET_TOOLS -n 3 clean
     exit $?
@@ -242,11 +251,11 @@ esac
 # Build the edk2 EmulatorPkg
 #
 if [[ $HOST_TOOLS == $TARGET_TOOLS ]]; then
-  build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc $BUILD_OPTIONS -a $PROCESSOR -b $BUILDTARGET -t $TARGET_TOOLS -D BUILD_$ARCH_SIZE $NETWORK_SUPPORT $BUILD_NEW_SHELL $BUILD_FAT -n 3
+  build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc $BUILD_OPTIONS -a $PROCESSOR -b $BUILDTARGET -t $TARGET_TOOLS -D BUILD_$ARCH_SIZE -D UNIX_SEC_BUILD $NETWORK_SUPPORT $BUILD_NEW_SHELL $BUILD_FAT -n 3
 else
-  build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc $BUILD_OPTIONS -a $PROCESSOR -b $BUILDTARGET -t $HOST_TOOLS  -D BUILD_$ARCH_SIZE -D SKIP_MAIN_BUILD -n 3 modules
+  build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc $BUILD_OPTIONS -a $PROCESSOR -b $BUILDTARGET -t $HOST_TOOLS  -D BUILD_$ARCH_SIZE -D UNIX_SEC_BUILD -D SKIP_MAIN_BUILD -n 3 modules
   build -p $WORKSPACE/EmulatorPkg/EmulatorPkg.dsc $BUILD_OPTIONS -a $PROCESSOR -b $BUILDTARGET -t $TARGET_TOOLS -D BUILD_$ARCH_SIZE $NETWORK_SUPPORT $BUILD_NEW_SHELL $BUILD_FAT -n 3
-  cp "$BUILD_OUTPUT_DIR/${BUILDTARGET}_$HOST_TOOLS/$PROCESSOR/Host" $BUILD_ROOT_ARCH
+  cp $BUILD_OUTPUT_DIR/DEBUG_"$HOST_TOOLS"/$PROCESSOR/Host $BUILD_ROOT_ARCH
 fi
 exit $?
 

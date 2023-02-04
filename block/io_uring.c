@@ -10,6 +10,7 @@
  */
 #include "qemu/osdep.h"
 #include <liburing.h>
+#include "qemu-common.h"
 #include "block/aio.h"
 #include "qemu/queue.h"
 #include "block/block.h"
@@ -72,8 +73,12 @@ static void luring_resubmit(LuringState *s, LuringAIOCB *luringcb)
 /**
  * luring_resubmit_short_read:
  *
- * Short reads are rare but may occur. The remaining read request needs to be
- * resubmitted.
+ * Before Linux commit 9d93a3f5a0c ("io_uring: punt short reads to async
+ * context") a buffered I/O request with the start of the file range in the
+ * page cache could result in a short read.  Applications need to resubmit the
+ * remaining read request.
+ *
+ * This is a slow path but recent kernels never take it.
  */
 static void luring_resubmit_short_read(LuringState *s, LuringAIOCB *luringcb,
                                        int nread)
@@ -84,7 +89,7 @@ static void luring_resubmit_short_read(LuringState *s, LuringAIOCB *luringcb,
     trace_luring_resubmit_short_read(s, luringcb, nread);
 
     /* Update read position */
-    luringcb->total_read += nread;
+    luringcb->total_read = nread;
     remaining = luringcb->qiov->size - luringcb->total_read;
 
     /* Shorten qiov */
@@ -98,7 +103,7 @@ static void luring_resubmit_short_read(LuringState *s, LuringAIOCB *luringcb,
                       remaining);
 
     /* Update sqe */
-    luringcb->sqeq.off += nread;
+    luringcb->sqeq.off = nread;
     luringcb->sqeq.addr = (__u64)(uintptr_t)luringcb->resubmit_qiov.iov;
     luringcb->sqeq.len = luringcb->resubmit_qiov.niov;
 
@@ -160,21 +165,7 @@ static void luring_process_completions(LuringState *s)
         total_bytes = ret + luringcb->total_read;
 
         if (ret < 0) {
-            /*
-             * Only writev/readv/fsync requests on regular files or host block
-             * devices are submitted. Therefore -EAGAIN is not expected but it's
-             * known to happen sometimes with Linux SCSI. Submit again and hope
-             * the request completes successfully.
-             *
-             * For more information, see:
-             * https://lore.kernel.org/io-uring/20210727165811.284510-3-axboe@kernel.dk/T/#u
-             *
-             * If the code is changed to submit other types of requests in the
-             * future, then this workaround may need to be extended to deal with
-             * genuine -EAGAIN results that should not be resubmitted
-             * immediately.
-             */
-            if (ret == -EINTR || ret == -EAGAIN) {
+            if (ret == -EINTR) {
                 luring_resubmit(s, luringcb);
                 continue;
             }
@@ -287,14 +278,12 @@ static bool qemu_luring_poll_cb(void *opaque)
 {
     LuringState *s = opaque;
 
-    return io_uring_cq_ready(&s->ring);
-}
+    if (io_uring_cq_ready(&s->ring)) {
+        luring_process_completions_and_submit(s);
+        return true;
+    }
 
-static void qemu_luring_poll_ready(void *opaque)
-{
-    LuringState *s = opaque;
-
-    luring_process_completions_and_submit(s);
+    return false;
 }
 
 static void ioq_init(LuringQueue *io_q)
@@ -399,8 +388,8 @@ int coroutine_fn luring_co_submit(BlockDriverState *bs, LuringState *s, int fd,
 
 void luring_detach_aio_context(LuringState *s, AioContext *old_context)
 {
-    aio_set_fd_handler(old_context, s->ring.ring_fd, false,
-                       NULL, NULL, NULL, NULL, s);
+    aio_set_fd_handler(old_context, s->ring.ring_fd, false, NULL, NULL, NULL,
+                       s);
     qemu_bh_delete(s->completion_bh);
     s->aio_context = NULL;
 }
@@ -410,8 +399,7 @@ void luring_attach_aio_context(LuringState *s, AioContext *new_context)
     s->aio_context = new_context;
     s->completion_bh = aio_bh_new(new_context, qemu_luring_completion_bh, s);
     aio_set_fd_handler(s->aio_context, s->ring.ring_fd, false,
-                       qemu_luring_completion_cb, NULL,
-                       qemu_luring_poll_cb, qemu_luring_poll_ready, s);
+                       qemu_luring_completion_cb, NULL, qemu_luring_poll_cb, s);
 }
 
 LuringState *luring_init(Error **errp)
@@ -437,6 +425,6 @@ LuringState *luring_init(Error **errp)
 void luring_cleanup(LuringState *s)
 {
     io_uring_queue_exit(&s->ring);
-    trace_luring_cleanup_state(s);
     g_free(s);
+    trace_luring_cleanup_state(s);
 }

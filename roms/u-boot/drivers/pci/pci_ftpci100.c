@@ -7,8 +7,6 @@
  * Macpaul Lin, Andes Technology Corporation <macpaul@andestech.com>
  */
 #include <common.h>
-#include <init.h>
-#include <log.h>
 #include <malloc.h>
 #include <pci.h>
 

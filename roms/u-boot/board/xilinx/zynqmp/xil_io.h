@@ -6,21 +6,20 @@
 /* FIXME remove this when vivado is fixed */
 #include <asm/io.h>
 #include <common.h>
-#include <linux/delay.h>
 
 #define xil_printf(...)
 
-static void Xil_Out32(unsigned long addr, unsigned long val)
+void Xil_Out32(unsigned long addr, unsigned long val)
 {
 	writel(val, addr);
 }
 
-static int Xil_In32(unsigned long addr)
+int Xil_In32(unsigned long addr)
 {
 	return readl(addr);
 }
 
-static void __maybe_unused usleep(u32 sleep)
+void usleep(u32 sleep)
 {
 	udelay(sleep);
 }

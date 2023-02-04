@@ -1,10 +1,8 @@
 #include "qemu/osdep.h"
-#include "qemu/cutils.h"
 #include <termios.h>
 #include "qapi/error.h"
 #include "qemu/sockets.h"
 #include "channel.h"
-#include "cutils.h"
 
 #ifdef CONFIG_SOLARIS
 #include <stropts.h>
@@ -36,7 +34,7 @@ static gboolean ga_channel_listen_accept(GIOChannel *channel,
         g_warning("error converting fd to gsocket: %s", strerror(errno));
         goto out;
     }
-    qemu_socket_set_nonblock(client_fd);
+    qemu_set_nonblock(client_fd);
     ret = ga_channel_client_add(c, client_fd);
     if (ret) {
         g_warning("error setting up connection");
@@ -121,7 +119,7 @@ static int ga_channel_client_add(GAChannel *c, int fd)
 }
 
 static gboolean ga_channel_open(GAChannel *c, const gchar *path,
-                                GAChannelMethod method, int fd, Error **errp)
+                                GAChannelMethod method, int fd)
 {
     int ret;
     c->method = method;
@@ -129,48 +127,27 @@ static gboolean ga_channel_open(GAChannel *c, const gchar *path,
     switch (c->method) {
     case GA_CHANNEL_VIRTIO_SERIAL: {
         assert(fd < 0);
-        fd = qga_open_cloexec(
-            path,
+        fd = qemu_open(path, O_RDWR | O_NONBLOCK
 #ifndef CONFIG_SOLARIS
-            O_ASYNC |
+                           | O_ASYNC
 #endif
-            O_RDWR | O_NONBLOCK,
-            0
-        );
+                           );
         if (fd == -1) {
-            error_setg_errno(errp, errno, "error opening channel '%s'", path);
+            g_critical("error opening channel: %s", strerror(errno));
             return false;
         }
 #ifdef CONFIG_SOLARIS
         ret = ioctl(fd, I_SETSIG, S_OUTPUT | S_INPUT | S_HIPRI);
         if (ret == -1) {
-            error_setg_errno(errp, errno, "error setting event mask for channel");
+            g_critical("error setting event mask for channel: %s",
+                       strerror(errno));
             close(fd);
             return false;
         }
 #endif
-#ifdef __FreeBSD__
-        /*
-         * In the default state channel sends echo of every command to a
-         * client. The client programm doesn't expect this and raises an
-         * error. Suppress echo by resetting ECHO terminal flag.
-         */
-        struct termios tio;
-        if (tcgetattr(fd, &tio) < 0) {
-            error_setg_errno(errp, errno, "error getting channel termios attrs");
-            close(fd);
-            return false;
-        }
-        tio.c_lflag &= ~ECHO;
-        if (tcsetattr(fd, TCSAFLUSH, &tio) < 0) {
-            error_setg_errno(errp, errno, "error setting channel termios attrs");
-            close(fd);
-            return false;
-        }
-#endif /* __FreeBSD__ */
         ret = ga_channel_client_add(c, fd);
         if (ret) {
-            error_setg(errp, "error adding channel to main loop");
+            g_critical("error adding channel to main loop");
             close(fd);
             return false;
         }
@@ -180,9 +157,9 @@ static gboolean ga_channel_open(GAChannel *c, const gchar *path,
         struct termios tio;
 
         assert(fd < 0);
-        fd = qga_open_cloexec(path, O_RDWR | O_NOCTTY | O_NONBLOCK, 0);
+        fd = qemu_open(path, O_RDWR | O_NOCTTY | O_NONBLOCK);
         if (fd == -1) {
-            error_setg_errno(errp, errno, "error opening channel '%s'", path);
+            g_critical("error opening channel: %s", strerror(errno));
             return false;
         }
         tcgetattr(fd, &tio);
@@ -203,7 +180,7 @@ static gboolean ga_channel_open(GAChannel *c, const gchar *path,
         tcsetattr(fd, TCSANOW, &tio);
         ret = ga_channel_client_add(c, fd);
         if (ret) {
-            error_setg(errp, "error adding channel to main loop");
+            g_critical("error adding channel to main loop");
             close(fd);
             return false;
         }
@@ -211,8 +188,12 @@ static gboolean ga_channel_open(GAChannel *c, const gchar *path,
     }
     case GA_CHANNEL_UNIX_LISTEN: {
         if (fd < 0) {
-            fd = unix_listen(path, errp);
-            if (fd < 0) {
+            Error *local_err = NULL;
+
+            fd = unix_listen(path, &local_err);
+            if (local_err != NULL) {
+                g_critical("%s", error_get_pretty(local_err));
+                error_free(local_err);
                 return false;
             }
         }
@@ -221,19 +202,24 @@ static gboolean ga_channel_open(GAChannel *c, const gchar *path,
     }
     case GA_CHANNEL_VSOCK_LISTEN: {
         if (fd < 0) {
+            Error *local_err = NULL;
             SocketAddress *addr;
             char *addr_str;
 
             addr_str = g_strdup_printf("vsock:%s", path);
-            addr = socket_parse(addr_str, errp);
+            addr = socket_parse(addr_str, &local_err);
             g_free(addr_str);
-            if (!addr) {
+            if (local_err != NULL) {
+                g_critical("%s", error_get_pretty(local_err));
+                error_free(local_err);
                 return false;
             }
 
-            fd = socket_listen(addr, 1, errp);
+            fd = socket_listen(addr, 1, &local_err);
             qapi_free_SocketAddress(addr);
-            if (fd < 0) {
+            if (local_err != NULL) {
+                g_critical("%s", error_get_pretty(local_err));
+                error_free(local_err);
                 return false;
             }
         }
@@ -241,7 +227,7 @@ static gboolean ga_channel_open(GAChannel *c, const gchar *path,
         break;
     }
     default:
-        error_setg(errp, "error binding/listening to specified socket");
+        g_critical("error binding/listening to specified socket");
         return false;
     }
 
@@ -286,14 +272,12 @@ GIOStatus ga_channel_read(GAChannel *c, gchar *buf, gsize size, gsize *count)
 GAChannel *ga_channel_new(GAChannelMethod method, const gchar *path,
                           int listen_fd, GAChannelCallback cb, gpointer opaque)
 {
-    Error *err = NULL;
     GAChannel *c = g_new0(GAChannel, 1);
     c->event_cb = cb;
     c->user_data = opaque;
 
-    if (!ga_channel_open(c, path, method, listen_fd, &err)) {
-        g_critical("%s", error_get_pretty(err));
-        error_free(err);
+    if (!ga_channel_open(c, path, method, listen_fd)) {
+        g_critical("error opening channel");
         ga_channel_free(c);
         return NULL;
     }

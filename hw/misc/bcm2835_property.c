@@ -69,8 +69,7 @@ static void bcm2835_property_mbox_push(BCM2835PropertyState *s, uint32_t value)
             break;
         case 0x00010003: /* Get board MAC address */
             resplen = sizeof(s->macaddr.a);
-            dma_memory_write(&s->dma_as, value + 12, s->macaddr.a, resplen,
-                             MEMTXATTRS_UNSPECIFIED);
+            dma_memory_write(&s->dma_as, value + 12, s->macaddr.a, resplen);
             break;
         case 0x00010004: /* Get board serial */
             qemu_log_mask(LOG_UNIMP,
@@ -270,10 +269,6 @@ static void bcm2835_property_mbox_push(BCM2835PropertyState *s, uint32_t value)
             stl_le_phys(&s->dma_as, value + 12, 0);
             resplen = 4;
             break;
-        case 0x00040013: /* Get number of displays */
-            stl_le_phys(&s->dma_as, value + 12, 1);
-            resplen = 4;
-            break;
 
         case 0x00060001: /* Get DMA channels */
             /* channels 2-5 */
@@ -425,7 +420,7 @@ static void bcm2835_property_class_init(ObjectClass *klass, void *data)
     dc->vmsd = &vmstate_bcm2835_property;
 }
 
-static const TypeInfo bcm2835_property_info = {
+static TypeInfo bcm2835_property_info = {
     .name          = TYPE_BCM2835_PROPERTY,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(BCM2835PropertyState),

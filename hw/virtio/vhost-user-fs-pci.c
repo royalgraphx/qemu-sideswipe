@@ -14,8 +14,7 @@
 #include "qemu/osdep.h"
 #include "hw/qdev-properties.h"
 #include "hw/virtio/vhost-user-fs.h"
-#include "hw/virtio/virtio-pci.h"
-#include "qom/object.h"
+#include "virtio-pci.h"
 
 struct VHostUserFSPCI {
     VirtIOPCIProxy parent_obj;
@@ -26,8 +25,8 @@ typedef struct VHostUserFSPCI VHostUserFSPCI;
 
 #define TYPE_VHOST_USER_FS_PCI "vhost-user-fs-pci-base"
 
-DECLARE_INSTANCE_CHECKER(VHostUserFSPCI, VHOST_USER_FS_PCI,
-                         TYPE_VHOST_USER_FS_PCI)
+#define VHOST_USER_FS_PCI(obj) \
+        OBJECT_CHECK(VHostUserFSPCI, (obj), TYPE_VHOST_USER_FS_PCI)
 
 static Property vhost_user_fs_pci_properties[] = {
     DEFINE_PROP_UINT32("vectors", VirtIOPCIProxy, nvectors,
@@ -68,8 +67,6 @@ static void vhost_user_fs_pci_instance_init(Object *obj)
 
     virtio_instance_init_common(obj, &dev->vdev, sizeof(dev->vdev),
                                 TYPE_VHOST_USER_FS);
-    object_property_add_alias(obj, "bootindex", OBJECT(&dev->vdev),
-                              "bootindex");
 }
 
 static const VirtioPCIDeviceTypeInfo vhost_user_fs_pci_info = {

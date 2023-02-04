@@ -4,14 +4,10 @@
  */
 
 #include "vpd_reader.h"
-#include <malloc.h>
 
 #include <i2c.h>
 #include <linux/bch.h>
 #include <stdlib.h>
-#include <dm/uclass.h>
-#include <i2c_eeprom.h>
-#include <hexdump.h>
 
 /* BCH configuration */
 
@@ -110,9 +106,9 @@ static const size_t HEADER_BLOCK_ECC_LEN = 4;
 
 static const u8 ECC_BLOCK_ID = 0xFF;
 
-int vpd_reader(size_t size, u8 *data, struct vpd_cache *userdata,
-	       int (*fn)(struct vpd_cache *, u8 id, u8 version, u8 type,
-			 size_t size, u8 const *data))
+static int vpd_reader(size_t size, u8 *data, struct vpd_cache *userdata,
+		      int (*fn)(struct vpd_cache *, u8 id, u8 version, u8 type,
+				size_t size, u8 const *data))
 {
 	if (size < HEADER_BLOCK_LEN || !data || !fn)
 		return -EINVAL;
@@ -200,38 +196,32 @@ int vpd_reader(size_t size, u8 *data, struct vpd_cache *userdata,
 	}
 }
 
-int read_i2c_vpd(struct vpd_cache *cache,
-		 int (*process_block)(struct vpd_cache *, u8 id, u8 version,
-				      u8 type, size_t size, u8 const *data))
+int read_vpd(struct vpd_cache *cache,
+	     int (*process_block)(struct vpd_cache *, u8 id, u8 version,
+				  u8 type, size_t size, u8 const *data))
 {
-	struct udevice *dev;
-	int ret;
+	static const size_t size = CONFIG_SYS_VPD_EEPROM_SIZE;
+
+	int res;
 	u8 *data;
-	int size;
+	unsigned int current_i2c_bus = i2c_get_bus_num();
 
-	ret = uclass_get_device_by_name(UCLASS_I2C_EEPROM, "vpd@0", &dev);
-	if (ret)
-		return ret;
-
-	size = i2c_eeprom_size(dev);
-	if (size < 0) {
-		printf("Unable to get size of eeprom: %d\n", ret);
-		return ret;
-	}
+	res = i2c_set_bus_num(CONFIG_SYS_VPD_EEPROM_I2C_BUS);
+	if (res < 0)
+		return res;
 
 	data = malloc(size);
 	if (!data)
 		return -ENOMEM;
 
-	ret = i2c_eeprom_read(dev, 0, data, size);
-	if (ret) {
-		free(data);
-		return ret;
-	}
-
-	ret = vpd_reader(size, data, cache, process_block);
+	res = i2c_read(CONFIG_SYS_VPD_EEPROM_I2C_ADDR, 0,
+		       CONFIG_SYS_VPD_EEPROM_I2C_ADDR_LEN,
+		       data, size);
+	if (res == 0)
+		res = vpd_reader(size, data, cache, process_block);
 
 	free(data);
 
-	return ret;
+	i2c_set_bus_num(current_i2c_bus);
+	return res;
 }

@@ -26,13 +26,11 @@
 #include "hw/ppc/spapr.h"
 #include "hw/ppc/spapr_vio.h"
 #include "trace.h"
-#include "qom/object.h"
 
 #define DEBUG_SPAPR 0
 
-typedef struct SpaprTpmState SpaprTpmState;
-DECLARE_INSTANCE_CHECKER(SpaprTpmState, VIO_SPAPR_VTPM,
-                         TYPE_TPM_SPAPR)
+#define VIO_SPAPR_VTPM(obj) \
+     OBJECT_CHECK(SpaprTpmState, (obj), TYPE_TPM_SPAPR)
 
 typedef struct TpmCrq {
     uint8_t valid;  /* 0x80: cmd; 0xc0: init crq */
@@ -66,7 +64,7 @@ typedef struct TpmCrq {
 
 #define TPM_SPAPR_BUFFER_MAX                 4096
 
-struct SpaprTpmState {
+typedef struct {
     SpaprVioDevice vdev;
 
     TpmCrq crq; /* track single TPM command */
@@ -86,14 +84,16 @@ struct SpaprTpmState {
     TPMVersion be_tpm_version;
 
     size_t be_buffer_size;
-};
+} SpaprTpmState;
 
 /*
  * Send a request to the TPM.
  */
 static void tpm_spapr_tpm_send(SpaprTpmState *s)
 {
-    tpm_util_show_buffer(s->buffer, s->be_buffer_size, "To TPM");
+    if (trace_event_get_state_backends(TRACE_TPM_SPAPR_SHOW_BUFFER)) {
+        tpm_util_show_buffer(s->buffer, s->be_buffer_size, "To TPM");
+    }
 
     s->state = SPAPR_VTPM_STATE_EXECUTION;
     s->cmd = (TPMBackendCmd) {
@@ -253,7 +253,9 @@ static void tpm_spapr_request_completed(TPMIf *ti, int ret)
     rc = spapr_vio_dma_write(&s->vdev, be32_to_cpu(crq->data),
                              s->buffer, len);
 
-    tpm_util_show_buffer(s->buffer, len, "From TPM");
+    if (trace_event_get_state_backends(TRACE_TPM_SPAPR_SHOW_BUFFER)) {
+        tpm_util_show_buffer(s->buffer, len, "From TPM");
+    }
 
     crq->valid = SPAPR_VTPM_MSG_RESULT;
     if (rc == H_SUCCESS) {

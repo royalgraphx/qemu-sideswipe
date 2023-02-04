@@ -68,4 +68,3 @@ static void iscsi_block_opts_init(void)
 }
 
 block_init(iscsi_block_opts_init);
-module_opts("iscsi");

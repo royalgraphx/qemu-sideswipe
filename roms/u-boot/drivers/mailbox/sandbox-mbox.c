@@ -5,9 +5,7 @@
 
 #include <common.h>
 #include <dm.h>
-#include <log.h>
 #include <mailbox-uclass.h>
-#include <malloc.h>
 #include <asm/io.h>
 #include <asm/mbox.h>
 
@@ -89,7 +87,7 @@ static const struct udevice_id sandbox_mbox_ids[] = {
 
 struct mbox_ops sandbox_mbox_mbox_ops = {
 	.request = sandbox_mbox_request,
-	.rfree = sandbox_mbox_free,
+	.free = sandbox_mbox_free,
 	.send = sandbox_mbox_send,
 	.recv = sandbox_mbox_recv,
 };
@@ -100,6 +98,6 @@ U_BOOT_DRIVER(sandbox_mbox) = {
 	.of_match = sandbox_mbox_ids,
 	.bind = sandbox_mbox_bind,
 	.probe = sandbox_mbox_probe,
-	.priv_auto	= sizeof(struct sandbox_mbox),
+	.priv_auto_alloc_size = sizeof(struct sandbox_mbox),
 	.ops = &sandbox_mbox_mbox_ops,
 };

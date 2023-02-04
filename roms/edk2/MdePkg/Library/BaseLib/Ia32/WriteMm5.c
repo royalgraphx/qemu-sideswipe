@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Writes the current value of 64-bit MMX Register #5 (MM5).
 
@@ -18,7 +21,7 @@
 VOID
 EFIAPI
 AsmWriteMm5 (
-  IN UINT64  Value
+  IN UINT64   Value
   )
 {
   _asm {

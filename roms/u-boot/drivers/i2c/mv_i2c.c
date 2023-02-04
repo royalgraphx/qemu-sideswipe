@@ -19,9 +19,7 @@
 #include <common.h>
 #include <dm.h>
 #include <i2c.h>
-#include <log.h>
 #include <asm/io.h>
-#include <linux/delay.h>
 #include "mv_i2c.h"
 
 /* All transfers are described by this data structure */
@@ -370,7 +368,7 @@ static int __i2c_write(struct mv_i2c *base, uchar chip, u8 *addr, int alen,
 	return 0;
 }
 
-#if !CONFIG_IS_ENABLED(DM_I2C)
+#ifndef CONFIG_DM_I2C
 
 static struct mv_i2c *base_glob;
 
@@ -436,7 +434,7 @@ void i2c_init(int speed, int slaveaddr)
 	base_glob = (struct mv_i2c *)CONFIG_MV_I2C_REG;
 #endif
 
-	if (speed > I2C_SPEED_STANDARD_RATE)
+	if (speed > 100000)
 		val = ICR_FM;
 	else
 		val = ICR_SM;
@@ -567,7 +565,7 @@ static int mv_i2c_set_bus_speed(struct udevice *bus, unsigned int speed)
 	struct mv_i2c_priv *priv = dev_get_priv(bus);
 	u32 val;
 
-	if (speed > I2C_SPEED_STANDARD_RATE)
+	if (speed > 100000)
 		val = ICR_FM;
 	else
 		val = ICR_SM;
@@ -580,7 +578,7 @@ static int mv_i2c_probe(struct udevice *bus)
 {
 	struct mv_i2c_priv *priv = dev_get_priv(bus);
 
-	priv->base = dev_read_addr_ptr(bus);
+	priv->base = (void *)devfdt_get_addr_ptr(bus);
 
 	return 0;
 }
@@ -600,7 +598,7 @@ U_BOOT_DRIVER(i2c_mv) = {
 	.id	= UCLASS_I2C,
 	.of_match = mv_i2c_ids,
 	.probe	= mv_i2c_probe,
-	.priv_auto	= sizeof(struct mv_i2c_priv),
+	.priv_auto_alloc_size = sizeof(struct mv_i2c_priv),
 	.ops	= &mv_i2c_ops,
 };
 #endif /* CONFIG_DM_I2C */

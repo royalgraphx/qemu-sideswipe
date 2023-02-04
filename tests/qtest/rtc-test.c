@@ -111,7 +111,7 @@ static void cmos_get_date_time(struct tm *date)
     date->tm_mday = mday;
     date->tm_mon = mon - 1;
     date->tm_year = base_year + year - 1900;
-#if !defined(__sun__) && !defined(_WIN32)
+#ifndef __sun__
     date->tm_gmtoff = 0;
 #endif
 
@@ -292,7 +292,7 @@ static void alarm_time(void)
             break;
         }
 
-        clock_step(NANOSECONDS_PER_SECOND);
+        clock_step(1000000000);
     }
 
     g_assert(get_irq(RTC_ISA_IRQ));
@@ -686,7 +686,7 @@ static void periodic_timer(void)
 
 int main(int argc, char **argv)
 {
-    QTestState *s;
+    QTestState *s = NULL;
     int ret;
 
     g_test_init(&argc, &argv, NULL);
@@ -712,7 +712,9 @@ int main(int argc, char **argv)
 
     ret = g_test_run();
 
-    qtest_quit(s);
+    if (s) {
+        qtest_quit(s);
+    }
 
     return ret;
 }

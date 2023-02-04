@@ -30,14 +30,15 @@
  */
 
 #define TYPE_AW_SUN8I_EMAC "allwinner-sun8i-emac"
-OBJECT_DECLARE_SIMPLE_TYPE(AwSun8iEmacState, AW_SUN8I_EMAC)
+#define AW_SUN8I_EMAC(obj) \
+    OBJECT_CHECK(AwSun8iEmacState, (obj), TYPE_AW_SUN8I_EMAC)
 
 /** @} */
 
 /**
  * Allwinner Sun8i EMAC object instance state
  */
-struct AwSun8iEmacState {
+typedef struct AwSun8iEmacState {
     /*< private >*/
     SysBusDevice  parent_obj;
     /*< public >*/
@@ -47,12 +48,6 @@ struct AwSun8iEmacState {
 
     /** Interrupt output signal to notify CPU */
     qemu_irq     irq;
-
-    /** Memory region where DMA transfers are done */
-    MemoryRegion *dma_mr;
-
-    /** Address space used internally for DMA transfers */
-    AddressSpace dma_as;
 
     /** Generic Network Interface Controller (NIC) for networking API */
     NICState     *nic;
@@ -99,6 +94,6 @@ struct AwSun8iEmacState {
 
     /** @} */
 
-};
+} AwSun8iEmacState;
 
-#endif /* HW_NET_ALLWINNER_SUN8I_EMAC_H */
+#endif /* HW_NET_ALLWINNER_SUN8I_H */

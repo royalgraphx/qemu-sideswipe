@@ -23,7 +23,7 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/datadir.h"
+#include "qemu-common.h"
 #include "keymaps.h"
 #include "trace.h"
 #include "qemu/ctype.h"

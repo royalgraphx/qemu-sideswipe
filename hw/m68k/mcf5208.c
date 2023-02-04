@@ -11,7 +11,7 @@
 #include "qemu/error-report.h"
 #include "qemu/log.h"
 #include "qapi/error.h"
-#include "qemu/datadir.h"
+#include "qemu-common.h"
 #include "cpu.h"
 #include "hw/irq.h"
 #include "hw/m68k/mcf.h"
@@ -25,6 +25,7 @@
 #include "hw/loader.h"
 #include "hw/sysbus.h"
 #include "elf.h"
+#include "exec/address-spaces.h"
 
 #define SYS_FREQ 166666666
 
@@ -156,9 +157,8 @@ static uint64_t m5208_sys_read(void *opaque, hwaddr addr,
         {
             int n;
             for (n = 0; n < 32; n++) {
-                if (current_machine->ram_size < (2u << n)) {
+                if (ram_size < (2u << n))
                     break;
-                }
             }
             return (n - 1)  | 0x40000000;
         }
@@ -197,7 +197,7 @@ static void mcf5208_sys_init(MemoryRegion *address_space, qemu_irq *pic)
     /* Timers.  */
     for (i = 0; i < 2; i++) {
         s = g_new0(m5208_timer_state, 1);
-        s->timer = ptimer_init(m5208_timer_trigger, s, PTIMER_POLICY_LEGACY);
+        s->timer = ptimer_init(m5208_timer_trigger, s, PTIMER_POLICY_DEFAULT);
         memory_region_init_io(&s->iomem, NULL, &m5208_timer_ops, s,
                               "m5208-timer", 0x00004000);
         memory_region_add_subregion(address_space, 0xfc080000 + 0x4000 * i,
@@ -301,17 +301,17 @@ static void mcf5208evb_init(MachineState *machine)
     /* 0xfc0a8000 SDRAM controller.  */
 
     /* Load firmware */
-    if (machine->firmware) {
+    if (bios_name) {
         char *fn;
         uint8_t *ptr;
 
-        fn = qemu_find_file(QEMU_FILE_TYPE_BIOS, machine->firmware);
+        fn = qemu_find_file(QEMU_FILE_TYPE_BIOS, bios_name);
         if (!fn) {
-            error_report("Could not find ROM image '%s'", machine->firmware);
+            error_report("Could not find ROM image '%s'", bios_name);
             exit(1);
         }
         if (load_image_targphys(fn, 0x0, ROM_SIZE) < 8) {
-            error_report("Could not load ROM image '%s'", machine->firmware);
+            error_report("Could not load ROM image '%s'", bios_name);
             exit(1);
         }
         g_free(fn);
@@ -323,7 +323,7 @@ static void mcf5208evb_init(MachineState *machine)
 
     /* Load kernel.  */
     if (!kernel_filename) {
-        if (qtest_enabled() || machine->firmware) {
+        if (qtest_enabled() || bios_name) {
             return;
         }
         error_report("Kernel image must be specified");

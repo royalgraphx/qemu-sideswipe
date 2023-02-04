@@ -32,11 +32,11 @@ EDKII_IOMMU_PPI  *mIoMmu;
 **/
 EFI_STATUS
 IoMmuMap (
-  IN  EDKII_IOMMU_OPERATION  Operation,
-  IN VOID                    *HostAddress,
-  IN  OUT UINTN              *NumberOfBytes,
-  OUT EFI_PHYSICAL_ADDRESS   *DeviceAddress,
-  OUT VOID                   **Mapping
+  IN  EDKII_IOMMU_OPERATION Operation,
+  IN VOID                   *HostAddress,
+  IN  OUT UINTN             *NumberOfBytes,
+  OUT EFI_PHYSICAL_ADDRESS  *DeviceAddress,
+  OUT VOID                  **Mapping
   )
 {
   EFI_STATUS  Status;
@@ -54,25 +54,23 @@ IoMmuMap (
     if (EFI_ERROR (Status)) {
       return EFI_OUT_OF_RESOURCES;
     }
-
     switch (Operation) {
-      case EdkiiIoMmuOperationBusMasterRead:
-      case EdkiiIoMmuOperationBusMasterRead64:
-        Attribute = EDKII_IOMMU_ACCESS_READ;
-        break;
-      case EdkiiIoMmuOperationBusMasterWrite:
-      case EdkiiIoMmuOperationBusMasterWrite64:
-        Attribute = EDKII_IOMMU_ACCESS_WRITE;
-        break;
-      case EdkiiIoMmuOperationBusMasterCommonBuffer:
-      case EdkiiIoMmuOperationBusMasterCommonBuffer64:
-        Attribute = EDKII_IOMMU_ACCESS_READ | EDKII_IOMMU_ACCESS_WRITE;
-        break;
-      default:
-        ASSERT (FALSE);
-        return EFI_INVALID_PARAMETER;
+    case EdkiiIoMmuOperationBusMasterRead:
+    case EdkiiIoMmuOperationBusMasterRead64:
+      Attribute = EDKII_IOMMU_ACCESS_READ;
+      break;
+    case EdkiiIoMmuOperationBusMasterWrite:
+    case EdkiiIoMmuOperationBusMasterWrite64:
+      Attribute = EDKII_IOMMU_ACCESS_WRITE;
+      break;
+    case EdkiiIoMmuOperationBusMasterCommonBuffer:
+    case EdkiiIoMmuOperationBusMasterCommonBuffer64:
+      Attribute = EDKII_IOMMU_ACCESS_READ | EDKII_IOMMU_ACCESS_WRITE;
+      break;
+    default:
+      ASSERT(FALSE);
+      return EFI_INVALID_PARAMETER;
     }
-
     Status = mIoMmu->SetAttribute (
                        mIoMmu,
                        *Mapping,
@@ -83,10 +81,9 @@ IoMmuMap (
     }
   } else {
     *DeviceAddress = (EFI_PHYSICAL_ADDRESS)(UINTN)HostAddress;
-    *Mapping       = NULL;
-    Status         = EFI_SUCCESS;
+    *Mapping = NULL;
+    Status = EFI_SUCCESS;
   }
-
   return Status;
 }
 
@@ -101,7 +98,7 @@ IoMmuMap (
 **/
 EFI_STATUS
 IoMmuUnmap (
-  IN VOID  *Mapping
+  IN VOID                  *Mapping
   )
 {
   EFI_STATUS  Status;
@@ -112,7 +109,6 @@ IoMmuUnmap (
   } else {
     Status = EFI_SUCCESS;
   }
-
   return Status;
 }
 
@@ -146,7 +142,7 @@ IoMmuAllocateBuffer (
   UINTN                 NumberOfBytes;
   EFI_PHYSICAL_ADDRESS  HostPhyAddress;
 
-  *HostAddress   = NULL;
+  *HostAddress = NULL;
   *DeviceAddress = 0;
 
   if (mIoMmu != NULL) {
@@ -161,19 +157,18 @@ IoMmuAllocateBuffer (
       return EFI_OUT_OF_RESOURCES;
     }
 
-    NumberOfBytes = EFI_PAGES_TO_SIZE (Pages);
-    Status        = mIoMmu->Map (
-                              mIoMmu,
-                              EdkiiIoMmuOperationBusMasterCommonBuffer,
-                              *HostAddress,
-                              &NumberOfBytes,
-                              DeviceAddress,
-                              Mapping
-                              );
+    NumberOfBytes = EFI_PAGES_TO_SIZE(Pages);
+    Status = mIoMmu->Map (
+                       mIoMmu,
+                       EdkiiIoMmuOperationBusMasterCommonBuffer,
+                       *HostAddress,
+                       &NumberOfBytes,
+                       DeviceAddress,
+                       Mapping
+                       );
     if (EFI_ERROR (Status)) {
       return EFI_OUT_OF_RESOURCES;
     }
-
     Status = mIoMmu->SetAttribute (
                        mIoMmu,
                        *Mapping,
@@ -191,12 +186,10 @@ IoMmuAllocateBuffer (
     if (EFI_ERROR (Status)) {
       return EFI_OUT_OF_RESOURCES;
     }
-
-    *HostAddress   = (VOID *)(UINTN)HostPhyAddress;
+    *HostAddress = (VOID *)(UINTN)HostPhyAddress;
     *DeviceAddress = HostPhyAddress;
-    *Mapping       = NULL;
+    *Mapping = NULL;
   }
-
   return Status;
 }
 
@@ -214,9 +207,9 @@ IoMmuAllocateBuffer (
 **/
 EFI_STATUS
 IoMmuFreeBuffer (
-  IN UINTN  Pages,
-  IN VOID   *HostAddress,
-  IN VOID   *Mapping
+  IN UINTN                  Pages,
+  IN VOID                   *HostAddress,
+  IN VOID                   *Mapping
   )
 {
   EFI_STATUS  Status;
@@ -228,143 +221,6 @@ IoMmuFreeBuffer (
   } else {
     Status = EFI_SUCCESS;
   }
-
-  return Status;
-}
-
-/**
-  Allocates aligned pages that are suitable for an OperationBusMasterCommonBuffer or
-  OperationBusMasterCommonBuffer64 mapping.
-
-  @param  Pages                 The number of pages to allocate.
-  @param  Alignment             The requested alignment of the allocation.  Must be a power of two.
-  @param  HostAddress           A pointer to store the base system memory address of the
-                                allocated range.
-  @param  DeviceAddress         The resulting map address for the bus master PCI controller to use to
-                                access the hosts HostAddress.
-  @param  Mapping               A resulting value to pass to Unmap().
-
-  @retval EFI_SUCCESS           The requested memory pages were allocated.
-  @retval EFI_UNSUPPORTED       Attributes is unsupported. The only legal attribute bits are
-                                MEMORY_WRITE_COMBINE and MEMORY_CACHED.
-  @retval EFI_INVALID_PARAMETER One or more parameters are invalid.
-  @retval EFI_OUT_OF_RESOURCES  The memory pages could not be allocated.
-
-**/
-EFI_STATUS
-IoMmuAllocateAlignedBuffer (
-  IN UINTN                  Pages,
-  IN UINTN                  Alignment,
-  OUT VOID                  **HostAddress,
-  OUT EFI_PHYSICAL_ADDRESS  *DeviceAddress,
-  OUT VOID                  **Mapping
-  )
-{
-  EFI_STATUS            Status;
-  VOID                  *Memory;
-  UINTN                 AlignedMemory;
-  UINTN                 AlignmentMask;
-  UINTN                 UnalignedPages;
-  UINTN                 RealPages;
-  UINTN                 NumberOfBytes;
-  EFI_PHYSICAL_ADDRESS  HostPhyAddress;
-
-  *HostAddress   = NULL;
-  *DeviceAddress = 0;
-  AlignmentMask  = Alignment - 1;
-
-  //
-  // Calculate the total number of pages since alignment is larger than page size.
-  //
-  RealPages = Pages + EFI_SIZE_TO_PAGES (Alignment);
-
-  //
-  // Make sure that Pages plus EFI_SIZE_TO_PAGES (Alignment) does not overflow.
-  //
-  ASSERT (RealPages > Pages);
-
-  if (mIoMmu != NULL) {
-    Status = mIoMmu->AllocateBuffer (
-                       mIoMmu,
-                       EfiBootServicesData,
-                       RealPages,
-                       HostAddress,
-                       0
-                       );
-    if (EFI_ERROR (Status)) {
-      return EFI_OUT_OF_RESOURCES;
-    }
-
-    Memory         = *HostAddress;
-    AlignedMemory  = ((UINTN)Memory + AlignmentMask) & ~AlignmentMask;
-    UnalignedPages = EFI_SIZE_TO_PAGES (AlignedMemory - (UINTN)Memory);
-    if (UnalignedPages > 0) {
-      //
-      // Free first unaligned page(s).
-      //
-      Status = mIoMmu->FreeBuffer (
-                         mIoMmu,
-                         UnalignedPages,
-                         Memory
-                         );
-      if (EFI_ERROR (Status)) {
-        return Status;
-      }
-    }
-
-    Memory         = (VOID *)(UINTN)(AlignedMemory + EFI_PAGES_TO_SIZE (Pages));
-    UnalignedPages = RealPages - Pages - UnalignedPages;
-    if (UnalignedPages > 0) {
-      //
-      // Free last unaligned page(s).
-      //
-      Status = mIoMmu->FreeBuffer (
-                         mIoMmu,
-                         UnalignedPages,
-                         Memory
-                         );
-      if (EFI_ERROR (Status)) {
-        return Status;
-      }
-    }
-
-    *HostAddress  = (VOID *)AlignedMemory;
-    NumberOfBytes = EFI_PAGES_TO_SIZE (Pages);
-    Status        = mIoMmu->Map (
-                              mIoMmu,
-                              EdkiiIoMmuOperationBusMasterCommonBuffer,
-                              *HostAddress,
-                              &NumberOfBytes,
-                              DeviceAddress,
-                              Mapping
-                              );
-    if (EFI_ERROR (Status)) {
-      return EFI_OUT_OF_RESOURCES;
-    }
-
-    Status = mIoMmu->SetAttribute (
-                       mIoMmu,
-                       *Mapping,
-                       EDKII_IOMMU_ACCESS_READ | EDKII_IOMMU_ACCESS_WRITE
-                       );
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-  } else {
-    Status = PeiServicesAllocatePages (
-               EfiBootServicesData,
-               RealPages,
-               &HostPhyAddress
-               );
-    if (EFI_ERROR (Status)) {
-      return EFI_OUT_OF_RESOURCES;
-    }
-
-    *HostAddress   = (VOID *)(((UINTN)HostPhyAddress + AlignmentMask) & ~AlignmentMask);
-    *DeviceAddress = ((UINTN)HostPhyAddress + AlignmentMask) & ~AlignmentMask;
-    *Mapping       = NULL;
-  }
-
   return Status;
 }
 
@@ -383,3 +239,4 @@ IoMmuInit (
     (VOID **)&mIoMmu
     );
 }
+

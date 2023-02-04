@@ -11,18 +11,19 @@
 //
 // Driver name table
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mAtaBusDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mAtaBusDriverNameTable[] = {
   { "eng;en", L"ATA Bus Driver" },
-  { NULL,     NULL              }
+  { NULL , NULL }
 };
 
 //
 // Controller name table
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mAtaBusControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mAtaBusControllerNameTable[] = {
   { "eng;en", L"ATA Controller" },
-  { NULL,     NULL              }
+  { NULL , NULL }
 };
+
 
 //
 // EFI Component Name Protocol
@@ -36,9 +37,9 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gAtaBusComponentName 
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gAtaBusComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)AtaBusComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)AtaBusComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gAtaBusComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) AtaBusComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) AtaBusComponentNameGetControllerName,
   "en"
 };
 
@@ -97,6 +98,7 @@ AtaBusComponentNameGetDriverName (
            (BOOLEAN)(This == &gAtaBusComponentName)
            );
 }
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -169,11 +171,11 @@ AtaBusComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 AtaBusComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   )
 {
   EFI_STATUS                Status;
@@ -203,14 +205,13 @@ AtaBusComponentNameGetControllerName (
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
     //
     // Get the child context
     //
     Status = gBS->OpenProtocol (
                     ChildHandle,
                     &gEfiBlockIoProtocolGuid,
-                    (VOID **)&BlockIo,
+                    (VOID **) &BlockIo,
                     gAtaBusDriverBinding.DriverBindingHandle,
                     ChildHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -218,11 +219,9 @@ AtaBusComponentNameGetControllerName (
     if (EFI_ERROR (Status)) {
       return EFI_UNSUPPORTED;
     }
-
-    AtaDevice           = ATA_DEVICE_FROM_BLOCK_IO (BlockIo);
-    ControllerNameTable = AtaDevice->ControllerNameTable;
+    AtaDevice = ATA_DEVICE_FROM_BLOCK_IO (BlockIo);
+    ControllerNameTable =AtaDevice->ControllerNameTable;
   }
-
   return LookupUnicodeString2 (
            Language,
            This->SupportedLanguages,

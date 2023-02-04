@@ -19,6 +19,7 @@ EFI_UDP6_PROTOCOL  mUdp6Protocol = {
   Udp6Poll
 };
 
+
 /**
   This function copies the current operational settings of this EFI UDPv6 Protocol
   instance into user-supplied buffers. This function is used optionally to retrieve
@@ -90,6 +91,7 @@ Udp6GetModeData (
   return Status;
 }
 
+
 /**
   This function is used to do the following:
   Initialize and start this instance of the EFI UDPv6 Protocol.
@@ -102,7 +104,7 @@ Udp6GetModeData (
 
   @retval EFI_SUCCESS            The configuration settings were set, changed, or
                                  reset successfully.
-  @retval EFI_NO_MAPPING         When the UdpConfigData.UseAnyStationAddress is set
+  @retval EFI_NO_MAPPING         When the UdpConifgData.UseAnyStationAddress is set
                                  to true and there is no address available for the IP6
                                  driver to bind a source address to this instance.
   @retval EFI_INVALID_PARAMETER  One or more following conditions are TRUE:
@@ -157,16 +159,16 @@ Udp6Configure (
   Status      = EFI_SUCCESS;
   ASSERT (Udp6Service != NULL);
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
+  OldTpl      = gBS->RaiseTPL (TPL_CALLBACK);
 
   if (UdpConfigData != NULL) {
+
     IP6_COPY_ADDRESS (&StationAddress, &UdpConfigData->StationAddress);
     IP6_COPY_ADDRESS (&RemoteAddress, &UdpConfigData->RemoteAddress);
 
     if ((!NetIp6IsUnspecifiedAddr (&StationAddress) && !NetIp6IsValidUnicast (&StationAddress)) ||
         (!NetIp6IsUnspecifiedAddr (&RemoteAddress) && !NetIp6IsValidUnicast (&RemoteAddress))
-        )
-    {
+        ){
       //
       // If not use default address, and StationAddress is not a valid unicast
       // if it is not IPv6 address or RemoteAddress is not a valid unicast IPv6
@@ -284,6 +286,7 @@ ON_EXIT:
   return Status;
 }
 
+
 /**
   This function is used to enable and disable the multicast group filtering.
 
@@ -345,13 +348,12 @@ Udp6Groups (
     if (McastIp != NULL) {
       FreePool (McastIp);
     }
-
     return EFI_NOT_STARTED;
   }
 
-  Ip = Instance->IpInfo->Ip.Ip6;
+  Ip      = Instance->IpInfo->Ip.Ip6;
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
+  OldTpl  = gBS->RaiseTPL (TPL_CALLBACK);
 
   //
   // Invoke the Ip instance the Udp6 instance consumes to do the group operation.
@@ -366,11 +368,13 @@ Udp6Groups (
   // Keep a local copy of the configured multicast IPs because IpIo receives
   // datagrams from the 0 station address IP instance and then UDP delivers to
   // the matched instance. This copy of multicast IPs is used to avoid receive
-  // the multicast datagrams destinated to multicast IPs the other instances configured.
+  // the mutlicast datagrams destinated to multicast IPs the other instances configured.
   //
   if (JoinFlag) {
-    Status = NetMapInsertTail (&Instance->McastIps, (VOID *)McastIp, NULL);
+
+    Status = NetMapInsertTail (&Instance->McastIps, (VOID *) McastIp, NULL);
   } else {
+
     Status = NetMapIterate (&Instance->McastIps, Udp6LeaveGroup, MulticastAddress);
     if ((MulticastAddress != NULL) && (Status == EFI_ABORTED)) {
       Status = EFI_SUCCESS;
@@ -389,6 +393,8 @@ ON_EXIT:
 
   return Status;
 }
+
+
 
 /**
   This function places a sending request to this instance of the EFI UDPv6 Protocol,
@@ -417,13 +423,13 @@ ON_EXIT:
                                  One or more of the
                                  Token.Packet.TxData.FragmentTable[].FragmentBuffer
                                  fields is NULL. One or more of the
-                                 Token.Packet.TxData.UdpSessionData.DestinationAddress
+                                 Token.Packet.TxData.UdpSessionData.DestinationAddres
                                  are not valid unicast IPv6
                                  addresses if the  UdpSessionData is not NULL.
                                  Token.Packet.TxData.UdpSessionData.
                                  DestinationAddress is NULL
                                  Token.Packet.TxData.UdpSessionData.
-                                 DestinationPort
+                                 DestinatioPort
                                  is zero.
                                  Token.Packet.TxData.UdpSessionData is NULL and this
                                  instance's UdpConfigData.RemoteAddress  is unspecified.
@@ -484,8 +490,7 @@ Udp6Transmit (
 
   if (EFI_ERROR (NetMapIterate (&Instance->TxTokens, Udp6TokenExist, Token)) ||
       EFI_ERROR (NetMapIterate (&Instance->RxTokens, Udp6TokenExist, Token))
-      )
-  {
+      ){
     //
     // Try to find a duplicate token in the two token maps, if found, return
     // EFI_ACCESS_DENIED.
@@ -500,7 +505,7 @@ Udp6Transmit (
   // Create a net buffer to hold the user buffer and the udp header.
   //
   Packet = NetbufFromExt (
-             (NET_FRAGMENT *)TxData->FragmentTable,
+             (NET_FRAGMENT *) TxData->FragmentTable,
              TxData->FragmentCount,
              UDP6_HEADER_SIZE,
              0,
@@ -515,10 +520,10 @@ Udp6Transmit (
   //
   // Store the IpIo in ProtoData.
   //
-  Udp6Service                       = Instance->Udp6Service;
-  *((UINTN *)&Packet->ProtoData[0]) = (UINTN)(Udp6Service->IpIo);
+  Udp6Service                        = Instance->Udp6Service;
+  *((UINTN *) &Packet->ProtoData[0]) = (UINTN) (Udp6Service->IpIo);
 
-  Udp6Header = (EFI_UDP_HEADER *)NetbufAllocSpace (Packet, UDP6_HEADER_SIZE, TRUE);
+  Udp6Header = (EFI_UDP_HEADER *) NetbufAllocSpace (Packet, UDP6_HEADER_SIZE, TRUE);
   ASSERT (Udp6Header != NULL);
   if (Udp6Header == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
@@ -530,10 +535,10 @@ Udp6Transmit (
   //
   // Fill the udp header.
   //
-  Udp6Header->SrcPort  = HTONS (ConfigData->StationPort);
-  Udp6Header->DstPort  = HTONS (ConfigData->RemotePort);
-  Udp6Header->Length   = HTONS ((UINT16)Packet->TotalSize);
-  Udp6Header->Checksum = 0;
+  Udp6Header->SrcPort      = HTONS (ConfigData->StationPort);
+  Udp6Header->DstPort      = HTONS (ConfigData->RemotePort);
+  Udp6Header->Length       = HTONS ((UINT16) Packet->TotalSize);
+  Udp6Header->Checksum     = 0;
   //
   // Set the UDP Header in NET_BUF, this UDP header is for IP6 can fast get the
   // Udp header for pseudoHeadCheckSum.
@@ -559,7 +564,7 @@ Udp6Transmit (
     }
 
     //
-    // Calculate the pseudo head checksum using the overridden parameters.
+    //Calculate the pseudo head checksum using the overridden parameters.
     //
     if (!NetIp6IsUnspecifiedAddr (&ConfigData->StationAddress)) {
       HeadSum = NetIp6PseudoHeadChecksum (
@@ -581,10 +586,11 @@ Udp6Transmit (
       }
     } else {
       //
-      // Set the checksum is zero if the ConfigData->StationAddress is unspecified
+      // Set the checksum is zero if the ConfigData->StationAddress is unspcified
       // and the Ipv6 will fill the correct value of this checksum.
       //
       Udp6Header->Checksum = 0;
+
     }
   } else {
     //
@@ -605,6 +611,8 @@ Udp6Transmit (
     }
   }
 
+
+
   //
   // Fill the IpIo Override data.
   //
@@ -623,7 +631,7 @@ Udp6Transmit (
   //
   // Send out this datagram through IpIo.
   //
-  if (UdpSessionData != NULL) {
+  if (UdpSessionData != NULL){
     IP6_COPY_ADDRESS (&(IpDestAddr.v6), &Destination);
   } else {
     ZeroMem (&IpDestAddr.v6, sizeof (EFI_IPv6_ADDRESS));
@@ -655,6 +663,7 @@ ON_EXIT:
 
   return Status;
 }
+
 
 /**
   This function places a completion token into the receive packet queue. This function
@@ -708,8 +717,7 @@ Udp6Receive (
 
   if (EFI_ERROR (NetMapIterate (&Instance->RxTokens, Udp6TokenExist, Token)) ||
       EFI_ERROR (NetMapIterate (&Instance->TxTokens, Udp6TokenExist, Token))
-      )
-  {
+      ){
     //
     // Return EFI_ACCESS_DENIED if the specified token is already in the TxTokens or
     // RxTokens map.
@@ -750,6 +758,7 @@ ON_EXIT:
 
   return Status;
 }
+
 
 /**
   This function is used to abort a pending transmit or receive request.
@@ -798,7 +807,7 @@ Udp6Cancel (
   OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
 
   //
-  // Cancel the tokens specified by Token for this instance.
+  // Cancle the tokens specified by Token for this instance.
   //
   Status = Udp6InstanceCancelToken (Instance, Token);
 
@@ -811,6 +820,7 @@ Udp6Cancel (
 
   return Status;
 }
+
 
 /**
   This function can be used by network drivers and applications to increase the rate that

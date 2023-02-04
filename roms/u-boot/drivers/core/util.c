@@ -4,14 +4,12 @@
  */
 
 #include <common.h>
-#include <dm/device.h>
 #include <dm/ofnode.h>
-#include <dm/read.h>
 #include <dm/util.h>
 #include <linux/libfdt.h>
 #include <vsprintf.h>
 
-#if CONFIG_IS_ENABLED(DM_WARN)
+#ifdef CONFIG_DM_WARN
 void dm_warn(const char *fmt, ...)
 {
 	va_list args;
@@ -33,20 +31,50 @@ int list_count_items(struct list_head *head)
 	return count;
 }
 
-#if !CONFIG_IS_ENABLED(OF_PLATDATA)
-int pci_get_devfn(struct udevice *dev)
+bool dm_fdt_pre_reloc(const void *blob, int offset)
 {
-	struct fdt_pci_addr addr;
-	int ret;
+	if (fdt_getprop(blob, offset, "u-boot,dm-pre-reloc", NULL))
+		return true;
 
-	/* Extract the devfn from fdt_pci_addr */
-	ret = ofnode_read_pci_addr(dev_ofnode(dev), FDT_PCI_SPACE_CONFIG,
-				   "reg", &addr);
-	if (ret) {
-		if (ret != -ENOENT)
-			return -EINVAL;
-	}
-
-	return addr.phys_hi & 0xff00;
-}
+#ifdef CONFIG_TPL_BUILD
+	if (fdt_getprop(blob, offset, "u-boot,dm-tpl", NULL))
+		return true;
+#elif defined(CONFIG_SPL_BUILD)
+	if (fdt_getprop(blob, offset, "u-boot,dm-spl", NULL))
+		return true;
+#else
+	/*
+	 * In regular builds individual spl and tpl handling both
+	 * count as handled pre-relocation for later second init.
+	 */
+	if (fdt_getprop(blob, offset, "u-boot,dm-spl", NULL) ||
+	    fdt_getprop(blob, offset, "u-boot,dm-tpl", NULL))
+		return true;
 #endif
+
+	return false;
+}
+
+bool dm_ofnode_pre_reloc(ofnode node)
+{
+	if (ofnode_read_bool(node, "u-boot,dm-pre-reloc"))
+		return true;
+
+#ifdef CONFIG_TPL_BUILD
+	if (ofnode_read_bool(node, "u-boot,dm-tpl"))
+		return true;
+#elif defined(CONFIG_SPL_BUILD)
+	if (ofnode_read_bool(node, "u-boot,dm-spl"))
+		return true;
+#else
+	/*
+	 * In regular builds individual spl and tpl handling both
+	 * count as handled pre-relocation for later second init.
+	 */
+	if (ofnode_read_bool(node, "u-boot,dm-spl") ||
+	    ofnode_read_bool(node, "u-boot,dm-tpl"))
+		return true;
+#endif
+
+	return false;
+}

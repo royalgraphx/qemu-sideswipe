@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -8,9 +8,9 @@
  */
 
 #include "internal/cryptlib.h"
-#include "crypto/bn.h"
-#include "rsa_local.h"
-#include "internal/constant_time.h"
+#include "internal/bn_int.h"
+#include "rsa_locl.h"
+#include "internal/constant_time_locl.h"
 
 static int rsa_ossl_public_encrypt(int flen, const unsigned char *from,
                                   unsigned char *to, RSA *rsa, int padding);
@@ -148,7 +148,8 @@ static int rsa_ossl_public_encrypt(int flen, const unsigned char *from,
      */
     r = BN_bn2binpad(ret, to, num);
  err:
-    BN_CTX_end(ctx);
+    if (ctx != NULL)
+        BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     OPENSSL_clear_free(buf, num);
     return r;
@@ -321,11 +322,6 @@ static int rsa_ossl_private_encrypt(int flen, const unsigned char *from,
             RSAerr(RSA_F_RSA_OSSL_PRIVATE_ENCRYPT, ERR_R_MALLOC_FAILURE);
             goto err;
         }
-        if (rsa->d == NULL) {
-            RSAerr(RSA_F_RSA_OSSL_PRIVATE_ENCRYPT, RSA_R_MISSING_PRIVATE_KEY);
-            BN_free(d);
-            goto err;
-        }
         BN_with_flags(d, rsa->d, BN_FLG_CONSTTIME);
 
         if (!rsa->meth->bn_mod_exp(ret, f, d, rsa->n, ctx,
@@ -358,7 +354,8 @@ static int rsa_ossl_private_encrypt(int flen, const unsigned char *from,
      */
     r = BN_bn2binpad(res, to, num);
  err:
-    BN_CTX_end(ctx);
+    if (ctx != NULL)
+        BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     OPENSSL_clear_free(buf, num);
     return r;
@@ -443,11 +440,6 @@ static int rsa_ossl_private_decrypt(int flen, const unsigned char *from,
             RSAerr(RSA_F_RSA_OSSL_PRIVATE_DECRYPT, ERR_R_MALLOC_FAILURE);
             goto err;
         }
-        if (rsa->d == NULL) {
-            RSAerr(RSA_F_RSA_OSSL_PRIVATE_DECRYPT, RSA_R_MISSING_PRIVATE_KEY);
-            BN_free(d);
-            goto err;
-        }
         BN_with_flags(d, rsa->d, BN_FLG_CONSTTIME);
 
         if (rsa->flags & RSA_FLAG_CACHE_PUBLIC)
@@ -489,10 +481,11 @@ static int rsa_ossl_private_decrypt(int flen, const unsigned char *from,
         goto err;
     }
     RSAerr(RSA_F_RSA_OSSL_PRIVATE_DECRYPT, RSA_R_PADDING_CHECK_FAILED);
-    err_clear_last_constant_time(1 & ~constant_time_msb(r));
+    err_clear_last_constant_time(r >= 0);
 
  err:
-    BN_CTX_end(ctx);
+    if (ctx != NULL)
+        BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     OPENSSL_clear_free(buf, num);
     return r;
@@ -588,7 +581,8 @@ static int rsa_ossl_public_decrypt(int flen, const unsigned char *from,
         RSAerr(RSA_F_RSA_OSSL_PUBLIC_DECRYPT, RSA_R_PADDING_CHECK_FAILED);
 
  err:
-    BN_CTX_end(ctx);
+    if (ctx != NULL)
+        BN_CTX_end(ctx);
     BN_CTX_free(ctx);
     OPENSSL_clear_free(buf, num);
     return r;

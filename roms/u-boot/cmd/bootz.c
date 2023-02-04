@@ -7,10 +7,7 @@
 #include <common.h>
 #include <bootm.h>
 #include <command.h>
-#include <image.h>
-#include <irq_func.h>
 #include <lmb.h>
-#include <log.h>
 #include <linux/compiler.h>
 
 int __weak bootz_setup(ulong image, ulong *start, ulong *end)
@@ -24,8 +21,8 @@ int __weak bootz_setup(ulong image, ulong *start, ulong *end)
 /*
  * zImage booting support
  */
-static int bootz_start(struct cmd_tbl *cmdtp, int flag, int argc,
-		       char *const argv[], bootm_headers_t *images)
+static int bootz_start(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[], bootm_headers_t *images)
 {
 	int ret;
 	ulong zi_start, zi_end;
@@ -35,9 +32,9 @@ static int bootz_start(struct cmd_tbl *cmdtp, int flag, int argc,
 
 	/* Setup Linux kernel zImage entry point */
 	if (!argc) {
-		images->ep = image_load_addr;
+		images->ep = load_addr;
 		debug("*  kernel: default image load address = 0x%08lx\n",
-				image_load_addr);
+				load_addr);
 	} else {
 		images->ep = simple_strtoul(argv[0], NULL, 16);
 		debug("*  kernel: cmdline image address = 0x%08lx\n",
@@ -54,13 +51,13 @@ static int bootz_start(struct cmd_tbl *cmdtp, int flag, int argc,
 	 * Handle the BOOTM_STATE_FINDOTHER state ourselves as we do not
 	 * have a header that provide this informaiton.
 	 */
-	if (bootm_find_images(flag, argc, argv, images->ep, zi_end - zi_start))
+	if (bootm_find_images(flag, argc, argv))
 		return 1;
 
 	return 0;
 }
 
-int do_bootz(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+int do_bootz(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	int ret;
 

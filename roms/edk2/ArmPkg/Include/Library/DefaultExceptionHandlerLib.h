@@ -6,8 +6,8 @@
 
 **/
 
-#ifndef DEFAULT_EXCEPTION_HANDLER_LIB_H_
-#define DEFAULT_EXCEPTION_HANDLER_LIB_H_
+#ifndef __DEFAULT_EXCEPTION_HANDLER_LIB_H__
+#define __DEFAULT_EXCEPTION_HANDLER_LIB_H__
 
 /**
   This is the default action to take on an unexpected exception
@@ -18,8 +18,8 @@
 **/
 VOID
 DefaultExceptionHandler (
-  IN     EFI_EXCEPTION_TYPE  ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT  SystemContext
+  IN     EFI_EXCEPTION_TYPE           ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT           SystemContext
   );
 
-#endif // DEFAULT_EXCEPTION_HANDLER_LIB_H_
+#endif

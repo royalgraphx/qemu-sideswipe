@@ -35,7 +35,6 @@
 
 #include "sysemu/dma.h"
 #include "hw/stream.h"
-#include "qom/object.h"
 
 #define D(x)
 
@@ -43,14 +42,16 @@
 #define TYPE_XILINX_AXI_DMA_DATA_STREAM "xilinx-axi-dma-data-stream"
 #define TYPE_XILINX_AXI_DMA_CONTROL_STREAM "xilinx-axi-dma-control-stream"
 
-OBJECT_DECLARE_SIMPLE_TYPE(XilinxAXIDMA, XILINX_AXI_DMA)
+#define XILINX_AXI_DMA(obj) \
+     OBJECT_CHECK(XilinxAXIDMA, (obj), TYPE_XILINX_AXI_DMA)
 
-typedef struct XilinxAXIDMAStreamSink XilinxAXIDMAStreamSink;
-DECLARE_INSTANCE_CHECKER(XilinxAXIDMAStreamSink, XILINX_AXI_DMA_DATA_STREAM,
-                         TYPE_XILINX_AXI_DMA_DATA_STREAM)
+#define XILINX_AXI_DMA_DATA_STREAM(obj) \
+     OBJECT_CHECK(XilinxAXIDMAStreamSlave, (obj),\
+     TYPE_XILINX_AXI_DMA_DATA_STREAM)
 
-DECLARE_INSTANCE_CHECKER(XilinxAXIDMAStreamSink, XILINX_AXI_DMA_CONTROL_STREAM,
-                         TYPE_XILINX_AXI_DMA_CONTROL_STREAM)
+#define XILINX_AXI_DMA_CONTROL_STREAM(obj) \
+     OBJECT_CHECK(XilinxAXIDMAStreamSlave, (obj),\
+     TYPE_XILINX_AXI_DMA_CONTROL_STREAM)
 
 #define R_DMACR             (0x00 / 4)
 #define R_DMASR             (0x04 / 4)
@@ -61,6 +62,8 @@ DECLARE_INSTANCE_CHECKER(XilinxAXIDMAStreamSink, XILINX_AXI_DMA_CONTROL_STREAM,
 #define CONTROL_PAYLOAD_WORDS 5
 #define CONTROL_PAYLOAD_SIZE (CONTROL_PAYLOAD_WORDS * (sizeof(uint32_t)))
 
+typedef struct XilinxAXIDMA XilinxAXIDMA;
+typedef struct XilinxAXIDMAStreamSlave XilinxAXIDMAStreamSlave;
 
 enum {
     DMACR_RUNSTOP = 1,
@@ -115,7 +118,7 @@ struct Stream {
     unsigned char txbuf[16 * 1024];
 };
 
-struct XilinxAXIDMAStreamSink {
+struct XilinxAXIDMAStreamSlave {
     Object parent;
 
     struct XilinxAXIDMA *dma;
@@ -128,10 +131,10 @@ struct XilinxAXIDMA {
     AddressSpace as;
 
     uint32_t freqhz;
-    StreamSink *tx_data_dev;
-    StreamSink *tx_control_dev;
-    XilinxAXIDMAStreamSink rx_data_dev;
-    XilinxAXIDMAStreamSink rx_control_dev;
+    StreamSlave *tx_data_dev;
+    StreamSlave *tx_control_dev;
+    XilinxAXIDMAStreamSlave rx_data_dev;
+    XilinxAXIDMAStreamSlave rx_control_dev;
 
     struct Stream streams[2];
 
@@ -261,8 +264,8 @@ static void stream_complete(struct Stream *s)
     ptimer_transaction_commit(s->ptimer);
 }
 
-static void stream_process_mem2s(struct Stream *s, StreamSink *tx_data_dev,
-                                 StreamSink *tx_control_dev)
+static void stream_process_mem2s(struct Stream *s, StreamSlave *tx_data_dev,
+                                 StreamSlave *tx_control_dev)
 {
     uint32_t prev_d;
     uint32_t txlen;
@@ -384,10 +387,10 @@ static void xilinx_axidma_reset(DeviceState *dev)
 }
 
 static size_t
-xilinx_axidma_control_stream_push(StreamSink *obj, unsigned char *buf,
+xilinx_axidma_control_stream_push(StreamSlave *obj, unsigned char *buf,
                                   size_t len, bool eop)
 {
-    XilinxAXIDMAStreamSink *cs = XILINX_AXI_DMA_CONTROL_STREAM(obj);
+    XilinxAXIDMAStreamSlave *cs = XILINX_AXI_DMA_CONTROL_STREAM(obj);
     struct Stream *s = &cs->dma->streams[1];
 
     if (len != CONTROL_PAYLOAD_SIZE) {
@@ -400,11 +403,11 @@ xilinx_axidma_control_stream_push(StreamSink *obj, unsigned char *buf,
 }
 
 static bool
-xilinx_axidma_data_stream_can_push(StreamSink *obj,
+xilinx_axidma_data_stream_can_push(StreamSlave *obj,
                                    StreamCanPushNotifyFn notify,
                                    void *notify_opaque)
 {
-    XilinxAXIDMAStreamSink *ds = XILINX_AXI_DMA_DATA_STREAM(obj);
+    XilinxAXIDMAStreamSlave *ds = XILINX_AXI_DMA_DATA_STREAM(obj);
     struct Stream *s = &ds->dma->streams[1];
 
     if (!stream_running(s) || stream_idle(s)) {
@@ -417,10 +420,10 @@ xilinx_axidma_data_stream_can_push(StreamSink *obj,
 }
 
 static size_t
-xilinx_axidma_data_stream_push(StreamSink *obj, unsigned char *buf, size_t len,
+xilinx_axidma_data_stream_push(StreamSlave *obj, unsigned char *buf, size_t len,
                                bool eop)
 {
-    XilinxAXIDMAStreamSink *ds = XILINX_AXI_DMA_DATA_STREAM(obj);
+    XilinxAXIDMAStreamSlave *ds = XILINX_AXI_DMA_DATA_STREAM(obj);
     struct Stream *s = &ds->dma->streams[1];
     size_t ret;
 
@@ -531,8 +534,8 @@ static const MemoryRegionOps axidma_ops = {
 static void xilinx_axidma_realize(DeviceState *dev, Error **errp)
 {
     XilinxAXIDMA *s = XILINX_AXI_DMA(dev);
-    XilinxAXIDMAStreamSink *ds = XILINX_AXI_DMA_DATA_STREAM(&s->rx_data_dev);
-    XilinxAXIDMAStreamSink *cs = XILINX_AXI_DMA_CONTROL_STREAM(
+    XilinxAXIDMAStreamSlave *ds = XILINX_AXI_DMA_DATA_STREAM(&s->rx_data_dev);
+    XilinxAXIDMAStreamSlave *cs = XILINX_AXI_DMA_CONTROL_STREAM(
                                                             &s->rx_control_dev);
     int i;
 
@@ -552,7 +555,7 @@ static void xilinx_axidma_realize(DeviceState *dev, Error **errp)
 
         st->dma = s;
         st->nr = i;
-        st->ptimer = ptimer_init(timer_hit, st, PTIMER_POLICY_LEGACY);
+        st->ptimer = ptimer_init(timer_hit, st, PTIMER_POLICY_DEFAULT);
         ptimer_transaction_begin(st->ptimer);
         ptimer_set_freq(st->ptimer, s->freqhz);
         ptimer_transaction_commit(st->ptimer);
@@ -588,9 +591,9 @@ static void xilinx_axidma_init(Object *obj)
 static Property axidma_properties[] = {
     DEFINE_PROP_UINT32("freqhz", XilinxAXIDMA, freqhz, 50000000),
     DEFINE_PROP_LINK("axistream-connected", XilinxAXIDMA,
-                     tx_data_dev, TYPE_STREAM_SINK, StreamSink *),
+                     tx_data_dev, TYPE_STREAM_SLAVE, StreamSlave *),
     DEFINE_PROP_LINK("axistream-control-connected", XilinxAXIDMA,
-                     tx_control_dev, TYPE_STREAM_SINK, StreamSink *),
+                     tx_control_dev, TYPE_STREAM_SLAVE, StreamSlave *),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -603,21 +606,21 @@ static void axidma_class_init(ObjectClass *klass, void *data)
     device_class_set_props(dc, axidma_properties);
 }
 
-static StreamSinkClass xilinx_axidma_data_stream_class = {
+static StreamSlaveClass xilinx_axidma_data_stream_class = {
     .push = xilinx_axidma_data_stream_push,
     .can_push = xilinx_axidma_data_stream_can_push,
 };
 
-static StreamSinkClass xilinx_axidma_control_stream_class = {
+static StreamSlaveClass xilinx_axidma_control_stream_class = {
     .push = xilinx_axidma_control_stream_push,
 };
 
 static void xilinx_axidma_stream_class_init(ObjectClass *klass, void *data)
 {
-    StreamSinkClass *ssc = STREAM_SINK_CLASS(klass);
+    StreamSlaveClass *ssc = STREAM_SLAVE_CLASS(klass);
 
-    ssc->push = ((StreamSinkClass *)data)->push;
-    ssc->can_push = ((StreamSinkClass *)data)->can_push;
+    ssc->push = ((StreamSlaveClass *)data)->push;
+    ssc->can_push = ((StreamSlaveClass *)data)->can_push;
 }
 
 static const TypeInfo axidma_info = {
@@ -631,11 +634,11 @@ static const TypeInfo axidma_info = {
 static const TypeInfo xilinx_axidma_data_stream_info = {
     .name          = TYPE_XILINX_AXI_DMA_DATA_STREAM,
     .parent        = TYPE_OBJECT,
-    .instance_size = sizeof(XilinxAXIDMAStreamSink),
+    .instance_size = sizeof(struct XilinxAXIDMAStreamSlave),
     .class_init    = xilinx_axidma_stream_class_init,
     .class_data    = &xilinx_axidma_data_stream_class,
     .interfaces = (InterfaceInfo[]) {
-        { TYPE_STREAM_SINK },
+        { TYPE_STREAM_SLAVE },
         { }
     }
 };
@@ -643,11 +646,11 @@ static const TypeInfo xilinx_axidma_data_stream_info = {
 static const TypeInfo xilinx_axidma_control_stream_info = {
     .name          = TYPE_XILINX_AXI_DMA_CONTROL_STREAM,
     .parent        = TYPE_OBJECT,
-    .instance_size = sizeof(XilinxAXIDMAStreamSink),
+    .instance_size = sizeof(struct XilinxAXIDMAStreamSlave),
     .class_init    = xilinx_axidma_stream_class_init,
     .class_data    = &xilinx_axidma_control_stream_class,
     .interfaces = (InterfaceInfo[]) {
-        { TYPE_STREAM_SINK },
+        { TYPE_STREAM_SLAVE },
         { }
     }
 };

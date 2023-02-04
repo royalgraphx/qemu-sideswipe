@@ -11,8 +11,3 @@ config VMBUS
     bool
     default y
     depends on HYPERV
-
-config SYNDBG
-    bool
-    default y
-    depends on VMBUS

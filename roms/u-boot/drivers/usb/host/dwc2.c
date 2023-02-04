@@ -5,23 +5,15 @@
  */
 
 #include <common.h>
-#include <clk.h>
-#include <cpu_func.h>
 #include <dm.h>
 #include <errno.h>
-#include <generic-phy.h>
-#include <log.h>
+#include <usb.h>
 #include <malloc.h>
 #include <memalign.h>
 #include <phys2bus.h>
-#include <usb.h>
 #include <usbroothubdes.h>
 #include <wait_bit.h>
-#include <asm/cache.h>
 #include <asm/io.h>
-#include <dm/device_compat.h>
-#include <linux/delay.h>
-#include <linux/usb/otg.h>
 #include <power/regulator.h>
 #include <reset.h>
 
@@ -43,8 +35,6 @@ struct dwc2_priv {
 #ifdef CONFIG_DM_REGULATOR
 	struct udevice *vbus_supply;
 #endif
-	struct phy phy;
-	struct clk_bulk clks;
 #else
 	uint8_t *aligned_buffer;
 	uint8_t *status_buffer;
@@ -115,8 +105,7 @@ static void init_fslspclksel(struct dwc2_core_regs *regs)
  * @param regs Programming view of DWC_otg controller.
  * @param num Tx FIFO to flush.
  */
-static void dwc_otg_flush_tx_fifo(struct udevice *dev,
-				  struct dwc2_core_regs *regs, const int num)
+static void dwc_otg_flush_tx_fifo(struct dwc2_core_regs *regs, const int num)
 {
 	int ret;
 
@@ -136,8 +125,7 @@ static void dwc_otg_flush_tx_fifo(struct udevice *dev,
  *
  * @param regs Programming view of DWC_otg controller.
  */
-static void dwc_otg_flush_rx_fifo(struct udevice *dev,
-				  struct dwc2_core_regs *regs)
+static void dwc_otg_flush_rx_fifo(struct dwc2_core_regs *regs)
 {
 	int ret;
 
@@ -155,8 +143,7 @@ static void dwc_otg_flush_rx_fifo(struct udevice *dev,
  * Do core a soft reset of the core.  Be careful with this because it
  * resets all the internal state machines of the core.
  */
-static void dwc_otg_core_reset(struct udevice *dev,
-			       struct dwc2_core_regs *regs)
+static void dwc_otg_core_reset(struct dwc2_core_regs *regs)
 {
 	int ret;
 
@@ -288,8 +275,8 @@ static void dwc_otg_core_host_init(struct udevice *dev,
 	clrbits_le32(&regs->gotgctl, DWC2_GOTGCTL_HSTSETHNPEN);
 
 	/* Make sure the FIFOs are flushed. */
-	dwc_otg_flush_tx_fifo(dev, regs, 0x10);	/* All Tx FIFOs */
-	dwc_otg_flush_rx_fifo(dev, regs);
+	dwc_otg_flush_tx_fifo(regs, 0x10);	/* All Tx FIFOs */
+	dwc_otg_flush_rx_fifo(regs);
 
 	/* Flush out any leftover queued requests. */
 	num_channels = readl(&regs->ghwcfg2);
@@ -310,7 +297,7 @@ static void dwc_otg_core_host_init(struct udevice *dev,
 		ret = wait_for_bit_le32(&regs->hc_regs[i].hcchar,
 					DWC2_HCCHAR_CHEN, false, 1000, false);
 		if (ret)
-			dev_info(dev, "%s: Timeout!\n", __func__);
+			dev_info("%s: Timeout!\n", __func__);
 	}
 
 	/* Turn on the vbus power. */
@@ -334,9 +321,8 @@ static void dwc_otg_core_host_init(struct udevice *dev,
  *
  * @param regs Programming view of the DWC_otg controller
  */
-static void dwc_otg_core_init(struct udevice *dev)
+static void dwc_otg_core_init(struct dwc2_priv *priv)
 {
-	struct dwc2_priv *priv = dev_get_priv(dev);
 	struct dwc2_core_regs *regs = priv->regs;
 	uint32_t ahbcfg = 0;
 	uint32_t usbcfg = 0;
@@ -365,7 +351,7 @@ static void dwc_otg_core_init(struct udevice *dev)
 	writel(usbcfg, &regs->gusbcfg);
 
 	/* Reset the Controller */
-	dwc_otg_core_reset(dev, regs);
+	dwc_otg_core_reset(regs);
 
 	/*
 	 * This programming sequence needs to happen in FS mode before
@@ -377,7 +363,7 @@ static void dwc_otg_core_init(struct udevice *dev)
 	setbits_le32(&regs->gusbcfg, DWC2_GUSBCFG_PHYSEL);
 
 	/* Reset after a PHY select */
-	dwc_otg_core_reset(dev, regs);
+	dwc_otg_core_reset(regs);
 
 	/*
 	 * Program DCFG.DevSpd or HCFG.FSLSPclkSel to 48Mhz in FS.
@@ -424,7 +410,7 @@ static void dwc_otg_core_init(struct udevice *dev)
 	writel(usbcfg, &regs->gusbcfg);
 
 	/* Reset after setting the PHY parameters */
-	dwc_otg_core_reset(dev, regs);
+	dwc_otg_core_reset(regs);
 #endif
 
 	usbcfg = readl(&regs->gusbcfg);
@@ -1122,8 +1108,7 @@ static int _submit_control_msg(struct dwc2_priv *priv, struct usb_device *dev,
 }
 
 int _submit_int_msg(struct dwc2_priv *priv, struct usb_device *dev,
-		    unsigned long pipe, void *buffer, int len, int interval,
-		    bool nonblock)
+		    unsigned long pipe, void *buffer, int len, int interval)
 {
 	unsigned long timeout;
 	int ret;
@@ -1133,16 +1118,11 @@ int _submit_int_msg(struct dwc2_priv *priv, struct usb_device *dev,
 	timeout = get_timer(0) + USB_TIMEOUT_MS(pipe);
 	for (;;) {
 		if (get_timer(0) > timeout) {
-#if CONFIG_IS_ENABLED(DM_USB)
-			dev_err(dev->dev,
-				"Timeout poll on interrupt endpoint\n");
-#else
-			log_err("Timeout poll on interrupt endpoint\n");
-#endif
+			dev_err(dev, "Timeout poll on interrupt endpoint\n");
 			return -ETIMEDOUT;
 		}
 		ret = _submit_bulk_msg(priv, dev, pipe, buffer, len);
-		if ((ret != -EAGAIN) || nonblock)
+		if (ret != -EAGAIN)
 			return ret;
 	}
 }
@@ -1164,8 +1144,6 @@ static int dwc2_reset(struct udevice *dev)
 			return ret;
 	}
 
-	/* force reset to clear all IP register */
-	reset_assert_bulk(&priv->resets);
 	ret = reset_deassert_bulk(&priv->resets);
 	if (ret) {
 		reset_release_bulk(&priv->resets);
@@ -1204,14 +1182,8 @@ static int dwc2_init_common(struct udevice *dev, struct dwc2_priv *priv)
 	priv->ext_vbus = 0;
 #endif
 
-	dwc_otg_core_init(dev);
-
-	if (usb_get_dr_mode(dev_ofnode(dev)) == USB_DR_MODE_PERIPHERAL) {
-		dev_dbg(dev, "USB device %s dr_mode set to %d. Skipping host_init.\n",
-			dev->name, usb_get_dr_mode(dev_ofnode(dev)));
-	} else {
-		dwc_otg_core_host_init(dev, regs);
-	}
+	dwc_otg_core_init(priv);
+	dwc_otg_core_host_init(dev, regs);
 
 	clrsetbits_le32(&regs->hprt0, DWC2_HPRT0_PRTENA |
 			DWC2_HPRT0_PRTCONNDET | DWC2_HPRT0_PRTENCHNG |
@@ -1237,8 +1209,6 @@ static int dwc2_init_common(struct udevice *dev, struct dwc2_priv *priv)
 	 */
 	if (readl(&regs->gintsts) & DWC2_GINTSTS_CURMODE_HOST)
 		mdelay(1000);
-
-	printf("USB DWC2\n");
 
 	return 0;
 }
@@ -1266,10 +1236,9 @@ int submit_bulk_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
 }
 
 int submit_int_msg(struct usb_device *dev, unsigned long pipe, void *buffer,
-		   int len, int interval, bool nonblock)
+		   int len, int interval)
 {
-	return _submit_int_msg(&local, dev, pipe, buffer, len, interval,
-			       nonblock);
+	return _submit_int_msg(&local, dev, pipe, buffer, len, interval);
 }
 
 /* U-Boot USB control interface */
@@ -1323,99 +1292,27 @@ static int dwc2_submit_bulk_msg(struct udevice *dev, struct usb_device *udev,
 
 static int dwc2_submit_int_msg(struct udevice *dev, struct usb_device *udev,
 			       unsigned long pipe, void *buffer, int length,
-			       int interval, bool nonblock)
+			       int interval)
 {
 	struct dwc2_priv *priv = dev_get_priv(dev);
 
 	debug("%s: dev='%s', udev=%p\n", __func__, dev->name, udev);
 
-	return _submit_int_msg(priv, udev, pipe, buffer, length, interval,
-			       nonblock);
+	return _submit_int_msg(priv, udev, pipe, buffer, length, interval);
 }
 
-static int dwc2_usb_of_to_plat(struct udevice *dev)
+static int dwc2_usb_ofdata_to_platdata(struct udevice *dev)
 {
 	struct dwc2_priv *priv = dev_get_priv(dev);
+	fdt_addr_t addr;
 
-	priv->regs = dev_read_addr_ptr(dev);
-	if (!priv->regs)
+	addr = dev_read_addr(dev);
+	if (addr == FDT_ADDR_T_NONE)
 		return -EINVAL;
+	priv->regs = (struct dwc2_core_regs *)addr;
 
 	priv->oc_disable = dev_read_bool(dev, "disable-over-current");
 	priv->hnp_srp_disable = dev_read_bool(dev, "hnp-srp-disable");
-
-	return 0;
-}
-
-static int dwc2_setup_phy(struct udevice *dev)
-{
-	struct dwc2_priv *priv = dev_get_priv(dev);
-	int ret;
-
-	ret = generic_phy_get_by_index(dev, 0, &priv->phy);
-	if (ret) {
-		if (ret == -ENOENT)
-			return 0; /* no PHY, nothing to do */
-		dev_err(dev, "Failed to get USB PHY: %d.\n", ret);
-		return ret;
-	}
-
-	ret = generic_phy_init(&priv->phy);
-	if (ret) {
-		dev_dbg(dev, "Failed to init USB PHY: %d.\n", ret);
-		return ret;
-	}
-
-	ret = generic_phy_power_on(&priv->phy);
-	if (ret) {
-		dev_dbg(dev, "Failed to power on USB PHY: %d.\n", ret);
-		generic_phy_exit(&priv->phy);
-		return ret;
-	}
-
-	return 0;
-}
-
-static int dwc2_shutdown_phy(struct udevice *dev)
-{
-	struct dwc2_priv *priv = dev_get_priv(dev);
-	int ret;
-
-	/* PHY is not valid when generic_phy_get_by_index() = -ENOENT */
-	if (!generic_phy_valid(&priv->phy))
-		return 0; /* no PHY, nothing to do */
-
-	ret = generic_phy_power_off(&priv->phy);
-	if (ret) {
-		dev_dbg(dev, "Failed to power off USB PHY: %d.\n", ret);
-		return ret;
-	}
-
-	ret = generic_phy_exit(&priv->phy);
-	if (ret) {
-		dev_dbg(dev, "Failed to power off USB PHY: %d.\n", ret);
-		return ret;
-	}
-
-	return 0;
-}
-
-static int dwc2_clk_init(struct udevice *dev)
-{
-	struct dwc2_priv *priv = dev_get_priv(dev);
-	int ret;
-
-	ret = clk_get_bulk(dev, &priv->clks);
-	if (ret == -ENOSYS || ret == -ENOENT)
-		return 0;
-	if (ret)
-		return ret;
-
-	ret = clk_enable_bulk(&priv->clks);
-	if (ret) {
-		clk_release_bulk(&priv->clks);
-		return ret;
-	}
 
 	return 0;
 }
@@ -1424,17 +1321,8 @@ static int dwc2_usb_probe(struct udevice *dev)
 {
 	struct dwc2_priv *priv = dev_get_priv(dev);
 	struct usb_bus_priv *bus_priv = dev_get_uclass_priv(dev);
-	int ret;
 
 	bus_priv->desc_before_addr = true;
-
-	ret = dwc2_clk_init(dev);
-	if (ret)
-		return ret;
-
-	ret = dwc2_setup_phy(dev);
-	if (ret)
-		return ret;
 
 	return dwc2_init_common(dev, priv);
 }
@@ -1448,17 +1336,9 @@ static int dwc2_usb_remove(struct udevice *dev)
 	if (ret)
 		return ret;
 
-	ret = dwc2_shutdown_phy(dev);
-	if (ret) {
-		dev_dbg(dev, "Failed to shutdown USB PHY: %d.\n", ret);
-		return ret;
-	}
-
 	dwc2_uninit_common(priv->regs);
 
 	reset_release_bulk(&priv->resets);
-	clk_disable_bulk(&priv->clks);
-	clk_release_bulk(&priv->clks);
 
 	return 0;
 }
@@ -1480,11 +1360,11 @@ U_BOOT_DRIVER(usb_dwc2) = {
 	.name	= "dwc2_usb",
 	.id	= UCLASS_USB,
 	.of_match = dwc2_usb_ids,
-	.of_to_plat = dwc2_usb_of_to_plat,
+	.ofdata_to_platdata = dwc2_usb_ofdata_to_platdata,
 	.probe	= dwc2_usb_probe,
 	.remove = dwc2_usb_remove,
 	.ops	= &dwc2_usb_ops,
-	.priv_auto	= sizeof(struct dwc2_priv),
+	.priv_auto_alloc_size = sizeof(struct dwc2_priv),
 	.flags	= DM_FLAG_ALLOC_PRIV_DMA,
 };
 #endif

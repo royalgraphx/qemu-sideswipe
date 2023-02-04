@@ -32,39 +32,40 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "VlanConfigNvData.h"
 
-extern EFI_COMPONENT_NAME2_PROTOCOL  gVlanConfigComponentName2;
-extern EFI_COMPONENT_NAME_PROTOCOL   gVlanConfigComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL gVlanConfigComponentName2;
+extern EFI_COMPONENT_NAME_PROTOCOL  gVlanConfigComponentName;
 
 //
 // Tool generated IFR binary data and String package data
 //
-extern UINT8  VlanConfigBin[];
-extern UINT8  VlanConfigDxeStrings[];
+extern UINT8                        VlanConfigBin[];
+extern UINT8                        VlanConfigDxeStrings[];
 
-#define VLAN_LIST_VAR_OFFSET  ((UINT16) OFFSET_OF (VLAN_CONFIGURATION, VlanList))
+#define VLAN_LIST_VAR_OFFSET ((UINT16) OFFSET_OF (VLAN_CONFIGURATION, VlanList))
 
 typedef struct {
-  UINTN                             Signature;
+  UINTN                           Signature;
 
-  EFI_HII_CONFIG_ACCESS_PROTOCOL    ConfigAccess;
-  EFI_HII_HANDLE                    HiiHandle;
-  EFI_HANDLE                        DriverHandle;
-  EFI_DEVICE_PATH_PROTOCOL          *ChildDevicePath;
+  EFI_HII_CONFIG_ACCESS_PROTOCOL  ConfigAccess;
+  EFI_HII_HANDLE                  HiiHandle;
+  EFI_HANDLE                      DriverHandle;
+  EFI_DEVICE_PATH_PROTOCOL        *ChildDevicePath;
 
-  EFI_HANDLE                        ControllerHandle;
-  EFI_HANDLE                        ImageHandle;
-  EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath;
-  EFI_VLAN_CONFIG_PROTOCOL          *VlanConfig;
-  CHAR16                            *MacString;
+  EFI_HANDLE                      ControllerHandle;
+  EFI_HANDLE                      ImageHandle;
+  EFI_DEVICE_PATH_PROTOCOL        *ParentDevicePath;
+  EFI_VLAN_CONFIG_PROTOCOL        *VlanConfig;
+  CHAR16                          *MacString;
 
-  UINT16                            NumberOfVlan;
-  UINT16                            VlanId[MAX_VLAN_NUMBER];
+  UINT16                          NumberOfVlan;
+  UINT16                          VlanId[MAX_VLAN_NUMBER];
 } VLAN_CONFIG_PRIVATE_DATA;
 
-#define VLAN_CONFIG_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('V', 'C', 'P', 'D')
+#define VLAN_CONFIG_PRIVATE_DATA_SIGNATURE     SIGNATURE_32 ('V', 'C', 'P', 'D')
 #define VLAN_CONFIG_PRIVATE_DATA_FROM_THIS(a)  CR (a, VLAN_CONFIG_PRIVATE_DATA, ConfigAccess, VLAN_CONFIG_PRIVATE_DATA_SIGNATURE)
 
-extern VLAN_CONFIG_PRIVATE_DATA  mVlanConfigPrivateDateTemplate;
+extern VLAN_CONFIG_PRIVATE_DATA mVlanConfigPrivateDateTemplate;
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
@@ -103,9 +104,9 @@ extern VLAN_CONFIG_PRIVATE_DATA  mVlanConfigPrivateDateTemplate;
 EFI_STATUS
 EFIAPI
 VlanConfigComponentNameGetDriverName (
-  IN     EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN     CHAR8                        *Language,
-  OUT CHAR16                          **DriverName
+  IN     EFI_COMPONENT_NAME_PROTOCOL   *This,
+  IN     CHAR8                         *Language,
+     OUT CHAR16                        **DriverName
   );
 
 /**
@@ -169,11 +170,11 @@ VlanConfigComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 VlanConfigComponentNameGetControllerName (
-  IN     EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN     EFI_HANDLE                   ControllerHandle,
-  IN     EFI_HANDLE                   ChildHandle OPTIONAL,
-  IN     CHAR8                        *Language,
-  OUT CHAR16                          **ControllerName
+  IN     EFI_COMPONENT_NAME_PROTOCOL   *This,
+  IN     EFI_HANDLE                    ControllerHandle,
+  IN     EFI_HANDLE                    ChildHandle OPTIONAL,
+  IN     CHAR8                         *Language,
+     OUT CHAR16                        **ControllerName
   );
 
 /**
@@ -184,7 +185,7 @@ VlanConfigComponentNameGetControllerName (
   @param[in]  RemainingDevicePath  Optional parameter use to pick a specific child
                                    device to start.
 
-  @retval EFI_SUCCESS          This driver supports this device
+  @retval EFI_SUCCES           This driver supports this device
   @retval EFI_ALREADY_STARTED  This driver is already running on this device
   @retval other                This driver does not support this device
 
@@ -192,9 +193,9 @@ VlanConfigComponentNameGetControllerName (
 EFI_STATUS
 EFIAPI
 VlanConfigDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   ControllerHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
+  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
+  IN EFI_HANDLE                      ControllerHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL        *RemainingDevicePath OPTIONAL
   );
 
 /**
@@ -205,7 +206,7 @@ VlanConfigDriverBindingSupported (
   @param[in]  RemainingDevicePath  Optional parameter use to pick a specific child
                                    device to start.
 
-  @retval EFI_SUCCESS          This driver is added to ControllerHandle
+  @retval EFI_SUCCES           This driver is added to ControllerHandle
   @retval EFI_ALREADY_STARTED  This driver is already running on ControllerHandle
   @retval other                This driver does not support this device
 
@@ -213,9 +214,9 @@ VlanConfigDriverBindingSupported (
 EFI_STATUS
 EFIAPI
 VlanConfigDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   ControllerHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
+  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
+  IN EFI_HANDLE                      ControllerHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL        *RemainingDevicePath OPTIONAL
   );
 
 /**
@@ -227,17 +228,17 @@ VlanConfigDriverBindingStart (
                                    of children is zero stop the entire bus driver.
   @param[in]  ChildHandleBuffer    List of Child Handles to Stop.
 
-  @retval EFI_SUCCESS          This driver is removed ControllerHandle
+  @retval EFI_SUCCES           This driver is removed ControllerHandle
   @retval other                This driver was not removed from this device
 
 **/
 EFI_STATUS
 EFIAPI
 VlanConfigDriverBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   ControllerHandle,
-  IN UINTN                        NumberOfChildren,
-  IN EFI_HANDLE                   *ChildHandleBuffer
+  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
+  IN EFI_HANDLE                      ControllerHandle,
+  IN UINTN                           NumberOfChildren,
+  IN EFI_HANDLE                      *ChildHandleBuffer
   );
 
 /**
@@ -248,7 +249,7 @@ VlanConfigDriverBindingStop (
 **/
 VOID
 VlanUpdateForm (
-  IN OUT VLAN_CONFIG_PRIVATE_DATA  *PrivateData
+  IN OUT VLAN_CONFIG_PRIVATE_DATA    *PrivateData
   );
 
 /**
@@ -265,7 +266,7 @@ VlanUpdateForm (
 **/
 EFI_STATUS
 InstallVlanConfigForm (
-  IN OUT VLAN_CONFIG_PRIVATE_DATA  *PrivateData
+  IN OUT VLAN_CONFIG_PRIVATE_DATA    *PrivateData
   );
 
 /**
@@ -280,7 +281,7 @@ InstallVlanConfigForm (
 **/
 EFI_STATUS
 UninstallVlanConfigForm (
-  IN OUT VLAN_CONFIG_PRIVATE_DATA  *PrivateData
+  IN OUT VLAN_CONFIG_PRIVATE_DATA    *PrivateData
   );
 
 /**
@@ -312,10 +313,10 @@ UninstallVlanConfigForm (
 EFI_STATUS
 EFIAPI
 VlanExtractConfig (
-  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
-  IN CONST EFI_STRING                      Request,
-  OUT EFI_STRING                           *Progress,
-  OUT EFI_STRING                           *Results
+  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL        *This,
+  IN CONST EFI_STRING                            Request,
+       OUT EFI_STRING                            *Progress,
+       OUT EFI_STRING                            *Results
   );
 
 /**
@@ -339,9 +340,9 @@ VlanExtractConfig (
 EFI_STATUS
 EFIAPI
 VlanRouteConfig (
-  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
-  IN CONST EFI_STRING                      Configuration,
-  OUT EFI_STRING                           *Progress
+  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL      *This,
+  IN CONST EFI_STRING                          Configuration,
+       OUT EFI_STRING                          *Progress
   );
 
 /**
@@ -369,12 +370,12 @@ VlanRouteConfig (
 EFI_STATUS
 EFIAPI
 VlanCallback (
-  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL  *This,
-  IN     EFI_BROWSER_ACTION                Action,
-  IN     EFI_QUESTION_ID                   QuestionId,
-  IN     UINT8                             Type,
-  IN     EFI_IFR_TYPE_VALUE                *Value,
-  OUT EFI_BROWSER_ACTION_REQUEST           *ActionRequest
+  IN CONST EFI_HII_CONFIG_ACCESS_PROTOCOL      *This,
+  IN     EFI_BROWSER_ACTION                    Action,
+  IN     EFI_QUESTION_ID                       QuestionId,
+  IN     UINT8                                 Type,
+  IN     EFI_IFR_TYPE_VALUE                    *Value,
+     OUT EFI_BROWSER_ACTION_REQUEST            *ActionRequest
   );
 
 #endif

@@ -4,8 +4,6 @@
  * Copyright 2017 NXP
  */
 
-#include <cpu_func.h>
-#include <asm/cache.h>
 #include <asm/io.h>
 #include <asm/psci.h>
 #include <asm/secure.h>
@@ -300,7 +298,7 @@ __secure s32 psci_affinity_info(u32 __always_unused function_id,
 	return psci_state[cpu];
 }
 
-__secure u32 psci_migrate_info_type(void)
+__secure s32 psci_migrate_info_type(u32 function_id)
 {
 	/* Trusted OS is either not present or does not require migration */
 	return 2;

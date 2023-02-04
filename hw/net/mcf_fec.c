@@ -32,7 +32,7 @@ do { printf("mcf_fec: " fmt , ## __VA_ARGS__); } while (0)
 #define FEC_MAX_FRAME_SIZE 2032
 #define FEC_MIB_SIZE 64
 
-struct mcf_fec_state {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -56,7 +56,7 @@ struct mcf_fec_state {
     uint32_t etdsr;
     uint32_t emrbr;
     uint32_t mib[FEC_MIB_SIZE];
-};
+} mcf_fec_state;
 
 #define FEC_INT_HB   0x80000000
 #define FEC_INT_BABR 0x40000000
@@ -313,10 +313,10 @@ static void mcf_fec_reset(DeviceState *dev)
     s->rfsr = 0x500;
 }
 
-#define MMFR_WRITE_OP   (1 << 28)
-#define MMFR_READ_OP    (2 << 28)
-#define MMFR_PHYADDR(v) (((v) >> 23) & 0x1f)
-#define MMFR_REGNUM(v)  (((v) >> 18) & 0x1f)
+#define MMFR_WRITE_OP	(1 << 28)
+#define MMFR_READ_OP	(2 << 28)
+#define MMFR_PHYADDR(v)	(((v) >> 23) & 0x1f)
+#define MMFR_REGNUM(v)	(((v) >> 18) & 0x1f)
 
 static uint64_t mcf_fec_read_mdio(mcf_fec_state *s)
 {

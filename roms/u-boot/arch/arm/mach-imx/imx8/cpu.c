@@ -6,26 +6,17 @@
 #include <common.h>
 #include <clk.h>
 #include <cpu.h>
-#include <cpu_func.h>
 #include <dm.h>
-#include <init.h>
-#include <log.h>
-#include <asm/cache.h>
-#include <asm/global_data.h>
 #include <dm/device-internal.h>
 #include <dm/lists.h>
 #include <dm/uclass.h>
 #include <errno.h>
-#include <spl.h>
-#include <thermal.h>
 #include <asm/arch/sci/sci.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch-imx/cpu.h>
 #include <asm/armv8/cpu.h>
 #include <asm/armv8/mmu.h>
-#include <asm/setup.h>
 #include <asm/mach-imx/boot_mode.h>
-#include <spl.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -44,24 +35,15 @@ struct pass_over_info_t *get_pass_over_info(void)
 
 int arch_cpu_init(void)
 {
-#if defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_RECOVER_DATA_SECTION)
-	spl_save_restore_data();
-#endif
+	struct pass_over_info_t *pass_over = get_pass_over_info();
 
-#ifdef CONFIG_SPL_BUILD
-	struct pass_over_info_t *pass_over;
-
-	if (is_soc_rev(CHIP_REV_A)) {
-		pass_over = get_pass_over_info();
-		if (pass_over && pass_over->g_ap_mu == 0) {
-			/*
-			 * When ap_mu is 0, means the U-Boot booted
-			 * from first container
-			 */
-			sc_misc_boot_status(-1, SC_MISC_BOOT_STATUS_SUCCESS);
-		}
+	if (pass_over && pass_over->g_ap_mu == 0) {
+		/*
+		 * When ap_mu is 0, means the U-Boot booted
+		 * from first container
+		 */
+		sc_misc_boot_status(-1, SC_MISC_BOOT_STATUS_SUCCESS);
 	}
-#endif
 
 	return 0;
 }
@@ -72,18 +54,18 @@ int arch_cpu_init_dm(void)
 	int node, ret;
 
 	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, "fsl,imx8-mu");
+	ret = device_bind_driver_to_node(gd->dm_root, "imx8_scu", "imx8_scu",
+					 offset_to_ofnode(node), &devp);
 
-	ret = uclass_get_device_by_of_offset(UCLASS_MISC, node, &devp);
 	if (ret) {
-		printf("could not get scu %d\n", ret);
+		printf("could not find scu %d\n", ret);
 		return ret;
 	}
 
-	if (is_imx8qm()) {
-		ret = sc_pm_set_resource_power_mode(-1, SC_R_SMMU,
-						    SC_PM_PW_MODE_ON);
-		if (ret)
-			return ret;
+	ret = device_probe(devp);
+	if (ret) {
+		printf("scu probe failed %d\n", ret);
+		return ret;
 	}
 
 	return 0;
@@ -172,37 +154,6 @@ enum boot_device get_boot_device(void)
 	return boot_dev;
 }
 
-#ifdef CONFIG_SERIAL_TAG
-#define FUSE_UNIQUE_ID_WORD0 16
-#define FUSE_UNIQUE_ID_WORD1 17
-void get_board_serial(struct tag_serialnr *serialnr)
-{
-	sc_err_t err;
-	u32 val1 = 0, val2 = 0;
-	u32 word1, word2;
-
-	if (!serialnr)
-		return;
-
-	word1 = FUSE_UNIQUE_ID_WORD0;
-	word2 = FUSE_UNIQUE_ID_WORD1;
-
-	err = sc_misc_otp_fuse_read(-1, word1, &val1);
-	if (err != SC_ERR_NONE) {
-		printf("%s fuse %d read error: %d\n", __func__, word1, err);
-		return;
-	}
-
-	err = sc_misc_otp_fuse_read(-1, word2, &val2);
-	if (err != SC_ERR_NONE) {
-		printf("%s fuse %d read error: %d\n", __func__, word2, err);
-		return;
-	}
-	serialnr->low = val1;
-	serialnr->high = val2;
-}
-#endif /*CONFIG_SERIAL_TAG*/
-
 #ifdef CONFIG_ENV_IS_IN_MMC
 __weak int board_mmc_get_env_dev(int devno)
 {
@@ -261,68 +212,14 @@ static int get_owned_memreg(sc_rm_mr_t mr, sc_faddr_t *addr_start,
 	return -EINVAL;
 }
 
-__weak void board_mem_get_layout(u64 *phys_sdram_1_start,
-				 u64 *phys_sdram_1_size,
-				 u64 *phys_sdram_2_start,
-				 u64 *phys_sdram_2_size)
-{
-	*phys_sdram_1_start = PHYS_SDRAM_1;
-	*phys_sdram_1_size = PHYS_SDRAM_1_SIZE;
-	*phys_sdram_2_start = PHYS_SDRAM_2;
-	*phys_sdram_2_size = PHYS_SDRAM_2_SIZE;
-}
-
 phys_size_t get_effective_memsize(void)
 {
 	sc_rm_mr_t mr;
-	sc_faddr_t start, end, end1, start_aligned;
-	u64 phys_sdram_1_start, phys_sdram_1_size;
-	u64 phys_sdram_2_start, phys_sdram_2_size;
+	sc_faddr_t start, end, end1;
 	int err;
 
-	board_mem_get_layout(&phys_sdram_1_start, &phys_sdram_1_size,
-			     &phys_sdram_2_start, &phys_sdram_2_size);
+	end1 = (sc_faddr_t)PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE;
 
-
-	end1 = (sc_faddr_t)phys_sdram_1_start + phys_sdram_1_size;
-	for (mr = 0; mr < 64; mr++) {
-		err = get_owned_memreg(mr, &start, &end);
-		if (!err) {
-			start_aligned = roundup(start, MEMSTART_ALIGNMENT);
-			/* Too small memory region, not use it */
-			if (start_aligned > end)
-				continue;
-
-			/* Find the memory region runs the U-Boot */
-			if (start >= phys_sdram_1_start && start <= end1 &&
-			    (start <= CONFIG_SYS_TEXT_BASE &&
-			    end >= CONFIG_SYS_TEXT_BASE)) {
-				if ((end + 1) <=
-				    ((sc_faddr_t)phys_sdram_1_start +
-				    phys_sdram_1_size))
-					return (end - phys_sdram_1_start + 1);
-				else
-					return phys_sdram_1_size;
-			}
-		}
-	}
-
-	return phys_sdram_1_size;
-}
-
-int dram_init(void)
-{
-	sc_rm_mr_t mr;
-	sc_faddr_t start, end, end1, end2;
-	u64 phys_sdram_1_start, phys_sdram_1_size;
-	u64 phys_sdram_2_start, phys_sdram_2_size;
-	int err;
-
-	board_mem_get_layout(&phys_sdram_1_start, &phys_sdram_1_size,
-			     &phys_sdram_2_start, &phys_sdram_2_size);
-
-	end1 = (sc_faddr_t)phys_sdram_1_start + phys_sdram_1_size;
-	end2 = (sc_faddr_t)phys_sdram_2_start + phys_sdram_2_size;
 	for (mr = 0; mr < 64; mr++) {
 		err = get_owned_memreg(mr, &start, &end);
 		if (!err) {
@@ -331,13 +228,44 @@ int dram_init(void)
 			if (start > end)
 				continue;
 
-			if (start >= phys_sdram_1_start && start <= end1) {
+			/* Find the memory region runs the U-Boot */
+			if (start >= PHYS_SDRAM_1 && start <= end1 &&
+			    (start <= CONFIG_SYS_TEXT_BASE &&
+			    end >= CONFIG_SYS_TEXT_BASE)) {
+				if ((end + 1) <= ((sc_faddr_t)PHYS_SDRAM_1 +
+				    PHYS_SDRAM_1_SIZE))
+					return (end - PHYS_SDRAM_1 + 1);
+				else
+					return PHYS_SDRAM_1_SIZE;
+			}
+		}
+	}
+
+	return PHYS_SDRAM_1_SIZE;
+}
+
+int dram_init(void)
+{
+	sc_rm_mr_t mr;
+	sc_faddr_t start, end, end1, end2;
+	int err;
+
+	end1 = (sc_faddr_t)PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE;
+	end2 = (sc_faddr_t)PHYS_SDRAM_2 + PHYS_SDRAM_2_SIZE;
+	for (mr = 0; mr < 64; mr++) {
+		err = get_owned_memreg(mr, &start, &end);
+		if (!err) {
+			start = roundup(start, MEMSTART_ALIGNMENT);
+			/* Too small memory region, not use it */
+			if (start > end)
+				continue;
+
+			if (start >= PHYS_SDRAM_1 && start <= end1) {
 				if ((end + 1) <= end1)
 					gd->ram_size += end - start + 1;
 				else
 					gd->ram_size += end1 - start;
-			} else if (start >= phys_sdram_2_start &&
-				   start <= end2) {
+			} else if (start >= PHYS_SDRAM_2 && start <= end2) {
 				if ((end + 1) <= end2)
 					gd->ram_size += end - start + 1;
 				else
@@ -348,8 +276,8 @@ int dram_init(void)
 
 	/* If error, set to the default value */
 	if (!gd->ram_size) {
-		gd->ram_size = phys_sdram_1_size;
-		gd->ram_size += phys_sdram_2_size;
+		gd->ram_size = PHYS_SDRAM_1_SIZE;
+		gd->ram_size += PHYS_SDRAM_2_SIZE;
 	}
 	return 0;
 }
@@ -382,15 +310,11 @@ int dram_init_banksize(void)
 	sc_rm_mr_t mr;
 	sc_faddr_t start, end, end1, end2;
 	int i = 0;
-	u64 phys_sdram_1_start, phys_sdram_1_size;
-	u64 phys_sdram_2_start, phys_sdram_2_size;
 	int err;
 
-	board_mem_get_layout(&phys_sdram_1_start, &phys_sdram_1_size,
-			     &phys_sdram_2_start, &phys_sdram_2_size);
+	end1 = (sc_faddr_t)PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE;
+	end2 = (sc_faddr_t)PHYS_SDRAM_2 + PHYS_SDRAM_2_SIZE;
 
-	end1 = (sc_faddr_t)phys_sdram_1_start + phys_sdram_1_size;
-	end2 = (sc_faddr_t)phys_sdram_2_start + phys_sdram_2_size;
 	for (mr = 0; mr < 64 && i < CONFIG_NR_DRAM_BANKS; mr++) {
 		err = get_owned_memreg(mr, &start, &end);
 		if (!err) {
@@ -398,7 +322,7 @@ int dram_init_banksize(void)
 			if (start > end) /* Small memory region, no use it */
 				continue;
 
-			if (start >= phys_sdram_1_start && start <= end1) {
+			if (start >= PHYS_SDRAM_1 && start <= end1) {
 				gd->bd->bi_dram[i].start = start;
 
 				if ((end + 1) <= end1)
@@ -409,7 +333,7 @@ int dram_init_banksize(void)
 
 				dram_bank_sort(i);
 				i++;
-			} else if (start >= phys_sdram_2_start && start <= end2) {
+			} else if (start >= PHYS_SDRAM_2 && start <= end2) {
 				gd->bd->bi_dram[i].start = start;
 
 				if ((end + 1) <= end2)
@@ -426,10 +350,10 @@ int dram_init_banksize(void)
 
 	/* If error, set to the default value */
 	if (!i) {
-		gd->bd->bi_dram[0].start = phys_sdram_1_start;
-		gd->bd->bi_dram[0].size = phys_sdram_1_size;
-		gd->bd->bi_dram[1].start = phys_sdram_2_start;
-		gd->bd->bi_dram[1].size = phys_sdram_2_size;
+		gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
+		gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
+		gd->bd->bi_dram[1].start = PHYS_SDRAM_2;
+		gd->bd->bi_dram[1].size = PHYS_SDRAM_2_SIZE;
 	}
 
 	return 0;
@@ -439,16 +363,11 @@ static u64 get_block_attrs(sc_faddr_t addr_start)
 {
 	u64 attr = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) | PTE_BLOCK_NON_SHARE |
 		PTE_BLOCK_PXN | PTE_BLOCK_UXN;
-	u64 phys_sdram_1_start, phys_sdram_1_size;
-	u64 phys_sdram_2_start, phys_sdram_2_size;
 
-	board_mem_get_layout(&phys_sdram_1_start, &phys_sdram_1_size,
-			     &phys_sdram_2_start, &phys_sdram_2_size);
-
-	if ((addr_start >= phys_sdram_1_start &&
-	     addr_start <= ((sc_faddr_t)phys_sdram_1_start + phys_sdram_1_size)) ||
-	    (addr_start >= phys_sdram_2_start &&
-	     addr_start <= ((sc_faddr_t)phys_sdram_2_start + phys_sdram_2_size)))
+	if ((addr_start >= PHYS_SDRAM_1 &&
+	     addr_start <= ((sc_faddr_t)PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE)) ||
+	    (addr_start >= PHYS_SDRAM_2 &&
+	     addr_start <= ((sc_faddr_t)PHYS_SDRAM_2 + PHYS_SDRAM_2_SIZE)))
 		return (PTE_BLOCK_MEMTYPE(MT_NORMAL) | PTE_BLOCK_OUTER_SHARE);
 
 	return attr;
@@ -457,20 +376,14 @@ static u64 get_block_attrs(sc_faddr_t addr_start)
 static u64 get_block_size(sc_faddr_t addr_start, sc_faddr_t addr_end)
 {
 	sc_faddr_t end1, end2;
-	u64 phys_sdram_1_start, phys_sdram_1_size;
-	u64 phys_sdram_2_start, phys_sdram_2_size;
 
-	board_mem_get_layout(&phys_sdram_1_start, &phys_sdram_1_size,
-			     &phys_sdram_2_start, &phys_sdram_2_size);
+	end1 = (sc_faddr_t)PHYS_SDRAM_1 + PHYS_SDRAM_1_SIZE;
+	end2 = (sc_faddr_t)PHYS_SDRAM_2 + PHYS_SDRAM_2_SIZE;
 
-
-	end1 = (sc_faddr_t)phys_sdram_1_start + phys_sdram_1_size;
-	end2 = (sc_faddr_t)phys_sdram_2_start + phys_sdram_2_size;
-
-	if (addr_start >= phys_sdram_1_start && addr_start <= end1) {
+	if (addr_start >= PHYS_SDRAM_1 && addr_start <= end1) {
 		if ((addr_end + 1) > end1)
 			return end1 - addr_start;
-	} else if (addr_start >= phys_sdram_2_start && addr_start <= end2) {
+	} else if (addr_start >= PHYS_SDRAM_2 && addr_start <= end2) {
 		if ((addr_end + 1) > end2)
 			return end2 - addr_start;
 	}
@@ -528,7 +441,7 @@ void enable_caches(void)
 	dcache_enable();
 }
 
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+#ifndef CONFIG_SYS_DCACHE_OFF
 u64 get_page_table_size(void)
 {
 	u64 one_pt = MAX_PTE_ENTRIES * sizeof(u64);
@@ -556,17 +469,10 @@ u64 get_page_table_size(void)
 }
 #endif
 
-#if defined(CONFIG_IMX8QM)
-#define FUSE_MAC0_WORD0 452
-#define FUSE_MAC0_WORD1 453
-#define FUSE_MAC1_WORD0 454
-#define FUSE_MAC1_WORD1 455
-#elif defined(CONFIG_IMX8QXP)
 #define FUSE_MAC0_WORD0 708
 #define FUSE_MAC0_WORD1 709
 #define FUSE_MAC1_WORD0 710
 #define FUSE_MAC1_WORD1 711
-#endif
 
 void imx_get_mac_from_fuse(int dev_id, unsigned char *mac)
 {
@@ -601,6 +507,15 @@ err:
 	printf("%s: fuse %d, err: %d\n", __func__, word[i], ret);
 }
 
+#if CONFIG_IS_ENABLED(CPU)
+struct cpu_imx_platdata {
+	const char *name;
+	const char *rev;
+	const char *type;
+	u32 cpurev;
+	u32 freq_mhz;
+};
+
 u32 get_cpu_rev(void)
 {
 	u32 id = 0, rev = 0;
@@ -616,43 +531,116 @@ u32 get_cpu_rev(void)
 	return (id << 12) | rev;
 }
 
-void board_boot_order(u32 *spl_boot_list)
+const char *get_imx8_type(u32 imxtype)
 {
-	spl_boot_list[0] = spl_boot_device();
-
-	if (spl_boot_list[0] == BOOT_DEVICE_SPI) {
-		/* Check whether we own the flexspi0, if not, use NOR boot */
-		if (!sc_rm_is_resource_owned(-1, SC_R_FSPI_0))
-			spl_boot_list[0] = BOOT_DEVICE_NOR;
+	switch (imxtype) {
+	case MXC_CPU_IMX8QXP:
+	case MXC_CPU_IMX8QXP_A0:
+		return "QXP";
+	default:
+		return "??";
 	}
 }
 
-bool m4_parts_booted(void)
+const char *get_imx8_rev(u32 rev)
 {
-	sc_rm_pt_t m4_parts[2];
-	int err;
-
-	err = sc_rm_get_resource_owner(-1, SC_R_M4_0_PID0, &m4_parts[0]);
-	if (err) {
-		printf("%s get resource [%d] owner error: %d\n", __func__,
-		       SC_R_M4_0_PID0, err);
-		return false;
+	switch (rev) {
+	case CHIP_REV_A:
+		return "A";
+	case CHIP_REV_B:
+		return "B";
+	default:
+		return "?";
 	}
-
-	if (sc_pm_is_partition_started(-1, m4_parts[0]))
-		return true;
-
-	if (is_imx8qm()) {
-		err = sc_rm_get_resource_owner(-1, SC_R_M4_1_PID0, &m4_parts[1]);
-		if (err) {
-			printf("%s get resource [%d] owner error: %d\n",
-			       __func__, SC_R_M4_1_PID0, err);
-			return false;
-		}
-
-		if (sc_pm_is_partition_started(-1, m4_parts[1]))
-			return true;
-	}
-
-	return false;
 }
+
+const char *get_core_name(void)
+{
+	if (is_cortex_a35())
+		return "A35";
+	else if (is_cortex_a53())
+		return "A53";
+	else if (is_cortex_a72())
+		return "A72";
+	else
+		return "?";
+}
+
+int cpu_imx_get_desc(struct udevice *dev, char *buf, int size)
+{
+	struct cpu_imx_platdata *plat = dev_get_platdata(dev);
+
+	if (size < 100)
+		return -ENOSPC;
+
+	snprintf(buf, size, "NXP i.MX8%s Rev%s %s at %u MHz\n",
+		 plat->type, plat->rev, plat->name, plat->freq_mhz);
+
+	return 0;
+}
+
+static int cpu_imx_get_info(struct udevice *dev, struct cpu_info *info)
+{
+	struct cpu_imx_platdata *plat = dev_get_platdata(dev);
+
+	info->cpu_freq = plat->freq_mhz * 1000;
+	info->features = BIT(CPU_FEAT_L1_CACHE) | BIT(CPU_FEAT_MMU);
+	return 0;
+}
+
+static int cpu_imx_get_count(struct udevice *dev)
+{
+	return 4;
+}
+
+static int cpu_imx_get_vendor(struct udevice *dev,  char *buf, int size)
+{
+	snprintf(buf, size, "NXP");
+	return 0;
+}
+
+static const struct cpu_ops cpu_imx8_ops = {
+	.get_desc	= cpu_imx_get_desc,
+	.get_info	= cpu_imx_get_info,
+	.get_count	= cpu_imx_get_count,
+	.get_vendor	= cpu_imx_get_vendor,
+};
+
+static const struct udevice_id cpu_imx8_ids[] = {
+	{ .compatible = "arm,cortex-a35" },
+	{ }
+};
+
+static int imx8_cpu_probe(struct udevice *dev)
+{
+	struct cpu_imx_platdata *plat = dev_get_platdata(dev);
+	struct clk cpu_clk;
+	u32 cpurev;
+	int ret;
+
+	cpurev = get_cpu_rev();
+	plat->cpurev = cpurev;
+	plat->name = get_core_name();
+	plat->rev = get_imx8_rev(cpurev & 0xFFF);
+	plat->type = get_imx8_type((cpurev & 0xFF000) >> 12);
+
+	ret = clk_get_by_index(dev, 0, &cpu_clk);
+	if (ret) {
+		debug("%s: Failed to get CPU clk: %d\n", __func__, ret);
+		return 0;
+	}
+
+	plat->freq_mhz = clk_get_rate(&cpu_clk) / 1000000;
+	return 0;
+}
+
+U_BOOT_DRIVER(cpu_imx8_drv) = {
+	.name		= "imx8x_cpu",
+	.id		= UCLASS_CPU,
+	.of_match	= cpu_imx8_ids,
+	.ops		= &cpu_imx8_ops,
+	.probe		= imx8_cpu_probe,
+	.platdata_auto_alloc_size = sizeof(struct cpu_imx_platdata),
+	.flags		= DM_FLAG_PRE_RELOC,
+};
+#endif

@@ -20,8 +20,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 VOID
 InitializeDiskInfo (
-  IN  USB_MASS_DEVICE  *UsbMass
+  IN  USB_MASS_DEVICE   *UsbMass
   );
+
 
 /**
   Provides inquiry information for the controller type.
@@ -42,9 +43,9 @@ InitializeDiskInfo (
 EFI_STATUS
 EFIAPI
 UsbDiskInfoInquiry (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *InquiryData,
-  IN OUT UINT32                  *InquiryDataSize
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *InquiryData,
+  IN OUT UINT32                   *InquiryDataSize
   );
 
 /**
@@ -68,9 +69,9 @@ UsbDiskInfoInquiry (
 EFI_STATUS
 EFIAPI
 UsbDiskInfoIdentify (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *IdentifyData,
-  IN OUT UINT32                  *IdentifyDataSize
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *IdentifyData,
+  IN OUT UINT32                   *IdentifyDataSize
   );
 
 /**
@@ -93,11 +94,12 @@ UsbDiskInfoIdentify (
 EFI_STATUS
 EFIAPI
 UsbDiskInfoSenseData (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *SenseData,
-  IN OUT UINT32                  *SenseDataSize,
-  OUT    UINT8                   *SenseDataNumber
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *SenseData,
+  IN OUT UINT32                   *SenseDataSize,
+  OUT    UINT8                    *SenseDataNumber
   );
+
 
 /**
   This function is used to get controller information.
@@ -113,9 +115,9 @@ UsbDiskInfoSenseData (
 EFI_STATUS
 EFIAPI
 UsbDiskInfoWhichIde (
-  IN  EFI_DISK_INFO_PROTOCOL  *This,
-  OUT UINT32                  *IdeChannel,
-  OUT UINT32                  *IdeDevice
+  IN  EFI_DISK_INFO_PROTOCOL   *This,
+  OUT UINT32                   *IdeChannel,
+  OUT UINT32                   *IdeDevice
   );
 
 #endif

@@ -70,6 +70,8 @@ struct uri_opener {
 struct socket_opener {
 	/** Communication semantics (e.g. SOCK_STREAM) */
 	int semantics;
+	/** Address family (e.g. AF_INET) */
+	int family;
 	/** Open socket
 	 *
 	 * @v intf		Object interface

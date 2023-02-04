@@ -30,7 +30,6 @@
 #include "hw/intc/intc.h"
 #include "hw/irq.h"
 #include "trace.h"
-#include "qom/object.h"
 
 //#define DEBUG_IRQ_COUNT
 
@@ -59,9 +58,10 @@ typedef struct SLAVIO_CPUINTCTLState {
 } SLAVIO_CPUINTCTLState;
 
 #define TYPE_SLAVIO_INTCTL "slavio_intctl"
-OBJECT_DECLARE_SIMPLE_TYPE(SLAVIO_INTCTLState, SLAVIO_INTCTL)
+#define SLAVIO_INTCTL(obj) \
+    OBJECT_CHECK(SLAVIO_INTCTLState, (obj), TYPE_SLAVIO_INTCTL)
 
-struct SLAVIO_INTCTLState {
+typedef struct SLAVIO_INTCTLState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -73,7 +73,7 @@ struct SLAVIO_INTCTLState {
     uint32_t intregm_pending;
     uint32_t intregm_disabled;
     uint32_t target_cpu;
-};
+} SLAVIO_INTCTLState;
 
 #define INTCTL_MAXADDR 0xf
 #define INTCTL_SIZE (INTCTL_MAXADDR + 1)

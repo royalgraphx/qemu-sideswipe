@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 #include "BaseLibInternals.h"
 
 /**
@@ -24,7 +27,7 @@
 VOID
 EFIAPI
 AsmFxSave (
-  OUT     IA32_FX_BUFFER  *Buffer
+  OUT     IA32_FX_BUFFER            *Buffer
   )
 {
   ASSERT (Buffer != NULL);
@@ -35,5 +38,5 @@ AsmFxSave (
   //
   // Mark one flag at end of Buffer, it will be check by AsmFxRestor()
   //
-  *(UINT32 *)(&Buffer->Buffer[sizeof (Buffer->Buffer) - 4]) = 0xAA5555AA;
+  *(UINT32 *) (&Buffer->Buffer[sizeof (Buffer->Buffer) - 4]) = 0xAA5555AA;
 }

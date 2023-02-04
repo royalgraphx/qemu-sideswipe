@@ -11,20 +11,14 @@
 #include <sbi/riscv_encoding.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_platform.h>
-#include <sbi/sbi_console.h>
 
 /* determine CPU extension, return non-zero support */
 int misa_extension_imp(char ext)
 {
 	unsigned long misa = csr_read(CSR_MISA);
 
-	if (misa) {
-		if ('A' <= ext && ext <= 'Z')
-			return misa & (1 << (ext - 'A'));
-		if ('a' <= ext && ext <= 'z')
-			return misa & (1 << (ext - 'a'));
-		return 0;
-	}
+	if (misa)
+		return misa & (1 << (ext - 'A'));
 
 	return sbi_platform_misa_extension(sbi_platform_thishart_ptr(), ext);
 }
@@ -50,193 +44,149 @@ int misa_xlen(void)
 	return r ? r : -1;
 }
 
-void misa_string(int xlen, char *out, unsigned int out_sz)
-{
-	unsigned int i, pos = 0;
-	const char valid_isa_order[] = "iemafdqclbjtpvnhkorwxyzg";
-
-	if (!out)
-		return;
-
-	if (5 <= (out_sz - pos)) {
-		out[pos++] = 'r';
-		out[pos++] = 'v';
-		switch (xlen) {
-		case 1:
-			out[pos++] = '3';
-			out[pos++] = '2';
-			break;
-		case 2:
-			out[pos++] = '6';
-			out[pos++] = '4';
-			break;
-		case 3:
-			out[pos++] = '1';
-			out[pos++] = '2';
-			out[pos++] = '8';
-			break;
-		default:
-			sbi_panic("%s: Unknown misa.MXL encoding %d",
-				   __func__, xlen);
-			return;
-		}
-	}
-
-	for (i = 0; i < array_size(valid_isa_order) && (pos < out_sz); i++) {
-		if (misa_extension_imp(valid_isa_order[i]))
-			out[pos++] = valid_isa_order[i];
-	}
-
-	if (pos < out_sz)
-		out[pos++] = '\0';
-}
-
 unsigned long csr_read_num(int csr_num)
 {
-#define switchcase_csr_read(__csr_num, __val)		\
-	case __csr_num:					\
-		__val = csr_read(__csr_num);		\
-		break;
-#define switchcase_csr_read_2(__csr_num, __val)	\
-	switchcase_csr_read(__csr_num + 0, __val)	\
-	switchcase_csr_read(__csr_num + 1, __val)
-#define switchcase_csr_read_4(__csr_num, __val)	\
-	switchcase_csr_read_2(__csr_num + 0, __val)	\
-	switchcase_csr_read_2(__csr_num + 2, __val)
-#define switchcase_csr_read_8(__csr_num, __val)	\
-	switchcase_csr_read_4(__csr_num + 0, __val)	\
-	switchcase_csr_read_4(__csr_num + 4, __val)
-#define switchcase_csr_read_16(__csr_num, __val)	\
-	switchcase_csr_read_8(__csr_num + 0, __val)	\
-	switchcase_csr_read_8(__csr_num + 8, __val)
-#define switchcase_csr_read_32(__csr_num, __val)	\
-	switchcase_csr_read_16(__csr_num + 0, __val)	\
-	switchcase_csr_read_16(__csr_num + 16, __val)
-#define switchcase_csr_read_64(__csr_num, __val)	\
-	switchcase_csr_read_32(__csr_num + 0, __val)	\
-	switchcase_csr_read_32(__csr_num + 32, __val)
-
 	unsigned long ret = 0;
 
 	switch (csr_num) {
-	switchcase_csr_read_16(CSR_PMPCFG0, ret)
-	switchcase_csr_read_64(CSR_PMPADDR0, ret)
-	switchcase_csr_read(CSR_MCYCLE, ret)
-	switchcase_csr_read(CSR_MINSTRET, ret)
-	switchcase_csr_read(CSR_MHPMCOUNTER3, ret)
-	switchcase_csr_read_4(CSR_MHPMCOUNTER4, ret)
-	switchcase_csr_read_8(CSR_MHPMCOUNTER8, ret)
-	switchcase_csr_read_16(CSR_MHPMCOUNTER16, ret)
-	switchcase_csr_read(CSR_MCOUNTINHIBIT, ret)
-	switchcase_csr_read(CSR_MHPMEVENT3, ret)
-	switchcase_csr_read_4(CSR_MHPMEVENT4, ret)
-	switchcase_csr_read_8(CSR_MHPMEVENT8, ret)
-	switchcase_csr_read_16(CSR_MHPMEVENT16, ret)
-#if __riscv_xlen == 32
-	switchcase_csr_read(CSR_MCYCLEH, ret)
-	switchcase_csr_read(CSR_MINSTRETH, ret)
-	switchcase_csr_read(CSR_MHPMCOUNTER3H, ret)
-	switchcase_csr_read_4(CSR_MHPMCOUNTER4H, ret)
-	switchcase_csr_read_8(CSR_MHPMCOUNTER8H, ret)
-	switchcase_csr_read_16(CSR_MHPMCOUNTER16H, ret)
-	/**
-	 * The CSR range MHPMEVENT[3-16]H are available only if sscofpmf
-	 * extension is present. The caller must ensure that.
-	 */
-	switchcase_csr_read(CSR_MHPMEVENT3H, ret)
-	switchcase_csr_read_4(CSR_MHPMEVENT4H, ret)
-	switchcase_csr_read_8(CSR_MHPMEVENT8H, ret)
-	switchcase_csr_read_16(CSR_MHPMEVENT16H, ret)
-#endif
-
+	case CSR_PMPCFG0:
+		ret = csr_read(CSR_PMPCFG0);
+		break;
+	case CSR_PMPCFG1:
+		ret = csr_read(CSR_PMPCFG1);
+		break;
+	case CSR_PMPCFG2:
+		ret = csr_read(CSR_PMPCFG2);
+		break;
+	case CSR_PMPCFG3:
+		ret = csr_read(CSR_PMPCFG3);
+		break;
+	case CSR_PMPADDR0:
+		ret = csr_read(CSR_PMPADDR0);
+		break;
+	case CSR_PMPADDR1:
+		ret = csr_read(CSR_PMPADDR1);
+		break;
+	case CSR_PMPADDR2:
+		ret = csr_read(CSR_PMPADDR2);
+		break;
+	case CSR_PMPADDR3:
+		ret = csr_read(CSR_PMPADDR3);
+		break;
+	case CSR_PMPADDR4:
+		ret = csr_read(CSR_PMPADDR4);
+		break;
+	case CSR_PMPADDR5:
+		ret = csr_read(CSR_PMPADDR5);
+		break;
+	case CSR_PMPADDR6:
+		ret = csr_read(CSR_PMPADDR6);
+		break;
+	case CSR_PMPADDR7:
+		ret = csr_read(CSR_PMPADDR7);
+		break;
+	case CSR_PMPADDR8:
+		ret = csr_read(CSR_PMPADDR8);
+		break;
+	case CSR_PMPADDR9:
+		ret = csr_read(CSR_PMPADDR9);
+		break;
+	case CSR_PMPADDR10:
+		ret = csr_read(CSR_PMPADDR10);
+		break;
+	case CSR_PMPADDR11:
+		ret = csr_read(CSR_PMPADDR11);
+		break;
+	case CSR_PMPADDR12:
+		ret = csr_read(CSR_PMPADDR12);
+		break;
+	case CSR_PMPADDR13:
+		ret = csr_read(CSR_PMPADDR13);
+		break;
+	case CSR_PMPADDR14:
+		ret = csr_read(CSR_PMPADDR14);
+		break;
+	case CSR_PMPADDR15:
+		ret = csr_read(CSR_PMPADDR15);
+		break;
 	default:
-		sbi_panic("%s: Unknown CSR %#x", __func__, csr_num);
 		break;
 	};
 
 	return ret;
-
-#undef switchcase_csr_read_64
-#undef switchcase_csr_read_32
-#undef switchcase_csr_read_16
-#undef switchcase_csr_read_8
-#undef switchcase_csr_read_4
-#undef switchcase_csr_read_2
-#undef switchcase_csr_read
 }
 
 void csr_write_num(int csr_num, unsigned long val)
 {
-#define switchcase_csr_write(__csr_num, __val)		\
-	case __csr_num:					\
-		csr_write(__csr_num, __val);		\
-		break;
-#define switchcase_csr_write_2(__csr_num, __val)	\
-	switchcase_csr_write(__csr_num + 0, __val)	\
-	switchcase_csr_write(__csr_num + 1, __val)
-#define switchcase_csr_write_4(__csr_num, __val)	\
-	switchcase_csr_write_2(__csr_num + 0, __val)	\
-	switchcase_csr_write_2(__csr_num + 2, __val)
-#define switchcase_csr_write_8(__csr_num, __val)	\
-	switchcase_csr_write_4(__csr_num + 0, __val)	\
-	switchcase_csr_write_4(__csr_num + 4, __val)
-#define switchcase_csr_write_16(__csr_num, __val)	\
-	switchcase_csr_write_8(__csr_num + 0, __val)	\
-	switchcase_csr_write_8(__csr_num + 8, __val)
-#define switchcase_csr_write_32(__csr_num, __val)	\
-	switchcase_csr_write_16(__csr_num + 0, __val)	\
-	switchcase_csr_write_16(__csr_num + 16, __val)
-#define switchcase_csr_write_64(__csr_num, __val)	\
-	switchcase_csr_write_32(__csr_num + 0, __val)	\
-	switchcase_csr_write_32(__csr_num + 32, __val)
-
 	switch (csr_num) {
-	switchcase_csr_write_16(CSR_PMPCFG0, val)
-	switchcase_csr_write_64(CSR_PMPADDR0, val)
-	switchcase_csr_write(CSR_MCYCLE, val)
-	switchcase_csr_write(CSR_MINSTRET, val)
-	switchcase_csr_write(CSR_MHPMCOUNTER3, val)
-	switchcase_csr_write_4(CSR_MHPMCOUNTER4, val)
-	switchcase_csr_write_8(CSR_MHPMCOUNTER8, val)
-	switchcase_csr_write_16(CSR_MHPMCOUNTER16, val)
-#if __riscv_xlen == 32
-	switchcase_csr_write(CSR_MCYCLEH, val)
-	switchcase_csr_write(CSR_MINSTRETH, val)
-	switchcase_csr_write(CSR_MHPMCOUNTER3H, val)
-	switchcase_csr_write_4(CSR_MHPMCOUNTER4H, val)
-	switchcase_csr_write_8(CSR_MHPMCOUNTER8H, val)
-	switchcase_csr_write_16(CSR_MHPMCOUNTER16H, val)
-	switchcase_csr_write(CSR_MHPMEVENT3H, val)
-	switchcase_csr_write_4(CSR_MHPMEVENT4H, val)
-	switchcase_csr_write_8(CSR_MHPMEVENT8H, val)
-	switchcase_csr_write_16(CSR_MHPMEVENT16H, val)
-#endif
-	switchcase_csr_write(CSR_MCOUNTINHIBIT, val)
-	switchcase_csr_write(CSR_MHPMEVENT3, val)
-	switchcase_csr_write_4(CSR_MHPMEVENT4, val)
-	switchcase_csr_write_8(CSR_MHPMEVENT8, val)
-	switchcase_csr_write_16(CSR_MHPMEVENT16, val)
-
+	case CSR_PMPCFG0:
+		csr_write(CSR_PMPCFG0, val);
+		break;
+	case CSR_PMPCFG1:
+		csr_write(CSR_PMPCFG1, val);
+		break;
+	case CSR_PMPCFG2:
+		csr_write(CSR_PMPCFG2, val);
+		break;
+	case CSR_PMPCFG3:
+		csr_write(CSR_PMPCFG3, val);
+		break;
+	case CSR_PMPADDR0:
+		csr_write(CSR_PMPADDR0, val);
+		break;
+	case CSR_PMPADDR1:
+		csr_write(CSR_PMPADDR1, val);
+		break;
+	case CSR_PMPADDR2:
+		csr_write(CSR_PMPADDR2, val);
+		break;
+	case CSR_PMPADDR3:
+		csr_write(CSR_PMPADDR3, val);
+		break;
+	case CSR_PMPADDR4:
+		csr_write(CSR_PMPADDR4, val);
+		break;
+	case CSR_PMPADDR5:
+		csr_write(CSR_PMPADDR5, val);
+		break;
+	case CSR_PMPADDR6:
+		csr_write(CSR_PMPADDR6, val);
+		break;
+	case CSR_PMPADDR7:
+		csr_write(CSR_PMPADDR7, val);
+		break;
+	case CSR_PMPADDR8:
+		csr_write(CSR_PMPADDR8, val);
+		break;
+	case CSR_PMPADDR9:
+		csr_write(CSR_PMPADDR9, val);
+		break;
+	case CSR_PMPADDR10:
+		csr_write(CSR_PMPADDR10, val);
+		break;
+	case CSR_PMPADDR11:
+		csr_write(CSR_PMPADDR11, val);
+		break;
+	case CSR_PMPADDR12:
+		csr_write(CSR_PMPADDR12, val);
+		break;
+	case CSR_PMPADDR13:
+		csr_write(CSR_PMPADDR13, val);
+		break;
+	case CSR_PMPADDR14:
+		csr_write(CSR_PMPADDR14, val);
+		break;
+	case CSR_PMPADDR15:
+		csr_write(CSR_PMPADDR15, val);
+		break;
 	default:
-		sbi_panic("%s: Unknown CSR %#x", __func__, csr_num);
 		break;
 	};
-
-#undef switchcase_csr_write_64
-#undef switchcase_csr_write_32
-#undef switchcase_csr_write_16
-#undef switchcase_csr_write_8
-#undef switchcase_csr_write_4
-#undef switchcase_csr_write_2
-#undef switchcase_csr_write
 }
 
 static unsigned long ctz(unsigned long x)
 {
 	unsigned long ret = 0;
-
-	if (x == 0)
-		return 8 * sizeof(x);
 
 	while (!(x & 1UL)) {
 		ret++;
@@ -265,14 +215,16 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 	pmpcfg_csr   = (CSR_PMPCFG0 + (n >> 2)) & ~1;
 	pmpcfg_shift = (n & 7) << 3;
 #else
-# error "Unexpected __riscv_xlen"
+	pmpcfg_csr   = -1;
+	pmpcfg_shift = -1;
 #endif
 	pmpaddr_csr = CSR_PMPADDR0 + n;
+	if (pmpcfg_csr < 0 || pmpcfg_shift < 0)
+		return SBI_ENOTSUPP;
 
 	/* encode PMP config */
-	prot &= ~PMP_A;
 	prot |= (log2len == PMP_SHIFT) ? PMP_A_NA4 : PMP_A_NAPOT;
-	cfgmask = ~(0xffUL << pmpcfg_shift);
+	cfgmask = ~(0xff << pmpcfg_shift);
 	pmpcfg	= (csr_read_num(pmpcfg_csr) & cfgmask);
 	pmpcfg |= ((prot << pmpcfg_shift) & ~cfgmask);
 
@@ -297,16 +249,16 @@ int pmp_set(unsigned int n, unsigned long prot, unsigned long addr,
 }
 
 int pmp_get(unsigned int n, unsigned long *prot_out, unsigned long *addr_out,
-	    unsigned long *log2len)
+	    unsigned long *size)
 {
 	int pmpcfg_csr, pmpcfg_shift, pmpaddr_csr;
 	unsigned long cfgmask, pmpcfg, prot;
-	unsigned long t1, addr, len;
+	unsigned long t1, addr, log2len;
 
 	/* check parameters */
-	if (n >= PMP_COUNT || !prot_out || !addr_out || !log2len)
+	if (n >= PMP_COUNT || !prot_out || !addr_out || !size)
 		return SBI_EINVAL;
-	*prot_out = *addr_out = *log2len = 0;
+	*prot_out = *addr_out = *size = 0;
 
 	/* calculate PMP register and offset */
 #if __riscv_xlen == 32
@@ -316,12 +268,15 @@ int pmp_get(unsigned int n, unsigned long *prot_out, unsigned long *addr_out,
 	pmpcfg_csr   = (CSR_PMPCFG0 + (n >> 2)) & ~1;
 	pmpcfg_shift = (n & 7) << 3;
 #else
-# error "Unexpected __riscv_xlen"
+	pmpcfg_csr   = -1;
+	pmpcfg_shift = -1;
 #endif
 	pmpaddr_csr = CSR_PMPADDR0 + n;
+	if (pmpcfg_csr < 0 || pmpcfg_shift < 0)
+		return SBI_ENOTSUPP;
 
 	/* decode PMP config */
-	cfgmask = (0xffUL << pmpcfg_shift);
+	cfgmask = (0xff << pmpcfg_shift);
 	pmpcfg	= csr_read_num(pmpcfg_csr) & cfgmask;
 	prot	= pmpcfg >> pmpcfg_shift;
 
@@ -330,21 +285,23 @@ int pmp_get(unsigned int n, unsigned long *prot_out, unsigned long *addr_out,
 		addr = csr_read_num(pmpaddr_csr);
 		if (addr == -1UL) {
 			addr	= 0;
-			len	= __riscv_xlen;
+			log2len = __riscv_xlen;
 		} else {
 			t1	= ctz(~addr);
 			addr	= (addr & ~((1UL << t1) - 1)) << PMP_SHIFT;
-			len	= (t1 + PMP_SHIFT + 1);
+			log2len = (t1 + PMP_SHIFT + 1);
 		}
 	} else {
 		addr	= csr_read_num(pmpaddr_csr) << PMP_SHIFT;
-		len	= PMP_SHIFT;
+		log2len = PMP_SHIFT;
 	}
 
 	/* return details */
 	*prot_out    = prot;
 	*addr_out    = addr;
-	*log2len     = len;
+
+	if (log2len < __riscv_xlen)
+		*size = (1UL << log2len);
 
 	return 0;
 }

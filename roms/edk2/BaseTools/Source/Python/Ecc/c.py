@@ -2,7 +2,6 @@
 # This file is used to be the c coding style checking of ECC tool
 #
 # Copyright (c) 2009 - 2019, Intel Corporation. All rights reserved.<BR>
-# Copyright (c) 2020, Arm Limited. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -65,9 +64,7 @@ def GetIdType(Str):
     Type = DataClass.MODEL_UNKNOWN
     Str = Str.replace('#', '# ')
     List = Str.split()
-    if len(List) < 2:
-        pass
-    elif List[1] == 'include':
+    if List[1] == 'include':
         Type = DataClass.MODEL_IDENTIFIER_INCLUDE
     elif List[1] == 'define':
         Type = DataClass.MODEL_IDENTIFIER_MACRO_DEFINE
@@ -1560,7 +1557,7 @@ def CheckFuncLayoutLocalVariable(FullFileName):
             continue
 
         for Result in ResultSet:
-            if len(Result[1]) > 0 and 'CONST' not in Result[3] and 'STATIC' not in Result[3]:
+            if len(Result[1]) > 0 and 'CONST' not in Result[3]:
                 PrintErrorMsg(ERROR_C_FUNCTION_LAYOUT_CHECK_NO_INIT_OF_VARIABLE, 'Variable Name: %s' % Result[0], FileTable, Result[2])
 
 def CheckMemberVariableFormat(Name, Value, FileTable, TdId, ModelId):
@@ -1862,7 +1859,7 @@ def CheckDeclNoUseCType(FullFileName):
                        where Model = %d
                    """ % (FileTable, DataClass.MODEL_IDENTIFIER_VARIABLE)
     ResultSet = Db.TblFile.Exec(SqlStatement)
-    CTypeTuple = ('int', 'unsigned', 'char', 'void', 'long')
+    CTypeTuple = ('int', 'unsigned', 'char', 'void', 'static', 'long')
     for Result in ResultSet:
         for Type in CTypeTuple:
             if PatternInModifier(Result[0], Type):
@@ -2391,7 +2388,7 @@ def CheckFileHeaderDoxygenComments(FullFileName):
                     PrintErrorMsg(ERROR_HEADER_CHECK_FILE, 'File header comment content should start with two spaces at each line', FileTable, ID)
 
             CommentLine = CommentLine.strip()
-            if CommentLine.startswith('Copyright') or ('Copyright' in CommentLine and CommentLine.lower().startswith('(c)')):
+            if CommentLine.startswith('Copyright'):
                 NoCopyrightFlag = False
                 if CommentLine.find('All rights reserved') == -1:
                     for Copyright in EccGlobalData.gConfig.Copyright:

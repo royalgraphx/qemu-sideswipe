@@ -20,11 +20,13 @@
 ;------------------------------------------------------------------------------
 global ASM_PFX(SetCodeSelector)
 ASM_PFX(SetCodeSelector):
-    push    rcx
+    sub     rsp, 0x10
     lea     rax, [setCodeSelectorLongJump]
-    push    rax
-    o64 retf
+    mov     [rsp], rax
+    mov     [rsp+4], cx
+    jmp     dword far [rsp]
 setCodeSelectorLongJump:
+    add     rsp, 0x10
     ret
 
 ;------------------------------------------------------------------------------

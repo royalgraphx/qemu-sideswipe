@@ -6,6 +6,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 #include "UsbMouse.h"
 
 //
@@ -20,15 +21,16 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gUsbMouseComponentNam
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gUsbMouseComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)UsbMouseComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)UsbMouseComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gUsbMouseComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) UsbMouseComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) UsbMouseComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mUsbMouseDriverNameTable[] = {
+
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mUsbMouseDriverNameTable[] = {
   { "eng;en", L"Usb Mouse Driver" },
-  { NULL,     NULL                }
+  { NULL , NULL }
 };
 
 /**
@@ -143,17 +145,17 @@ UsbMouseComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 UsbMouseComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   )
 {
-  EFI_STATUS                   Status;
-  USB_MOUSE_DEV                *UsbMouseDev;
-  EFI_SIMPLE_POINTER_PROTOCOL  *SimplePointerProtocol;
-  EFI_USB_IO_PROTOCOL          *UsbIoProtocol;
+  EFI_STATUS                  Status;
+  USB_MOUSE_DEV               *UsbMouseDev;
+  EFI_SIMPLE_POINTER_PROTOCOL *SimplePointerProtocol;
+  EFI_USB_IO_PROTOCOL         *UsbIoProtocol;
 
   //
   // This is a device driver, so ChildHandle must be NULL.
@@ -168,7 +170,7 @@ UsbMouseComponentNameGetControllerName (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiUsbIoProtocolGuid,
-                  (VOID **)&UsbIoProtocol,
+                  (VOID **) &UsbIoProtocol,
                   gUsbMouseDriverBinding.DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -187,14 +189,13 @@ UsbMouseComponentNameGetControllerName (
   if (Status != EFI_ALREADY_STARTED) {
     return EFI_UNSUPPORTED;
   }
-
   //
   // Get the device context
   //
   Status = gBS->OpenProtocol (
                   ControllerHandle,
-                  &gEfiSimplePointerProtocolGuid,
-                  (VOID **)&SimplePointerProtocol,
+                 &gEfiSimplePointerProtocolGuid,
+                  (VOID **) &SimplePointerProtocol,
                   gUsbMouseDriverBinding.DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -213,4 +214,5 @@ UsbMouseComponentNameGetControllerName (
            ControllerName,
            (BOOLEAN)(This == &gUsbMouseComponentName)
            );
+
 }

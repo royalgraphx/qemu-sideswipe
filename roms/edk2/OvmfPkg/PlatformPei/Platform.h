@@ -13,33 +13,33 @@
 
 VOID
 AddIoMemoryBaseSizeHob (
-  EFI_PHYSICAL_ADDRESS  MemoryBase,
-  UINT64                MemorySize
+  EFI_PHYSICAL_ADDRESS        MemoryBase,
+  UINT64                      MemorySize
   );
 
 VOID
 AddIoMemoryRangeHob (
-  EFI_PHYSICAL_ADDRESS  MemoryBase,
-  EFI_PHYSICAL_ADDRESS  MemoryLimit
+  EFI_PHYSICAL_ADDRESS        MemoryBase,
+  EFI_PHYSICAL_ADDRESS        MemoryLimit
   );
 
 VOID
 AddMemoryBaseSizeHob (
-  EFI_PHYSICAL_ADDRESS  MemoryBase,
-  UINT64                MemorySize
+  EFI_PHYSICAL_ADDRESS        MemoryBase,
+  UINT64                      MemorySize
   );
 
 VOID
 AddMemoryRangeHob (
-  EFI_PHYSICAL_ADDRESS  MemoryBase,
-  EFI_PHYSICAL_ADDRESS  MemoryLimit
+  EFI_PHYSICAL_ADDRESS        MemoryBase,
+  EFI_PHYSICAL_ADDRESS        MemoryLimit
   );
 
 VOID
 AddReservedMemoryBaseSizeHob (
-  EFI_PHYSICAL_ADDRESS  MemoryBase,
-  UINT64                MemorySize,
-  BOOLEAN               Cacheable
+  EFI_PHYSICAL_ADDRESS        MemoryBase,
+  UINT64                      MemorySize,
+  BOOLEAN                     Cacheable
   );
 
 VOID
@@ -49,11 +49,6 @@ AddressWidthInitialization (
 
 VOID
 Q35TsegMbytesInitialization (
-  VOID
-  );
-
-VOID
-Q35SmramAtDefaultSmbaseInitialization (
   VOID
   );
 
@@ -83,11 +78,6 @@ PeiFvInitialization (
   );
 
 VOID
-MemTypeInfoInitialization (
-  VOID
-  );
-
-VOID
 InstallFeatureControlCallback (
   VOID
   );
@@ -97,28 +87,38 @@ InstallClearCacheCallback (
   VOID
   );
 
+EFI_STATUS
+InitializeXen (
+  VOID
+  );
+
+BOOLEAN
+XenDetect (
+  VOID
+  );
+
 VOID
 AmdSevInitialize (
   VOID
   );
 
-extern EFI_BOOT_MODE  mBootMode;
+extern BOOLEAN mXen;
 
 VOID
-SevInitializeRam (
+XenPublishRamRegions (
   VOID
   );
 
-extern BOOLEAN  mS3Supported;
+extern EFI_BOOT_MODE mBootMode;
 
-extern UINT8  mPhysMemAddressWidth;
+extern BOOLEAN mS3Supported;
 
-extern UINT32  mMaxCpuCount;
+extern UINT8 mPhysMemAddressWidth;
 
-extern UINT16  mHostBridgeDevId;
+extern UINT32 mMaxCpuCount;
 
-extern BOOLEAN  mQ35SmramAtDefaultSmbase;
+extern UINT16 mHostBridgeDevId;
 
-extern UINT32  mQemuUc32Base;
+extern UINT32 mQemuUc32Base;
 
 #endif // _PLATFORM_PEI_H_INCLUDED_

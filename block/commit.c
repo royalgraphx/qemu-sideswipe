@@ -20,7 +20,6 @@
 #include "qapi/error.h"
 #include "qapi/qmp/qerror.h"
 #include "qemu/ratelimit.h"
-#include "qemu/memalign.h"
 #include "sysemu/block-backend.h"
 
 enum {
@@ -38,7 +37,6 @@ typedef struct CommitBlockJob {
     BlockBackend *top;
     BlockBackend *base;
     BlockDriverState *base_bs;
-    BlockDriverState *base_overlay;
     BlockdevOnError on_error;
     bool base_read_only;
     bool chain_frozen;
@@ -91,7 +89,7 @@ static void commit_abort(Job *job)
      * XXX Can (or should) we somehow keep 'consistent read' blocked even
      * after the failed/cancelled commit job is gone? If we already wrote
      * something to base, the intermediate images aren't valid any more. */
-    bdrv_replace_node(s->commit_top_bs, s->commit_top_bs->backing->bs,
+    bdrv_replace_node(s->commit_top_bs, backing_bs(s->commit_top_bs),
                       &error_abort);
 
     bdrv_unref(s->commit_top_bs);
@@ -120,24 +118,24 @@ static int coroutine_fn commit_run(Job *job, Error **errp)
     uint64_t delay_ns = 0;
     int ret = 0;
     int64_t n = 0; /* bytes */
-    QEMU_AUTO_VFREE void *buf = NULL;
+    void *buf = NULL;
     int64_t len, base_len;
 
-    len = blk_getlength(s->top);
+    ret = len = blk_getlength(s->top);
     if (len < 0) {
-        return len;
+        goto out;
     }
     job_progress_set_remaining(&s->common.job, len);
 
-    base_len = blk_getlength(s->base);
+    ret = base_len = blk_getlength(s->base);
     if (base_len < 0) {
-        return base_len;
+        goto out;
     }
 
     if (base_len < len) {
-        ret = blk_co_truncate(s->base, len, false, PREALLOC_MODE_OFF, 0, NULL);
+        ret = blk_truncate(s->base, len, false, PREALLOC_MODE_OFF, 0, NULL);
         if (ret) {
-            return ret;
+            goto out;
         }
     }
 
@@ -155,9 +153,9 @@ static int coroutine_fn commit_run(Job *job, Error **errp)
             break;
         }
         /* Copy if allocated above the base */
-        ret = bdrv_is_allocated_above(blk_bs(s->top), s->base_overlay, true,
+        ret = bdrv_is_allocated_above(blk_bs(s->top), blk_bs(s->base), false,
                                       offset, COMMIT_BUFFER_SIZE, &n);
-        copy = (ret > 0);
+        copy = (ret == 1);
         trace_commit_one_iteration(s, offset, n, ret);
         if (copy) {
             assert(n < SIZE_MAX);
@@ -175,7 +173,7 @@ static int coroutine_fn commit_run(Job *job, Error **errp)
                 block_job_error_action(&s->common, s->on_error,
                                        error_in_source, -ret);
             if (action == BLOCK_ERROR_ACTION_REPORT) {
-                return ret;
+                goto out;
             } else {
                 n = 0;
                 continue;
@@ -191,7 +189,12 @@ static int coroutine_fn commit_run(Job *job, Error **errp)
         }
     }
 
-    return 0;
+    ret = 0;
+
+out:
+    qemu_vfree(buf);
+
+    return ret;
 }
 
 static const BlockJobDriver commit_job_driver = {
@@ -208,7 +211,7 @@ static const BlockJobDriver commit_job_driver = {
 };
 
 static int coroutine_fn bdrv_commit_top_preadv(BlockDriverState *bs,
-    int64_t offset, int64_t bytes, QEMUIOVector *qiov, BdrvRequestFlags flags)
+    uint64_t offset, uint64_t bytes, QEMUIOVector *qiov, int flags)
 {
     return bdrv_co_preadv(bs->backing, offset, bytes, qiov, flags);
 }
@@ -234,11 +237,11 @@ static void bdrv_commit_top_child_perm(BlockDriverState *bs, BdrvChild *c,
 static BlockDriver bdrv_commit_top = {
     .format_name                = "commit_top",
     .bdrv_co_preadv             = bdrv_commit_top_preadv,
+    .bdrv_co_block_status       = bdrv_co_block_status_from_backing,
     .bdrv_refresh_filename      = bdrv_commit_top_refresh_filename,
     .bdrv_child_perm            = bdrv_commit_top_child_perm,
 
     .is_filter                  = true,
-    .filtered_child_is_backing  = true,
 };
 
 void commit_start(const char *job_id, BlockDriverState *bs,
@@ -250,34 +253,13 @@ void commit_start(const char *job_id, BlockDriverState *bs,
     CommitBlockJob *s;
     BlockDriverState *iter;
     BlockDriverState *commit_top_bs = NULL;
-    BlockDriverState *filtered_base;
-    int64_t base_size, top_size;
-    uint64_t base_perms, iter_shared_perms;
+    Error *local_err = NULL;
     int ret;
 
-    GLOBAL_STATE_CODE();
-
     assert(top != bs);
-    if (bdrv_skip_filters(top) == bdrv_skip_filters(base)) {
+    if (top == base) {
         error_setg(errp, "Invalid files for merge: top and base are the same");
         return;
-    }
-
-    base_size = bdrv_getlength(base);
-    if (base_size < 0) {
-        error_setg_errno(errp, -base_size, "Could not inquire base image size");
-        return;
-    }
-
-    top_size = bdrv_getlength(top);
-    if (top_size < 0) {
-        error_setg_errno(errp, -top_size, "Could not inquire top image size");
-        return;
-    }
-
-    base_perms = BLK_PERM_CONSISTENT_READ | BLK_PERM_WRITE;
-    if (base_size < top_size) {
-        base_perms |= BLK_PERM_RESIZE;
     }
 
     s = block_job_create(job_id, &commit_job_driver, NULL, bs, 0, BLK_PERM_ALL,
@@ -310,52 +292,26 @@ void commit_start(const char *job_id, BlockDriverState *bs,
 
     commit_top_bs->total_sectors = top->total_sectors;
 
-    ret = bdrv_append(commit_top_bs, top, errp);
-    bdrv_unref(commit_top_bs); /* referenced by new parents or failed */
-    if (ret < 0) {
+    bdrv_append(commit_top_bs, top, &local_err);
+    if (local_err) {
         commit_top_bs = NULL;
+        error_propagate(errp, local_err);
         goto fail;
     }
 
     s->commit_top_bs = commit_top_bs;
 
-    /*
-     * Block all nodes between top and base, because they will
-     * disappear from the chain after this operation.
-     * Note that this assumes that the user is fine with removing all
-     * nodes (including R/W filters) between top and base.  Assuring
-     * this is the responsibility of the interface (i.e. whoever calls
-     * commit_start()).
-     */
-    s->base_overlay = bdrv_find_overlay(top, base);
-    assert(s->base_overlay);
-
-    /*
-     * The topmost node with
-     * bdrv_skip_filters(filtered_base) == bdrv_skip_filters(base)
-     */
-    filtered_base = bdrv_cow_bs(s->base_overlay);
-    assert(bdrv_skip_filters(filtered_base) == bdrv_skip_filters(base));
-
-    /*
-     * XXX BLK_PERM_WRITE needs to be allowed so we don't block ourselves
-     * at s->base (if writes are blocked for a node, they are also blocked
-     * for its backing file). The other options would be a second filter
-     * driver above s->base.
-     */
-    iter_shared_perms = BLK_PERM_WRITE_UNCHANGED | BLK_PERM_WRITE;
-
-    for (iter = top; iter != base; iter = bdrv_filter_or_cow_bs(iter)) {
-        if (iter == filtered_base) {
-            /*
-             * From here on, all nodes are filters on the base.  This
-             * allows us to share BLK_PERM_CONSISTENT_READ.
-             */
-            iter_shared_perms |= BLK_PERM_CONSISTENT_READ;
-        }
-
+    /* Block all nodes between top and base, because they will
+     * disappear from the chain after this operation. */
+    assert(bdrv_chain_contains(top, base));
+    for (iter = top; iter != base; iter = backing_bs(iter)) {
+        /* XXX BLK_PERM_WRITE needs to be allowed so we don't block ourselves
+         * at s->base (if writes are blocked for a node, they are also blocked
+         * for its backing file). The other options would be a second filter
+         * driver above s->base. */
         ret = block_job_add_bdrv(&s->common, "intermediate node", iter, 0,
-                                 iter_shared_perms, errp);
+                                 BLK_PERM_WRITE_UNCHANGED | BLK_PERM_WRITE,
+                                 errp);
         if (ret < 0) {
             goto fail;
         }
@@ -372,8 +328,11 @@ void commit_start(const char *job_id, BlockDriverState *bs,
     }
 
     s->base = blk_new(s->common.job.aio_context,
-                      base_perms,
                       BLK_PERM_CONSISTENT_READ
+                      | BLK_PERM_WRITE
+                      | BLK_PERM_RESIZE,
+                      BLK_PERM_CONSISTENT_READ
+                      | BLK_PERM_GRAPH_MOD
                       | BLK_PERM_WRITE_UNCHANGED);
     ret = blk_insert_bs(s->base, base, errp);
     if (ret < 0) {
@@ -433,30 +392,25 @@ int bdrv_commit(BlockDriverState *bs)
     int ro;
     int64_t n;
     int ret = 0;
-    QEMU_AUTO_VFREE uint8_t *buf = NULL;
+    uint8_t *buf = NULL;
     Error *local_err = NULL;
-
-    GLOBAL_STATE_CODE();
 
     if (!drv)
         return -ENOMEDIUM;
 
-    backing_file_bs = bdrv_cow_bs(bs);
-
-    if (!backing_file_bs) {
+    if (!bs->backing) {
         return -ENOTSUP;
     }
 
     if (bdrv_op_is_blocked(bs, BLOCK_OP_TYPE_COMMIT_SOURCE, NULL) ||
-        bdrv_op_is_blocked(backing_file_bs, BLOCK_OP_TYPE_COMMIT_TARGET, NULL))
-    {
+        bdrv_op_is_blocked(bs->backing->bs, BLOCK_OP_TYPE_COMMIT_TARGET, NULL)) {
         return -EBUSY;
     }
 
-    ro = bdrv_is_read_only(backing_file_bs);
+    ro = bs->backing->bs->read_only;
 
     if (ro) {
-        if (bdrv_reopen_set_read_only(backing_file_bs, false, NULL)) {
+        if (bdrv_reopen_set_read_only(bs->backing->bs, false, NULL)) {
             return -EACCES;
         }
     }
@@ -474,6 +428,8 @@ int bdrv_commit(BlockDriverState *bs)
     }
 
     /* Insert commit_top block node above backing, so we can write to it */
+    backing_file_bs = backing_bs(bs);
+
     commit_top_bs = bdrv_new_open_driver(&bdrv_commit_top, NULL, BDRV_O_RDWR,
                                          &local_err);
     if (commit_top_bs == NULL) {
@@ -528,12 +484,12 @@ int bdrv_commit(BlockDriverState *bs)
             goto ro_cleanup;
         }
         if (ret) {
-            ret = blk_pread(src, offset, n, buf, 0);
+            ret = blk_pread(src, offset, buf, n);
             if (ret < 0) {
                 goto ro_cleanup;
             }
 
-            ret = blk_pwrite(backing, offset, n, buf, 0);
+            ret = blk_pwrite(backing, offset, buf, n, 0);
             if (ret < 0) {
                 goto ro_cleanup;
             }
@@ -556,8 +512,10 @@ int bdrv_commit(BlockDriverState *bs)
 
     ret = 0;
 ro_cleanup:
+    qemu_vfree(buf);
+
     blk_unref(backing);
-    if (bdrv_cow_bs(bs) != backing_file_bs) {
+    if (backing_file_bs) {
         bdrv_set_backing_hd(bs, backing_file_bs, &error_abort);
     }
     bdrv_unref(commit_top_bs);
@@ -565,7 +523,7 @@ ro_cleanup:
 
     if (ro) {
         /* ignoring error return here */
-        bdrv_reopen_set_read_only(backing_file_bs, true, NULL);
+        bdrv_reopen_set_read_only(bs->backing->bs, true, NULL);
     }
 
     return ret;

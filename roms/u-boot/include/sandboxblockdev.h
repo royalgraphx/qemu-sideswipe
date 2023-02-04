@@ -14,13 +14,6 @@ struct host_block_dev {
 	int fd;
 };
 
-/**
- * host_dev_bind() - Bind or unbind a device
- *
- * @dev: Device number (0=first slot)
- * @filename: Host filename to use, or NULL to unbind
- * @removable: true if the block device should mark itself as removable
- */
-int host_dev_bind(int dev, char *filename, bool removable);
+int host_dev_bind(int dev, char *filename);
 
 #endif

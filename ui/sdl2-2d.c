@@ -32,11 +32,14 @@ void sdl2_2d_update(DisplayChangeListener *dcl,
                     int x, int y, int w, int h)
 {
     struct sdl2_console *scon = container_of(dcl, struct sdl2_console, dcl);
-    DisplaySurface *surf = scon->surface;
+    DisplaySurface *surf = qemu_console_surface(dcl->con);
     SDL_Rect rect;
     size_t surface_data_offset;
     assert(!scon->opengl);
 
+    if (!surf) {
+        return;
+    }
     if (!scon->texture) {
         return;
     }
@@ -72,7 +75,7 @@ void sdl2_2d_switch(DisplayChangeListener *dcl,
         scon->texture = NULL;
     }
 
-    if (is_placeholder(new_surface) && qemu_console_get_index(dcl->con)) {
+    if (!new_surface) {
         sdl2_window_destroy(scon);
         return;
     }

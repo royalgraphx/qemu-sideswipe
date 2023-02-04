@@ -10,7 +10,6 @@
  */
 
 #include "qemu/osdep.h"
-#include <glib/gstdio.h>
 #include <sys/resource.h>
 #include <getopt.h>
 #include <syslog.h>
@@ -22,6 +21,7 @@
 #include <linux/magic.h>
 #endif
 #include <cap-ng.h>
+#include "qemu-common.h"
 #include "qemu/sockets.h"
 #include "qemu/xattr.h"
 #include "9p-iov-marshal.h"
@@ -57,7 +57,7 @@ static bool is_daemon;
 static bool get_version; /* IOC getversion IOCTL supported */
 static char *prog_name;
 
-static void G_GNUC_PRINTF(2, 3) do_log(int loglevel, const char *format, ...)
+static void GCC_FMT_ATTR(2, 3) do_log(int loglevel, const char *format, ...)
 {
     va_list ap;
 
@@ -518,7 +518,7 @@ static void statfs_to_prstatfs(ProxyStatFS *pr_stfs, struct statfs *stfs)
 
 /*
  * Gets stat/statfs information and packs in out_iovec structure
- * on success returns number of bytes packed in out_iovec structure
+ * on success returns number of bytes packed in out_iovec struture
  * otherwise returns -errno
  */
 static int do_stat(int type, struct iovec *iovec, struct iovec *out_iovec)
@@ -640,7 +640,7 @@ static int do_create_others(int type, struct iovec *iovec)
         if (retval < 0) {
             goto err_out;
         }
-        retval = g_mkdir(path.data, mode);
+        retval = mkdir(path.data, mode);
         break;
     case T_SYMLINK:
         retval = proxy_unmarshal(iovec, offset, "ss", &oldpath, &path);

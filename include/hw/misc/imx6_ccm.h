@@ -13,7 +13,6 @@
 
 #include "hw/misc/imx_ccm.h"
 #include "qemu/bitops.h"
-#include "qom/object.h"
 
 #define CCM_CCR 0
 #define CCM_CCDR 1
@@ -179,9 +178,9 @@
 #define EXTRACT(value, name) extract32(value, name##_SHIFT, name##_LENGTH)
 
 #define TYPE_IMX6_CCM "imx6.ccm"
-OBJECT_DECLARE_SIMPLE_TYPE(IMX6CCMState, IMX6_CCM)
+#define IMX6_CCM(obj) OBJECT_CHECK(IMX6CCMState, (obj), TYPE_IMX6_CCM)
 
-struct IMX6CCMState {
+typedef struct IMX6CCMState {
     /* <private> */
     IMXCCMState parent_obj;
 
@@ -193,6 +192,6 @@ struct IMX6CCMState {
     uint32_t ccm[CCM_MAX];
     uint32_t analog[CCM_ANALOG_MAX];
 
-};
+} IMX6CCMState;
 
 #endif /* IMX6_CCM_H */

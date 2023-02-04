@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Executes a WBINVD instruction.
 
@@ -23,3 +26,4 @@ AsmWbinvd (
     wbinvd
   }
 }
+

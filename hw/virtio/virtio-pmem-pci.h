@@ -16,7 +16,6 @@
 
 #include "hw/virtio/virtio-pci.h"
 #include "hw/virtio/virtio-pmem.h"
-#include "qom/object.h"
 
 typedef struct VirtIOPMEMPCI VirtIOPMEMPCI;
 
@@ -24,8 +23,8 @@ typedef struct VirtIOPMEMPCI VirtIOPMEMPCI;
  * virtio-pmem-pci: This extends VirtioPCIProxy.
  */
 #define TYPE_VIRTIO_PMEM_PCI "virtio-pmem-pci-base"
-DECLARE_INSTANCE_CHECKER(VirtIOPMEMPCI, VIRTIO_PMEM_PCI,
-                         TYPE_VIRTIO_PMEM_PCI)
+#define VIRTIO_PMEM_PCI(obj) \
+        OBJECT_CHECK(VirtIOPMEMPCI, (obj), TYPE_VIRTIO_PMEM_PCI)
 
 struct VirtIOPMEMPCI {
     VirtIOPCIProxy parent_obj;

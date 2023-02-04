@@ -8,6 +8,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "Edb.h"
 
+
 /**
 
   Display memory unit.
@@ -24,34 +25,34 @@ EdbDisplayMemoryUnit (
   IN EDB_DATA_WIDTH  Width
   )
 {
-  UINT8   Data8;
-  UINT16  Data16;
-  UINT32  Data32;
-  UINT64  Data64;
+  UINT8  Data8;
+  UINT16 Data16;
+  UINT32 Data32;
+  UINT64 Data64;
 
   //
   // Print according to width
   //
   switch (Width) {
-    case EdbWidthUint8:
-      CopyMem (&Data8, (VOID *)Address, sizeof (UINT8));
-      EDBPrint (L"%02x ", Data8);
-      return sizeof (UINT8);
-    case EdbWidthUint16:
-      CopyMem (&Data16, (VOID *)Address, sizeof (UINT16));
-      EDBPrint (L"%04x ", Data16);
-      return sizeof (UINT16);
-    case EdbWidthUint32:
-      CopyMem (&Data32, (VOID *)Address, sizeof (UINT32));
-      EDBPrint (L"%08x ", Data32);
-      return sizeof (UINT32);
-    case EdbWidthUint64:
-      CopyMem (&Data64, (VOID *)Address, sizeof (UINT64));
-      EDBPrint (L"%016lx ", Data64);
-      return sizeof (UINT64);
-    default:
-      ASSERT (FALSE);
-      break;
+  case EdbWidthUint8:
+    CopyMem (&Data8, (VOID *)Address, sizeof(UINT8));
+    EDBPrint (L"%02x ", Data8);
+    return sizeof(UINT8);
+  case EdbWidthUint16:
+    CopyMem (&Data16, (VOID *)Address, sizeof(UINT16));
+    EDBPrint (L"%04x ", Data16);
+    return sizeof(UINT16);
+  case EdbWidthUint32:
+    CopyMem (&Data32, (VOID *)Address, sizeof(UINT32));
+    EDBPrint (L"%08x ", Data32);
+    return sizeof(UINT32);
+  case EdbWidthUint64:
+    CopyMem (&Data64, (VOID *)Address, sizeof(UINT64));
+    EDBPrint (L"%016lx ", Data64);
+    return sizeof(UINT64);
+  default:
+    ASSERT (FALSE);
+    break;
   }
 
   //
@@ -71,9 +72,9 @@ EdbDisplayMemoryUnit (
 **/
 VOID
 EdbDisplayMemory (
-  IN UINTN           Address,
-  IN UINTN           Count,
-  IN EDB_DATA_WIDTH  Width
+  IN UINTN          Address,
+  IN UINTN          Count,
+  IN EDB_DATA_WIDTH Width
   )
 {
   UINTN  LineNumber;
@@ -83,27 +84,27 @@ EdbDisplayMemory (
   UINTN  NumberInLine;
 
   if (Count == 0) {
-    return;
+    return ;
   }
 
   //
   // Get line number and byte number
   //
   switch (Width) {
-    case EdbWidthUint8:
-      NumberInLine = 16;
-      break;
-    case EdbWidthUint16:
-      NumberInLine = 8;
-      break;
-    case EdbWidthUint32:
-      NumberInLine = 4;
-      break;
-    case EdbWidthUint64:
-      NumberInLine = 2;
-      break;
-    default:
-      return;
+  case EdbWidthUint8:
+    NumberInLine = 16;
+    break;
+  case EdbWidthUint16:
+    NumberInLine = 8;
+    break;
+  case EdbWidthUint32:
+    NumberInLine = 4;
+    break;
+  case EdbWidthUint64:
+    NumberInLine = 2;
+    break;
+  default:
+    return;
   }
 
   LineNumber = Count / NumberInLine;
@@ -117,12 +118,12 @@ EdbDisplayMemory (
   // Print each line
   //
   for (LineIndex = 0; LineIndex < LineNumber; LineIndex++) {
+
     //
     // Break check
     //
     if (((LineIndex % EFI_DEBUGGER_LINE_NUMBER_IN_PAGE) == 0) &&
-        (LineIndex != 0))
-    {
+        (LineIndex != 0)) {
       if (SetPageBreak ()) {
         break;
       }
@@ -132,7 +133,6 @@ EdbDisplayMemory (
     for (ByteIndex = 0; ByteIndex < NumberInLine; ByteIndex++) {
       Address += EdbDisplayMemoryUnit (Address, Width);
     }
-
     EDBPrint (L"\n");
   }
 
@@ -140,8 +140,7 @@ EdbDisplayMemory (
   // Break check
   //
   if (((LineIndex % EFI_DEBUGGER_LINE_NUMBER_IN_PAGE) == 0) &&
-      (LineIndex != 0))
-  {
+      (LineIndex != 0)) {
     if (SetPageBreak ()) {
       return;
     }
@@ -155,7 +154,7 @@ EdbDisplayMemory (
     Address += EdbDisplayMemoryUnit (Address, Width);
   }
 
-  return;
+  return ;
 }
 
 /**
@@ -169,29 +168,29 @@ EdbDisplayMemory (
 **/
 VOID
 EdbEnterMemory (
-  IN UINTN           Address,
-  IN VOID            *Value,
-  IN EDB_DATA_WIDTH  Width
+  IN UINTN          Address,
+  IN VOID           *Value,
+  IN EDB_DATA_WIDTH Width
   )
 {
   switch (Width) {
-    case EdbWidthUint8:
-      CopyMem ((VOID *)Address, Value, sizeof (UINT8));
-      break;
-    case EdbWidthUint16:
-      CopyMem ((VOID *)Address, Value, sizeof (UINT16));
-      break;
-    case EdbWidthUint32:
-      CopyMem ((VOID *)Address, Value, sizeof (UINT32));
-      break;
-    case EdbWidthUint64:
-      CopyMem ((VOID *)Address, Value, sizeof (UINT64));
-      break;
-    default:
-      break;
+  case EdbWidthUint8:
+    CopyMem ((VOID *)Address, Value, sizeof(UINT8));
+    break;
+  case EdbWidthUint16:
+    CopyMem ((VOID *)Address, Value, sizeof(UINT16));
+    break;
+  case EdbWidthUint32:
+    CopyMem ((VOID *)Address, Value, sizeof(UINT32));
+    break;
+  case EdbWidthUint64:
+    CopyMem ((VOID *)Address, Value, sizeof(UINT64));
+    break;
+  default:
+    break;
   }
 
-  return;
+  return ;
 }
 
 /**
@@ -208,14 +207,14 @@ EdbEnterMemory (
 **/
 EFI_STATUS
 EdbGetMemoryAddressCount (
-  IN CHAR16  *CommandArg,
-  IN UINTN   *Address,
-  IN UINTN   *Count
+  IN CHAR16    *CommandArg,
+  IN UINTN     *Address,
+  IN UINTN     *Count
   )
 {
-  CHAR16      *CommandStr;
-  UINTN       MemAddress;
-  EFI_STATUS  Status;
+  CHAR16       *CommandStr;
+  UINTN        MemAddress;
+  EFI_STATUS   Status;
 
   //
   // Get Address
@@ -225,11 +224,10 @@ EdbGetMemoryAddressCount (
     EDBPrint (L"Memory: Address error!\n");
     return EFI_INVALID_PARAMETER;
   }
-
   Status = Symboltoi (CommandStr, &MemAddress);
   if (EFI_ERROR (Status)) {
     if (Status == EFI_NOT_FOUND) {
-      MemAddress = Xtoi (CommandStr);
+      MemAddress = Xtoi(CommandStr);
     } else {
       //
       // Something wrong, let Symboltoi print error info.
@@ -238,7 +236,6 @@ EdbGetMemoryAddressCount (
       return EFI_INVALID_PARAMETER;
     }
   }
-
   *Address = MemAddress;
 
   //
@@ -248,7 +245,7 @@ EdbGetMemoryAddressCount (
   if (CommandStr == NULL) {
     *Count = 1;
   } else {
-    *Count = Xtoi (CommandStr);
+    *Count = Xtoi(CommandStr);
   }
 
   //
@@ -271,14 +268,14 @@ EdbGetMemoryAddressCount (
 **/
 EFI_STATUS
 EdbGetMemoryAddressValue (
-  IN CHAR16  *CommandArg,
-  IN UINTN   *Address,
-  IN UINT64  *Value
+  IN CHAR16    *CommandArg,
+  IN UINTN     *Address,
+  IN UINT64    *Value
   )
 {
-  CHAR16      *CommandStr;
-  UINTN       MemAddress;
-  EFI_STATUS  Status;
+  CHAR16       *CommandStr;
+  UINTN        MemAddress;
+  EFI_STATUS   Status;
 
   //
   // Get Address
@@ -288,11 +285,10 @@ EdbGetMemoryAddressValue (
     EDBPrint (L"Memory: Address error!\n");
     return EFI_INVALID_PARAMETER;
   }
-
   Status = Symboltoi (CommandStr, &MemAddress);
   if (EFI_ERROR (Status)) {
     if (Status == EFI_NOT_FOUND) {
-      MemAddress = Xtoi (CommandStr);
+      MemAddress = Xtoi(CommandStr);
     } else {
       //
       // Something wrong, let Symboltoi print error info.
@@ -301,7 +297,6 @@ EdbGetMemoryAddressValue (
       return EFI_INVALID_PARAMETER;
     }
   }
-
   *Address = MemAddress;
 
   //
@@ -312,8 +307,7 @@ EdbGetMemoryAddressValue (
     EDBPrint (L"Memory: Value error!\n");
     return EFI_INVALID_PARAMETER;
   }
-
-  *Value = LXtoi (CommandStr);
+  *Value = LXtoi(CommandStr);
 
   //
   // Done
@@ -333,19 +327,19 @@ EdbGetMemoryAddressValue (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryDisplay (
-  IN     CHAR16          *CommandArg,
-  IN     EDB_DATA_WIDTH  Width
+  IN     CHAR16                    *CommandArg,
+  IN     EDB_DATA_WIDTH            Width
   )
 {
-  EFI_STATUS  Status;
-  UINTN       Address;
-  UINTN       Count;
+  EFI_STATUS Status;
+  UINTN      Address;
+  UINTN      Count;
 
   //
   // Get memory address and count
   //
   Status = EdbGetMemoryAddressCount (CommandArg, &Address, &Count);
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR(Status)) {
     return EFI_DEBUG_CONTINUE;
   }
 
@@ -372,19 +366,19 @@ DebuggerMemoryDisplay (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryEnter (
-  IN     CHAR16          *CommandArg,
-  IN     EDB_DATA_WIDTH  Width
+  IN     CHAR16                    *CommandArg,
+  IN     EDB_DATA_WIDTH            Width
   )
 {
-  EFI_STATUS  Status;
-  UINTN       Address;
-  UINT64      Value;
+  EFI_STATUS Status;
+  UINTN      Address;
+  UINT64     Value;
 
   //
   // Get memory address and value
   //
   Status = EdbGetMemoryAddressValue (CommandArg, &Address, &Value);
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR(Status)) {
     return EFI_DEBUG_CONTINUE;
   }
 
@@ -413,10 +407,10 @@ DebuggerMemoryEnter (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryDB (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   return DebuggerMemoryDisplay (CommandArg, EdbWidthUint8);
@@ -436,10 +430,10 @@ DebuggerMemoryDB (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryDW (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   return DebuggerMemoryDisplay (CommandArg, EdbWidthUint16);
@@ -459,10 +453,10 @@ DebuggerMemoryDW (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryDD (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   return DebuggerMemoryDisplay (CommandArg, EdbWidthUint32);
@@ -482,10 +476,10 @@ DebuggerMemoryDD (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryDQ (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   return DebuggerMemoryDisplay (CommandArg, EdbWidthUint64);
@@ -505,10 +499,10 @@ DebuggerMemoryDQ (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryEB (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   return DebuggerMemoryEnter (CommandArg, EdbWidthUint8);
@@ -528,10 +522,10 @@ DebuggerMemoryEB (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryEW (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   return DebuggerMemoryEnter (CommandArg, EdbWidthUint16);
@@ -551,10 +545,10 @@ DebuggerMemoryEW (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryED (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   return DebuggerMemoryEnter (CommandArg, EdbWidthUint32);
@@ -574,10 +568,10 @@ DebuggerMemoryED (
 **/
 EFI_DEBUG_STATUS
 DebuggerMemoryEQ (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   return DebuggerMemoryEnter (CommandArg, EdbWidthUint64);

@@ -21,7 +21,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
   @param[in]  PeiServices  Pointer to PEI Services Table
 
   @retval EFI_SUCCESS    Debug Agent successfully initialized.
-  @retval other          Some error occurs when initialized Debug Agent.
+  @retval other          Some error occurs when initialzed Debug Agent.
 
 **/
 EFI_STATUS
@@ -31,7 +31,7 @@ DebugAgentPeiInitialize (
   IN CONST EFI_PEI_SERVICES  **PeiServices
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                 Status;
 
   Status = EFI_UNSUPPORTED;
   InitializeDebugAgent (DEBUG_AGENT_INIT_PEI, &Status, NULL);

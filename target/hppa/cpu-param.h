@@ -6,7 +6,7 @@
  */
 
 #ifndef HPPA_CPU_PARAM_H
-#define HPPA_CPU_PARAM_H
+#define HPPA_CPU_PARAM_H 1
 
 #ifdef TARGET_HPPA64
 # define TARGET_LONG_BITS             64

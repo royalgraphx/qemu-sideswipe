@@ -23,16 +23,15 @@
   @sa InstallProtocolInterface
 **/
 EFI_STATUS
-ConsoleLoggerInstall (
-  IN CONST UINTN                   ScreensToSave,
-  OUT CONSOLE_LOGGER_PRIVATE_DATA  **ConsoleInfo
+ConsoleLoggerInstall(
+  IN CONST UINTN ScreensToSave,
+  OUT CONSOLE_LOGGER_PRIVATE_DATA **ConsoleInfo
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS Status;
+  ASSERT(ConsoleInfo != NULL);
 
-  ASSERT (ConsoleInfo != NULL);
-
-  (*ConsoleInfo) = AllocateZeroPool (sizeof (CONSOLE_LOGGER_PRIVATE_DATA));
+  (*ConsoleInfo) = AllocateZeroPool(sizeof(CONSOLE_LOGGER_PRIVATE_DATA));
   if ((*ConsoleInfo) == NULL) {
     return (EFI_OUT_OF_RESOURCES);
   }
@@ -67,18 +66,18 @@ ConsoleLoggerInstall (
   (*ConsoleInfo)->OurConOut.Mode              = gST->ConOut->Mode;
   (*ConsoleInfo)->Enabled                     = TRUE;
 
-  Status = ConsoleLoggerResetBuffers (*ConsoleInfo);
-  if (EFI_ERROR (Status)) {
-    SHELL_FREE_NON_NULL ((*ConsoleInfo));
+  Status = ConsoleLoggerResetBuffers(*ConsoleInfo);
+  if (EFI_ERROR(Status)) {
+    SHELL_FREE_NON_NULL((*ConsoleInfo));
     *ConsoleInfo = NULL;
     return (Status);
   }
 
-  Status = gBS->InstallProtocolInterface (&gImageHandle, &gEfiSimpleTextOutProtocolGuid, EFI_NATIVE_INTERFACE, (VOID *)&((*ConsoleInfo)->OurConOut));
-  if (EFI_ERROR (Status)) {
-    SHELL_FREE_NON_NULL ((*ConsoleInfo)->Buffer);
-    SHELL_FREE_NON_NULL ((*ConsoleInfo)->Attributes);
-    SHELL_FREE_NON_NULL ((*ConsoleInfo));
+  Status = gBS->InstallProtocolInterface(&gImageHandle, &gEfiSimpleTextOutProtocolGuid, EFI_NATIVE_INTERFACE, (VOID*)&((*ConsoleInfo)->OurConOut));
+  if (EFI_ERROR(Status)) {
+    SHELL_FREE_NON_NULL((*ConsoleInfo)->Buffer);
+    SHELL_FREE_NON_NULL((*ConsoleInfo)->Attributes);
+    SHELL_FREE_NON_NULL((*ConsoleInfo));
     *ConsoleInfo = NULL;
     return (Status);
   }
@@ -91,10 +90,10 @@ ConsoleLoggerInstall (
   //
   gST->Hdr.CRC32 = 0;
   gBS->CalculateCrc32 (
-         (UINT8 *)&gST->Hdr,
-         gST->Hdr.HeaderSize,
-         &gST->Hdr.CRC32
-         );
+        (UINT8 *)&gST->Hdr,
+        gST->Hdr.HeaderSize,
+        &gST->Hdr.CRC32
+        );
   return (Status);
 }
 
@@ -108,47 +107,38 @@ ConsoleLoggerInstall (
   @return other           The operation failed.  This was from UninstallProtocolInterface.
 **/
 EFI_STATUS
-ConsoleLoggerUninstall (
-  IN CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo
+ConsoleLoggerUninstall(
+  IN CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo
   )
 {
-  ASSERT (ConsoleInfo != NULL);
-  ASSERT (ConsoleInfo->OldConOut != NULL);
+  ASSERT(ConsoleInfo != NULL);
+  ASSERT(ConsoleInfo->OldConOut != NULL);
 
   if (ConsoleInfo->Buffer != NULL) {
-    FreePool (ConsoleInfo->Buffer);
-    DEBUG_CODE (
-      ConsoleInfo->Buffer = NULL;
-      );
-    DEBUG_CODE (
-      ConsoleInfo->BufferSize = 0;
-      );
+    FreePool(ConsoleInfo->Buffer);
+    DEBUG_CODE(ConsoleInfo->Buffer     = NULL;);
+    DEBUG_CODE(ConsoleInfo->BufferSize = 0;);
   }
-
   if (ConsoleInfo->Attributes != NULL) {
-    FreePool (ConsoleInfo->Attributes);
-    DEBUG_CODE (
-      ConsoleInfo->Attributes = NULL;
-      );
-    DEBUG_CODE (
-      ConsoleInfo->AttribSize = 0;
-      );
+    FreePool(ConsoleInfo->Attributes);
+    DEBUG_CODE(ConsoleInfo->Attributes = NULL;);
+    DEBUG_CODE(ConsoleInfo->AttribSize = 0;);
   }
 
   gST->ConsoleOutHandle = ConsoleInfo->OldConHandle;
-  gST->ConOut           = ConsoleInfo->OldConOut;
+  gST->ConOut = ConsoleInfo->OldConOut;
 
   //
   // Update the CRC32 in the EFI System Table header
   //
   gST->Hdr.CRC32 = 0;
   gBS->CalculateCrc32 (
-         (UINT8 *)&gST->Hdr,
-         gST->Hdr.HeaderSize,
-         &gST->Hdr.CRC32
-         );
+        (UINT8 *)&gST->Hdr,
+        gST->Hdr.HeaderSize,
+        &gST->Hdr.CRC32
+        );
 
-  return (gBS->UninstallProtocolInterface (gImageHandle, &gEfiSimpleTextOutProtocolGuid, (VOID *)&ConsoleInfo->OurConOut));
+  return (gBS->UninstallProtocolInterface(gImageHandle, &gEfiSimpleTextOutProtocolGuid, (VOID*)&ConsoleInfo->OurConOut));
 }
 
 /**
@@ -164,29 +154,29 @@ ConsoleLoggerUninstall (
   @param[in] ConsoleInfo  The pointer to the instance of the console logger information.
 **/
 EFI_STATUS
-ConsoleLoggerDisplayHistory (
-  IN CONST BOOLEAN                Forward,
-  IN CONST UINTN                  Rows,
-  IN CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo
+ConsoleLoggerDisplayHistory(
+  IN CONST BOOLEAN  Forward,
+  IN CONST UINTN    Rows,
+  IN CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo
   )
 {
-  UINTN  RowChange;
+  UINTN   RowChange;
 
-  ASSERT (ConsoleInfo != NULL);
+  ASSERT(ConsoleInfo != NULL);
 
   //
   // Calculate the row number change
   //
   switch (Rows) {
-    case ((UINTN)(-1)):
-      RowChange = ConsoleInfo->RowsPerScreen;
-      break;
-    case (0):
-      RowChange = ConsoleInfo->RowsPerScreen / 2;
-      break;
-    default:
-      RowChange = Rows;
-      break;
+  case ((UINTN)(-1)):
+    RowChange = ConsoleInfo->RowsPerScreen;
+    break;
+  case (0):
+    RowChange = ConsoleInfo->RowsPerScreen / 2;
+    break;
+  default:
+    RowChange = Rows;
+    break;
   }
 
   //
@@ -212,7 +202,7 @@ ConsoleLoggerDisplayHistory (
   //
   // Clear the screen
   //
-  ConsoleInfo->OldConOut->ClearScreen (ConsoleInfo->OldConOut);
+  ConsoleInfo->OldConOut->ClearScreen(ConsoleInfo->OldConOut);
 
   //
   // Set the new start row
@@ -226,7 +216,7 @@ ConsoleLoggerDisplayHistory (
   //
   // Change the screen
   //
-  return (UpdateDisplayFromHistory (ConsoleInfo));
+  return (UpdateDisplayFromHistory(ConsoleInfo));
 }
 
 /**
@@ -239,11 +229,11 @@ ConsoleLoggerDisplayHistory (
   @sa UpdateDisplayFromHistory
 **/
 EFI_STATUS
-ConsoleLoggerStopHistory (
-  IN CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo
+ConsoleLoggerStopHistory(
+  IN CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo
   )
 {
-  ASSERT (ConsoleInfo != NULL);
+  ASSERT(ConsoleInfo != NULL);
   if (ConsoleInfo->CurrentStartRow == ConsoleInfo->OriginalStartRow) {
     return (EFI_SUCCESS);
   }
@@ -251,10 +241,10 @@ ConsoleLoggerStopHistory (
   //
   // Clear the screen
   //
-  ConsoleInfo->OldConOut->ClearScreen (ConsoleInfo->OldConOut);
+  ConsoleInfo->OldConOut->ClearScreen(ConsoleInfo->OldConOut);
 
   ConsoleInfo->CurrentStartRow = ConsoleInfo->OriginalStartRow;
-  return (UpdateDisplayFromHistory (ConsoleInfo));
+  return (UpdateDisplayFromHistory(ConsoleInfo));
 }
 
 /**
@@ -265,74 +255,71 @@ ConsoleLoggerStopHistory (
   @return other           The operation failed.
 **/
 EFI_STATUS
-UpdateDisplayFromHistory (
-  IN CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo
+UpdateDisplayFromHistory(
+  IN CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo
   )
 {
-  EFI_STATUS  Status;
-  EFI_STATUS  RetVal;
-  CHAR16      *Screen;
-  INT32       *Attributes;
-  UINTN       CurrentRow;
-  CHAR16      TempCharHolder;
-  UINTN       Column;
-  INT32       CurrentAttrib;
-  UINTN       CurrentColumn;
-  CHAR16      *StringSegment;
-  CHAR16      *StringSegmentEnd;
-  CHAR16      StringSegmentEndChar;
-  INT32       OrigAttribute;
+  EFI_STATUS      Status;
+  EFI_STATUS      RetVal;
+  CHAR16          *Screen;
+  INT32           *Attributes;
+  UINTN           CurrentRow;
+  CHAR16          TempCharHolder;
+  UINTN           Column;
+  INT32           CurrentAttrib;
+  UINTN           CurrentColumn;
+  CHAR16          *StringSegment;
+  CHAR16          *StringSegmentEnd;
+  CHAR16          StringSegmentEndChar;
+  INT32           OrigAttribute;
 
-  ASSERT (ConsoleInfo != NULL);
+  ASSERT(ConsoleInfo != NULL);
   TempCharHolder = CHAR_NULL;
-  RetVal         = EFI_SUCCESS;
-  OrigAttribute  = ConsoleInfo->OldConOut->Mode->Attribute;
+  RetVal = EFI_SUCCESS;
+  OrigAttribute = ConsoleInfo->OldConOut->Mode->Attribute;
 
   //
   // Disable cursor visibility and move it to the top left corner
   //
-  ConsoleInfo->OldConOut->EnableCursor (ConsoleInfo->OldConOut, FALSE);
-  ConsoleInfo->OldConOut->SetCursorPosition (ConsoleInfo->OldConOut, 0, 0);
+  ConsoleInfo->OldConOut->EnableCursor       (ConsoleInfo->OldConOut, FALSE);
+  ConsoleInfo->OldConOut->SetCursorPosition  (ConsoleInfo->OldConOut, 0, 0);
 
-  Screen     = &ConsoleInfo->Buffer[(ConsoleInfo->ColsPerScreen + 2) * ConsoleInfo->CurrentStartRow];
+  Screen = &ConsoleInfo->Buffer[(ConsoleInfo->ColsPerScreen + 2) * ConsoleInfo->CurrentStartRow];
   Attributes = &ConsoleInfo->Attributes[ConsoleInfo->ColsPerScreen * ConsoleInfo->CurrentStartRow];
   for ( CurrentRow = 0
-        ; CurrentRow < ConsoleInfo->RowsPerScreen
-        ; CurrentRow++,
-        Screen += (ConsoleInfo->ColsPerScreen + 2),
-        Attributes += ConsoleInfo->ColsPerScreen
-        )
-  {
+      ; CurrentRow < ConsoleInfo->RowsPerScreen
+      ; CurrentRow++
+      , Screen += (ConsoleInfo->ColsPerScreen + 2)
+      , Attributes += ConsoleInfo->ColsPerScreen
+     ){
     //
     // dont use the last char - prevents screen scroll
     //
-    if (CurrentRow == (ConsoleInfo->RowsPerScreen-1)) {
-      TempCharHolder                         = Screen[ConsoleInfo->ColsPerScreen - 1];
+    if (CurrentRow == (ConsoleInfo->RowsPerScreen-1)){
+      TempCharHolder = Screen[ConsoleInfo->ColsPerScreen - 1];
       Screen[ConsoleInfo->ColsPerScreen - 1] = CHAR_NULL;
     }
 
     for ( Column = 0
-          ; Column < ConsoleInfo->ColsPerScreen
-          ; Column++
-          )
-    {
+        ; Column < ConsoleInfo->ColsPerScreen
+        ; Column++
+       ){
       if (Screen[Column] != CHAR_NULL) {
         CurrentAttrib = Attributes[Column];
         CurrentColumn = Column;
         StringSegment = &Screen[Column];
 
         //
-        // Find the first char with a different attribute and make that temporarily NULL
+        // Find the first char with a different arrribute and make that temporarily NULL
         // so we can do fewer printout statements.  (later) restore that one and we will
-        // start at that column on the next loop.
+        // start at that collumn on the next loop.
         //
         StringSegmentEndChar = CHAR_NULL;
         for ( StringSegmentEnd = StringSegment
-              ; *StringSegmentEnd != CHAR_NULL
-              ; StringSegmentEnd++,
-              Column++
-              )
-        {
+            ; *StringSegmentEnd != CHAR_NULL
+            ; StringSegmentEnd++
+            , Column++
+           ){
           if (Attributes[Column] != CurrentAttrib) {
             StringSegmentEndChar = *StringSegmentEnd;
             *StringSegmentEnd    = CHAR_NULL;
@@ -344,12 +331,12 @@ UpdateDisplayFromHistory (
         // Now write out as much as had the same Attributes
         //
 
-        ConsoleInfo->OldConOut->SetAttribute (ConsoleInfo->OldConOut, CurrentAttrib);
-        ConsoleInfo->OldConOut->SetCursorPosition (ConsoleInfo->OldConOut, CurrentColumn, CurrentRow);
-        Status = ConsoleInfo->OldConOut->OutputString (ConsoleInfo->OldConOut, StringSegment);
+        ConsoleInfo->OldConOut->SetAttribute(ConsoleInfo->OldConOut, CurrentAttrib);
+        ConsoleInfo->OldConOut->SetCursorPosition(ConsoleInfo->OldConOut, CurrentColumn, CurrentRow);
+        Status = ConsoleInfo->OldConOut->OutputString(ConsoleInfo->OldConOut, StringSegment);
 
-        if (EFI_ERROR (Status)) {
-          ASSERT (FALSE);
+        if (EFI_ERROR(Status)) {
+          ASSERT(FALSE);
           RetVal = Status;
         }
 
@@ -359,7 +346,7 @@ UpdateDisplayFromHistory (
         // a segment with that new attribute
         //
         if (StringSegmentEndChar != CHAR_NULL) {
-          *StringSegmentEnd    = StringSegmentEndChar;
+          *StringSegmentEnd = StringSegmentEndChar;
           StringSegmentEndChar = CHAR_NULL;
           Column--;
         }
@@ -371,7 +358,7 @@ UpdateDisplayFromHistory (
     //
     if (TempCharHolder != CHAR_NULL) {
       Screen[ConsoleInfo->ColsPerScreen - 1] = TempCharHolder;
-      TempCharHolder                         = CHAR_NULL;
+      TempCharHolder = CHAR_NULL;
     }
   } // row for loop
 
@@ -381,34 +368,34 @@ UpdateDisplayFromHistory (
   //
   if (ConsoleInfo->CurrentStartRow == ConsoleInfo->OriginalStartRow) {
     ConsoleInfo->OldConOut->SetAttribute (
-                              ConsoleInfo->OldConOut,
-                              ConsoleInfo->HistoryMode.Attribute
-                              );
+                                ConsoleInfo->OldConOut,
+                                ConsoleInfo->HistoryMode.Attribute
+                               );
     ConsoleInfo->OldConOut->SetCursorPosition (
-                              ConsoleInfo->OldConOut,
-                              ConsoleInfo->HistoryMode.CursorColumn,
-                              ConsoleInfo->HistoryMode.CursorRow - ConsoleInfo->OriginalStartRow
-                              );
+                                ConsoleInfo->OldConOut,
+                                ConsoleInfo->HistoryMode.CursorColumn,
+                                ConsoleInfo->HistoryMode.CursorRow - ConsoleInfo->OriginalStartRow
+                               );
 
     Status = ConsoleInfo->OldConOut->EnableCursor (
-                                       ConsoleInfo->OldConOut,
-                                       ConsoleInfo->HistoryMode.CursorVisible
-                                       );
+                                ConsoleInfo->OldConOut,
+                                ConsoleInfo->HistoryMode.CursorVisible
+                               );
     if (EFI_ERROR (Status)) {
       RetVal = Status;
     }
   } else {
     ConsoleInfo->OldConOut->SetAttribute (
-                              ConsoleInfo->OldConOut,
-                              OrigAttribute
-                              );
+                                ConsoleInfo->OldConOut,
+                                OrigAttribute
+                               );
   }
 
   return (RetVal);
 }
 
 /**
-  Reset the text output device hardware and optionally run diagnostics
+  Reset the text output device hardware and optionaly run diagnostics
 
   @param  This                pointer to EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
   @param ExtendedVerification Indicates that a more extensive test may be performed
@@ -420,14 +407,13 @@ UpdateDisplayFromHistory (
 EFI_STATUS
 EFIAPI
 ConsoleLoggerReset (
-  IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
-  IN  BOOLEAN                          ExtendedVerification
+  IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This,
+  IN  BOOLEAN                         ExtendedVerification
   )
 {
-  EFI_STATUS                   Status;
-  CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo;
-
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  EFI_STATUS                  Status;
+  CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo;
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
 
   //
   // Forward the request to the original ConOut
@@ -438,10 +424,10 @@ ConsoleLoggerReset (
   // Check that the buffers are still correct for logging
   //
   if (!EFI_ERROR (Status)) {
-    ConsoleLoggerResetBuffers (ConsoleInfo);
+    ConsoleLoggerResetBuffers(ConsoleInfo);
     if (ExtendedVerification) {
       ConsoleInfo->OriginalStartRow = 0;
-      ConsoleInfo->CurrentStartRow  = 0;
+      ConsoleInfo->CurrentStartRow = 0;
     }
   }
 
@@ -457,9 +443,9 @@ ConsoleLoggerReset (
   @param[in] ConsoleInfo  The pointer to the instance of the console logger information.
 **/
 EFI_STATUS
-AppendStringToHistory (
-  IN CONST CHAR16                 *String,
-  IN CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo
+AppendStringToHistory(
+  IN CONST CHAR16 *String,
+  IN CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo
   )
 {
   CONST CHAR16  *Walker;
@@ -467,135 +453,127 @@ AppendStringToHistory (
   UINTN         PrintIndex;
   UINTN         Index;
 
-  ASSERT (ConsoleInfo != NULL);
+  ASSERT(ConsoleInfo != NULL);
 
   for ( Walker = String
-        ; Walker != NULL && *Walker != CHAR_NULL
-        ; Walker++
-        )
-  {
+      ; Walker != NULL && *Walker != CHAR_NULL
+      ; Walker++
+     ){
     switch (*Walker) {
-      case (CHAR_BACKSPACE):
-        if (ConsoleInfo->HistoryMode.CursorColumn > 0) {
-          ConsoleInfo->HistoryMode.CursorColumn--;
+    case (CHAR_BACKSPACE):
+      if (ConsoleInfo->HistoryMode.CursorColumn > 0) {
+        ConsoleInfo->HistoryMode.CursorColumn--;
+      }
+      break;
+    case (CHAR_LINEFEED):
+      if (ConsoleInfo->HistoryMode.CursorRow >= (INT32)((ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount)-1)) {
+        //
+        // Should never be bigger
+        //
+        ASSERT(ConsoleInfo->HistoryMode.CursorRow == (INT32)((ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount)-1));
+
+        //
+        // scroll history attributes 'up' 1 row and set the last row to default attribute
+        //
+        CopySize = ConsoleInfo->ColsPerScreen
+                 * ((ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount) - 1)
+                 * sizeof(ConsoleInfo->Attributes[0]);
+        ASSERT(CopySize < ConsoleInfo->AttribSize);
+        CopyMem(
+          ConsoleInfo->Attributes,
+          ConsoleInfo->Attributes + ConsoleInfo->ColsPerScreen,
+          CopySize
+         );
+
+        for ( Index = 0
+            ; Index < ConsoleInfo->ColsPerScreen
+            ; Index++
+           ){
+          *(ConsoleInfo->Attributes + (CopySize/sizeof(ConsoleInfo->Attributes[0])) + Index) = ConsoleInfo->HistoryMode.Attribute;
         }
 
-        break;
-      case (CHAR_LINEFEED):
-        if (ConsoleInfo->HistoryMode.CursorRow >= (INT32)((ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount)-1)) {
-          //
-          // Should never be bigger
-          //
-          ASSERT (ConsoleInfo->HistoryMode.CursorRow == (INT32)((ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount)-1));
+        //
+        // scroll history buffer 'up' 1 row and set the last row to spaces (L' ')
+        //
+        CopySize = (ConsoleInfo->ColsPerScreen + 2)
+                 * ((ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount) - 1)
+                 * sizeof(ConsoleInfo->Buffer[0]);
+        ASSERT(CopySize < ConsoleInfo->BufferSize);
+        CopyMem(
+          ConsoleInfo->Buffer,
+          ConsoleInfo->Buffer + (ConsoleInfo->ColsPerScreen + 2),
+          CopySize
+         );
 
-          //
-          // scroll history attributes 'up' 1 row and set the last row to default attribute
-          //
-          CopySize = ConsoleInfo->ColsPerScreen
-                     * ((ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount) - 1)
-                     * sizeof (ConsoleInfo->Attributes[0]);
-          ASSERT (CopySize < ConsoleInfo->AttribSize);
-          CopyMem (
-            ConsoleInfo->Attributes,
-            ConsoleInfo->Attributes + ConsoleInfo->ColsPerScreen,
-            CopySize
-            );
+        //
+        // Set that last row of chars to spaces
+        //
+        SetMem16(((UINT8*)ConsoleInfo->Buffer)+CopySize, ConsoleInfo->ColsPerScreen*sizeof(CHAR16), L' ');
+      } else {
+        //
+        // we are not on the last row
+        //
 
-          for ( Index = 0
-                ; Index < ConsoleInfo->ColsPerScreen
-                ; Index++
-                )
-          {
-            *(ConsoleInfo->Attributes + (CopySize/sizeof (ConsoleInfo->Attributes[0])) + Index) = ConsoleInfo->HistoryMode.Attribute;
-          }
-
-          //
-          // scroll history buffer 'up' 1 row and set the last row to spaces (L' ')
-          //
-          CopySize = (ConsoleInfo->ColsPerScreen + 2)
-                     * ((ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount) - 1)
-                     * sizeof (ConsoleInfo->Buffer[0]);
-          ASSERT (CopySize < ConsoleInfo->BufferSize);
-          CopyMem (
-            ConsoleInfo->Buffer,
-            ConsoleInfo->Buffer + (ConsoleInfo->ColsPerScreen + 2),
-            CopySize
-            );
-
-          //
-          // Set that last row of chars to spaces
-          //
-          SetMem16 (((UINT8 *)ConsoleInfo->Buffer)+CopySize, ConsoleInfo->ColsPerScreen*sizeof (CHAR16), L' ');
-        } else {
-          //
-          // we are not on the last row
-          //
-
-          //
-          // We should not be scrolling history
-          //
-          ASSERT (ConsoleInfo->OriginalStartRow == ConsoleInfo->CurrentStartRow);
-          //
-          // are we at the end of a row?
-          //
-          if (ConsoleInfo->HistoryMode.CursorRow == (INT32)(ConsoleInfo->OriginalStartRow + ConsoleInfo->RowsPerScreen - 1)) {
-            ConsoleInfo->OriginalStartRow++;
-            ConsoleInfo->CurrentStartRow++;
-          }
-
-          ConsoleInfo->HistoryMode.CursorRow++;
+        //
+        // We should not be scrolling history
+        //
+        ASSERT (ConsoleInfo->OriginalStartRow == ConsoleInfo->CurrentStartRow);
+        //
+        // are we at the end of a row?
+        //
+        if (ConsoleInfo->HistoryMode.CursorRow == (INT32) (ConsoleInfo->OriginalStartRow + ConsoleInfo->RowsPerScreen - 1)) {
+          ConsoleInfo->OriginalStartRow++;
+          ConsoleInfo->CurrentStartRow++;
         }
+        ConsoleInfo->HistoryMode.CursorRow++;
+      }
+      break;
+    case (CHAR_CARRIAGE_RETURN):
+      //
+      // Move the cursor to the beginning of the current row.
+      //
+      ConsoleInfo->HistoryMode.CursorColumn = 0;
+      break;
+    default:
+      //
+      // Acrtually print characters into the history buffer
+      //
 
-        break;
-      case (CHAR_CARRIAGE_RETURN):
-        //
-        // Move the cursor to the beginning of the current row.
-        //
-        ConsoleInfo->HistoryMode.CursorColumn = 0;
-        break;
-      default:
-        //
-        // Acrtually print characters into the history buffer
-        //
+      PrintIndex = ConsoleInfo->HistoryMode.CursorRow * ConsoleInfo->ColsPerScreen + ConsoleInfo->HistoryMode.CursorColumn;
 
-        PrintIndex = ConsoleInfo->HistoryMode.CursorRow * ConsoleInfo->ColsPerScreen + ConsoleInfo->HistoryMode.CursorColumn;
-
-        for ( // no initializer needed
-              ; ConsoleInfo->HistoryMode.CursorColumn < (INT32)ConsoleInfo->ColsPerScreen
-              ; ConsoleInfo->HistoryMode.CursorColumn++,
-              PrintIndex++,
-              Walker++
-              )
-        {
-          if (  (*Walker == CHAR_NULL)
-             || (*Walker == CHAR_BACKSPACE)
-             || (*Walker == CHAR_LINEFEED)
-             || (*Walker == CHAR_CARRIAGE_RETURN)
-                )
-          {
+      for ( // no initializer needed
+          ; ConsoleInfo->HistoryMode.CursorColumn < (INT32) ConsoleInfo->ColsPerScreen
+          ; ConsoleInfo->HistoryMode.CursorColumn++
+          , PrintIndex++
+          , Walker++
+         ){
+        if (*Walker == CHAR_NULL
+          ||*Walker == CHAR_BACKSPACE
+          ||*Walker == CHAR_LINEFEED
+          ||*Walker == CHAR_CARRIAGE_RETURN
+         ){
             Walker--;
             break;
-          }
-
-          //
-          // The buffer is 2*CursorRow more since it has that many \r\n characters at the end of each row.
-          //
-
-          ASSERT (PrintIndex + ConsoleInfo->HistoryMode.CursorRow < ConsoleInfo->BufferSize);
-          ConsoleInfo->Buffer[PrintIndex + (2*ConsoleInfo->HistoryMode.CursorRow)] = *Walker;
-          ASSERT (PrintIndex < ConsoleInfo->AttribSize);
-          ConsoleInfo->Attributes[PrintIndex] = ConsoleInfo->HistoryMode.Attribute;
-        } // for loop
-
-        //
-        // Add the carriage return and line feed at the end of the lines
-        //
-        if (ConsoleInfo->HistoryMode.CursorColumn >= (INT32)ConsoleInfo->ColsPerScreen) {
-          AppendStringToHistory (L"\r\n", ConsoleInfo);
-          Walker--;
         }
+        //
+        // The buffer is 2*CursorRow more since it has that many \r\n characters at the end of each row.
+        //
 
-        break;
+        ASSERT(PrintIndex + ConsoleInfo->HistoryMode.CursorRow < ConsoleInfo->BufferSize);
+        ConsoleInfo->Buffer[PrintIndex + (2*ConsoleInfo->HistoryMode.CursorRow)] = *Walker;
+        ASSERT(PrintIndex < ConsoleInfo->AttribSize);
+        ConsoleInfo->Attributes[PrintIndex] = ConsoleInfo->HistoryMode.Attribute;
+      } // for loop
+
+      //
+      // Add the carriage return and line feed at the end of the lines
+      //
+      if (ConsoleInfo->HistoryMode.CursorColumn >= (INT32)ConsoleInfo->ColsPerScreen) {
+        AppendStringToHistory(L"\r\n", ConsoleInfo);
+        Walker--;
+      }
+
+      break;
     } // switch for character
   } // for loop
 
@@ -619,23 +597,23 @@ AppendStringToHistory (
                                   rendered and were skipped.
 **/
 EFI_STATUS
-ConsoleLoggerOutputStringSplit (
-  IN CONST CHAR16                 *String,
-  IN CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo
+ConsoleLoggerOutputStringSplit(
+  IN CONST CHAR16   *String,
+  IN CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS    Status;
 
   //
   // Forward the request to the original ConOut
   //
-  Status = ConsoleInfo->OldConOut->OutputString (ConsoleInfo->OldConOut, (CHAR16 *)String);
+  Status = ConsoleInfo->OldConOut->OutputString (ConsoleInfo->OldConOut, (CHAR16*)String);
 
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR(Status)) {
     return (Status);
   }
 
-  return (AppendStringToHistory (String, ConsoleInfo));
+  return (AppendStringToHistory(String, ConsoleInfo));
 }
 
 /**
@@ -647,40 +625,37 @@ ConsoleLoggerOutputStringSplit (
   @return other         Break was choosen
 **/
 EFI_STATUS
-ConsoleLoggerDoPageBreak (
+ConsoleLoggerDoPageBreak(
   VOID
   )
 {
-  SHELL_PROMPT_RESPONSE  *Resp;
-  EFI_STATUS             Status;
+  SHELL_PROMPT_RESPONSE *Resp;
+  EFI_STATUS            Status;
 
   Resp = NULL;
-  ASSERT (ShellInfoObject.PageBreakEnabled);
+  ASSERT(ShellInfoObject.PageBreakEnabled);
   ShellInfoObject.PageBreakEnabled = FALSE;
-  Status                           = ShellPromptForResponseHii (ShellPromptResponseTypeQuitContinue, STRING_TOKEN (STR_SHELL_QUIT_CONT), ShellInfoObject.HiiHandle, (VOID **)&Resp);
+  Status = ShellPromptForResponseHii(ShellPromptResponseTypeQuitContinue, STRING_TOKEN(STR_SHELL_QUIT_CONT), ShellInfoObject.HiiHandle, (VOID**)&Resp);
   ShellInfoObject.PageBreakEnabled = TRUE;
-  ASSERT (Resp != NULL);
+  ASSERT(Resp != NULL);
   if (Resp == NULL) {
     return (EFI_NOT_FOUND);
   }
-
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR(Status)) {
     if (Resp != NULL) {
-      FreePool (Resp);
+      FreePool(Resp);
     }
-
     return (Status);
   }
-
   if (*Resp == ShellPromptResponseContinue) {
-    FreePool (Resp);
-    ShellInfoObject.ConsoleInfo->RowCounter = 0;
-    //    ShellInfoObject.ConsoleInfo->OurConOut.Mode->CursorRow    = 0;
-    //    ShellInfoObject.ConsoleInfo->OurConOut.Mode->CursorColumn = 0;
+    FreePool(Resp);
+    ShellInfoObject.ConsoleInfo->RowCounter                   = 0;
+//    ShellInfoObject.ConsoleInfo->OurConOut.Mode->CursorRow    = 0;
+//    ShellInfoObject.ConsoleInfo->OurConOut.Mode->CursorColumn = 0;
 
     return (EFI_SUCCESS);
   } else if (*Resp == ShellPromptResponseQuit) {
-    FreePool (Resp);
+    FreePool(Resp);
     ShellInfoObject.ConsoleInfo->Enabled = FALSE;
     //
     // When user wants to quit, the shell should stop running the command.
@@ -688,12 +663,10 @@ ConsoleLoggerDoPageBreak (
     gBS->SignalEvent (ShellInfoObject.NewEfiShellProtocol->ExecutionBreak);
     return (EFI_DEVICE_ERROR);
   } else {
-    ASSERT (FALSE);
+    ASSERT(FALSE);
   }
-
   return (EFI_SUCCESS);
 }
-
 /**
   Worker function to handle printing the output with page breaks.
 
@@ -710,9 +683,9 @@ ConsoleLoggerDoPageBreak (
                                   rendered and were skipped.
 **/
 EFI_STATUS
-ConsoleLoggerPrintWithPageBreak (
-  IN CONST CHAR16                 *String,
-  IN CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo
+ConsoleLoggerPrintWithPageBreak(
+  IN CONST CHAR16   *String,
+  IN CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo
   )
 {
   CONST CHAR16  *Walker;
@@ -721,30 +694,75 @@ ConsoleLoggerPrintWithPageBreak (
   CHAR16        TempChar;
 
   StringCopy = NULL;
-  StringCopy = StrnCatGrow (&StringCopy, NULL, String, 0);
+  StringCopy = StrnCatGrow(&StringCopy, NULL, String, 0);
   if (StringCopy == NULL) {
     return (EFI_OUT_OF_RESOURCES);
   }
 
-  for ( Walker = StringCopy,
-        LineStart = StringCopy
-        ; Walker != NULL && *Walker != CHAR_NULL
-        ; Walker++
-        )
-  {
+  for ( Walker = StringCopy
+      , LineStart = StringCopy
+      ; Walker != NULL && *Walker != CHAR_NULL
+      ; Walker++
+     ){
     switch (*Walker) {
-      case (CHAR_BACKSPACE):
-        if (ConsoleInfo->OurConOut.Mode->CursorColumn > 0) {
-          ConsoleInfo->OurConOut.Mode->CursorColumn--;
-        }
+    case (CHAR_BACKSPACE):
+      if (ConsoleInfo->OurConOut.Mode->CursorColumn > 0) {
+        ConsoleInfo->OurConOut.Mode->CursorColumn--;
+      }
+      break;
+    case (CHAR_LINEFEED):
+      //
+      // add a temp NULL terminator
+      //
+      TempChar = *(Walker + 1);
+      *((CHAR16*)(Walker+1)) = CHAR_NULL;
 
-        break;
-      case (CHAR_LINEFEED):
+      //
+      // output the string
+      //
+      ConsoleLoggerOutputStringSplit (LineStart, ConsoleInfo);
+
+      //
+      // restore the temp NULL terminator to it's original character
+      //
+      *((CHAR16*)(Walker+1)) = TempChar;
+
+      //
+      // Update LineStart Variable
+      //
+      LineStart = Walker + 1;
+
+      //
+      // increment row count
+      //
+      ShellInfoObject.ConsoleInfo->RowCounter++;
+      ConsoleInfo->OurConOut.Mode->CursorRow++;
+
+      break;
+    case (CHAR_CARRIAGE_RETURN):
+      //
+      // Move the cursor to the beginning of the current row.
+      //
+      ConsoleInfo->OurConOut.Mode->CursorColumn = 0;
+      break;
+    default:
+      //
+      // increment column count
+      //
+      ConsoleInfo->OurConOut.Mode->CursorColumn++;
+      //
+      // check if that is the last column
+      //
+      if ((INTN)ConsoleInfo->ColsPerScreen == ConsoleInfo->OurConOut.Mode->CursorColumn + 1) {
+        //
+        // output a line similar to the linefeed character.
+        //
+
         //
         // add a temp NULL terminator
         //
-        TempChar                = *(Walker + 1);
-        *((CHAR16 *)(Walker+1)) = CHAR_NULL;
+        TempChar = *(Walker + 1);
+        *((CHAR16*)(Walker+1)) = CHAR_NULL;
 
         //
         // output the string
@@ -752,9 +770,9 @@ ConsoleLoggerPrintWithPageBreak (
         ConsoleLoggerOutputStringSplit (LineStart, ConsoleInfo);
 
         //
-        // restore the temp NULL terminator to its original character
+        // restore the temp NULL terminator to it's original character
         //
-        *((CHAR16 *)(Walker+1)) = TempChar;
+        *((CHAR16*)(Walker+1)) = TempChar;
 
         //
         // Update LineStart Variable
@@ -762,82 +780,34 @@ ConsoleLoggerPrintWithPageBreak (
         LineStart = Walker + 1;
 
         //
-        // increment row count
+        // increment row count and zero the column
         //
         ShellInfoObject.ConsoleInfo->RowCounter++;
         ConsoleInfo->OurConOut.Mode->CursorRow++;
-
-        break;
-      case (CHAR_CARRIAGE_RETURN):
-        //
-        // Move the cursor to the beginning of the current row.
-        //
         ConsoleInfo->OurConOut.Mode->CursorColumn = 0;
-        break;
-      default:
-        //
-        // increment column count
-        //
-        ConsoleInfo->OurConOut.Mode->CursorColumn++;
-        //
-        // check if that is the last column
-        //
-        if ((INTN)ConsoleInfo->ColsPerScreen == ConsoleInfo->OurConOut.Mode->CursorColumn + 1) {
-          //
-          // output a line similar to the linefeed character.
-          //
-
-          //
-          // add a temp NULL terminator
-          //
-          TempChar                = *(Walker + 1);
-          *((CHAR16 *)(Walker+1)) = CHAR_NULL;
-
-          //
-          // output the string
-          //
-          ConsoleLoggerOutputStringSplit (LineStart, ConsoleInfo);
-
-          //
-          // restore the temp NULL terminator to its original character
-          //
-          *((CHAR16 *)(Walker+1)) = TempChar;
-
-          //
-          // Update LineStart Variable
-          //
-          LineStart = Walker + 1;
-
-          //
-          // increment row count and zero the column
-          //
-          ShellInfoObject.ConsoleInfo->RowCounter++;
-          ConsoleInfo->OurConOut.Mode->CursorRow++;
-          ConsoleInfo->OurConOut.Mode->CursorColumn = 0;
-        } // last column on line
-
-        break;
+      } // last column on line
+      break;
     } // switch for character
 
     //
     // check if that was the last printable row.  If yes handle PageBreak mode
     //
     if ((ConsoleInfo->RowsPerScreen) -1 == ShellInfoObject.ConsoleInfo->RowCounter) {
-      if (EFI_ERROR (ConsoleLoggerDoPageBreak ())) {
+      if (EFI_ERROR(ConsoleLoggerDoPageBreak())) {
         //
         // We got an error which means 'break' and halt the printing
         //
-        SHELL_FREE_NON_NULL (StringCopy);
+        SHELL_FREE_NON_NULL(StringCopy);
         return (EFI_DEVICE_ERROR);
       }
     }
   } // for loop
 
-  if ((LineStart != NULL) && (*LineStart != CHAR_NULL)) {
+  if (LineStart != NULL && *LineStart != CHAR_NULL) {
     ConsoleLoggerOutputStringSplit (LineStart, ConsoleInfo);
   }
 
-  SHELL_FREE_NON_NULL (StringCopy);
+  SHELL_FREE_NON_NULL(StringCopy);
   return (EFI_SUCCESS);
 }
 
@@ -860,26 +830,26 @@ ConsoleLoggerPrintWithPageBreak (
 EFI_STATUS
 EFIAPI
 ConsoleLoggerOutputString (
-  IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
-  IN  CHAR16                           *WString
+  IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This,
+  IN  CHAR16                          *WString
   )
 {
-  EFI_STATUS                         Status;
-  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL  *TxtInEx;
-  EFI_KEY_DATA                       KeyData;
-  UINTN                              EventIndex;
-  CONSOLE_LOGGER_PRIVATE_DATA        *ConsoleInfo;
+  EFI_STATUS                        Status;
+  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL *TxtInEx;
+  EFI_KEY_DATA                      KeyData;
+  UINTN                             EventIndex;
+  CONSOLE_LOGGER_PRIVATE_DATA       *ConsoleInfo;
 
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
   if (ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleOut) {
     return (EFI_UNSUPPORTED);
   }
+  ASSERT(ShellInfoObject.ConsoleInfo == ConsoleInfo);
 
-  ASSERT (ShellInfoObject.ConsoleInfo == ConsoleInfo);
-
-  Status = gBS->HandleProtocol (gST->ConsoleInHandle, &gEfiSimpleTextInputExProtocolGuid, (VOID **)&TxtInEx);
+  Status = gBS->HandleProtocol (gST->ConsoleInHandle, &gEfiSimpleTextInputExProtocolGuid, (VOID **) &TxtInEx);
   if (!EFI_ERROR (Status)) {
     while (ShellInfoObject.HaltOutput) {
+
       ShellInfoObject.HaltOutput = FALSE;
       //
       // just get some key
@@ -887,7 +857,7 @@ ConsoleLoggerOutputString (
       Status = gBS->WaitForEvent (1, &TxtInEx->WaitForKeyEx, &EventIndex);
       ASSERT_EFI_ERROR (Status);
       Status = TxtInEx->ReadKeyStrokeEx (TxtInEx, &KeyData);
-      if (EFI_ERROR (Status)) {
+      if (EFI_ERROR(Status)) {
         break;
       }
 
@@ -895,8 +865,7 @@ ConsoleLoggerOutputString (
           ((KeyData.KeyState.KeyShiftState == (EFI_SHIFT_STATE_VALID | EFI_LEFT_CONTROL_PRESSED)) ||
            (KeyData.KeyState.KeyShiftState == (EFI_SHIFT_STATE_VALID | EFI_RIGHT_CONTROL_PRESSED))
           )
-          )
-      {
+         ) {
         ShellInfoObject.HaltOutput = TRUE;
       }
     }
@@ -905,9 +874,9 @@ ConsoleLoggerOutputString (
   if (!ShellInfoObject.ConsoleInfo->Enabled) {
     return (EFI_DEVICE_ERROR);
   } else if (ShellInfoObject.PageBreakEnabled) {
-    return (ConsoleLoggerPrintWithPageBreak (WString, ConsoleInfo));
+    return (ConsoleLoggerPrintWithPageBreak(WString, ConsoleInfo));
   } else {
-    return (ConsoleLoggerOutputStringSplit (WString, ConsoleInfo));
+    return (ConsoleLoggerOutputStringSplit(WString, ConsoleInfo));
   }
 }
 
@@ -929,12 +898,11 @@ EFI_STATUS
 EFIAPI
 ConsoleLoggerTestString (
   IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
-  IN  CHAR16                           *WString
+  IN  CHAR16                        *WString
   )
 {
-  CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo;
-
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo;
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
   //
   // Forward the request to the original ConOut
   //
@@ -959,23 +927,22 @@ EFI_STATUS
 EFIAPI
 ConsoleLoggerQueryMode (
   IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
-  IN  UINTN                            ModeNumber,
-  OUT UINTN                            *Columns,
-  OUT UINTN                            *Rows
+  IN  UINTN                         ModeNumber,
+  OUT UINTN                         *Columns,
+  OUT UINTN                         *Rows
   )
 {
-  CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo;
-
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo;
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
   //
   // Forward the request to the original ConOut
   //
   return (ConsoleInfo->OldConOut->QueryMode (
-                                    ConsoleInfo->OldConOut,
-                                    ModeNumber,
-                                    Columns,
-                                    Rows
-                                    ));
+    ConsoleInfo->OldConOut,
+    ModeNumber,
+    Columns,
+    Rows
+   ));
 }
 
 /**
@@ -993,15 +960,14 @@ ConsoleLoggerQueryMode (
 EFI_STATUS
 EFIAPI
 ConsoleLoggerSetMode (
-  IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
-  IN  UINTN                            ModeNumber
+  IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL   *This,
+  IN  UINTN                             ModeNumber
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                  Status;
 
-  CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo;
-
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo;
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
 
   //
   // Forward the request to the original ConOut
@@ -1013,9 +979,9 @@ ConsoleLoggerSetMode (
   //
   if (!EFI_ERROR (Status)) {
     ConsoleInfo->OurConOut.Mode = ConsoleInfo->OldConOut->Mode;
-    ConsoleLoggerResetBuffers (ConsoleInfo);
+    ConsoleLoggerResetBuffers(ConsoleInfo);
     ConsoleInfo->OriginalStartRow = 0;
-    ConsoleInfo->CurrentStartRow  = 0;
+    ConsoleInfo->CurrentStartRow = 0;
     ConsoleInfo->OurConOut.ClearScreen (&ConsoleInfo->OurConOut);
   }
 
@@ -1040,15 +1006,14 @@ ConsoleLoggerSetMode (
 EFI_STATUS
 EFIAPI
 ConsoleLoggerSetAttribute (
-  IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
-  IN  UINTN                            Attribute
+  IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This,
+  IN  UINTN                           Attribute
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                  Status;
 
-  CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo;
-
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo;
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
 
   //
   // Forward the request to the original ConOut
@@ -1059,7 +1024,7 @@ ConsoleLoggerSetAttribute (
   // Record console output history
   //
   if (!EFI_ERROR (Status)) {
-    ConsoleInfo->HistoryMode.Attribute = (INT32)Attribute;
+    ConsoleInfo->HistoryMode.Attribute = (INT32) Attribute;
   }
 
   return Status;
@@ -1082,18 +1047,18 @@ ConsoleLoggerClearScreen (
   IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This
   )
 {
-  EFI_STATUS                   Status;
-  CHAR16                       *Screen;
-  INT32                        *Attributes;
-  UINTN                        Row;
-  UINTN                        Column;
-  CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo;
+  EFI_STATUS        Status;
+  CHAR16            *Screen;
+  INT32             *Attributes;
+  UINTN             Row;
+  UINTN             Column;
+  CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo;
 
   if (ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleOut) {
     return (EFI_UNSUPPORTED);
   }
 
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
 
   //
   // Forward the request to the original ConOut
@@ -1104,30 +1069,26 @@ ConsoleLoggerClearScreen (
   // Record console output history
   //
   if (!EFI_ERROR (Status)) {
-    Screen     = &ConsoleInfo->Buffer[(ConsoleInfo->ColsPerScreen + 2) * ConsoleInfo->CurrentStartRow];
+    Screen = &ConsoleInfo->Buffer[(ConsoleInfo->ColsPerScreen + 2) * ConsoleInfo->CurrentStartRow];
     Attributes = &ConsoleInfo->Attributes[ConsoleInfo->ColsPerScreen * ConsoleInfo->CurrentStartRow];
     for ( Row = ConsoleInfo->OriginalStartRow
-          ; Row < (ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount)
-          ; Row++
-          )
-    {
+        ; Row < (ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount)
+        ; Row++
+       ){
       for ( Column = 0
-            ; Column < ConsoleInfo->ColsPerScreen
-            ; Column++,
-            Screen++,
-            Attributes++
-            )
-      {
-        *Screen     = L' ';
+          ; Column < ConsoleInfo->ColsPerScreen
+          ; Column++
+          , Screen++
+          , Attributes++
+         ){
+        *Screen = L' ';
         *Attributes = ConsoleInfo->OldConOut->Mode->Attribute;
       }
-
       //
       // Skip the NULL on each column end in text buffer only
       //
       Screen += 2;
     }
-
     ConsoleInfo->HistoryMode.CursorColumn = 0;
     ConsoleInfo->HistoryMode.CursorRow    = 0;
   }
@@ -1152,26 +1113,26 @@ EFI_STATUS
 EFIAPI
 ConsoleLoggerSetCursorPosition (
   IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
-  IN  UINTN                            Column,
-  IN  UINTN                            Row
+  IN  UINTN                         Column,
+  IN  UINTN                         Row
   )
 {
-  EFI_STATUS                   Status;
-  CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo;
+  EFI_STATUS                  Status;
+  CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo;
 
   if (ShellInfoObject.ShellInitSettings.BitUnion.Bits.NoConsoleOut) {
     return (EFI_UNSUPPORTED);
   }
 
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
   //
   // Forward the request to the original ConOut
   //
   Status = ConsoleInfo->OldConOut->SetCursorPosition (
-                                     ConsoleInfo->OldConOut,
-                                     Column,
-                                     Row
-                                     );
+    ConsoleInfo->OldConOut,
+    Column,
+    Row
+   );
 
   //
   // Record console output history
@@ -1201,14 +1162,13 @@ EFI_STATUS
 EFIAPI
 ConsoleLoggerEnableCursor (
   IN  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *This,
-  IN  BOOLEAN                          Visible
+  IN  BOOLEAN                       Visible
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                  Status;
 
-  CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo;
-
-  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS (This);
+  CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo;
+  ConsoleInfo = CONSOLE_LOGGER_PRIVATE_DATA_FROM_THIS(This);
   //
   // Forward the request to the original ConOut
   //
@@ -1229,46 +1189,45 @@ ConsoleLoggerEnableCursor (
 
   @param[in] ConsoleInfo  The pointer to the instance of the console logger information.
 
-  This will be used when a mode has changed or a reset occurred to verify all
+  This will be used when a mode has changed or a reset ocurred to verify all
   history buffers.
 **/
 EFI_STATUS
-ConsoleLoggerResetBuffers (
-  IN CONSOLE_LOGGER_PRIVATE_DATA  *ConsoleInfo
+ConsoleLoggerResetBuffers(
+  IN CONSOLE_LOGGER_PRIVATE_DATA *ConsoleInfo
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS Status;
 
   if (ConsoleInfo->Buffer != NULL) {
-    FreePool (ConsoleInfo->Buffer);
+    FreePool(ConsoleInfo->Buffer);
     ConsoleInfo->Buffer     = NULL;
     ConsoleInfo->BufferSize = 0;
   }
-
   if (ConsoleInfo->Attributes != NULL) {
-    FreePool (ConsoleInfo->Attributes);
+    FreePool(ConsoleInfo->Attributes);
     ConsoleInfo->Attributes = NULL;
     ConsoleInfo->AttribSize = 0;
   }
 
   Status = gST->ConOut->QueryMode (gST->ConOut, gST->ConOut->Mode->Mode, &ConsoleInfo->ColsPerScreen, &ConsoleInfo->RowsPerScreen);
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR(Status)){
     return (Status);
   }
 
-  ConsoleInfo->BufferSize = (ConsoleInfo->ColsPerScreen + 2) * ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount * sizeof (ConsoleInfo->Buffer[0]);
-  ConsoleInfo->AttribSize = ConsoleInfo->ColsPerScreen * ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount * sizeof (ConsoleInfo->Attributes[0]);
+  ConsoleInfo->BufferSize = (ConsoleInfo->ColsPerScreen + 2) * ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount * sizeof(ConsoleInfo->Buffer[0]);
+  ConsoleInfo->AttribSize = ConsoleInfo->ColsPerScreen * ConsoleInfo->RowsPerScreen * ConsoleInfo->ScreenCount * sizeof(ConsoleInfo->Attributes[0]);
 
-  ConsoleInfo->Buffer = (CHAR16 *)AllocateZeroPool (ConsoleInfo->BufferSize);
+  ConsoleInfo->Buffer = (CHAR16*)AllocateZeroPool(ConsoleInfo->BufferSize);
 
   if (ConsoleInfo->Buffer == NULL) {
     return (EFI_OUT_OF_RESOURCES);
   }
 
-  ConsoleInfo->Attributes = (INT32 *)AllocateZeroPool (ConsoleInfo->AttribSize);
+  ConsoleInfo->Attributes = (INT32*)AllocateZeroPool(ConsoleInfo->AttribSize);
   if (ConsoleInfo->Attributes == NULL) {
-    FreePool (ConsoleInfo->Buffer);
-    ConsoleInfo->Buffer = NULL;
+    FreePool(ConsoleInfo->Buffer);
+    ConsoleInfo->Buffer     = NULL;
     return (EFI_OUT_OF_RESOURCES);
   }
 

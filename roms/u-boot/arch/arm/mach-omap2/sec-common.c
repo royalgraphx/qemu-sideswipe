@@ -13,11 +13,6 @@
  */
 
 #include <common.h>
-#include <command.h>
-#include <cpu_func.h>
-#include <hang.h>
-#include <init.h>
-#include <log.h>
 #include <stdarg.h>
 
 #include <asm/arch/sys_proto.h>
@@ -338,7 +333,7 @@ int secure_tee_install(u32 addr)
 	debug("tee_info.tee_arg0 = %08X\n", tee_info.tee_arg0);
 	debug("tee_file_size = %d\n", tee_file_size);
 
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+#if !defined(CONFIG_SYS_DCACHE_OFF)
 	flush_dcache_range(
 		rounddown((u32)loadptr, ARCH_DMA_MINALIGN),
 		roundup((u32)loadptr + tee_file_size, ARCH_DMA_MINALIGN));
@@ -361,7 +356,7 @@ int secure_tee_install(u32 addr)
 		/* Reuse the tee_info buffer for SMC params */
 		smc_cpu1_params = (u32 *)&tee_info;
 		smc_cpu1_params[0] = 0;
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+#if !defined(CONFIG_SYS_DCACHE_OFF)
 		flush_dcache_range((u32)smc_cpu1_params, (u32)smc_cpu1_params +
 				roundup(sizeof(u32), ARCH_DMA_MINALIGN));
 #endif

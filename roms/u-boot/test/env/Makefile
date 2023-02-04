@@ -4,5 +4,3 @@
 
 obj-y += cmd_ut_env.o
 obj-y += attr.o
-obj-y += hashtable.o
-obj-$(CONFIG_ENV_IMPORT_FDT) += fdt.o

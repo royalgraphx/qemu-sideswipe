@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # qcow2 internal snapshots/VM state tests
 #

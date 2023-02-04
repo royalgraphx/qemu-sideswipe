@@ -17,12 +17,15 @@
 #include "hw/virtio/virtio.h"
 #include "qapi/qapi-types-misc.h"
 #include "sysemu/hostmem.h"
-#include "qom/object.h"
 
 #define TYPE_VIRTIO_MEM "virtio-mem"
 
-OBJECT_DECLARE_TYPE(VirtIOMEM, VirtIOMEMClass,
-                    VIRTIO_MEM)
+#define VIRTIO_MEM(obj) \
+        OBJECT_CHECK(VirtIOMEM, (obj), TYPE_VIRTIO_MEM)
+#define VIRTIO_MEM_CLASS(oc) \
+        OBJECT_CLASS_CHECK(VirtIOMEMClass, (oc), TYPE_VIRTIO_MEM)
+#define VIRTIO_MEM_GET_CLASS(obj) \
+        OBJECT_GET_CLASS(VirtIOMEMClass, (obj), TYPE_VIRTIO_MEM)
 
 #define VIRTIO_MEM_MEMDEV_PROP "memdev"
 #define VIRTIO_MEM_NODE_PROP "node"
@@ -30,10 +33,8 @@ OBJECT_DECLARE_TYPE(VirtIOMEM, VirtIOMEMClass,
 #define VIRTIO_MEM_REQUESTED_SIZE_PROP "requested-size"
 #define VIRTIO_MEM_BLOCK_SIZE_PROP "block-size"
 #define VIRTIO_MEM_ADDR_PROP "memaddr"
-#define VIRTIO_MEM_UNPLUGGED_INACCESSIBLE_PROP "unplugged-inaccessible"
-#define VIRTIO_MEM_PREALLOC_PROP "prealloc"
 
-struct VirtIOMEM {
+typedef struct VirtIOMEM {
     VirtIODevice parent_obj;
 
     /* guest -> host request queue */
@@ -64,24 +65,14 @@ struct VirtIOMEM {
     /* block size and alignment */
     uint64_t block_size;
 
-    /*
-     * Whether we indicate VIRTIO_MEM_F_UNPLUGGED_INACCESSIBLE to the guest.
-     * For !x86 targets this will always be "on" and consequently indicate
-     * VIRTIO_MEM_F_UNPLUGGED_INACCESSIBLE.
-     */
-    OnOffAuto unplugged_inaccessible;
-
-    /* whether to prealloc memory when plugging new blocks */
-    bool prealloc;
-
     /* notifiers to notify when "size" changes */
     NotifierList size_change_notifiers;
 
-    /* listeners to notify on plug/unplug activity. */
-    QLIST_HEAD(, RamDiscardListener) rdl_list;
-};
+    /* don't migrate unplugged memory */
+    NotifierWithReturn precopy_notifier;
+} VirtIOMEM;
 
-struct VirtIOMEMClass {
+typedef struct VirtIOMEMClass {
     /* private */
     VirtIODevice parent;
 
@@ -90,6 +81,6 @@ struct VirtIOMEMClass {
     MemoryRegion *(*get_memory_region)(VirtIOMEM *vmem, Error **errp);
     void (*add_size_change_notifier)(VirtIOMEM *vmem, Notifier *notifier);
     void (*remove_size_change_notifier)(VirtIOMEM *vmem, Notifier *notifier);
-};
+} VirtIOMEMClass;
 
 #endif

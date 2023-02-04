@@ -4,10 +4,8 @@
  */
 
 #include <common.h>
-#include <hang.h>
-#include <asm/arch-rockchip/bootrom.h>
-#include <asm/arch-rockchip/boot_mode.h>
-#include <asm/cache.h>
+#include <asm/arch/bootrom.h>
+#include <asm/arch/boot_mode.h>
 #include <asm/io.h>
 #include <asm/setjmp.h>
 #include <asm/system.h>
@@ -41,8 +39,8 @@ void back_to_bootrom(enum rockchip_bootrom_cmd brom_cmd)
  * to check it and back to bootrom at very early bootstage(before
  * some basic configurations(such as interrupts) been
  * changed by TPL/SPL, as the bootrom download operation
- * relies on many default settings(such as interrupts) by
- * itself.
+ * relys on many default settings(such as interrupts) by
+ * it's self.
  */
 static bool check_back_to_brom_dnl_flag(void)
 {

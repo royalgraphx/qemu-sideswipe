@@ -15,7 +15,8 @@
  *
  * TODO:
  * 1. Support PCA957X_TYPE
- * 2. Support Polarity Inversion
+ * 2. Support 24 gpio pins
+ * 3. Support Polarity Inversion
  */
 
 #include <common.h>
@@ -26,9 +27,7 @@
 #include <malloc.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
-#include <dm/device_compat.h>
 #include <dt-bindings/gpio/gpio.h>
-#include <linux/bitops.h>
 
 #define PCA953X_INPUT           0
 #define PCA953X_OUTPUT          1
@@ -76,7 +75,7 @@ struct pca953x_info {
 static int pca953x_write_single(struct udevice *dev, int reg, u8 val,
 				int offset)
 {
-	struct pca953x_info *info = dev_get_plat(dev);
+	struct pca953x_info *info = dev_get_platdata(dev);
 	int bank_shift = fls((info->gpio_count - 1) / BANK_SZ);
 	int off = offset / BANK_SZ;
 	int ret = 0;
@@ -93,7 +92,7 @@ static int pca953x_write_single(struct udevice *dev, int reg, u8 val,
 static int pca953x_read_single(struct udevice *dev, int reg, u8 *val,
 			       int offset)
 {
-	struct pca953x_info *info = dev_get_plat(dev);
+	struct pca953x_info *info = dev_get_platdata(dev);
 	int bank_shift = fls((info->gpio_count - 1) / BANK_SZ);
 	int off = offset / BANK_SZ;
 	int ret;
@@ -112,17 +111,13 @@ static int pca953x_read_single(struct udevice *dev, int reg, u8 *val,
 
 static int pca953x_read_regs(struct udevice *dev, int reg, u8 *val)
 {
-	struct pca953x_info *info = dev_get_plat(dev);
+	struct pca953x_info *info = dev_get_platdata(dev);
 	int ret = 0;
 
 	if (info->gpio_count <= 8) {
 		ret = dm_i2c_read(dev, reg, val, 1);
 	} else if (info->gpio_count <= 16) {
 		ret = dm_i2c_read(dev, reg << 1, val, info->bank_count);
-	} else if (info->gpio_count <= 24) {
-		/* Auto increment */
-		ret = dm_i2c_read(dev, (reg << 2) | 0x80, val,
-				  info->bank_count);
 	} else if (info->gpio_count == 40) {
 		/* Auto increment */
 		ret = dm_i2c_read(dev, (reg << 3) | 0x80, val,
@@ -137,17 +132,13 @@ static int pca953x_read_regs(struct udevice *dev, int reg, u8 *val)
 
 static int pca953x_write_regs(struct udevice *dev, int reg, u8 *val)
 {
-	struct pca953x_info *info = dev_get_plat(dev);
+	struct pca953x_info *info = dev_get_platdata(dev);
 	int ret = 0;
 
 	if (info->gpio_count <= 8) {
 		ret = dm_i2c_write(dev, reg, val, 1);
 	} else if (info->gpio_count <= 16) {
 		ret = dm_i2c_write(dev, reg << 1, val, info->bank_count);
-	} else if (info->gpio_count <= 24) {
-		/* Auto increment */
-		ret = dm_i2c_write(dev, (reg << 2) | 0x80, val,
-				   info->bank_count);
 	} else if (info->gpio_count == 40) {
 		/* Auto increment */
 		ret = dm_i2c_write(dev, (reg << 3) | 0x80, val, info->bank_count);
@@ -160,7 +151,7 @@ static int pca953x_write_regs(struct udevice *dev, int reg, u8 *val)
 
 static int pca953x_is_output(struct udevice *dev, int offset)
 {
-	struct pca953x_info *info = dev_get_plat(dev);
+	struct pca953x_info *info = dev_get_platdata(dev);
 
 	int bank = offset / BANK_SZ;
 	int off = offset % BANK_SZ;
@@ -185,7 +176,7 @@ static int pca953x_get_value(struct udevice *dev, uint offset)
 
 static int pca953x_set_value(struct udevice *dev, uint offset, int value)
 {
-	struct pca953x_info *info = dev_get_plat(dev);
+	struct pca953x_info *info = dev_get_platdata(dev);
 	int bank = offset / BANK_SZ;
 	int off = offset % BANK_SZ;
 	u8 val;
@@ -207,7 +198,7 @@ static int pca953x_set_value(struct udevice *dev, uint offset, int value)
 
 static int pca953x_set_direction(struct udevice *dev, uint offset, int dir)
 {
-	struct pca953x_info *info = dev_get_plat(dev);
+	struct pca953x_info *info = dev_get_platdata(dev);
 	int bank = offset / BANK_SZ;
 	int off = offset % BANK_SZ;
 	u8 val;
@@ -271,7 +262,7 @@ static const struct dm_gpio_ops pca953x_ops = {
 
 static int pca953x_probe(struct udevice *dev)
 {
-	struct pca953x_info *info = dev_get_plat(dev);
+	struct pca953x_info *info = dev_get_platdata(dev);
 	struct gpio_dev_priv *uc_priv = dev_get_uclass_priv(dev);
 	char name[32], label[8], *str;
 	int addr;
@@ -372,7 +363,6 @@ static const struct udevice_id pca953x_ids[] = {
 	{ .compatible = "ti,tca6408", .data = OF_953X(8, PCA_INT), },
 	{ .compatible = "ti,tca6416", .data = OF_953X(16, PCA_INT), },
 	{ .compatible = "ti,tca6424", .data = OF_953X(24, PCA_INT), },
-	{ .compatible = "ti,tca9539", .data = OF_953X(16, PCA_INT), },
 
 	{ .compatible = "onsemi,pca9654", .data = OF_953X(8, PCA_INT), },
 
@@ -385,6 +375,6 @@ U_BOOT_DRIVER(pca953x) = {
 	.id		= UCLASS_GPIO,
 	.ops		= &pca953x_ops,
 	.probe		= pca953x_probe,
-	.plat_auto	= sizeof(struct pca953x_info),
+	.platdata_auto_alloc_size = sizeof(struct pca953x_info),
 	.of_match	= pca953x_ids,
 };

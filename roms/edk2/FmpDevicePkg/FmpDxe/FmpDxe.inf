@@ -4,7 +4,7 @@
 #  information provided through PCDs and libraries.
 #
 #  Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
-#  Copyright (c) 2018 - 2021, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 ##
@@ -17,7 +17,6 @@
   MODULE_TYPE                    = DXE_DRIVER
   VERSION_STRING                 = 1.0
   ENTRY_POINT                    = FmpDxeEntryPoint
-  UNLOAD_IMAGE                   = UninstallFmpInstance
 
 #
 # The following information is for reference only and not required by the build tools.
@@ -27,7 +26,6 @@
 
 [Sources]
   FmpDxe.c
-  FmpDxe.h
   DetectTestKey.c
   VariableSupport.h
   VariableSupport.c
@@ -45,28 +43,22 @@
   BaseMemoryLib
   UefiBootServicesTableLib
   MemoryAllocationLib
-  PrintLib
   UefiLib
   BaseCryptLib
   FmpAuthenticationLib
   FmpDeviceLib
   FmpPayloadHeaderLib
   CapsuleUpdatePolicyLib
-  FmpDependencyLib
-  FmpDependencyCheckLib
-  FmpDependencyDeviceLib
-  VariablePolicyHelperLib
 
 [Guids]
   gEfiEndOfDxeEventGroupGuid
 
 [Protocols]
+  gEdkiiVariableLockProtocolGuid                ## CONSUMES
   gEfiFirmwareManagementProtocolGuid            ## PRODUCES
   gEdkiiFirmwareManagementProgressProtocolGuid  ## PRODUCES
-  gEdkiiVariablePolicyProtocolGuid              ## CONSUMES
 
 [Pcd]
-  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceStorageAccessEnable              ## CONSUMES
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageIdName                      ## CONSUMES
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceBuildTimeLowestSupportedVersion  ## CONSUMES
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceLockEventGuid                    ## CONSUMES
@@ -74,7 +66,6 @@
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceProgressColor                    ## CONSUMES
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDevicePkcs7CertBufferXdr               ## CONSUMES
   gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceTestKeySha256Digest              ## CONSUMES
-  gFmpDevicePkgTokenSpaceGuid.PcdFmpDeviceImageTypeIdGuid                  ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdTestKeyUsed                            ## SOMETIMES_PRODUCES
 
 [Depex]

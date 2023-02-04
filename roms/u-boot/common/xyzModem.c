@@ -25,7 +25,6 @@
 #include <xyzModem.h>
 #include <stdarg.h>
 #include <u-boot/crc.h>
-#include <watchdog.h>
 
 /* Assumption - run xyzModem protocol over the console port */
 
@@ -64,7 +63,6 @@ CYGACC_COMM_IF_GETC_TIMEOUT (char chan, char *c)
 {
 
   ulong now = get_timer(0);
-  WATCHDOG_RESET();
   while (!tstc ())
     {
       if (get_timer(now) > xyzModem_CHAR_TIMEOUT)
@@ -72,7 +70,7 @@ CYGACC_COMM_IF_GETC_TIMEOUT (char chan, char *c)
     }
   if (tstc ())
     {
-      *c = getchar();
+      *c = getc ();
       return 1;
     }
   return 0;
@@ -173,7 +171,7 @@ parse_num (char *s, unsigned long *val, char **es, char *delim)
 }
 
 
-#if defined(DEBUG) && !CONFIG_IS_ENABLED(USE_TINY_PRINTF)
+#if defined(DEBUG) && !defined(CONFIG_USE_TINY_PRINTF)
 /*
  * Note: this debug setup works by storing the strings in a fixed buffer
  */

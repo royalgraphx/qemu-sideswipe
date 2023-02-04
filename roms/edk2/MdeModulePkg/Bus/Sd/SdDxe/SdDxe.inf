@@ -62,5 +62,3 @@
   ## BY_START
   gEfiDevicePathProtocolGuid
 
-[UserExtensions.TianoCore."ExtraFiles"]
-  SdDxeExtra.uni

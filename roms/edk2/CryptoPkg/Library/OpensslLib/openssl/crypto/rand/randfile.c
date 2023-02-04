@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2020 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -26,7 +26,7 @@
 #ifndef OPENSSL_NO_POSIX_IO
 # include <sys/stat.h>
 # include <fcntl.h>
-# if defined(_WIN32) && !defined(_WIN32_WCE)
+# ifdef _WIN32
 #  include <windows.h>
 #  include <io.h>
 #  define stat    _stat
@@ -254,7 +254,7 @@ const char *RAND_file_name(char *buf, size_t size)
     size_t len;
     int use_randfile = 1;
 
-#if defined(_WIN32) && defined(CP_UTF8) && !defined(_WIN32_WCE)
+#if defined(_WIN32) && defined(CP_UTF8)
     DWORD envlen;
     WCHAR *var;
 

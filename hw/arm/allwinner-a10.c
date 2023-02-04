@@ -16,8 +16,10 @@
  */
 
 #include "qemu/osdep.h"
+#include "exec/address-spaces.h"
 #include "qapi/error.h"
 #include "qemu/module.h"
+#include "cpu.h"
 #include "hw/sysbus.h"
 #include "hw/arm/allwinner-a10.h"
 #include "hw/misc/unimp.h"
@@ -130,7 +132,9 @@ static void aw_a10_realize(DeviceState *dev, Error **errp)
         int i;
 
         for (i = 0; i < AW_A10_NUM_USB; i++) {
-            g_autofree char *bus = g_strdup_printf("usb-bus.%d", i);
+            char bus[16];
+
+            sprintf(bus, "usb-bus.%d", i);
 
             object_property_set_bool(OBJECT(&s->ehci[i]), "companion-enable",
                                      true, &error_fatal);
@@ -151,8 +155,6 @@ static void aw_a10_realize(DeviceState *dev, Error **errp)
     }
 
     /* SD/MMC */
-    object_property_set_link(OBJECT(&s->mmc0), "dma-memory",
-                             OBJECT(get_system_memory()), &error_fatal);
     sysbus_realize(SYS_BUS_DEVICE(&s->mmc0), &error_fatal);
     sysbus_mmio_map(SYS_BUS_DEVICE(&s->mmc0), 0, AW_A10_MMC0_BASE);
     sysbus_connect_irq(SYS_BUS_DEVICE(&s->mmc0), 0, qdev_get_gpio_in(dev, 32));

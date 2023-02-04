@@ -1,10 +1,8 @@
 /** @file
-  Random number generator services that uses CPU RNG instructions to
-  provide random numbers.
+  Random number generator services that uses RdRand instruction access
+  to provide high-quality random numbers.
 
-Copyright (c) 2021, NUVIA Inc. All rights reserved.<BR>
 Copyright (c) 2015, Intel Corporation. All rights reserved.<BR>
-
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -12,14 +10,46 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 
-#include "BaseRngLibInternals.h"
+//
+// Bit mask used to determine if RdRand instruction is supported.
+//
+#define RDRAND_MASK                  BIT30
 
 //
 // Limited retry number when valid random data is returned.
 // Uses the recommended value defined in Section 7.3.17 of "Intel 64 and IA-32
-// Architectures Software Developer's Manual".
+// Architectures Software Developer's Mannual".
 //
-#define GETRANDOM_RETRY_LIMIT  10
+#define RDRAND_RETRY_LIMIT           10
+
+/**
+  The constructor function checks whether or not RDRAND instruction is supported
+  by the host hardware.
+
+  The constructor function checks whether or not RDRAND instruction is supported.
+  It will ASSERT() if RDRAND instruction is not supported.
+  It will always return RETURN_SUCCESS.
+
+  @retval RETURN_SUCCESS   The constructor always returns EFI_SUCCESS.
+
+**/
+RETURN_STATUS
+EFIAPI
+BaseRngLibConstructor (
+  VOID
+  )
+{
+  UINT32  RegEcx;
+
+  //
+  // Determine RDRAND support by examining bit 30 of the ECX register returned by
+  // CPUID. A value of 1 indicates that processor support RDRAND instruction.
+  //
+  AsmCpuid (1, 0, 0, &RegEcx, 0);
+  ASSERT ((RegEcx & RDRAND_MASK) == RDRAND_MASK);
+
+  return RETURN_SUCCESS;
+}
 
 /**
   Generates a 16-bit random number.
@@ -35,26 +65,18 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 BOOLEAN
 EFIAPI
 GetRandomNumber16 (
-  OUT     UINT16  *Rand
+  OUT     UINT16                    *Rand
   )
 {
   UINT32  Index;
 
   ASSERT (Rand != NULL);
 
-  if (Rand == NULL) {
-    return FALSE;
-  }
-
-  if (!ArchIsRngSupported ()) {
-    return FALSE;
-  }
-
   //
   // A loop to fetch a 16 bit random value with a retry count limit.
   //
-  for (Index = 0; Index < GETRANDOM_RETRY_LIMIT; Index++) {
-    if (ArchGetRandomNumber16 (Rand)) {
+  for (Index = 0; Index < RDRAND_RETRY_LIMIT; Index++) {
+    if (AsmRdRand16 (Rand)) {
       return TRUE;
     }
   }
@@ -76,26 +98,18 @@ GetRandomNumber16 (
 BOOLEAN
 EFIAPI
 GetRandomNumber32 (
-  OUT     UINT32  *Rand
+  OUT     UINT32                    *Rand
   )
 {
   UINT32  Index;
 
   ASSERT (Rand != NULL);
 
-  if (Rand == NULL) {
-    return FALSE;
-  }
-
-  if (!ArchIsRngSupported ()) {
-    return FALSE;
-  }
-
   //
   // A loop to fetch a 32 bit random value with a retry count limit.
   //
-  for (Index = 0; Index < GETRANDOM_RETRY_LIMIT; Index++) {
-    if (ArchGetRandomNumber32 (Rand)) {
+  for (Index = 0; Index < RDRAND_RETRY_LIMIT; Index++) {
+    if (AsmRdRand32 (Rand)) {
       return TRUE;
     }
   }
@@ -117,26 +131,18 @@ GetRandomNumber32 (
 BOOLEAN
 EFIAPI
 GetRandomNumber64 (
-  OUT     UINT64  *Rand
+  OUT     UINT64                    *Rand
   )
 {
   UINT32  Index;
 
   ASSERT (Rand != NULL);
 
-  if (Rand == NULL) {
-    return FALSE;
-  }
-
-  if (!ArchIsRngSupported ()) {
-    return FALSE;
-  }
-
   //
   // A loop to fetch a 64 bit random value with a retry count limit.
   //
-  for (Index = 0; Index < GETRANDOM_RETRY_LIMIT; Index++) {
-    if (ArchGetRandomNumber64 (Rand)) {
+  for (Index = 0; Index < RDRAND_RETRY_LIMIT; Index++) {
+    if (AsmRdRand64 (Rand)) {
       return TRUE;
     }
   }
@@ -158,18 +164,10 @@ GetRandomNumber64 (
 BOOLEAN
 EFIAPI
 GetRandomNumber128 (
-  OUT     UINT64  *Rand
+  OUT     UINT64                    *Rand
   )
 {
   ASSERT (Rand != NULL);
-
-  if (Rand == NULL) {
-    return FALSE;
-  }
-
-  if (!ArchIsRngSupported ()) {
-    return FALSE;
-  }
 
   //
   // Read first 64 bits

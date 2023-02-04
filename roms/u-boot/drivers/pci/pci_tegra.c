@@ -15,13 +15,11 @@
 #include <clk.h>
 #include <dm.h>
 #include <errno.h>
-#include <log.h>
 #include <malloc.h>
 #include <pci.h>
 #include <pci_tegra.h>
 #include <power-domain.h>
 #include <reset.h>
-#include <linux/delay.h>
 
 #include <asm/io.h>
 #include <asm/gpio.h>
@@ -310,7 +308,7 @@ static int tegra_pcie_conf_address(struct tegra_pcie *pcie, pci_dev_t bdf,
 	}
 }
 
-static int pci_tegra_read_config(const struct udevice *bus, pci_dev_t bdf,
+static int pci_tegra_read_config(struct udevice *bus, pci_dev_t bdf,
 				 uint offset, ulong *valuep,
 				 enum pci_size_t size)
 {
@@ -1092,7 +1090,7 @@ static const struct tegra_pcie_soc pci_tegra_soc[] = {
 	},
 };
 
-static int pci_tegra_of_to_plat(struct udevice *dev)
+static int pci_tegra_ofdata_to_platdata(struct udevice *dev)
 {
 	struct tegra_pcie *pcie = dev_get_priv(dev);
 	enum tegra_pci_id id;
@@ -1197,7 +1195,7 @@ U_BOOT_DRIVER(pci_tegra) = {
 	.id	= UCLASS_PCI,
 	.of_match = pci_tegra_ids,
 	.ops	= &pci_tegra_ops,
-	.of_to_plat = pci_tegra_of_to_plat,
+	.ofdata_to_platdata = pci_tegra_ofdata_to_platdata,
 	.probe	= pci_tegra_probe,
-	.priv_auto	= sizeof(struct tegra_pcie),
+	.priv_auto_alloc_size = sizeof(struct tegra_pcie),
 };

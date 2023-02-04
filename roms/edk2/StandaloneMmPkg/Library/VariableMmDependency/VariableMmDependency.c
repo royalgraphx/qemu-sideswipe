@@ -1,10 +1,10 @@
 /** @file
-  Runtime DXE part corresponding to StandaloneMM variable module.
+  Runtime DXE part corresponding to StanaloneMM variable module.
 
 This module installs variable arch protocol and variable write arch protocol
 to StandaloneMM runtime variable service.
 
-Copyright (c) 2019 - 2021, Arm Ltd. All rights reserved.
+Copyright (c) 2019, ARM Ltd. All rights reserved.
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -26,12 +26,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 EFI_STATUS
 EFIAPI
 VariableMmDependencyLibConstructor (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE                           ImageHandle,
+  IN EFI_SYSTEM_TABLE                     *SystemTable
   )
 {
-  EFI_STATUS  Status;
-  EFI_HANDLE  Handle;
+  EFI_STATUS            Status;
+  EFI_HANDLE            Handle;
 
   Handle = NULL;
   Status = gBS->InstallMultipleProtocolInterfaces (

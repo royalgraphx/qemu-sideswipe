@@ -1,11 +1,12 @@
 /** @file
 
-  Copyright (c) 2016 - 2020, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016 - 2018, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "SecFsp.h"
+
 
 /**
   This function check the FSP API calling condition.
@@ -17,14 +18,14 @@
 EFI_STATUS
 EFIAPI
 FspApiCallingCheck (
-  IN UINT8  ApiIdx,
-  IN VOID   *ApiParam
+  IN UINT8     ApiIdx,
+  IN VOID     *ApiParam
   )
 {
-  EFI_STATUS       Status;
-  FSP_GLOBAL_DATA  *FspData;
+  EFI_STATUS                Status;
+  FSP_GLOBAL_DATA           *FspData;
 
-  Status  = EFI_SUCCESS;
+  Status = EFI_SUCCESS;
   FspData = GetFspGlobalDataPointer ();
 
   if (ApiIdx == NotifyPhaseApiIndex) {
@@ -58,7 +59,7 @@ FspApiCallingCheck (
         Status = EFI_UNSUPPORTED;
       }
     }
-  } else if ((ApiIdx == FspSiliconInitApiIndex) || (ApiIdx == FspMultiPhaseSiInitApiIndex)) {
+  } else if (ApiIdx == FspSiliconInitApiIndex) {
     //
     // FspSiliconInit check
     //
@@ -67,7 +68,7 @@ FspApiCallingCheck (
     } else {
       if (FspData->Signature != FSP_GLOBAL_DATA_SIGNATURE) {
         Status = EFI_UNSUPPORTED;
-      } else if (EFI_ERROR (FspUpdSignatureCheck (FspSiliconInitApiIndex, ApiParam))) {
+      } else if (EFI_ERROR (FspUpdSignatureCheck (ApiIdx, ApiParam))) {
         Status = EFI_INVALID_PARAMETER;
       }
     }

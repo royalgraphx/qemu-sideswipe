@@ -9,6 +9,7 @@
 #ifndef _ASM_ARCH_CLOCK_H
 #define _ASM_ARCH_CLOCK_H
 
+#include <common.h>
 #include <asm/arch/crm_regs.h>
 
 #ifdef CONFIG_SYS_MX7_HCLK
@@ -174,24 +175,6 @@ enum clk_root_index {
 	CLK_ROOT_MAX,
 };
 
-#if (CONFIG_CONS_INDEX == 0)
-#define UART_CLK_ROOT UART1_CLK_ROOT
-#elif (CONFIG_CONS_INDEX == 1)
-#define UART_CLK_ROOT UART2_CLK_ROOT
-#elif (CONFIG_CONS_INDEX == 2)
-#define UART_CLK_ROOT UART3_CLK_ROOT
-#elif (CONFIG_CONS_INDEX == 3)
-#define UART_CLK_ROOT UART4_CLK_ROOT
-#elif (CONFIG_CONS_INDEX == 4)
-#define UART_CLK_ROOT UART5_CLK_ROOT
-#elif (CONFIG_CONS_INDEX == 5)
-#define UART_CLK_ROOT UART6_CLK_ROOT
-#elif (CONFIG_CONS_INDEX == 6)
-#define UART_CLK_ROOT UART7_CLK_ROOT
-#else
-#error "Invalid IMX UART ID for serial console is defined"
-#endif
-
 struct clk_root_setting {
 	enum clk_root_index root;
 	u32 setting;
@@ -356,7 +339,7 @@ int set_clk_nand(void);
 void enable_ocotp_clk(unsigned char enable);
 #endif
 void enable_usboh3_clk(unsigned char enable);
-#ifdef CONFIG_IMX_HAB
+#ifdef CONFIG_SECURE_BOOT
 void hab_caam_clock_enable(unsigned char enable);
 #endif
 void mxs_set_lcdclk(uint32_t base_addr, uint32_t freq);

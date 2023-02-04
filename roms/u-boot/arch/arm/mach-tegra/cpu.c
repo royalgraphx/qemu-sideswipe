@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2010-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION.  All rights reserved.
  */
 
 #include <common.h>
-#include <log.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/gp_padctrl.h>
@@ -13,7 +12,6 @@
 #include <asm/arch-tegra/clk_rst.h>
 #include <asm/arch-tegra/pmc.h>
 #include <asm/arch-tegra/scu.h>
-#include <linux/delay.h>
 #include "cpu.h"
 
 int get_num_cpus(void)
@@ -301,19 +299,21 @@ void enable_cpu_clock(int enable)
 
 static int is_cpu_powered(void)
 {
-	return (tegra_pmc_readl(offsetof(struct pmc_ctlr,
-				pmc_pwrgate_status)) & CPU_PWRED) ? 1 : 0;
+	struct pmc_ctlr *pmc = (struct pmc_ctlr *)NV_PA_PMC_BASE;
+
+	return (readl(&pmc->pmc_pwrgate_status) & CPU_PWRED) ? 1 : 0;
 }
 
 static void remove_cpu_io_clamps(void)
 {
+	struct pmc_ctlr *pmc = (struct pmc_ctlr *)NV_PA_PMC_BASE;
 	u32 reg;
 	debug("%s entry\n", __func__);
 
 	/* Remove the clamps on the CPU I/O signals */
-	reg = tegra_pmc_readl(offsetof(struct pmc_ctlr, pmc_remove_clamping));
+	reg = readl(&pmc->pmc_remove_clamping);
 	reg |= CPU_CLMP;
-	tegra_pmc_writel(reg, offsetof(struct pmc_ctlr, pmc_remove_clamping));
+	writel(reg, &pmc->pmc_remove_clamping);
 
 	/* Give I/O signals time to stabilize */
 	udelay(IO_STABILIZATION_DELAY);
@@ -321,19 +321,17 @@ static void remove_cpu_io_clamps(void)
 
 void powerup_cpu(void)
 {
+	struct pmc_ctlr *pmc = (struct pmc_ctlr *)NV_PA_PMC_BASE;
 	u32 reg;
 	int timeout = IO_STABILIZATION_DELAY;
 	debug("%s entry\n", __func__);
 
 	if (!is_cpu_powered()) {
 		/* Toggle the CPU power state (OFF -> ON) */
-		reg = tegra_pmc_readl(offsetof(struct pmc_ctlr,
-				      pmc_pwrgate_toggle));
+		reg = readl(&pmc->pmc_pwrgate_toggle);
 		reg &= PARTID_CP;
 		reg |= START_CP;
-		tegra_pmc_writel(reg,
-				 offsetof(struct pmc_ctlr,
-				 pmc_pwrgate_toggle));
+		writel(reg, &pmc->pmc_pwrgate_toggle);
 
 		/* Wait for the power to come up */
 		while (!is_cpu_powered()) {

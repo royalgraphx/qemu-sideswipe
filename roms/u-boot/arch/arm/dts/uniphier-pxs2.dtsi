@@ -141,10 +141,8 @@
 			cooling-maps {
 				map {
 					trip = <&cpu_alert>;
-					cooling-device = <&cpu0 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu1 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu2 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>,
-							 <&cpu3 THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+					cooling-device = <&cpu0
+					    THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
 				};
 			};
 		};
@@ -157,7 +155,7 @@
 		ranges;
 		interrupt-parent = <&intc>;
 
-		l2: cache-controller@500c0000 {
+		l2: l2-cache@500c0000 {
 			compatible = "socionext,uniphier-system-cache";
 			reg = <0x500c0000 0x2000>, <0x503c0100 0x8>,
 			      <0x506c0000 0x400>;
@@ -173,8 +171,6 @@
 			compatible = "socionext,uniphier-scssi";
 			status = "disabled";
 			reg = <0x54006000 0x100>;
-			#address-cells = <1>;
-			#size-cells = <0>;
 			interrupts = <0 39 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_spi0>;
@@ -186,13 +182,11 @@
 			compatible = "socionext,uniphier-scssi";
 			status = "disabled";
 			reg = <0x54006100 0x100>;
-			#address-cells = <1>;
-			#size-cells = <0>;
 			interrupts = <0 216 4>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&pinctrl_spi1>;
-			clocks = <&peri_clk 12>;
-			resets = <&peri_rst 12>;
+			clocks = <&peri_clk 11>;
+			resets = <&peri_rst 11>;
 		};
 
 		serial0: serial@54006800 {
@@ -450,7 +444,7 @@
 			};
 		};
 
-		emmc: mmc@5a000000 {
+		emmc: sdhc@5a000000 {
 			compatible = "socionext,uniphier-sd-v3.1.1";
 			status = "disabled";
 			reg = <0x5a000000 0x800>;
@@ -466,7 +460,7 @@
 			non-removable;
 		};
 
-		sd: mmc@5a400000 {
+		sd: sdhc@5a400000 {
 			compatible = "socionext,uniphier-sd-v3.1.1";
 			status = "disabled";
 			reg = <0x5a400000 0x800>;
@@ -512,15 +506,7 @@
 			};
 		};
 
-		xdmac: dma-controller@5fc10000 {
-			compatible = "socionext,uniphier-xdmac";
-			reg = <0x5fc10000 0x5300>;
-			interrupts = <0 188 4>;
-			dma-channels = <16>;
-			#dma-cells = <2>;
-		};
-
-		aidet: interrupt-controller@5fc20000 {
+		aidet: aidet@5fc20000 {
 			compatible = "socionext,uniphier-pxs2-aidet";
 			reg = <0x5fc20000 0x200>;
 			interrupt-controller;
@@ -811,7 +797,7 @@
 			};
 		};
 
-		nand: nand-controller@68000000 {
+		nand: nand@68000000 {
 			compatible = "socionext,uniphier-denali-nand-v5b";
 			status = "disabled";
 			reg-names = "nand_data", "denali_reg";
@@ -821,8 +807,7 @@
 			pinctrl-0 = <&pinctrl_nand2cs>;
 			clock-names = "nand", "nand_x", "ecc";
 			clocks = <&sys_clk 2>, <&sys_clk 3>, <&sys_clk 3>;
-			reset-names = "nand", "reg";
-			resets = <&sys_rst 2>, <&sys_rst 2>;
+			resets = <&sys_rst 2>;
 		};
 	};
 };

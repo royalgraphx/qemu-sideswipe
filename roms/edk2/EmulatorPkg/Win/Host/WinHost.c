@@ -9,34 +9,15 @@
   allocate memory space with ReadWrite and Execute attribute.
 
 Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
-(C) Copyright 2016-2020 Hewlett Packard Enterprise Development LP<BR>
+(C) Copyright 2016 Hewlett Packard Enterprise Development LP<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
 #include "WinHost.h"
 
 #ifndef SE_TIME_ZONE_NAME
-#define SE_TIME_ZONE_NAME  TEXT("SeTimeZonePrivilege")
+#define SE_TIME_ZONE_NAME                 TEXT("SeTimeZonePrivilege")
 #endif
-
-//
-// The growth size for array of module handle entries
-//
-#define MAX_PDB_NAME_TO_MOD_HANDLE_ARRAY_SIZE  0x100
-
-//
-// Module handle entry structure
-//
-typedef struct {
-  CHAR8    *PdbPointer;
-  VOID     *ModHandle;
-} PDB_NAME_TO_MOD_HANDLE;
-
-//
-// An Array to hold the module handles
-//
-PDB_NAME_TO_MOD_HANDLE  *mPdbNameModHandleArray    = NULL;
-UINTN                   mPdbNameModHandleArraySize = 0;
 
 //
 // Default information about where the FD is located.
@@ -44,17 +25,17 @@ UINTN                   mPdbNameModHandleArraySize = 0;
 //  The number of array elements is allocated base on parsing
 //  PcdWinNtFirmwareVolume and the memory is never freed.
 //
-UINTN       gFdInfoCount = 0;
-NT_FD_INFO  *gFdInfo;
+UINTN                                     gFdInfoCount = 0;
+NT_FD_INFO                                *gFdInfo;
 
 //
-// Array that supports separate memory ranges.
+// Array that supports seperate memory rantes.
 //  The memory ranges are set by PcdWinNtMemorySizeForSecMain.
 //  The number of array elements is allocated base on parsing
 //  PcdWinNtMemorySizeForSecMain value and the memory is never freed.
 //
-UINTN             gSystemMemoryCount = 0;
-NT_SYSTEM_MEMORY  *gSystemMemory;
+UINTN                                     gSystemMemoryCount = 0;
+NT_SYSTEM_MEMORY                          *gSystemMemory;
 
 /*++
 
@@ -90,7 +71,7 @@ WinPeiAutoScan (
   //
   // Allocate enough memory space for emulator
   //
-  gSystemMemory[Index].Memory = (EFI_PHYSICAL_ADDRESS)(UINTN)VirtualAlloc (NULL, (SIZE_T)(gSystemMemory[Index].Size), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+  gSystemMemory[Index].Memory = (EFI_PHYSICAL_ADDRESS) (UINTN) VirtualAlloc (NULL, (SIZE_T) (gSystemMemory[Index].Size), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
   if (gSystemMemory[Index].Memory == 0) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -105,7 +86,7 @@ WinPeiAutoScan (
 
 Routine Description:
   Return the FD Size and base address. Since the FD is loaded from a
-  file into host memory only the SEC will know its address.
+  file into host memory only the SEC will know it's address.
 
 Arguments:
   Index  - Which FD, starts at zero.
@@ -130,11 +111,12 @@ WinFdAddress (
     return EFI_UNSUPPORTED;
   }
 
+
   *FdBase = (EFI_PHYSICAL_ADDRESS)(UINTN)gFdInfo[Index].Address;
   *FdSize = (UINT64)gFdInfo[Index].Size;
   *FixUp  = 0;
 
-  if ((*FdBase == 0) && (*FdSize == 0)) {
+  if (*FdBase == 0 && *FdSize == 0) {
     return EFI_UNSUPPORTED;
   }
 
@@ -172,7 +154,8 @@ WinThunk (
   return &gEmuThunkProtocol;
 }
 
-EMU_THUNK_PPI  mSecEmuThunkPpi = {
+
+EMU_THUNK_PPI mSecEmuThunkPpi = {
   WinPeiAutoScan,
   WinFdAddress,
   WinThunk
@@ -225,7 +208,7 @@ Returns:
 **/
 BOOLEAN
 EfiSystemMemoryRange (
-  IN  VOID  *MemoryAddress
+  IN  VOID *MemoryAddress
   )
 {
   UINTN                 Index;
@@ -234,8 +217,7 @@ EfiSystemMemoryRange (
   MemoryBase = (EFI_PHYSICAL_ADDRESS)(UINTN)MemoryAddress;
   for (Index = 0; Index < gSystemMemoryCount; Index++) {
     if ((MemoryBase >= gSystemMemory[Index].Memory) &&
-        (MemoryBase < (gSystemMemory[Index].Memory + gSystemMemory[Index].Size)))
-    {
+        (MemoryBase < (gSystemMemory[Index].Memory + gSystemMemory[Index].Size)) ) {
       return TRUE;
     }
   }
@@ -243,15 +225,15 @@ EfiSystemMemoryRange (
   return FALSE;
 }
 
+
 EFI_STATUS
 WinNtOpenFile (
-  IN  CHAR16    *FileName             OPTIONAL,
-  IN  UINT32    MapSize,
-  IN  DWORD     CreationDisposition,
-  IN OUT  VOID  **BaseAddress,
-  OUT UINTN     *Length
+  IN  CHAR16                    *FileName,            OPTIONAL
+  IN  UINT32                    MapSize,
+  IN  DWORD                     CreationDisposition,
+  IN OUT  VOID                  **BaseAddress,
+  OUT UINTN                     *Length
   )
-
 /*++
 
 Routine Description:
@@ -272,7 +254,7 @@ Arguments:
 Returns:
   EFI_SUCCESS      - The file was opened and mapped.
   EFI_NOT_FOUND    - FileName was not found in the current directory
-  EFI_DEVICE_ERROR - An error occurred attempting to map the opened file
+  EFI_DEVICE_ERROR - An error occured attempting to map the opened file
 
 --*/
 {
@@ -299,7 +281,6 @@ Returns:
       return EFI_NOT_FOUND;
     }
   }
-
   //
   // Map the open file into a memory range
   //
@@ -314,18 +295,17 @@ Returns:
   if (NtMapHandle == NULL) {
     return EFI_DEVICE_ERROR;
   }
-
   //
   // Get the virtual address (address in the emulator) of the mapped file
   //
   VirtualAddress = MapViewOfFileEx (
-                     NtMapHandle,
-                     FILE_MAP_EXECUTE | FILE_MAP_ALL_ACCESS,
-                     0,
-                     0,
-                     MapSize,
-                     *BaseAddress
-                     );
+                    NtMapHandle,
+                    FILE_MAP_EXECUTE | FILE_MAP_ALL_ACCESS,
+                    0,
+                    0,
+                    MapSize,
+                    *BaseAddress
+                    );
   if (VirtualAddress == NULL) {
     return EFI_DEVICE_ERROR;
   }
@@ -335,11 +315,11 @@ Returns:
     // Seek to the end of the file to figure out the true file size.
     //
     FileSize = SetFilePointer (
-                 NtFileHandle,
-                 0,
-                 NULL,
-                 FILE_END
-                 );
+                NtFileHandle,
+                0,
+                NULL,
+                FILE_END
+                );
     if (FileSize == -1) {
       return EFI_DEVICE_ERROR;
     }
@@ -357,11 +337,10 @@ Returns:
 INTN
 EFIAPI
 main (
-  IN  INT    Argc,
-  IN  CHAR8  **Argv,
-  IN  CHAR8  **Envp
+  IN  INTN  Argc,
+  IN  CHAR8 **Argv,
+  IN  CHAR8 **Envp
   )
-
 /*++
 
 Routine Description:
@@ -378,45 +357,45 @@ Returns:
 
 --*/
 {
-  EFI_STATUS           Status;
-  HANDLE               Token;
-  TOKEN_PRIVILEGES     TokenPrivileges;
-  VOID                 *TemporaryRam;
-  UINT32               TemporaryRamSize;
-  VOID                 *EmuMagicPage;
-  UINTN                Index;
-  UINTN                Index1;
-  CHAR16               *FileName;
-  CHAR16               *FileNamePtr;
-  BOOLEAN              Done;
-  EFI_PEI_FILE_HANDLE  FileHandle;
-  VOID                 *SecFile;
-  CHAR16               *MemorySizeStr;
-  CHAR16               *FirmwareVolumesStr;
-  UINTN                ProcessAffinityMask;
-  UINTN                SystemAffinityMask;
-  INT32                LowBit;
+  EFI_STATUS            Status;
+  HANDLE                Token;
+  TOKEN_PRIVILEGES      TokenPrivileges;
+  VOID                  *TemporaryRam;
+  UINT32                TemporaryRamSize;
+  VOID                  *EmuMagicPage;
+  UINTN                 Index;
+  UINTN                 Index1;
+  CHAR16                *FileName;
+  CHAR16                *FileNamePtr;
+  BOOLEAN               Done;
+  EFI_PEI_FILE_HANDLE   FileHandle;
+  VOID                  *SecFile;
+  CHAR16                *MemorySizeStr;
+  CHAR16                *FirmwareVolumesStr;
+  UINT32                ProcessAffinityMask;
+  UINT32                SystemAffinityMask;
+  INT32                 LowBit;
 
   //
   // Enable the privilege so that RTC driver can successfully run SetTime()
   //
-  OpenProcessToken (GetCurrentProcess (), TOKEN_ADJUST_PRIVILEGES|TOKEN_QUERY, &Token);
-  if (LookupPrivilegeValue (NULL, SE_TIME_ZONE_NAME, &TokenPrivileges.Privileges[0].Luid)) {
-    TokenPrivileges.PrivilegeCount           = 1;
+  OpenProcessToken (GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES|TOKEN_QUERY, &Token);
+  if (LookupPrivilegeValue(NULL, SE_TIME_ZONE_NAME, &TokenPrivileges.Privileges[0].Luid)) {
+    TokenPrivileges.PrivilegeCount = 1;
     TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    AdjustTokenPrivileges (Token, FALSE, &TokenPrivileges, 0, (PTOKEN_PRIVILEGES)NULL, 0);
+    AdjustTokenPrivileges(Token, FALSE, &TokenPrivileges, 0, (PTOKEN_PRIVILEGES) NULL, 0);
   }
 
-  MemorySizeStr      = (CHAR16 *)PcdGetPtr (PcdEmuMemorySize);
-  FirmwareVolumesStr = (CHAR16 *)PcdGetPtr (PcdEmuFirmwareVolume);
+  MemorySizeStr      = (CHAR16 *) PcdGetPtr (PcdEmuMemorySize);
+  FirmwareVolumesStr = (CHAR16 *) PcdGetPtr (PcdEmuFirmwareVolume);
 
-  SecPrint ("\n\rEDK II WIN Host Emulation Environment from http://www.tianocore.org/edk2/\n\r");
+  SecPrint ("\nEDK II WIN Host Emulation Environment from http://www.tianocore.org/edk2/\n");
 
   //
   // Determine the first thread available to this process.
   //
   if (GetProcessAffinityMask (GetCurrentProcess (), &ProcessAffinityMask, &SystemAffinityMask)) {
-    LowBit = (INT32)LowBitSet32 ((UINT32)ProcessAffinityMask);
+    LowBit = (INT32)LowBitSet32 (ProcessAffinityMask);
     if (LowBit != -1) {
       //
       // Force the system to bind the process to a single thread to work
@@ -445,32 +424,30 @@ Returns:
   AddThunkProtocol (&mWinNtWndThunkIo, (CHAR16 *)PcdGetPtr (PcdEmuGop), TRUE);
   AddThunkProtocol (&mWinNtFileSystemThunkIo, (CHAR16 *)PcdGetPtr (PcdEmuFileSystem), TRUE);
   AddThunkProtocol (&mWinNtBlockIoThunkIo, (CHAR16 *)PcdGetPtr (PcdEmuVirtualDisk), TRUE);
-  AddThunkProtocol (&mWinNtSnpThunkIo, (CHAR16 *)PcdGetPtr (PcdEmuNetworkInterface), TRUE);
 
   //
   // Allocate space for gSystemMemory Array
   //
-  gSystemMemoryCount = CountSeparatorsInString (MemorySizeStr, '!') + 1;
-  gSystemMemory      = calloc (gSystemMemoryCount, sizeof (NT_SYSTEM_MEMORY));
+  gSystemMemoryCount  = CountSeparatorsInString (MemorySizeStr, '!') + 1;
+  gSystemMemory       = calloc (gSystemMemoryCount, sizeof (NT_SYSTEM_MEMORY));
   if (gSystemMemory == NULL) {
-    SecPrint ("ERROR : Can not allocate memory for %S.  Exiting.\n\r", MemorySizeStr);
+    SecPrint ("ERROR : Can not allocate memory for %S.  Exiting.\n", MemorySizeStr);
     exit (1);
   }
 
   //
   // Allocate space for gSystemMemory Array
   //
-  gFdInfoCount = CountSeparatorsInString (FirmwareVolumesStr, '!') + 1;
-  gFdInfo      = calloc (gFdInfoCount, sizeof (NT_FD_INFO));
+  gFdInfoCount  = CountSeparatorsInString (FirmwareVolumesStr, '!') + 1;
+  gFdInfo       = calloc (gFdInfoCount, sizeof (NT_FD_INFO));
   if (gFdInfo == NULL) {
-    SecPrint ("ERROR : Can not allocate memory for %S.  Exiting.\n\r", FirmwareVolumesStr);
+    SecPrint ("ERROR : Can not allocate memory for %S.  Exiting.\n", FirmwareVolumesStr);
     exit (1);
   }
-
   //
   // Setup Boot Mode.
   //
-  SecPrint ("  BootMode 0x%02x\n\r", PcdGet32 (PcdEmuBootMode));
+  SecPrint ("  BootMode 0x%02x\n", PcdGet32 (PcdEmuBootMode));
 
   //
   //  Allocate 128K memory to emulate temp memory for PEI.
@@ -478,16 +455,14 @@ Returns:
   //  Set TemporaryRam to zero so WinNtOpenFile will allocate a new mapping
   //
   TemporaryRamSize = TEMPORARY_RAM_SIZE;
-  TemporaryRam     = VirtualAlloc (NULL, (SIZE_T)(TemporaryRamSize), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+  TemporaryRam     = VirtualAlloc (NULL, (SIZE_T) (TemporaryRamSize), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
   if (TemporaryRam == NULL) {
-    SecPrint ("ERROR : Can not allocate enough space for SecStack\n\r");
+    SecPrint ("ERROR : Can not allocate enough space for SecStack\n");
     exit (1);
   }
-
   SetMem32 (TemporaryRam, TemporaryRamSize, PcdGet32 (PcdInitValueInTempStack));
 
-  SecPrint (
-    "  OS Emulator passing in %u KB of temp RAM at 0x%08lx to SEC\n\r",
+  SecPrint ("  OS Emulator passing in %u KB of temp RAM at 0x%08lx to SEC\n",
     TemporaryRamSize / SIZE_1KB,
     TemporaryRam
     );
@@ -502,14 +477,14 @@ Returns:
   if (EmuMagicPage != NULL) {
     UINT64  Size;
     Status = WinNtOpenFile (
-               NULL,
-               SIZE_4KB,
-               0,
-               &EmuMagicPage,
-               &Size
-               );
+              NULL,
+              SIZE_4KB,
+              0,
+              &EmuMagicPage,
+              &Size
+              );
     if (EFI_ERROR (Status)) {
-      SecPrint ("ERROR : Could not allocate PeiServicesTablePage @ %p\n\r", EmuMagicPage);
+      SecPrint ("ERROR : Could not allocate PeiServicesTablePage @ %p\n", EmuMagicPage);
       return EFI_DEVICE_ERROR;
     }
   }
@@ -520,38 +495,37 @@ Returns:
   //
   FileNamePtr = AllocateCopyPool (StrSize (FirmwareVolumesStr), FirmwareVolumesStr);
   if (FileNamePtr == NULL) {
-    SecPrint ("ERROR : Can not allocate memory for firmware volume string\n\r");
+    SecPrint ("ERROR : Can not allocate memory for firmware volume string\n");
     exit (1);
   }
 
   for (Done = FALSE, Index = 0, SecFile = NULL; !Done; Index++) {
     FileName = FileNamePtr;
-    for (Index1 = 0; (FileNamePtr[Index1] != '!') && (FileNamePtr[Index1] != 0); Index1++) {
-    }
-
+    for (Index1 = 0; (FileNamePtr[Index1] != '!') && (FileNamePtr[Index1] != 0); Index1++)
+      ;
     if (FileNamePtr[Index1] == 0) {
       Done = TRUE;
     } else {
-      FileNamePtr[Index1] = '\0';
-      FileNamePtr         = &FileNamePtr[Index1 + 1];
+      FileNamePtr[Index1]  = '\0';
+      FileNamePtr = &FileNamePtr[Index1 + 1];
     }
 
     //
     // Open the FD and remember where it got mapped into our processes address space
     //
     Status = WinNtOpenFile (
-               FileName,
-               0,
-               OPEN_EXISTING,
-               &gFdInfo[Index].Address,
-               &gFdInfo[Index].Size
-               );
+              FileName,
+              0,
+              OPEN_EXISTING,
+              &gFdInfo[Index].Address,
+              &gFdInfo[Index].Size
+              );
     if (EFI_ERROR (Status)) {
-      SecPrint ("ERROR : Can not open Firmware Device File %S (0x%X).  Exiting.\n\r", FileName, Status);
+      SecPrint ("ERROR : Can not open Firmware Device File %S (0x%X).  Exiting.\n", FileName, Status);
       exit (1);
     }
 
-    SecPrint ("  FD loaded from %S", FileName);
+    SecPrint ("  FD loaded from %S\n", FileName);
 
     if (SecFile == NULL) {
       //
@@ -559,11 +533,11 @@ Returns:
       // Load the first one we find.
       //
       FileHandle = NULL;
-      Status     = PeiServicesFfsFindNextFile (
-                     EFI_FV_FILETYPE_SECURITY_CORE,
-                     (EFI_PEI_FV_HANDLE)gFdInfo[Index].Address,
-                     &FileHandle
-                     );
+      Status = PeiServicesFfsFindNextFile (
+                  EFI_FV_FILETYPE_SECURITY_CORE,
+                  (EFI_PEI_FV_HANDLE)gFdInfo[Index].Address,
+                  &FileHandle
+                  );
       if (!EFI_ERROR (Status)) {
         Status = PeiServicesFfsFindSectionData (EFI_SECTION_PE32, FileHandle, &SecFile);
         if (!EFI_ERROR (Status)) {
@@ -572,9 +546,8 @@ Returns:
       }
     }
 
-    SecPrint ("\n\r");
+    SecPrint ("\n");
   }
-
   //
   // Calculate memory regions and store the information in the gSystemMemory
   //  global for later use. The autosizing code will use this data to
@@ -584,14 +557,13 @@ Returns:
     //
     // Save the size of the memory and make a Unicode filename SystemMemory00, ...
     //
-    gSystemMemory[Index].Size = ((UINT64)_wtoi (MemorySizeStr)) * ((UINT64)SIZE_1MB);
+    gSystemMemory[Index].Size = _wtoi (MemorySizeStr) * SIZE_1MB;
 
     //
     // Find the next region
     //
-    for (Index1 = 0; MemorySizeStr[Index1] != '!' && MemorySizeStr[Index1] != 0; Index1++) {
-    }
-
+    for (Index1 = 0; MemorySizeStr[Index1] != '!' && MemorySizeStr[Index1] != 0; Index1++)
+      ;
     if (MemorySizeStr[Index1] == 0) {
       Done = TRUE;
     }
@@ -599,7 +571,7 @@ Returns:
     MemorySizeStr = MemorySizeStr + Index1 + 1;
   }
 
-  SecPrint ("\n\r");
+  SecPrint ("\n");
 
   //
   // Hand off to SEC Core
@@ -610,19 +582,18 @@ Returns:
   // If we get here, then the SEC Core returned. This is an error as SEC should
   //  always hand off to PEI Core and then on to DXE Core.
   //
-  SecPrint ("ERROR : SEC returned\n\r");
+  SecPrint ("ERROR : SEC returned\n");
   exit (1);
 }
 
 VOID
 SecLoadSecCore (
-  IN  UINTN  TemporaryRam,
-  IN  UINTN  TemporaryRamSize,
-  IN  VOID   *BootFirmwareVolumeBase,
-  IN  UINTN  BootFirmwareVolumeSize,
-  IN  VOID   *SecCorePe32File
+  IN  UINTN   TemporaryRam,
+  IN  UINTN   TemporaryRamSize,
+  IN  VOID    *BootFirmwareVolumeBase,
+  IN  UINTN   BootFirmwareVolumeSize,
+  IN  VOID    *SecCorePe32File
   )
-
 /*++
 
 Routine Description:
@@ -635,15 +606,15 @@ Arguments:
   SecCorePe32File         - SEC Core PE32
 
 Returns:
-  Success means control is transferred and thus we should never return
+  Success means control is transfered and thus we should never return
 
 --*/
 {
-  EFI_STATUS            Status;
-  VOID                  *TopOfStack;
-  VOID                  *SecCoreEntryPoint;
-  EFI_SEC_PEI_HAND_OFF  *SecCoreData;
-  UINTN                 SecStackSize;
+  EFI_STATUS                  Status;
+  VOID                        *TopOfStack;
+  VOID                        *SecCoreEntryPoint;
+  EFI_SEC_PEI_HAND_OFF        *SecCoreData;
+  UINTN                       SecStackSize;
 
   //
   // Compute Top Of Memory for Stack and PEI Core Allocations
@@ -659,37 +630,37 @@ Returns:
   // |  Stack    |
   // |-----------| <---- TemporaryRamBase
   //
-  TopOfStack = (VOID *)(TemporaryRam + SecStackSize);
+  TopOfStack  = (VOID *)(TemporaryRam + SecStackSize);
 
   //
   // Reservet space for storing PeiCore's parament in stack.
   //
-  TopOfStack = (VOID *)((UINTN)TopOfStack - sizeof (EFI_SEC_PEI_HAND_OFF) - CPU_STACK_ALIGNMENT);
-  TopOfStack = ALIGN_POINTER (TopOfStack, CPU_STACK_ALIGNMENT);
+  TopOfStack  = (VOID *)((UINTN)TopOfStack - sizeof (EFI_SEC_PEI_HAND_OFF) - CPU_STACK_ALIGNMENT);
+  TopOfStack  = ALIGN_POINTER (TopOfStack, CPU_STACK_ALIGNMENT);
 
   //
   // Bind this information into the SEC hand-off state
   //
-  SecCoreData                         = (EFI_SEC_PEI_HAND_OFF *)(UINTN)TopOfStack;
+  SecCoreData                         = (EFI_SEC_PEI_HAND_OFF*)(UINTN)TopOfStack;
   SecCoreData->DataSize               = sizeof (EFI_SEC_PEI_HAND_OFF);
   SecCoreData->BootFirmwareVolumeBase = BootFirmwareVolumeBase;
   SecCoreData->BootFirmwareVolumeSize = BootFirmwareVolumeSize;
-  SecCoreData->TemporaryRamBase       = (VOID *)TemporaryRam;
+  SecCoreData->TemporaryRamBase       = (VOID*)TemporaryRam;
   SecCoreData->TemporaryRamSize       = TemporaryRamSize;
   SecCoreData->StackBase              = SecCoreData->TemporaryRamBase;
   SecCoreData->StackSize              = SecStackSize;
-  SecCoreData->PeiTemporaryRamBase    = (VOID *)((UINTN)SecCoreData->TemporaryRamBase + SecStackSize);
+  SecCoreData->PeiTemporaryRamBase    = (VOID*) ((UINTN) SecCoreData->TemporaryRamBase + SecStackSize);
   SecCoreData->PeiTemporaryRamSize    = TemporaryRamSize - SecStackSize;
 
   //
   // Load the PEI Core from a Firmware Volume
   //
   Status = SecPeCoffGetEntryPoint (
-             SecCorePe32File,
-             &SecCoreEntryPoint
-             );
+            SecCorePe32File,
+            &SecCoreEntryPoint
+            );
   if (EFI_ERROR (Status)) {
-    return;
+    return ;
   }
 
   //
@@ -704,7 +675,7 @@ Returns:
   //
   // If we get here, then the SEC Core returned.  This is an error
   //
-  return;
+  return ;
 }
 
 RETURN_STATUS
@@ -714,28 +685,26 @@ SecPeCoffGetEntryPoint (
   IN OUT VOID  **EntryPoint
   )
 {
-  EFI_STATUS                    Status;
-  PE_COFF_LOADER_IMAGE_CONTEXT  ImageContext;
+  EFI_STATUS                            Status;
+  PE_COFF_LOADER_IMAGE_CONTEXT          ImageContext;
 
   ZeroMem (&ImageContext, sizeof (ImageContext));
-  ImageContext.Handle = Pe32Data;
+  ImageContext.Handle     = Pe32Data;
 
-  ImageContext.ImageRead = (PE_COFF_LOADER_READ_FILE)SecImageRead;
+  ImageContext.ImageRead  = (PE_COFF_LOADER_READ_FILE) SecImageRead;
 
-  Status = PeCoffLoaderGetImageInfo (&ImageContext);
+  Status                  = PeCoffLoaderGetImageInfo (&ImageContext);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Allocate space in NT (not emulator) memory with ReadWrite and Execute attribute.
   // Extra space is for alignment
   //
-  ImageContext.ImageAddress = (EFI_PHYSICAL_ADDRESS)(UINTN)VirtualAlloc (NULL, (SIZE_T)(ImageContext.ImageSize + (ImageContext.SectionAlignment * 2)), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+  ImageContext.ImageAddress = (EFI_PHYSICAL_ADDRESS) (UINTN) VirtualAlloc (NULL, (SIZE_T) (ImageContext.ImageSize + (ImageContext.SectionAlignment * 2)), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
   if (ImageContext.ImageAddress == 0) {
     return EFI_OUT_OF_RESOURCES;
   }
-
   //
   // Align buffer on section boundary
   //
@@ -752,7 +721,7 @@ SecPeCoffGetEntryPoint (
     return Status;
   }
 
-  *EntryPoint = (VOID *)(UINTN)ImageContext.EntryPoint;
+  *EntryPoint   = (VOID *)(UINTN)ImageContext.EntryPoint;
 
   return EFI_SUCCESS;
 }
@@ -760,12 +729,11 @@ SecPeCoffGetEntryPoint (
 EFI_STATUS
 EFIAPI
 SecImageRead (
-  IN     VOID   *FileHandle,
-  IN     UINTN  FileOffset,
-  IN OUT UINTN  *ReadSize,
-  OUT    VOID   *Buffer
+  IN     VOID    *FileHandle,
+  IN     UINTN   FileOffset,
+  IN OUT UINTN   *ReadSize,
+  OUT    VOID    *Buffer
   )
-
 /*++
 
 Routine Description:
@@ -782,13 +750,13 @@ Returns:
 
 --*/
 {
-  CHAR8  *Destination8;
-  CHAR8  *Source8;
-  UINTN  Length;
+  CHAR8 *Destination8;
+  CHAR8 *Source8;
+  UINTN Length;
 
-  Destination8 = Buffer;
-  Source8      = (CHAR8 *)((UINTN)FileHandle + FileOffset);
-  Length       = *ReadSize;
+  Destination8  = Buffer;
+  Source8       = (CHAR8 *) ((UINTN) FileHandle + FileOffset);
+  Length        = *ReadSize;
   while (Length--) {
     *(Destination8++) = *(Source8++);
   }
@@ -798,10 +766,9 @@ Returns:
 
 CHAR16 *
 AsciiToUnicode (
-  IN  CHAR8  *Ascii,
-  IN  UINTN  *StrLen OPTIONAL
+  IN  CHAR8   *Ascii,
+  IN  UINTN   *StrLen OPTIONAL
   )
-
 /*++
 
 Routine Description:
@@ -823,16 +790,15 @@ Returns:
   //
   // Allocate a buffer for unicode string
   //
-  for (Index = 0; Ascii[Index] != '\0'; Index++) {
-  }
-
+  for (Index = 0; Ascii[Index] != '\0'; Index++)
+    ;
   Unicode = malloc ((Index + 1) * sizeof (CHAR16));
   if (Unicode == NULL) {
     return NULL;
   }
 
   for (Index = 0; Ascii[Index] != '\0'; Index++) {
-    Unicode[Index] = (CHAR16)Ascii[Index];
+    Unicode[Index] = (CHAR16) Ascii[Index];
   }
 
   Unicode[Index] = '\0';
@@ -846,10 +812,9 @@ Returns:
 
 UINTN
 CountSeparatorsInString (
-  IN  CONST CHAR16  *String,
-  IN  CHAR16        Separator
+  IN  CONST CHAR16   *String,
+  IN  CHAR16         Separator
   )
-
 /*++
 
 Routine Description:
@@ -864,7 +829,7 @@ Returns:
 
 --*/
 {
-  UINTN  Count;
+  UINTN Count;
 
   for (Count = 0; *String != '\0'; String++) {
     if (*String == Separator) {
@@ -875,142 +840,26 @@ Returns:
   return Count;
 }
 
-/**
-  Store the ModHandle in an array indexed by the Pdb File name.
-  The ModHandle is needed to unload the image.
-  @param ImageContext - Input data returned from PE Laoder Library. Used to find the
-                 .PDB file name of the PE Image.
-  @param ModHandle    - Returned from LoadLibraryEx() and stored for call to
-                 FreeLibrary().
-  @return   return EFI_SUCCESS when ModHandle was stored.
---*/
-EFI_STATUS
-AddModHandle (
-  IN  PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext,
-  IN  VOID                          *ModHandle
-  )
-
-{
-  UINTN                   Index;
-  PDB_NAME_TO_MOD_HANDLE  *Array;
-  UINTN                   PreviousSize;
-  PDB_NAME_TO_MOD_HANDLE  *TempArray;
-  HANDLE                  Handle;
-  UINTN                   Size;
-
-  //
-  // Return EFI_ALREADY_STARTED if this DLL has already been loaded
-  //
-  Array = mPdbNameModHandleArray;
-  for (Index = 0; Index < mPdbNameModHandleArraySize; Index++, Array++) {
-    if ((Array->PdbPointer != NULL) && (Array->ModHandle == ModHandle)) {
-      return EFI_ALREADY_STARTED;
-    }
-  }
-
-  Array = mPdbNameModHandleArray;
-  for (Index = 0; Index < mPdbNameModHandleArraySize; Index++, Array++) {
-    if (Array->PdbPointer == NULL) {
-      //
-      // Make a copy of the stirng and store the ModHandle
-      //
-      Handle            = GetProcessHeap ();
-      Size              = AsciiStrLen (ImageContext->PdbPointer) + 1;
-      Array->PdbPointer = HeapAlloc (Handle, HEAP_ZERO_MEMORY, Size);
-      ASSERT (Array->PdbPointer != NULL);
-
-      AsciiStrCpyS (Array->PdbPointer, Size, ImageContext->PdbPointer);
-      Array->ModHandle = ModHandle;
-      return EFI_SUCCESS;
-    }
-  }
-
-  //
-  // No free space in mPdbNameModHandleArray so grow it by
-  // MAX_PDB_NAME_TO_MOD_HANDLE_ARRAY_SIZE entires.
-  //
-  PreviousSize                = mPdbNameModHandleArraySize * sizeof (PDB_NAME_TO_MOD_HANDLE);
-  mPdbNameModHandleArraySize += MAX_PDB_NAME_TO_MOD_HANDLE_ARRAY_SIZE;
-  //
-  // re-allocate a new buffer and copy the old values to the new locaiton.
-  //
-  TempArray = HeapAlloc (
-                GetProcessHeap (),
-                HEAP_ZERO_MEMORY,
-                mPdbNameModHandleArraySize * sizeof (PDB_NAME_TO_MOD_HANDLE)
-                );
-
-  CopyMem ((VOID *)(UINTN)TempArray, (VOID *)(UINTN)mPdbNameModHandleArray, PreviousSize);
-
-  HeapFree (GetProcessHeap (), 0, mPdbNameModHandleArray);
-
-  mPdbNameModHandleArray = TempArray;
-  if (mPdbNameModHandleArray == NULL) {
-    ASSERT (FALSE);
-    return EFI_OUT_OF_RESOURCES;
-  }
-
-  return AddModHandle (ImageContext, ModHandle);
-}
-
-/**
-  Return the ModHandle and delete the entry in the array.
-   @param  ImageContext - Input data returned from PE Laoder Library. Used to find the
-                 .PDB file name of the PE Image.
-  @return
-    ModHandle - ModHandle assoicated with ImageContext is returned
-    NULL      - No ModHandle associated with ImageContext
-**/
-VOID *
-RemoveModHandle (
-  IN  PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
-  )
-{
-  UINTN                   Index;
-  PDB_NAME_TO_MOD_HANDLE  *Array;
-
-  if (ImageContext->PdbPointer == NULL) {
-    //
-    // If no PDB pointer there is no ModHandle so return NULL
-    //
-    return NULL;
-  }
-
-  Array = mPdbNameModHandleArray;
-  for (Index = 0; Index < mPdbNameModHandleArraySize; Index++, Array++) {
-    if ((Array->PdbPointer != NULL) && (AsciiStrCmp (Array->PdbPointer, ImageContext->PdbPointer) == 0)) {
-      //
-      // If you find a match return it and delete the entry
-      //
-      HeapFree (GetProcessHeap (), 0, Array->PdbPointer);
-      Array->PdbPointer = NULL;
-      return Array->ModHandle;
-    }
-  }
-
-  return NULL;
-}
 
 VOID
 EFIAPI
 PeCoffLoaderRelocateImageExtraAction (
-  IN OUT PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
+  IN OUT PE_COFF_LOADER_IMAGE_CONTEXT         *ImageContext
   )
 {
-  EFI_STATUS  Status;
-  VOID        *DllEntryPoint;
-  CHAR16      *DllFileName;
-  HMODULE     Library;
-  UINTN       Index;
+  VOID              *DllEntryPoint;
+  CHAR16            *DllFileName;
+  HMODULE           Library;
+  UINTN             Index;
 
   ASSERT (ImageContext != NULL);
   //
   // If we load our own PE COFF images the Windows debugger can not source
-  //  level debug our code. If a valid PDB pointer exists use it to load
+  //  level debug our code. If a valid PDB pointer exists usw it to load
   //  the *.dll file as a library using Windows* APIs. This allows
   //  source level debug. The image is still loaded and relocated
   //  in the Framework memory space like on a real system (by the code above),
-  //  but the entry point points into the DLL loaded by the code below.
+  //  but the entry point points into the DLL loaded by the code bellow.
   //
 
   DllEntryPoint = NULL;
@@ -1019,8 +868,7 @@ PeCoffLoaderRelocateImageExtraAction (
   // Load the DLL if it's not an EBC image.
   //
   if ((ImageContext->PdbPointer != NULL) &&
-      (ImageContext->Machine != EFI_IMAGE_MACHINE_EBC))
-  {
+      (ImageContext->Machine != EFI_IMAGE_MACHINE_EBC)) {
     //
     // Convert filename from ASCII to Unicode
     //
@@ -1029,7 +877,7 @@ PeCoffLoaderRelocateImageExtraAction (
     //
     // Check that we have a valid filename
     //
-    if ((Index < 5) || (DllFileName[Index - 4] != '.')) {
+    if (Index < 5 || DllFileName[Index - 4] != '.') {
       free (DllFileName);
 
       //
@@ -1039,13 +887,12 @@ PeCoffLoaderRelocateImageExtraAction (
       //
       return;
     }
-
     //
     // Replace .PDB with .DLL on the filename
     //
-    DllFileName[Index - 3] = 'D';
-    DllFileName[Index - 2] = 'L';
-    DllFileName[Index - 1] = 'L';
+    DllFileName[Index - 3]  = 'D';
+    DllFileName[Index - 2]  = 'L';
+    DllFileName[Index - 1]  = 'L';
 
     //
     // Load the .DLL file into the user process's address space for source
@@ -1061,26 +908,15 @@ PeCoffLoaderRelocateImageExtraAction (
       // checking as the we can point to the PE32 image loaded by Tiano. This
       // step is only needed for source level debugging
       //
-      DllEntryPoint = (VOID *)(UINTN)GetProcAddress (Library, "InitializeDriver");
+      DllEntryPoint = (VOID *) (UINTN) GetProcAddress (Library, "InitializeDriver");
+
     }
 
     if ((Library != NULL) && (DllEntryPoint != NULL)) {
-      Status = AddModHandle (ImageContext, Library);
-      if (Status == EFI_ALREADY_STARTED) {
-        //
-        // If the DLL has already been loaded before, then this instance of the DLL can not be debugged.
-        //
-        ImageContext->PdbPointer = NULL;
-        SecPrint ("WARNING: DLL already loaded.  No source level debug %S.\n\r", DllFileName);
-      } else {
-        //
-        // This DLL is not already loaded, so source level debugging is supported.
-        //
-        ImageContext->EntryPoint = (EFI_PHYSICAL_ADDRESS)(UINTN)DllEntryPoint;
-        SecPrint ("LoadLibraryEx (\n\r  %S,\n\r  NULL, DONT_RESOLVE_DLL_REFERENCES)\n\r", DllFileName);
-      }
+      ImageContext->EntryPoint  = (EFI_PHYSICAL_ADDRESS) (UINTN) DllEntryPoint;
+      SecPrint ("LoadLibraryEx (%S,\n               NULL, DONT_RESOLVE_DLL_REFERENCES)\n", DllFileName);
     } else {
-      SecPrint ("WARNING: No source level debug %S. \n\r", DllFileName);
+      SecPrint ("WARNING: No source level debug %S. \n", DllFileName);
     }
 
     free (DllFileName);
@@ -1090,21 +926,12 @@ PeCoffLoaderRelocateImageExtraAction (
 VOID
 EFIAPI
 PeCoffLoaderUnloadImageExtraAction (
-  IN PE_COFF_LOADER_IMAGE_CONTEXT  *ImageContext
-  )
+  IN PE_COFF_LOADER_IMAGE_CONTEXT         *ImageContext
+)
 {
-  VOID  *ModHandle;
-
   ASSERT (ImageContext != NULL);
-
-  ModHandle = RemoveModHandle (ImageContext);
-  if (ModHandle != NULL) {
-    FreeLibrary (ModHandle);
-    SecPrint ("FreeLibrary (\n\r  %s)\n\r", ImageContext->PdbPointer);
-  } else {
-    SecPrint ("WARNING: Unload image without source level debug\n\r");
-  }
 }
+
 
 VOID
 _ModuleEntryPoint (

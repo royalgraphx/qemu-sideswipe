@@ -6,7 +6,9 @@
 
 **/
 
+
 #include "BaseLibInternals.h"
+
 
 /**
   Writes the current Global Descriptor Table Register (GDTR) descriptor.
@@ -20,7 +22,7 @@
 VOID
 EFIAPI
 InternalX86WriteGdtr (
-  IN      CONST IA32_DESCRIPTOR  *Gdtr
+  IN      CONST IA32_DESCRIPTOR     *Gdtr
   )
 {
   _asm {
@@ -28,3 +30,4 @@ InternalX86WriteGdtr (
     lgdt    fword ptr [eax]
   }
 }
+

@@ -80,11 +80,12 @@ static int execute(void)
 			return EFI_ST_FAILURE;
 		}
 		for (j = 0; j < GROUP_SIZE; ++j) {
-			if (counter[j] != 2 * i + 1) {
+			if (counter[j] != i) {
 				efi_st_printf("i %u, j %u, count %u\n",
 					      (unsigned int)i, (unsigned int)j,
 					      (unsigned int)counter[j]);
-				efi_st_error("Notification function was not called\n");
+				efi_st_error(
+					"Notification function was called\n");
 				return EFI_ST_FAILURE;
 			}
 			/* Clear signaled state */
@@ -93,7 +94,7 @@ static int execute(void)
 				efi_st_error("Event was not signaled\n");
 				return EFI_ST_FAILURE;
 			}
-			if (counter[j] != 2 * i + 1) {
+			if (counter[j] != i) {
 				efi_st_printf("i %u, j %u, count %u\n",
 					      (unsigned int)i, (unsigned int)j,
 					      (unsigned int)counter[j]);
@@ -108,7 +109,7 @@ static int execute(void)
 					"Signaled state not cleared\n");
 				return EFI_ST_FAILURE;
 			}
-			if (counter[j] != 2 * i + 2) {
+			if (counter[j] != i + 1) {
 				efi_st_printf("i %u, j %u, count %u\n",
 					      (unsigned int)i, (unsigned int)j,
 					      (unsigned int)counter[j]);

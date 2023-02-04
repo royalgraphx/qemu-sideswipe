@@ -21,10 +21,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 EFI_STATUS
 EFIAPI
 PeimInitializeAutoScanPei (
-  IN       EFI_PEI_FILE_HANDLE  FileHandle,
-  IN CONST EFI_PEI_SERVICES     **PeiServices
+  IN       EFI_PEI_FILE_HANDLE       FileHandle,
+  IN CONST EFI_PEI_SERVICES          **PeiServices
   )
-
 /*++
 
 Routine Description:
@@ -39,15 +38,16 @@ Returns:
 
 **/
 {
-  EFI_STATUS                   Status;
-  EFI_PEI_PPI_DESCRIPTOR       *PpiDescriptor;
-  EMU_THUNK_PPI                *Thunk;
-  UINT64                       MemorySize;
-  EFI_PHYSICAL_ADDRESS         MemoryBase;
-  UINTN                        Index;
-  EFI_RESOURCE_ATTRIBUTE_TYPE  Attributes;
+  EFI_STATUS                  Status;
+  EFI_PEI_PPI_DESCRIPTOR      *PpiDescriptor;
+  EMU_THUNK_PPI               *Thunk;
+  UINT64                      MemorySize;
+  EFI_PHYSICAL_ADDRESS        MemoryBase;
+  UINTN                       Index;
+  EFI_RESOURCE_ATTRIBUTE_TYPE Attributes;
 
-  DEBUG ((DEBUG_ERROR, "Emu Autoscan PEIM Loaded\n"));
+
+  DEBUG ((EFI_D_ERROR, "Emu Autoscan PEIM Loaded\n"));
 
   //
   // Get the PEI UNIX Autoscan PPI
@@ -66,12 +66,12 @@ Returns:
     if (!EFI_ERROR (Status)) {
       Attributes =
         (
-         EFI_RESOURCE_ATTRIBUTE_PRESENT |
-         EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
-         EFI_RESOURCE_ATTRIBUTE_UNCACHEABLE |
-         EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
-         EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
-         EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE
+          EFI_RESOURCE_ATTRIBUTE_PRESENT |
+          EFI_RESOURCE_ATTRIBUTE_INITIALIZED |
+          EFI_RESOURCE_ATTRIBUTE_UNCACHEABLE |
+          EFI_RESOURCE_ATTRIBUTE_WRITE_COMBINEABLE |
+          EFI_RESOURCE_ATTRIBUTE_WRITE_THROUGH_CACHEABLE |
+          EFI_RESOURCE_ATTRIBUTE_WRITE_BACK_CACHEABLE
         );
 
       if (Index == 0) {
@@ -91,7 +91,6 @@ Returns:
         MemorySize
         );
     }
-
     Index++;
   } while (!EFI_ERROR (Status));
 

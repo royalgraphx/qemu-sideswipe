@@ -6,14 +6,10 @@
 #include <common.h>
 #include <clk-uclass.h>
 #include <dm.h>
-#include <log.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/scu_ast2500.h>
 #include <dm/lists.h>
-#include <dt-bindings/clock/aspeed-clock.h>
-#include <linux/delay.h>
-#include <linux/err.h>
+#include <dt-bindings/clock/ast2500-scu.h>
 
 /*
  * MAC Clock Delay settings, taken from Aspeed SDK
@@ -123,7 +119,8 @@ static ulong ast2500_clk_get_rate(struct clk *clk)
 	ulong rate;
 
 	switch (clk->id) {
-	case ASPEED_CLK_HPLL:
+	case PLL_HPLL:
+	case ARMCLK:
 		/*
 		 * This ignores dynamic/static slowdown of ARMCLK and may
 		 * be inaccurate.
@@ -131,11 +128,11 @@ static ulong ast2500_clk_get_rate(struct clk *clk)
 		rate = ast2500_get_hpll_rate(clkin,
 					     readl(&priv->scu->h_pll_param));
 		break;
-	case ASPEED_CLK_MPLL:
+	case MCLK_DDR:
 		rate = ast2500_get_mpll_rate(clkin,
 					     readl(&priv->scu->m_pll_param));
 		break;
-	case ASPEED_CLK_APB:
+	case BCLK_PCLK:
 		{
 			ulong apb_div = 4 + 4 * ((readl(&priv->scu->clk_sel1)
 						  & SCU_PCLK_DIV_MASK)
@@ -146,30 +143,19 @@ static ulong ast2500_clk_get_rate(struct clk *clk)
 			rate = rate / apb_div;
 		}
 		break;
-	case ASPEED_CLK_SDIO:
-		{
-			ulong apb_div = 4 + 4 * ((readl(&priv->scu->clk_sel1)
-						  & SCU_SDCLK_DIV_MASK)
-						 >> SCU_SDCLK_DIV_SHIFT);
-			rate = ast2500_get_hpll_rate(clkin,
-						     readl(&priv->
-							   scu->h_pll_param));
-			rate = rate / apb_div;
-		}
-		break;
-	case ASPEED_CLK_GATE_UART1CLK:
+	case PCLK_UART1:
 		rate = ast2500_get_uart_clk_rate(priv->scu, 1);
 		break;
-	case ASPEED_CLK_GATE_UART2CLK:
+	case PCLK_UART2:
 		rate = ast2500_get_uart_clk_rate(priv->scu, 2);
 		break;
-	case ASPEED_CLK_GATE_UART3CLK:
+	case PCLK_UART3:
 		rate = ast2500_get_uart_clk_rate(priv->scu, 3);
 		break;
-	case ASPEED_CLK_GATE_UART4CLK:
+	case PCLK_UART4:
 		rate = ast2500_get_uart_clk_rate(priv->scu, 4);
 		break;
-	case ASPEED_CLK_GATE_UART5CLK:
+	case PCLK_UART5:
 		rate = ast2500_get_uart_clk_rate(priv->scu, 5);
 		break;
 	default:
@@ -431,10 +417,11 @@ static ulong ast2500_clk_set_rate(struct clk *clk, ulong rate)
 
 	ulong new_rate;
 	switch (clk->id) {
-	case ASPEED_CLK_MPLL:
+	case PLL_MPLL:
+	case MCLK_DDR:
 		new_rate = ast2500_configure_ddr(priv->scu, rate);
 		break;
-	case ASPEED_CLK_D2PLL:
+	case PLL_D2PLL:
 		new_rate = ast2500_configure_d2pll(priv->scu, rate);
 		break;
 	default:
@@ -449,34 +436,18 @@ static int ast2500_clk_enable(struct clk *clk)
 	struct ast2500_clk_priv *priv = dev_get_priv(clk->dev);
 
 	switch (clk->id) {
-	case ASPEED_CLK_SDIO:
-		if (readl(&priv->scu->clk_stop_ctrl1) & SCU_CLKSTOP_SDCLK) {
-			ast_scu_unlock(priv->scu);
-
-			setbits_le32(&priv->scu->sysreset_ctrl1,
-				     SCU_SYSRESET_SDIO);
-			udelay(100);
-			clrbits_le32(&priv->scu->clk_stop_ctrl1,
-				     SCU_CLKSTOP_SDCLK);
-			mdelay(10);
-			clrbits_le32(&priv->scu->sysreset_ctrl1,
-				     SCU_SYSRESET_SDIO);
-
-			ast_scu_lock(priv->scu);
-		}
-		break;
 	/*
 	 * For MAC clocks the clock rate is
 	 * configured based on whether RGMII or RMII mode has been selected
 	 * through hardware strapping.
 	 */
-	case ASPEED_CLK_GATE_MAC1CLK:
+	case PCLK_MAC1:
 		ast2500_configure_mac(priv->scu, 1);
 		break;
-	case ASPEED_CLK_GATE_MAC2CLK:
+	case PCLK_MAC2:
 		ast2500_configure_mac(priv->scu, 2);
 		break;
-	case ASPEED_CLK_D2PLL:
+	case PLL_D2PLL:
 		ast2500_configure_d2pll(priv->scu, D2PLL_DEFAULT_RATE);
 		break;
 	default:
@@ -492,7 +463,7 @@ struct clk_ops ast2500_clk_ops = {
 	.enable = ast2500_clk_enable,
 };
 
-static int ast2500_clk_of_to_plat(struct udevice *dev)
+static int ast2500_clk_probe(struct udevice *dev)
 {
 	struct ast2500_clk_priv *priv = dev_get_priv(dev);
 
@@ -524,8 +495,8 @@ U_BOOT_DRIVER(aspeed_ast2500_scu) = {
 	.name		= "aspeed_ast2500_scu",
 	.id		= UCLASS_CLK,
 	.of_match	= ast2500_clk_ids,
-	.priv_auto	= sizeof(struct ast2500_clk_priv),
+	.priv_auto_alloc_size = sizeof(struct ast2500_clk_priv),
 	.ops		= &ast2500_clk_ops,
 	.bind		= ast2500_clk_bind,
-	.of_to_plat		= ast2500_clk_of_to_plat,
+	.probe		= ast2500_clk_probe,
 };

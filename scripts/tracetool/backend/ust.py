@@ -19,7 +19,11 @@ PUBLIC = True
 
 
 def generate_h_begin(events, group):
-    header = 'trace-ust-' + group + '.h'
+    if group == "root":
+        header = "trace-ust-root.h"
+    else:
+        header = "trace-ust.h"
+
     out('#include <lttng/tracepoint.h>',
         '#include "%s"' % header,
         '',

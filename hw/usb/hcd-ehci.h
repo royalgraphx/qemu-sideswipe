@@ -23,7 +23,6 @@
 #include "sysemu/dma.h"
 #include "hw/pci/pci.h"
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #ifndef EHCI_DEBUG
 #define EHCI_DEBUG   0
@@ -329,37 +328,41 @@ void usb_ehci_unrealize(EHCIState *s, DeviceState *dev);
 void ehci_reset(void *opaque);
 
 #define TYPE_PCI_EHCI "pci-ehci-usb"
-OBJECT_DECLARE_SIMPLE_TYPE(EHCIPCIState, PCI_EHCI)
+#define PCI_EHCI(obj) OBJECT_CHECK(EHCIPCIState, (obj), TYPE_PCI_EHCI)
 
-struct EHCIPCIState {
+typedef struct EHCIPCIState {
     /*< private >*/
     PCIDevice pcidev;
     /*< public >*/
 
     EHCIState ehci;
-};
+} EHCIPCIState;
 
 
 #define TYPE_SYS_BUS_EHCI "sysbus-ehci-usb"
 #define TYPE_PLATFORM_EHCI "platform-ehci-usb"
 #define TYPE_EXYNOS4210_EHCI "exynos4210-ehci-usb"
 #define TYPE_AW_H3_EHCI "aw-h3-ehci-usb"
-#define TYPE_NPCM7XX_EHCI "npcm7xx-ehci-usb"
 #define TYPE_TEGRA2_EHCI "tegra2-ehci-usb"
 #define TYPE_PPC4xx_EHCI "ppc4xx-ehci-usb"
 #define TYPE_FUSBH200_EHCI "fusbh200-ehci-usb"
 
-OBJECT_DECLARE_TYPE(EHCISysBusState, SysBusEHCIClass, SYS_BUS_EHCI)
+#define SYS_BUS_EHCI(obj) \
+    OBJECT_CHECK(EHCISysBusState, (obj), TYPE_SYS_BUS_EHCI)
+#define SYS_BUS_EHCI_CLASS(class) \
+    OBJECT_CLASS_CHECK(SysBusEHCIClass, (class), TYPE_SYS_BUS_EHCI)
+#define SYS_BUS_EHCI_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(SysBusEHCIClass, (obj), TYPE_SYS_BUS_EHCI)
 
-struct EHCISysBusState {
+typedef struct EHCISysBusState {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
 
     EHCIState ehci;
-};
+} EHCISysBusState;
 
-struct SysBusEHCIClass {
+typedef struct SysBusEHCIClass {
     /*< private >*/
     SysBusDeviceClass parent_class;
     /*< public >*/
@@ -368,16 +371,17 @@ struct SysBusEHCIClass {
     uint16_t opregbase;
     uint16_t portscbase;
     uint16_t portnr;
-};
+} SysBusEHCIClass;
 
-OBJECT_DECLARE_SIMPLE_TYPE(FUSBH200EHCIState, FUSBH200_EHCI)
+#define FUSBH200_EHCI(obj) \
+    OBJECT_CHECK(FUSBH200EHCIState, (obj), TYPE_FUSBH200_EHCI)
 
-struct FUSBH200EHCIState {
+typedef struct FUSBH200EHCIState {
     /*< private >*/
     EHCISysBusState parent_obj;
     /*< public >*/
 
     MemoryRegion mem_vendor;
-};
+} FUSBH200EHCIState;
 
 #endif

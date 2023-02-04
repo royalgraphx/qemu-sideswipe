@@ -68,7 +68,7 @@ static const char *imx6_src_reg_name(uint32_t reg)
     case SRC_GPR10:
         return "SRC_GPR10";
     default:
-        sprintf(unknown, "%u ?", reg);
+        sprintf(unknown, "%d ?", reg);
         return unknown;
     }
 }
@@ -151,7 +151,7 @@ static void imx6_defer_clear_reset_bit(int cpuid,
         return;
     }
 
-    ri = g_new(struct SRCSCRResetInfo, 1);
+    ri = g_malloc(sizeof(struct SRCSCRResetInfo));
     ri->s = s;
     ri->reset_bit = reset_shift;
 

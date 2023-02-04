@@ -12,6 +12,7 @@
 #ifndef __REAL_TIME_CLOCK_LIB__
 #define __REAL_TIME_CLOCK_LIB__
 
+
 /**
   Returns the current time and date information, and the time-keeping capabilities
   of the hardware platform.
@@ -32,6 +33,7 @@ LibGetTime (
   OUT  EFI_TIME_CAPABILITIES  *Capabilities
   );
 
+
 /**
   Sets the current local time and date information.
 
@@ -45,8 +47,9 @@ LibGetTime (
 EFI_STATUS
 EFIAPI
 LibSetTime (
-  IN EFI_TIME  *Time
+  IN EFI_TIME                *Time
   );
+
 
 /**
   Returns the current wakeup alarm clock setting.
@@ -63,10 +66,11 @@ LibSetTime (
 EFI_STATUS
 EFIAPI
 LibGetWakeupTime (
-  OUT BOOLEAN   *Enabled,
-  OUT BOOLEAN   *Pending,
-  OUT EFI_TIME  *Time
+  OUT BOOLEAN     *Enabled,
+  OUT BOOLEAN     *Pending,
+  OUT EFI_TIME    *Time
   );
+
 
 /**
   Sets the system wakeup alarm clock time.
@@ -84,9 +88,11 @@ LibGetWakeupTime (
 EFI_STATUS
 EFIAPI
 LibSetWakeupTime (
-  IN BOOLEAN    Enabled,
-  OUT EFI_TIME  *Time
+  IN BOOLEAN      Enabled,
+  OUT EFI_TIME    *Time
   );
+
+
 
 /**
   This is the declaration of an EFI image entry point. This can be the entry point to an application
@@ -101,9 +107,10 @@ LibSetWakeupTime (
 EFI_STATUS
 EFIAPI
 LibRtcInitialize (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE                            ImageHandle,
+  IN EFI_SYSTEM_TABLE                      *SystemTable
   );
+
 
 /**
   Fixup internal data so that EFI can be call in virtual mode.
@@ -116,8 +123,10 @@ LibRtcInitialize (
 VOID
 EFIAPI
 LibRtcVirtualNotifyEvent (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT        Event,
+  IN VOID             *Context
   );
 
+
 #endif
+

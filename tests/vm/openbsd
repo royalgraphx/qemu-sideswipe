@@ -22,24 +22,22 @@ class OpenBSDVM(basevm.BaseVM):
     name = "openbsd"
     arch = "x86_64"
 
-    link = "https://cdn.openbsd.org/pub/OpenBSD/7.2/amd64/install72.iso"
-    csum = "0369ef40a3329efcb978c578c7fdc7bda71e502aecec930a74b44160928c91d3"
+    link = "https://cdn.openbsd.org/pub/OpenBSD/6.6/amd64/install66.iso"
+    csum = "b22e63df56e6266de6bbeed8e9be0fbe9ee2291551c5bc03f3cc2e4ab9436ee3"
     size = "20G"
     pkgs = [
         # tools
         "git",
         "pkgconf",
         "bzip2", "xz",
-        "ninja",
 
         # gnu tools
         "bash",
         "gmake",
         "gsed",
-        "gettext-tools",
 
         # libs: usb
-        "libusb1--",
+        "libusb1",
 
         # libs: crypto
         "gnutls",
@@ -48,17 +46,13 @@ class OpenBSDVM(basevm.BaseVM):
         "jpeg",
         "png",
 
-        # libs: ui
-        "capstone",
+	# libs: ui
         "sdl2",
         "gtk+3",
         "libxkbcommon",
 
         # libs: migration
         "zstd",
-
-        # libs: networking
-        "libslirp",
     ]
 
     BUILD_SCRIPT = """
@@ -85,6 +79,7 @@ class OpenBSDVM(basevm.BaseVM):
 
         self.print_step("Booting installer")
         self.boot(img_tmp, extra_args = [
+            "-bios", "pc-bios/bios-256k.bin",
             "-machine", "graphics=off",
             "-device", "VGA",
             "-cdrom", iso
@@ -98,9 +93,10 @@ class OpenBSDVM(basevm.BaseVM):
         self.console_wait_send("Terminal type",           "xterm\n")
         self.console_wait_send("System hostname",         "openbsd\n")
         self.console_wait_send("Which network interface", "vio0\n")
-        self.console_wait_send("IPv4 address",            "autoconf\n")
+        self.console_wait_send("IPv4 address",            "dhcp\n")
         self.console_wait_send("IPv6 address",            "none\n")
         self.console_wait_send("Which network interface", "done\n")
+        self.console_wait_send("DNS domain name",         "localnet\n")
         self.console_wait("Password for root account")
         self.console_send("%s\n" % self._config["root_pass"])
         self.console_wait("Password for root account")

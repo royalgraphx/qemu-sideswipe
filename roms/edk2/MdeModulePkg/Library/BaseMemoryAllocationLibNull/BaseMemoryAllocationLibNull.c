@@ -7,10 +7,12 @@
 
 **/
 
+
 #include <Uefi/UefiBaseType.h>
 
 #include <Library/DebugLib.h>
 #include <Library/MemoryAllocationLib.h>
+
 
 /**
   Allocates one or more 4KB pages of type EfiBootServicesData.
@@ -560,7 +562,7 @@ ReallocateReservedPool (
 VOID
 EFIAPI
 FreePool (
-  IN VOID  *Buffer
+  IN VOID   *Buffer
   )
 {
   ASSERT (FALSE);

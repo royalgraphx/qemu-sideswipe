@@ -12,6 +12,10 @@
  * A23 specific configuration
  */
 
+#ifdef CONFIG_USB_EHCI_HCD
+#define CONFIG_USB_EHCI_SUNXI
+#endif
+
 /*
  * Include common sunxi configuration where most the settings are
  */

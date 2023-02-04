@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # Tests updates of the qcow2 L1 table
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"
@@ -38,7 +37,7 @@ trap "_cleanup; exit \$status" 0 1 2 3 15
 . ./common.filter
 
 _supported_fmt qcow2
-_supported_proto file nfs fuse
+_supported_proto file nfs
 
 
 IMG_SIZE=64K

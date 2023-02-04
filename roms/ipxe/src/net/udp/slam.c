@@ -655,49 +655,35 @@ static struct interface_descriptor slam_xfer_desc =
  */
 static int slam_parse_multicast_address ( struct slam_request *slam,
 					  const char *path,
-					  struct sockaddr_tcpip *address ) {
-	char *path_dup;
+					  struct sockaddr_in *address ) {
+	char path_dup[ strlen ( path ) /* no +1 */ ];
 	char *sep;
 	char *end;
-	int rc;
 
 	/* Create temporary copy of path, minus the leading '/' */
 	assert ( *path == '/' );
-	path_dup = strdup ( path + 1 );
-	if ( ! path_dup ) {
-		rc = -ENOMEM;
-		goto err_strdup;
-	}
+	memcpy ( path_dup, ( path + 1 ) , sizeof ( path_dup ) );
 
 	/* Parse port, if present */
 	sep = strchr ( path_dup, ':' );
 	if ( sep ) {
 		*(sep++) = '\0';
-		address->st_port = htons ( strtoul ( sep, &end, 0 ) );
+		address->sin_port = htons ( strtoul ( sep, &end, 0 ) );
 		if ( *end != '\0' ) {
 			DBGC ( slam, "SLAM %p invalid multicast port "
 			       "\"%s\"\n", slam, sep );
-			rc = -EINVAL;
-			goto err_port;
+			return -EINVAL;
 		}
 	}
 
 	/* Parse address */
-	if ( sock_aton ( path_dup, ( ( struct sockaddr * ) address ) ) == 0 ) {
+	if ( inet_aton ( path_dup, &address->sin_addr ) == 0 ) {
 		DBGC ( slam, "SLAM %p invalid multicast address \"%s\"\n",
 		       slam, path_dup );
-		rc = -EINVAL;
-		goto err_addr;
+		return -EINVAL;
 	}
 
-	/* Success */
-	rc = 0;
-
- err_addr:
- err_port:
-	free ( path_dup );
- err_strdup:
-	return rc;
+	return 0;
 }
 
 /**
@@ -715,7 +701,7 @@ static int slam_open ( struct interface *xfer, struct uri *uri ) {
 	};
 	struct slam_request *slam;
 	struct sockaddr_tcpip server;
-	struct sockaddr_tcpip multicast;
+	struct sockaddr_in multicast;
 	int rc;
 
 	/* Sanity checks */

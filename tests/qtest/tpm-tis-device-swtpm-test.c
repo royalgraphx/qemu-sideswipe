@@ -14,6 +14,7 @@
  */
 
 #include "qemu/osdep.h"
+#include <glib/gstdio.h>
 
 #include "libqtest.h"
 #include "qemu/module.h"
@@ -65,9 +66,9 @@ int main(int argc, char **argv)
                         tpm_tis_swtpm_migration_test);
     ret = g_test_run();
 
-    tpm_util_rmdir(ts.dst_tpm_path);
+    g_rmdir(ts.dst_tpm_path);
     g_free(ts.dst_tpm_path);
-    tpm_util_rmdir(ts.src_tpm_path);
+    g_rmdir(ts.src_tpm_path);
     g_free(ts.src_tpm_path);
     g_free(ts.uri);
 

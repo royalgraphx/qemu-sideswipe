@@ -24,6 +24,7 @@
 #include "qemu/main-loop.h"
 #include "hw/irq.h"
 #include "hw/mips/cpudevs.h"
+#include "cpu.h"
 #include "sysemu/kvm.h"
 #include "kvm_mips.h"
 

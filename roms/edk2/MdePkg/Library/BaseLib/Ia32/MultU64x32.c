@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Multiples a 64-bit unsigned integer by a 32-bit unsigned integer
   and generates a 64-bit unsigned result.
@@ -23,8 +26,8 @@
 UINT64
 EFIAPI
 InternalMathMultU64x32 (
-  IN      UINT64  Multiplicand,
-  IN      UINT32  Multiplier
+  IN      UINT64                    Multiplicand,
+  IN      UINT32                    Multiplier
   )
 {
   _asm {
@@ -35,3 +38,4 @@ InternalMathMultU64x32 (
     add     edx, ecx
   }
 }
+

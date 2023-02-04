@@ -17,12 +17,12 @@
 #include "hw/virtio/virtio-scsi.h"
 #include "hw/virtio/vhost.h"
 #include "hw/fw-path-provider.h"
-#include "qom/object.h"
 
 #define TYPE_VHOST_SCSI_COMMON "vhost-scsi-common"
-OBJECT_DECLARE_SIMPLE_TYPE(VHostSCSICommon, VHOST_SCSI_COMMON)
+#define VHOST_SCSI_COMMON(obj) \
+        OBJECT_CHECK(VHostSCSICommon, (obj), TYPE_VHOST_SCSI_COMMON)
 
-struct VHostSCSICommon {
+typedef struct VHostSCSICommon {
     VirtIOSCSICommon parent_obj;
 
     Error *migration_blocker;
@@ -35,9 +35,7 @@ struct VHostSCSICommon {
     int lun;
     uint64_t host_features;
     bool migratable;
-
-    struct vhost_inflight *inflight;
-};
+} VHostSCSICommon;
 
 int vhost_scsi_common_start(VHostSCSICommon *vsc);
 void vhost_scsi_common_stop(VHostSCSICommon *vsc);

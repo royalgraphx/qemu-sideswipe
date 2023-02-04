@@ -28,20 +28,18 @@
 #include "qemu/module.h"
 #include "chardev/char-win.h"
 #include "chardev/char-win-stdio.h"
-#include "qom/object.h"
 
-struct WinStdioChardev {
+typedef struct {
     Chardev parent;
     HANDLE  hStdIn;
     HANDLE  hInputReadyEvent;
     HANDLE  hInputDoneEvent;
     HANDLE  hInputThread;
     uint8_t win_stdio_buf;
-};
-typedef struct WinStdioChardev WinStdioChardev;
+} WinStdioChardev;
 
-DECLARE_INSTANCE_CHECKER(WinStdioChardev, WIN_STDIO_CHARDEV,
-                         TYPE_CHARDEV_WIN_STDIO)
+#define WIN_STDIO_CHARDEV(obj)                                          \
+    OBJECT_CHECK(WinStdioChardev, (obj), TYPE_CHARDEV_WIN_STDIO)
 
 static void win_stdio_wait_func(void *opaque)
 {
@@ -146,8 +144,6 @@ static void qemu_chr_open_stdio(Chardev *chr,
                                 bool *be_opened,
                                 Error **errp)
 {
-    ChardevStdio *opts = backend->u.stdio.data;
-    bool stdio_allow_signal = !opts->has_signal || opts->signal;
     WinStdioChardev *stdio = WIN_STDIO_CHARDEV(chr);
     DWORD              dwMode;
     int                is_console = 0;
@@ -195,11 +191,7 @@ static void qemu_chr_open_stdio(Chardev *chr,
     if (is_console) {
         /* set the terminal in raw mode */
         /* ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS */
-        if (stdio_allow_signal) {
-            dwMode |= ENABLE_PROCESSED_INPUT;
-        } else {
-            dwMode &= ~ENABLE_PROCESSED_INPUT;
-        }
+        dwMode |= ENABLE_PROCESSED_INPUT;
     }
 
     SetConsoleMode(stdio->hStdIn, dwMode);

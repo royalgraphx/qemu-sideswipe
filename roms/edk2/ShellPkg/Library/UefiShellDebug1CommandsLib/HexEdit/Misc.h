@@ -18,12 +18,12 @@
                             >0 : advance
                             <0: retreat
 
-  @retval NULL An error occurred.
+  @retval NULL An error occured.
   @return A pointer to the line after move.
 **/
 HEFI_EDITOR_LINE *
 HMoveLine (
-  IN  INTN  Count
+  IN  INTN Count
   );
 
 /**
@@ -33,12 +33,12 @@ HMoveLine (
                           >0 : advance
                           <0: retreat
 
-  @retval NULL An error occurred.
+  @retval NULL An error occured.
   @return A pointer to the line after move.
 **/
 HEFI_EDITOR_LINE *
 HMoveCurrentLine (
-  IN  INTN  Count
+  IN  INTN Count
   );
 
 /**
@@ -56,8 +56,8 @@ HMoveCurrentLine (
 **/
 EFI_STATUS
 HFreeLines (
-  IN LIST_ENTRY        *ListHead,
-  IN HEFI_EDITOR_LINE  *Lines
+  IN LIST_ENTRY   *ListHead,
+  IN HEFI_EDITOR_LINE *Lines
   );
 
 /**
@@ -69,7 +69,7 @@ HFreeLines (
 **/
 INT32
 HGetTextX (
-  IN INT32  GuidX
+  IN INT32 GuidX
   );
 
 /**
@@ -81,7 +81,7 @@ HGetTextX (
 **/
 INT32
 HGetTextY (
-  IN INT32  GuidY
+  IN INT32 GuidY
   );
 
 #endif

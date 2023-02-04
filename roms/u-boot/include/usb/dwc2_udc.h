@@ -8,14 +8,11 @@
 #ifndef __DWC2_USB_GADGET
 #define __DWC2_USB_GADGET
 
-#include <dm/ofnode.h>
-
 #define PHY0_SLEEP              (1 << 5)
-#define DWC2_MAX_HW_ENDPOINTS	16
 
 struct dwc2_plat_otg_data {
 	void		*priv;
-	ofnode		phy_of_node;
+	int		phy_of_node;
 	int		(*phy_control)(int on);
 	uintptr_t	regs_phy;
 	uintptr_t	regs_otg;
@@ -25,15 +22,8 @@ struct dwc2_plat_otg_data {
 	unsigned int	rx_fifo_sz;
 	unsigned int	np_tx_fifo_sz;
 	unsigned int	tx_fifo_sz;
-	unsigned int	tx_fifo_sz_array[DWC2_MAX_HW_ENDPOINTS];
-	unsigned char   tx_fifo_sz_nb;
-	bool		force_b_session_valid;
-	bool		force_vbus_detection;
-	bool		activate_stm_id_vb_detection;
 };
 
 int dwc2_udc_probe(struct dwc2_plat_otg_data *pdata);
-
-int dwc2_udc_B_session_valid(struct udevice *dev);
 
 #endif	/* __DWC2_USB_GADGET */

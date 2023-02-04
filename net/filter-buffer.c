@@ -18,15 +18,16 @@
 
 #define TYPE_FILTER_BUFFER "filter-buffer"
 
-OBJECT_DECLARE_SIMPLE_TYPE(FilterBufferState, FILTER_BUFFER)
+#define FILTER_BUFFER(obj) \
+    OBJECT_CHECK(FilterBufferState, (obj), TYPE_FILTER_BUFFER)
 
-struct FilterBufferState {
+typedef struct FilterBufferState {
     NetFilterState parent_obj;
 
     NetQueue *incoming_queue;
     uint32_t interval;
     QEMUTimer release_timer;
-};
+} FilterBufferState;
 
 static void filter_buffer_flush(NetFilterState *nf)
 {
@@ -144,6 +145,16 @@ static void filter_buffer_status_changed(NetFilterState *nf, Error **errp)
     }
 }
 
+static void filter_buffer_class_init(ObjectClass *oc, void *data)
+{
+    NetFilterClass *nfc = NETFILTER_CLASS(oc);
+
+    nfc->setup = filter_buffer_setup;
+    nfc->cleanup = filter_buffer_cleanup;
+    nfc->receive_iov = filter_buffer_receive_iov;
+    nfc->status_changed = filter_buffer_status_changed;
+}
+
 static void filter_buffer_get_interval(Object *obj, Visitor *v,
                                        const char *name, void *opaque,
                                        Error **errp)
@@ -172,24 +183,18 @@ static void filter_buffer_set_interval(Object *obj, Visitor *v,
     s->interval = value;
 }
 
-static void filter_buffer_class_init(ObjectClass *oc, void *data)
+static void filter_buffer_init(Object *obj)
 {
-    NetFilterClass *nfc = NETFILTER_CLASS(oc);
-
-    object_class_property_add(oc, "interval", "uint32",
-                              filter_buffer_get_interval,
-                              filter_buffer_set_interval, NULL, NULL);
-
-    nfc->setup = filter_buffer_setup;
-    nfc->cleanup = filter_buffer_cleanup;
-    nfc->receive_iov = filter_buffer_receive_iov;
-    nfc->status_changed = filter_buffer_status_changed;
+    object_property_add(obj, "interval", "uint32",
+                        filter_buffer_get_interval,
+                        filter_buffer_set_interval, NULL, NULL);
 }
 
 static const TypeInfo filter_buffer_info = {
     .name = TYPE_FILTER_BUFFER,
     .parent = TYPE_NETFILTER,
     .class_init = filter_buffer_class_init,
+    .instance_init = filter_buffer_init,
     .instance_size = sizeof(FilterBufferState),
 };
 

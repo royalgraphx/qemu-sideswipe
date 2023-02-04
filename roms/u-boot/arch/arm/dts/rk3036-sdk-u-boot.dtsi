@@ -1,5 +1,3 @@
-#include "rk3036-u-boot.dtsi"
-
 &uart2 {
 	u-boot,dm-pre-reloc;
 };

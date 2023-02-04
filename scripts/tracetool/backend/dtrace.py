@@ -38,7 +38,7 @@ def generate_h_begin(events, group):
     if group == "root":
         header = "trace-dtrace-root.h"
     else:
-        header = "trace-dtrace-%s.h" % group
+        header = "trace-dtrace.h"
 
     # Workaround for ust backend, which also includes <sys/sdt.h> and may
     # require SDT_USE_VARIADIC to be defined. If dtrace includes <sys/sdt.h>

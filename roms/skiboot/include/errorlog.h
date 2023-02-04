@@ -1,5 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2018 IBM Corp. */
+/* Copyright 2013-2014 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef __ERRORLOG_H
 #define __ERRORLOG_H
@@ -94,19 +107,19 @@
 #define ORG_POWERNV	2
 
 /* Multiple user data sections */
-struct elog_user_data_section {
-	__be32 tag;
-	__be16 size;
-	__be16 component_id;
+struct __attribute__((__packed__))elog_user_data_section {
+	uint32_t tag;
+	uint16_t size;
+	uint16_t component_id;
 	char data_dump[1];
-} __packed;
+};
 
 /*
  * All the information regarding an error/event to be reported
  * needs to populate this structure using pre-defined interfaces
  * only
  */
-struct errorlog {
+struct __attribute__((__packed__)) errorlog {
 
 	uint16_t component_id;
 	uint8_t error_event_type;
@@ -323,8 +336,6 @@ enum opal_reasoncode {
 /* FSP console */
 	OPAL_RC_CONSOLE_HANG	    = OPAL_SRC_COMPONENT_CONSOLE | 0x10,
 };
-
-#define OPAL_ELOG_SEC_DESC	0x44455343
 
 #define DEFINE_LOG_ENTRY(reason, type, id, subsys,			\
 severity, subtype) static struct opal_err_info err_##reason =		\

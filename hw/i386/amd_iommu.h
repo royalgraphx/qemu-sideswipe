@@ -23,7 +23,6 @@
 
 #include "hw/pci/pci.h"
 #include "hw/i386/x86-iommu.h"
-#include "qom/object.h"
 
 /* Capability registers */
 #define AMDVI_CAPAB_BAR_LOW           0x04
@@ -297,7 +296,8 @@ struct irte_ga {
 };
 
 #define TYPE_AMD_IOMMU_DEVICE "amd-iommu"
-OBJECT_DECLARE_SIMPLE_TYPE(AMDVIState, AMD_IOMMU_DEVICE)
+#define AMD_IOMMU_DEVICE(obj)\
+    OBJECT_CHECK(AMDVIState, (obj), TYPE_AMD_IOMMU_DEVICE)
 
 #define TYPE_AMD_IOMMU_PCI "AMDVI-PCI"
 
@@ -310,7 +310,7 @@ typedef struct AMDVIPCIState {
     PCIDevice dev;               /* The PCI device itself        */
 } AMDVIPCIState;
 
-struct AMDVIState {
+typedef struct AMDVIState {
     X86IOMMUState iommu;        /* IOMMU bus device             */
     AMDVIPCIState pci;          /* IOMMU PCI device             */
 
@@ -367,6 +367,6 @@ struct AMDVIState {
 
     /* Interrupt remapping */
     bool ga_enabled;
-};
+} AMDVIState;
 
 #endif

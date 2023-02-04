@@ -33,7 +33,6 @@ enum if_type {
 	IF_TYPE_HOST,
 	IF_TYPE_NVME,
 	IF_TYPE_EFI,
-	IF_TYPE_PVBLOCK,
 	IF_TYPE_VIRTIO,
 
 	IF_TYPE_COUNT,			/* Number of interface types */
@@ -56,7 +55,7 @@ enum sig_type {
 
 /*
  * With driver model (CONFIG_BLK) this is uclass platform data, accessible
- * with dev_get_uclass_plat(dev)
+ * with dev_get_uclass_platdata(dev)
  */
 struct blk_desc {
 	/*
@@ -114,12 +113,6 @@ struct blk_desc {
 	(PAD_SIZE(size, blk_desc->blksz))
 
 #if CONFIG_IS_ENABLED(BLOCK_CACHE)
-
-/**
- * blkcache_init() - initialize the block cache list pointers
- */
-int blkcache_init(void);
-
 /**
  * blkcache_read() - attempt to read a set of blocks from cache
  *
@@ -130,7 +123,7 @@ int blkcache_init(void);
  * @param blksz - size in bytes of each block
  * @param buf - buffer to contain cached data
  *
- * @return - 1 if block returned from cache, 0 otherwise.
+ * @return - '1' if block returned from cache, '0' otherwise.
  */
 int blkcache_read(int iftype, int dev,
 		  lbaint_t start, lbaint_t blkcnt,
@@ -680,7 +673,7 @@ const char *blk_get_if_type_name(enum if_type if_type);
  * @cur_devnump: Current device number for this interface type
  * @return 0 if OK, CMD_RET_ERROR on error
  */
-int blk_common_cmd(int argc, char *const argv[], enum if_type if_type,
+int blk_common_cmd(int argc, char * const argv[], enum if_type if_type,
 		   int *cur_devnump);
 
 #endif

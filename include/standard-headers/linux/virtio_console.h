@@ -45,13 +45,13 @@
 
 struct virtio_console_config {
 	/* colums of the screens */
-	__virtio16 cols;
+	uint16_t cols;
 	/* rows of the screens */
-	__virtio16 rows;
+	uint16_t rows;
 	/* max. number of ports this device can hold */
-	__virtio32 max_nr_ports;
+	uint32_t max_nr_ports;
 	/* emergency write register */
-	__virtio32 emerg_wr;
+	uint32_t emerg_wr;
 } QEMU_PACKED;
 
 /*

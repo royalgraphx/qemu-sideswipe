@@ -29,20 +29,20 @@ endif
 
 PLATFORM_RELFLAGS += -fdata-sections -ffunction-sections -fvisibility=hidden
 
-KBUILD_LDFLAGS += -Bsymbolic -Bsymbolic-functions
-KBUILD_LDFLAGS += -m $(if $(IS_32BIT),elf_i386,elf_x86_64)
+PLATFORM_LDFLAGS += -Bsymbolic -Bsymbolic-functions
+PLATFORM_LDFLAGS += -m $(if $(IS_32BIT),elf_i386,elf_x86_64)
 
 # This is used in the top-level Makefile which does not include
-# KBUILD_LDFLAGS
+# PLATFORM_LDFLAGS
 LDFLAGS_EFI_PAYLOAD := -Bsymbolic -Bsymbolic-functions -shared --no-undefined -s
 
 OBJCOPYFLAGS_EFI := -j .text -j .sdata -j .data -j .dynamic -j .dynsym \
 	-j .rel -j .rela -j .reloc
 
-# Compiler flags to be added when building UEFI applications
+ifeq ($(IS_32BIT),y)
+CFLAGS_NON_EFI := -mregparm=3
+endif
 CFLAGS_EFI := -fpic -fshort-wchar
-# Compiler flags to be removed when building UEFI applications
-CFLAGS_NON_EFI := -mregparm=3 -fstack-protector-strong
 
 ifeq ($(CONFIG_EFI_STUB_64BIT),)
 CFLAGS_EFI += $(call cc-option, -mno-red-zone)
@@ -70,10 +70,8 @@ LDSCRIPT := $(LDSCRIPT_EFI)
 
 else
 
-ifeq ($(IS_32BIT),y)
-PLATFORM_CPPFLAGS += -mregparm=3
-endif
-KBUILD_LDFLAGS += --emit-relocs
+PLATFORM_CPPFLAGS += $(CFLAGS_NON_EFI)
+PLATFORM_LDFLAGS += --emit-relocs
 LDFLAGS_FINAL += --gc-sections $(if $(CONFIG_SPL_BUILD),,-pie)
 
 endif

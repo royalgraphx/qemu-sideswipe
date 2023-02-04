@@ -1,14 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * There's some system level parameters that aren't over IPMI or NVRAM
- * but that the FSP exposes through this interface.
+/* Copyright 2013-2014 IBM Corp.
  *
- * We expose these through an OPAL API as there really isn't any other/better
- * way of doing so.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * Copyright 2013-2017 IBM Corp.
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 #include <skiboot.h>
 #include <fsp.h>
 #include <opal.h>
@@ -69,18 +73,18 @@ static int fsp_sysparam_process(struct sysparam_req *r)
 
 	if (r->msg.state != fsp_msg_done) {
 		prerror("FSP: Request for sysparam 0x%x got FSP failure!\n",
-			fsp_msg_get_data_word(&r->msg, 0));
+			r->msg.data.words[0]);
 		stlen = -1; /* XXX Find saner error codes */
 		goto complete;
 	}
 
-	param_id = fsp_msg_get_data_word(&r->resp, 0);
-	len = fsp_msg_get_data_word(&r->resp, 1) & 0xffff;
+	param_id = r->resp.data.words[0];
+	len = r->resp.data.words[1] & 0xffff;
 
 	/* Check params validity */
-	if (param_id != fsp_msg_get_data_word(&r->msg, 0)) {
+	if (param_id != r->msg.data.words[0]) {
 		prerror("FSP: Request for sysparam 0x%x got resp. for 0x%x!\n",
-			fsp_msg_get_data_word(&r->msg, 0), param_id);
+			r->msg.data.words[0], param_id);
 		stlen = -2; /* XXX Sane error codes */
 		goto complete;
 	}
@@ -95,7 +99,7 @@ static int fsp_sysparam_process(struct sysparam_req *r)
 	switch(fstat) {
 	case 0x00: /* XXX Is that even possible ? */
 	case 0x11: /* Data in request */
-		memcpy(r->ubuf, &r->resp.data.bytes[8], len);
+		memcpy(r->ubuf, &r->resp.data.words[2], len);
 		/* fallthrough */
 	case 0x12: /* Data in TCE */
 		stlen = len;
@@ -106,7 +110,7 @@ static int fsp_sysparam_process(struct sysparam_req *r)
  complete:
 	/* Call completion if any */
 	if (comp)
-		comp(fsp_msg_get_data_word(&r->msg, 0), stlen, cdata);
+		comp(r->msg.data.words[0], stlen, cdata);
 	
 	free(r);
 
@@ -194,8 +198,7 @@ static void fsp_opal_getparam_complete(uint32_t param_id __unused, int err_len,
 		rc = OPAL_INTERNAL_ERROR;
 
 	opal_queue_msg(OPAL_MSG_ASYNC_COMP, NULL, NULL,
-			cpu_to_be64(comp_data->async_token),
-			cpu_to_be64(rc));
+			comp_data->async_token, rc);
 	free(comp_data);
 }
 
@@ -208,15 +211,15 @@ static void fsp_opal_setparam_complete(struct fsp_msg *msg)
 
 	if (msg->state != fsp_msg_done) {
 		prerror("FSP: Request for set sysparam 0x%x got FSP failure!\n",
-				fsp_msg_get_data_word(msg, 0));
+				msg->data.words[0]);
 		rc = OPAL_INTERNAL_ERROR;
 		goto out;
 	}
 
-	param_id = fsp_msg_get_data_word(msg->resp, 0);
-	if (param_id != fsp_msg_get_data_word(msg, 0)) {
+	param_id = msg->resp->data.words[0];
+	if (param_id != msg->data.words[0]) {
 		prerror("FSP: Request for set sysparam 0x%x got resp. for 0x%x!"
-				"\n", fsp_msg_get_data_word(msg, 0), param_id);
+				"\n", msg->data.words[0], param_id);
 		rc = OPAL_INTERNAL_ERROR;
 		goto out;
 	}
@@ -243,8 +246,7 @@ static void fsp_opal_setparam_complete(struct fsp_msg *msg)
 
 out:
 	opal_queue_msg(OPAL_MSG_ASYNC_COMP, NULL, NULL,
-			cpu_to_be64(comp_data->async_token),
-			cpu_to_be64(rc));
+			comp_data->async_token, rc);
 	free(comp_data);
 	fsp_freemsg(msg);
 }
@@ -399,7 +401,7 @@ static bool fsp_sysparam_msg(u32 cmd_sub_mod, struct fsp_msg *msg)
 	case FSP_CMD_SP_SPARM_UPD_0:
 	case FSP_CMD_SP_SPARM_UPD_1:
 		printf("FSP: Got sysparam update, param ID 0x%x\n",
-		       fsp_msg_get_data_word(msg, 0));
+		       msg->data.words[0]);
 
 		sysparam_run_update_notifier(msg);
 
@@ -424,7 +426,7 @@ static void add_opal_sysparam_node(void)
 {
 	struct dt_node *sysparams;
 	char *names, *s;
-	__be32 *ids, *lens;
+	uint32_t *ids, *lens;
 	uint8_t *perms;
 	unsigned int i, count, size = 0;
 
@@ -471,8 +473,8 @@ static void add_opal_sysparam_node(void)
 		strcpy(s, sysparam_attrs[i].name);
 		s = s + strlen(sysparam_attrs[i].name) + 1;
 
-		ids[i] = cpu_to_be32(sysparam_attrs[i].id);
-		lens[i] = cpu_to_be32(sysparam_attrs[i].length);
+		ids[i] = sysparam_attrs[i].id;
+		lens[i] = sysparam_attrs[i].length;
 		perms[i] = sysparam_attrs[i].perm;
 	}
 

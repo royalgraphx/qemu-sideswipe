@@ -37,7 +37,7 @@ server-arg.exe : server-arg.obj
 server-cmod.exe : server-cmod.obj
 server-conf.exe : server-conf.obj
 
-# MMS doesn't infer this automatically...
+# Stoopid MMS doesn't infer this automatically...
 client-arg.obj : client-arg.c
 client-conf.obj : client-conf.c
 saccept.obj : saccept.c

@@ -14,6 +14,7 @@
 #include "qemu/cutils.h"
 #include "qapi/string-output-visitor.h"
 #include "qapi/visitor-impl.h"
+#include "qemu/host-utils.h"
 #include <math.h>
 #include "qemu/range.h"
 
@@ -257,7 +258,7 @@ static bool print_type_number(Visitor *v, const char *name, double *obj,
                               Error **errp)
 {
     StringOutputVisitor *sov = to_sov(v);
-    string_output_set(sov, g_strdup_printf("%.17g", *obj));
+    string_output_set(sov, g_strdup_printf("%f", *obj));
     return true;
 }
 

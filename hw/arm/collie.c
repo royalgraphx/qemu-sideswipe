@@ -18,16 +18,16 @@
 #include "hw/block/flash.h"
 #include "exec/address-spaces.h"
 #include "cpu.h"
-#include "qom/object.h"
 
-struct CollieMachineState {
+typedef struct {
     MachineState parent;
 
     StrongARMState *sa1110;
-};
+} CollieMachineState;
 
 #define TYPE_COLLIE_MACHINE MACHINE_TYPE_NAME("collie")
-OBJECT_DECLARE_SIMPLE_TYPE(CollieMachineState, COLLIE_MACHINE)
+#define COLLIE_MACHINE(obj) \
+    OBJECT_CHECK(CollieMachineState, obj, TYPE_COLLIE_MACHINE)
 
 static struct arm_boot_info collie_binfo = {
     .loader_start = SA_SDCS0,

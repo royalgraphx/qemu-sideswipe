@@ -12,16 +12,18 @@
 
 #include "qemu/osdep.h"
 #include "sysemu/hostmem.h"
+#include "sysemu/sysemu.h"
 #include "qom/object_interfaces.h"
 #include "qemu/memfd.h"
 #include "qemu/module.h"
 #include "qapi/error.h"
-#include "qom/object.h"
 
 #define TYPE_MEMORY_BACKEND_MEMFD "memory-backend-memfd"
 
-OBJECT_DECLARE_SIMPLE_TYPE(HostMemoryBackendMemfd, MEMORY_BACKEND_MEMFD)
+#define MEMORY_BACKEND_MEMFD(obj)                                        \
+    OBJECT_CHECK(HostMemoryBackendMemfd, (obj), TYPE_MEMORY_BACKEND_MEMFD)
 
+typedef struct HostMemoryBackendMemfd HostMemoryBackendMemfd;
 
 struct HostMemoryBackendMemfd {
     HostMemoryBackend parent_obj;
@@ -35,7 +37,6 @@ static void
 memfd_backend_memory_alloc(HostMemoryBackend *backend, Error **errp)
 {
     HostMemoryBackendMemfd *m = MEMORY_BACKEND_MEMFD(backend);
-    uint32_t ram_flags;
     char *name;
     int fd;
 
@@ -53,10 +54,9 @@ memfd_backend_memory_alloc(HostMemoryBackend *backend, Error **errp)
     }
 
     name = host_memory_backend_get_name(backend);
-    ram_flags = backend->share ? RAM_SHARED : 0;
-    ram_flags |= backend->reserve ? 0 : RAM_NORESERVE;
-    memory_region_init_ram_from_fd(&backend->mr, OBJECT(backend), name,
-                                   backend->size, ram_flags, fd, 0, errp);
+    memory_region_init_ram_from_fd(&backend->mr, OBJECT(backend),
+                                   name, backend->size,
+                                   backend->share, fd, errp);
     g_free(name);
 }
 

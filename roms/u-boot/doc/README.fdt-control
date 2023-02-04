@@ -122,14 +122,13 @@ the U-Boot image (including u-boot.bin). This is suitable for debugging
 and development only and is not recommended for production devices.
 
 If CONFIG_OF_SEPARATE is defined, then it will be built and placed in
-a u-boot.dtb file alongside u-boot-nodtb.bin. A common approach is then to
+a u-boot.dtb file alongside u-boot.bin. A common approach is then to
 join the two:
 
-	cat u-boot-nodtb.bin u-boot.dtb >image.bin
+	cat u-boot.bin u-boot.dtb >image.bin
 
 and then flash image.bin onto your board. Note that U-Boot creates
-u-boot-dtb.bin which does the above step for you also. Resulting
-u-boot.bin is a copy of u-boot-dtb.bin in this case. If you are using
+u-boot-dtb.bin which does the above step for you also. If you are using
 CONFIG_SPL_FRAMEWORK, then u-boot.img will be built to include the device
 tree binary.
 
@@ -182,7 +181,7 @@ U-Boot can be divided into three phases: TPL, SPL and U-Boot proper.
 
 The full device tree is available to U-Boot proper, but normally only a subset
 (or none at all) is available to TPL and SPL. See 'Pre-Relocation Support' and
-'SPL Support' in doc/driver-model/design.rst for more details.
+'SPL Support' in doc/driver-model/README.txt for more details.
 
 
 Using several DTBs in the SPL (CONFIG_SPL_MULTI_DTB)

@@ -6,10 +6,8 @@
 #include <common.h>
 #include <fsl_ddr_sdram.h>
 #include <fsl_ddr_dimm_params.h>
-#include <log.h>
 #include <asm/arch/soc.h>
 #include <asm/arch/clock.h>
-#include <asm/global_data.h>
 #include "ddr.h"
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -162,17 +160,6 @@ found:
 	}
 }
 
-#ifdef CONFIG_TFABOOT
-int fsl_initdram(void)
-{
-	gd->ram_size = tfa_get_dram_size();
-
-	if (!gd->ram_size)
-		gd->ram_size = fsl_ddr_sdram_size();
-
-	return 0;
-}
-#else
 int fsl_initdram(void)
 {
 #if defined(CONFIG_SPL) && !defined(CONFIG_SPL_BUILD)
@@ -185,4 +172,3 @@ int fsl_initdram(void)
 
 	return 0;
 }
-#endif /* CONFIG_TFABOOT */

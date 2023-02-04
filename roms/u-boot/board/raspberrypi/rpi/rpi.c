@@ -6,11 +6,10 @@
 #include <common.h>
 #include <config.h>
 #include <dm.h>
-#include <env.h>
+#include <environment.h>
 #include <efi_loader.h>
 #include <fdt_support.h>
 #include <fdt_simplefb.h>
-#include <init.h>
 #include <lcd.h>
 #include <memalign.h>
 #include <mmc.h>
@@ -28,11 +27,8 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-/* Assigned in lowlevel_init.S
- * Push the variable into the .data section so that it
- * does not get cleared later.
- */
-unsigned long __section(".data") fw_dtb_pointer;
+/* From lowlevel_init.S */
+extern unsigned long fw_dtb_pointer;
 
 /* TODO(sjg@chromium.org): Move these to the msg.c file */
 struct msg_get_arm_mem {
@@ -147,26 +143,6 @@ static const struct rpi_model rpi_models_new_scheme[] = {
 		DTB_DIR "bcm2837-rpi-3-a-plus.dtb",
 		false,
 	},
-	[0x10] = {
-		"Compute Module 3+",
-		DTB_DIR "bcm2837-rpi-cm3.dtb",
-		false,
-	},
-	[0x11] = {
-		"4 Model B",
-		DTB_DIR "bcm2711-rpi-4-b.dtb",
-		true,
-	},
-	[0x13] = {
-		"400",
-		DTB_DIR "bcm2711-rpi-400.dtb",
-		true,
-	},
-	[0x14] = {
-		"Compute Module 4",
-		DTB_DIR "bcm2711-rpi-cm4.dtb",
-		true,
-	},
 };
 
 static const struct rpi_model rpi_models_old_scheme[] = {
@@ -262,6 +238,30 @@ static uint32_t rev_scheme;
 static uint32_t rev_type;
 static const struct rpi_model *model;
 
+#ifdef CONFIG_ARM64
+static struct mm_region bcm2837_mem_map[] = {
+	{
+		.virt = 0x00000000UL,
+		.phys = 0x00000000UL,
+		.size = 0x3f000000UL,
+		.attrs = PTE_BLOCK_MEMTYPE(MT_NORMAL) |
+			 PTE_BLOCK_INNER_SHARE
+	}, {
+		.virt = 0x3f000000UL,
+		.phys = 0x3f000000UL,
+		.size = 0x01000000UL,
+		.attrs = PTE_BLOCK_MEMTYPE(MT_DEVICE_NGNRNE) |
+			 PTE_BLOCK_NON_SHARE |
+			 PTE_BLOCK_PXN | PTE_BLOCK_UXN
+	}, {
+		/* List terminator */
+		0,
+	}
+};
+
+struct mm_region *mem_map = bcm2837_mem_map;
+#endif
+
 int dram_init(void)
 {
 	ALLOC_CACHE_ALIGN_BUFFER(struct msg_get_arm_mem, msg, 1);
@@ -278,28 +278,8 @@ int dram_init(void)
 
 	gd->ram_size = msg->get_arm_mem.body.resp.mem_size;
 
-	/*
-	 * In some configurations the memory size returned by VideoCore
-	 * is not aligned to the section size, what is mandatory for
-	 * the u-boot's memory setup.
-	 */
-	gd->ram_size &= ~MMU_SECTION_SIZE;
-
 	return 0;
 }
-
-#ifdef CONFIG_OF_BOARD
-int dram_init_banksize(void)
-{
-	int ret;
-
-	ret = fdtdec_setup_memory_banksize();
-	if (ret)
-		return ret;
-
-	return fdtdec_setup_mem_size_base();
-}
-#endif
 
 static void set_fdtfile(void)
 {
@@ -495,7 +475,7 @@ void *board_fdt_blob_setup(void)
 	return (void *)fw_dtb_pointer;
 }
 
-int ft_board_setup(void *blob, struct bd_info *bd)
+int ft_board_setup(void *blob, bd_t *bd)
 {
 	/*
 	 * For now, we simply always add the simplefb DT node. Later, we
@@ -506,8 +486,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 
 #ifdef CONFIG_EFI_LOADER
 	/* Reserve the spin table */
-	efi_add_memory_map(0, CONFIG_RPI_EFI_NR_SPIN_PAGES << EFI_PAGE_SHIFT,
-			   EFI_RESERVED_MEMORY_TYPE);
+	efi_add_memory_map(0, 1, EFI_RESERVED_MEMORY_TYPE, 0);
 #endif
 
 	return 0;

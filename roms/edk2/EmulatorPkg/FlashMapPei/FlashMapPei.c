@@ -1,11 +1,12 @@
 /*++ @file
   PEIM to build GUIDed HOBs for platform specific flash map
 
-Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2010, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2011, Apple Inc. All rights reserved.
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
+
 
 #include "PiPei.h"
 
@@ -23,10 +24,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 EFI_STATUS
 EFIAPI
 PeimInitializeFlashMap (
-  IN       EFI_PEI_FILE_HANDLE  FileHandle,
-  IN CONST EFI_PEI_SERVICES     **PeiServices
+  IN       EFI_PEI_FILE_HANDLE       FileHandle,
+  IN CONST EFI_PEI_SERVICES          **PeiServices
   )
-
 /*++
 
 Routine Description:
@@ -48,17 +48,17 @@ Returns:
   EFI_PHYSICAL_ADDRESS    FdFixUp;
   UINT64                  FdSize;
 
-  DEBUG ((DEBUG_ERROR, "EmulatorPkg Flash Map PEIM Loaded\n"));
+  DEBUG ((EFI_D_ERROR, "EmulatorPkg Flash Map PEIM Loaded\n"));
 
   //
   // Get the Fwh Information PPI
   //
   Status = PeiServicesLocatePpi (
-             &gEmuThunkPpiGuid, // GUID
-             0,                 // INSTANCE
-             &PpiDescriptor,    // EFI_PEI_PPI_DESCRIPTOR
-             (VOID **)&Thunk    // PPI
-             );
+            &gEmuThunkPpiGuid, // GUID
+            0,                 // INSTANCE
+            &PpiDescriptor,     // EFI_PEI_PPI_DESCRIPTOR
+            (VOID **)&Thunk       // PPI
+            );
   ASSERT_EFI_ERROR (Status);
 
   //
@@ -69,9 +69,9 @@ Returns:
     return Status;
   }
 
-  PcdSet64S (PcdFlashNvStorageVariableBase64, PcdGet64 (PcdEmuFlashNvStorageVariableBase) + FdFixUp);
-  PcdSet64S (PcdFlashNvStorageFtwWorkingBase64, PcdGet64 (PcdEmuFlashNvStorageFtwWorkingBase) + FdFixUp);
-  PcdSet64S (PcdFlashNvStorageFtwSpareBase64, PcdGet64 (PcdEmuFlashNvStorageFtwSpareBase) + FdFixUp);
+  PcdSet64 (PcdFlashNvStorageVariableBase64, PcdGet64 (PcdEmuFlashNvStorageVariableBase) + FdFixUp);
+  PcdSet64 (PcdFlashNvStorageFtwWorkingBase64, PcdGet64 (PcdEmuFlashNvStorageFtwWorkingBase) + FdFixUp);
+  PcdSet64 (PcdFlashNvStorageFtwSpareBase64, PcdGet64 (PcdEmuFlashNvStorageFtwSpareBase) + FdFixUp);
 
   return EFI_SUCCESS;
 }

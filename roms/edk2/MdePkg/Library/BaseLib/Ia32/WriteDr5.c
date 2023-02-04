@@ -20,7 +20,7 @@
 UINTN
 EFIAPI
 AsmWriteDr5 (
-  IN UINTN  Value
+  IN UINTN Value
   )
 {
   _asm {
@@ -30,3 +30,4 @@ AsmWriteDr5 (
     _emit   0xe8
   }
 }
+

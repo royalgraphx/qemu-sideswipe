@@ -18,7 +18,6 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/log.h"
 #include "cpu.h"
 #include "internals.h"
 #include "exec/exec-all.h"
@@ -79,30 +78,13 @@ static uint8_t *allocation_tag_mem(CPUARMState *env, int ptr_mmu_idx,
                                    int tag_size, uintptr_t ra)
 {
 #ifdef CONFIG_USER_ONLY
-    uint64_t clean_ptr = useronly_clean_ptr(ptr);
-    int flags = page_get_flags(clean_ptr);
-    uint8_t *tags;
-    uintptr_t index;
-
-    if (!(flags & (ptr_access == MMU_DATA_STORE ? PAGE_WRITE_ORG : PAGE_READ))) {
-        cpu_loop_exit_sigsegv(env_cpu(env), ptr, ptr_access,
-                              !(flags & PAGE_VALID), ra);
-    }
-
-    /* Require both MAP_ANON and PROT_MTE for the page. */
-    if (!(flags & PAGE_ANON) || !(flags & PAGE_MTE)) {
-        return NULL;
-    }
-
-    tags = page_get_target_data(clean_ptr);
-
-    index = extract32(ptr, LOG2_TAG_GRANULE + 1,
-                      TARGET_PAGE_BITS - LOG2_TAG_GRANULE - 1);
-    return tags + index;
+    /* Tag storage not implemented.  */
+    return NULL;
 #else
-    CPUTLBEntryFull *full;
-    MemTxAttrs attrs;
+    uintptr_t index;
+    CPUIOTLBEntry *iotlbentry;
     int in_page, flags;
+    ram_addr_t ptr_ra;
     hwaddr ptr_paddr, tag_paddr, xlat;
     MemoryRegion *mr;
     ARMASIdx tag_asi;
@@ -114,16 +96,34 @@ static uint8_t *allocation_tag_mem(CPUARMState *env, int ptr_mmu_idx,
      * exception for inaccessible pages, and resolves the virtual address
      * into the softmmu tlb.
      *
-     * When RA == 0, this is for mte_probe.  The page is expected to be
+     * When RA == 0, this is for mte_probe1.  The page is expected to be
      * valid.  Indicate to probe_access_flags no-fault, then assert that
      * we received a valid page.
      */
-    flags = probe_access_full(env, ptr, ptr_access, ptr_mmu_idx,
-                              ra == 0, &host, &full, ra);
+    flags = probe_access_flags(env, ptr, ptr_access, ptr_mmu_idx,
+                               ra == 0, &host, ra);
     assert(!(flags & TLB_INVALID_MASK));
 
+    /*
+     * Find the iotlbentry for ptr.  This *must* be present in the TLB
+     * because we just found the mapping.
+     * TODO: Perhaps there should be a cputlb helper that returns a
+     * matching tlb entry + iotlb entry.
+     */
+    index = tlb_index(env, ptr_mmu_idx, ptr);
+# ifdef CONFIG_DEBUG_TCG
+    {
+        CPUTLBEntry *entry = tlb_entry(env, ptr_mmu_idx, ptr);
+        target_ulong comparator = (ptr_access == MMU_DATA_LOAD
+                                   ? entry->addr_read
+                                   : tlb_addr_write(entry));
+        g_assert(tlb_hit(comparator, ptr));
+    }
+# endif
+    iotlbentry = &env_tlb(env)->d[ptr_mmu_idx].iotlb[index];
+
     /* If the virtual page MemAttr != Tagged, access unchecked. */
-    if (full->pte_attrs != 0xf0) {
+    if (!arm_tlb_mte_tagged(&iotlbentry->attrs)) {
         return NULL;
     }
 
@@ -139,14 +139,6 @@ static uint8_t *allocation_tag_mem(CPUARMState *env, int ptr_mmu_idx,
     }
 
     /*
-     * Remember these values across the second lookup below,
-     * which may invalidate this pointer via tlb resize.
-     */
-    ptr_paddr = full->phys_addr;
-    attrs = full->attrs;
-    full = NULL;
-
-    /*
      * The Normal memory access can extend to the next page.  E.g. a single
      * 8-byte access to the last byte of a page will check only the last
      * tag on the first page.
@@ -154,8 +146,9 @@ static uint8_t *allocation_tag_mem(CPUARMState *env, int ptr_mmu_idx,
      */
     in_page = -(ptr | TARGET_PAGE_MASK);
     if (unlikely(ptr_size > in_page)) {
-        flags |= probe_access_full(env, ptr + in_page, ptr_access,
-                                   ptr_mmu_idx, ra == 0, &host, &full, ra);
+        void *ignore;
+        flags |= probe_access_flags(env, ptr + in_page, ptr_access,
+                                    ptr_mmu_idx, ra == 0, &ignore, ra);
         assert(!(flags & TLB_INVALID_MASK));
     }
 
@@ -163,17 +156,33 @@ static uint8_t *allocation_tag_mem(CPUARMState *env, int ptr_mmu_idx,
     if (unlikely(flags & TLB_WATCHPOINT)) {
         int wp = ptr_access == MMU_DATA_LOAD ? BP_MEM_READ : BP_MEM_WRITE;
         assert(ra != 0);
-        cpu_check_watchpoint(env_cpu(env), ptr, ptr_size, attrs, wp, ra);
+        cpu_check_watchpoint(env_cpu(env), ptr, ptr_size,
+                             iotlbentry->attrs, wp, ra);
     }
+
+    /*
+     * Find the physical address within the normal mem space.
+     * The memory region lookup must succeed because TLB_MMIO was
+     * not set in the cputlb lookup above.
+     */
+    mr = memory_region_from_host(host, &ptr_ra);
+    tcg_debug_assert(mr != NULL);
+    tcg_debug_assert(memory_region_is_ram(mr));
+    ptr_paddr = ptr_ra;
+    do {
+        ptr_paddr += mr->addr;
+        mr = mr->container;
+    } while (mr);
 
     /* Convert to the physical address in tag space.  */
     tag_paddr = ptr_paddr >> (LOG2_TAG_GRANULE + 1);
 
     /* Look up the address in tag space. */
-    tag_asi = attrs.secure ? ARMASIdx_TagS : ARMASIdx_TagNS;
+    tag_asi = iotlbentry->attrs.secure ? ARMASIdx_TagS : ARMASIdx_TagNS;
     tag_as = cpu_get_address_space(env_cpu(env), tag_asi);
     mr = address_space_translate(tag_as, tag_paddr, &xlat, NULL,
-                                 tag_access == MMU_DATA_STORE, attrs);
+                                 tag_access == MMU_DATA_STORE,
+                                 iotlbentry->attrs);
 
     /*
      * Note that @mr will never be NULL.  If there is nothing in the address
@@ -304,11 +313,11 @@ static void store_tag1(uint64_t ptr, uint8_t *mem, int tag)
 static void store_tag1_parallel(uint64_t ptr, uint8_t *mem, int tag)
 {
     int ofs = extract32(ptr, LOG2_TAG_GRANULE, 1) * 4;
-    uint8_t old = qatomic_read(mem);
+    uint8_t old = atomic_read(mem);
 
     while (1) {
         uint8_t new = deposit32(old, ofs, 4, tag);
-        uint8_t cmp = qatomic_cmpxchg(mem, old, new);
+        uint8_t cmp = atomic_cmpxchg(mem, old, new);
         if (likely(cmp == old)) {
             return;
         }
@@ -389,7 +398,7 @@ static inline void do_st2g(CPUARMState *env, uint64_t ptr, uint64_t xt,
                                   2 * TAG_GRANULE, MMU_DATA_STORE, 1, ra);
         if (mem1) {
             tag |= tag << 4;
-            qatomic_set(mem1, tag);
+            atomic_set(mem1, tag);
         }
     }
 }
@@ -504,50 +513,12 @@ void HELPER(stzgm_tags)(CPUARMState *env, uint64_t ptr, uint64_t val)
     }
 }
 
-static void mte_sync_check_fail(CPUARMState *env, uint32_t desc,
-                                uint64_t dirty_ptr, uintptr_t ra)
-{
-    int is_write, syn;
-
-    env->exception.vaddress = dirty_ptr;
-
-    is_write = FIELD_EX32(desc, MTEDESC, WRITE);
-    syn = syn_data_abort_no_iss(arm_current_el(env) != 0, 0, 0, 0, 0, is_write,
-                                0x11);
-    raise_exception_ra(env, EXCP_DATA_ABORT, syn, exception_target_el(env), ra);
-    g_assert_not_reached();
-}
-
-static void mte_async_check_fail(CPUARMState *env, uint64_t dirty_ptr,
-                                 uintptr_t ra, ARMMMUIdx arm_mmu_idx, int el)
-{
-    int select;
-
-    if (regime_has_2_ranges(arm_mmu_idx)) {
-        select = extract64(dirty_ptr, 55, 1);
-    } else {
-        select = 0;
-    }
-    env->cp15.tfsr_el[el] |= 1 << select;
-#ifdef CONFIG_USER_ONLY
-    /*
-     * Stand in for a timer irq, setting _TIF_MTE_ASYNC_FAULT,
-     * which then sends a SIGSEGV when the thread is next scheduled.
-     * This cpu will return to the main loop at the end of the TB,
-     * which is rather sooner than "normal".  But the alternative
-     * is waiting until the next syscall.
-     */
-    qemu_cpu_kick(env_cpu(env));
-#endif
-}
-
 /* Record a tag check failure.  */
-static void mte_check_fail(CPUARMState *env, uint32_t desc,
+static void mte_check_fail(CPUARMState *env, int mmu_idx,
                            uint64_t dirty_ptr, uintptr_t ra)
 {
-    int mmu_idx = FIELD_EX32(desc, MTEDESC, MIDX);
     ARMMMUIdx arm_mmu_idx = core_to_aa64_mmu_idx(mmu_idx);
-    int el, reg_el, tcf;
+    int el, reg_el, tcf, select;
     uint64_t sctlr;
 
     reg_el = regime_el(env, arm_mmu_idx);
@@ -566,9 +537,19 @@ static void mte_check_fail(CPUARMState *env, uint32_t desc,
 
     switch (tcf) {
     case 1:
-        /* Tag check fail causes a synchronous exception. */
-        mte_sync_check_fail(env, desc, dirty_ptr, ra);
-        break;
+        /*
+         * Tag check fail causes a synchronous exception.
+         *
+         * In restore_state_to_opc, we set the exception syndrome
+         * for the load or store operation.  Unwind first so we
+         * may overwrite that with the syndrome for the tag check.
+         */
+        cpu_restore_state(env_cpu(env), ra, true);
+        env->exception.vaddress = dirty_ptr;
+        raise_exception(env, EXCP_DATA_ABORT,
+                        syn_data_abort_no_iss(el != 0, 0, 0, 0, 0, 0, 0x11),
+                        exception_target_el(env));
+        /* noreturn, but fall through to the assert anyway */
 
     case 0:
         /*
@@ -580,22 +561,99 @@ static void mte_check_fail(CPUARMState *env, uint32_t desc,
 
     case 2:
         /* Tag check fail causes asynchronous flag set.  */
-        mte_async_check_fail(env, dirty_ptr, ra, arm_mmu_idx, el);
+        mmu_idx = arm_mmu_idx_el(env, el);
+        if (regime_has_2_ranges(mmu_idx)) {
+            select = extract64(dirty_ptr, 55, 1);
+        } else {
+            select = 0;
+        }
+        env->cp15.tfsr_el[el] |= 1 << select;
         break;
 
-    case 3:
-        /*
-         * Tag check fail causes asynchronous flag set for stores, or
-         * a synchronous exception for loads.
-         */
-        if (FIELD_EX32(desc, MTEDESC, WRITE)) {
-            mte_async_check_fail(env, dirty_ptr, ra, arm_mmu_idx, el);
-        } else {
-            mte_sync_check_fail(env, desc, dirty_ptr, ra);
-        }
+    default:
+        /* Case 3: Reserved. */
+        qemu_log_mask(LOG_GUEST_ERROR,
+                      "Tag check failure with SCTLR_EL%d.TCF%s "
+                      "set to reserved value %d\n",
+                      reg_el, el ? "" : "0", tcf);
         break;
     }
 }
+
+/*
+ * Perform an MTE checked access for a single logical or atomic access.
+ */
+static bool mte_probe1_int(CPUARMState *env, uint32_t desc, uint64_t ptr,
+                           uintptr_t ra, int bit55)
+{
+    int mem_tag, mmu_idx, ptr_tag, size;
+    MMUAccessType type;
+    uint8_t *mem;
+
+    ptr_tag = allocation_tag_from_addr(ptr);
+
+    if (tcma_check(desc, bit55, ptr_tag)) {
+        return true;
+    }
+
+    mmu_idx = FIELD_EX32(desc, MTEDESC, MIDX);
+    type = FIELD_EX32(desc, MTEDESC, WRITE) ? MMU_DATA_STORE : MMU_DATA_LOAD;
+    size = FIELD_EX32(desc, MTEDESC, ESIZE);
+
+    mem = allocation_tag_mem(env, mmu_idx, ptr, type, size,
+                             MMU_DATA_LOAD, 1, ra);
+    if (!mem) {
+        return true;
+    }
+
+    mem_tag = load_tag1(ptr, mem);
+    return ptr_tag == mem_tag;
+}
+
+/*
+ * No-fault version of mte_check1, to be used by SVE for MemSingleNF.
+ * Returns false if the access is Checked and the check failed.  This
+ * is only intended to probe the tag -- the validity of the page must
+ * be checked beforehand.
+ */
+bool mte_probe1(CPUARMState *env, uint32_t desc, uint64_t ptr)
+{
+    int bit55 = extract64(ptr, 55, 1);
+
+    /* If TBI is disabled, the access is unchecked. */
+    if (unlikely(!tbi_check(desc, bit55))) {
+        return true;
+    }
+
+    return mte_probe1_int(env, desc, ptr, 0, bit55);
+}
+
+uint64_t mte_check1(CPUARMState *env, uint32_t desc,
+                    uint64_t ptr, uintptr_t ra)
+{
+    int bit55 = extract64(ptr, 55, 1);
+
+    /* If TBI is disabled, the access is unchecked, and ptr is not dirty. */
+    if (unlikely(!tbi_check(desc, bit55))) {
+        return ptr;
+    }
+
+    if (unlikely(!mte_probe1_int(env, desc, ptr, ra, bit55))) {
+        int mmu_idx = FIELD_EX32(desc, MTEDESC, MIDX);
+        mte_check_fail(env, mmu_idx, ptr, ra);
+    }
+
+    return useronly_clean_ptr(ptr);
+}
+
+uint64_t HELPER(mte_check1)(CPUARMState *env, uint32_t desc, uint64_t ptr)
+{
+    return mte_check1(env, desc, ptr, GETPC());
+}
+
+/*
+ * Perform an MTE checked access for multiple logical accesses.
+ */
 
 /**
  * checkN:
@@ -659,70 +717,59 @@ static int checkN(uint8_t *mem, int odd, int cmp, int count)
     return n;
 }
 
-/**
- * mte_probe_int() - helper for mte_probe and mte_check
- * @env: CPU environment
- * @desc: MTEDESC descriptor
- * @ptr: virtual address of the base of the access
- * @fault: return virtual address of the first check failure
- *
- * Internal routine for both mte_probe and mte_check.
- * Return zero on failure, filling in *fault.
- * Return negative on trivial success for tbi disabled.
- * Return positive on success with tbi enabled.
- */
-static int mte_probe_int(CPUARMState *env, uint32_t desc, uint64_t ptr,
-                         uintptr_t ra, uint64_t *fault)
+uint64_t mte_checkN(CPUARMState *env, uint32_t desc,
+                    uint64_t ptr, uintptr_t ra)
 {
     int mmu_idx, ptr_tag, bit55;
-    uint64_t ptr_last, prev_page, next_page;
-    uint64_t tag_first, tag_last;
-    uint64_t tag_byte_first, tag_byte_last;
-    uint32_t sizem1, tag_count, tag_size, n, c;
+    uint64_t ptr_last, ptr_end, prev_page, next_page;
+    uint64_t tag_first, tag_end;
+    uint64_t tag_byte_first, tag_byte_end;
+    uint32_t esize, total, tag_count, tag_size, n, c;
     uint8_t *mem1, *mem2;
     MMUAccessType type;
 
     bit55 = extract64(ptr, 55, 1);
-    *fault = ptr;
 
     /* If TBI is disabled, the access is unchecked, and ptr is not dirty. */
     if (unlikely(!tbi_check(desc, bit55))) {
-        return -1;
+        return ptr;
     }
 
     ptr_tag = allocation_tag_from_addr(ptr);
 
     if (tcma_check(desc, bit55, ptr_tag)) {
-        return 1;
+        goto done;
     }
 
     mmu_idx = FIELD_EX32(desc, MTEDESC, MIDX);
     type = FIELD_EX32(desc, MTEDESC, WRITE) ? MMU_DATA_STORE : MMU_DATA_LOAD;
-    sizem1 = FIELD_EX32(desc, MTEDESC, SIZEM1);
+    esize = FIELD_EX32(desc, MTEDESC, ESIZE);
+    total = FIELD_EX32(desc, MTEDESC, TSIZE);
 
-    /* Find the addr of the end of the access */
-    ptr_last = ptr + sizem1;
+    /* Find the addr of the end of the access, and of the last element. */
+    ptr_end = ptr + total;
+    ptr_last = ptr_end - esize;
 
     /* Round the bounds to the tag granule, and compute the number of tags. */
     tag_first = QEMU_ALIGN_DOWN(ptr, TAG_GRANULE);
-    tag_last = QEMU_ALIGN_DOWN(ptr_last, TAG_GRANULE);
-    tag_count = ((tag_last - tag_first) / TAG_GRANULE) + 1;
+    tag_end = QEMU_ALIGN_UP(ptr_last, TAG_GRANULE);
+    tag_count = (tag_end - tag_first) / TAG_GRANULE;
 
     /* Round the bounds to twice the tag granule, and compute the bytes. */
     tag_byte_first = QEMU_ALIGN_DOWN(ptr, 2 * TAG_GRANULE);
-    tag_byte_last = QEMU_ALIGN_DOWN(ptr_last, 2 * TAG_GRANULE);
+    tag_byte_end = QEMU_ALIGN_UP(ptr_last, 2 * TAG_GRANULE);
 
     /* Locate the page boundaries. */
     prev_page = ptr & TARGET_PAGE_MASK;
     next_page = prev_page + TARGET_PAGE_SIZE;
 
-    if (likely(tag_last - prev_page < TARGET_PAGE_SIZE)) {
+    if (likely(tag_end - prev_page <= TARGET_PAGE_SIZE)) {
         /* Memory access stays on one page. */
-        tag_size = ((tag_byte_last - tag_byte_first) / (2 * TAG_GRANULE)) + 1;
-        mem1 = allocation_tag_mem(env, mmu_idx, ptr, type, sizem1 + 1,
+        tag_size = (tag_byte_end - tag_byte_first) / (2 * TAG_GRANULE);
+        mem1 = allocation_tag_mem(env, mmu_idx, ptr, type, total,
                                   MMU_DATA_LOAD, tag_size, ra);
         if (!mem1) {
-            return 1;
+            goto done;
         }
         /* Perform all of the comparisons. */
         n = checkN(mem1, ptr & TAG_GRANULE, ptr_tag, tag_count);
@@ -732,9 +779,9 @@ static int mte_probe_int(CPUARMState *env, uint32_t desc, uint64_t ptr,
         mem1 = allocation_tag_mem(env, mmu_idx, ptr, type, next_page - ptr,
                                   MMU_DATA_LOAD, tag_size, ra);
 
-        tag_size = ((tag_byte_last - next_page) / (2 * TAG_GRANULE)) + 1;
+        tag_size = (tag_byte_end - next_page) / (2 * TAG_GRANULE);
         mem2 = allocation_tag_mem(env, mmu_idx, next_page, type,
-                                  ptr_last - next_page + 1,
+                                  ptr_end - next_page,
                                   MMU_DATA_LOAD, tag_size, ra);
 
         /*
@@ -748,57 +795,31 @@ static int mte_probe_int(CPUARMState *env, uint32_t desc, uint64_t ptr,
         }
         if (n == c) {
             if (!mem2) {
-                return 1;
+                goto done;
             }
             n += checkN(mem2, 0, ptr_tag, tag_count - c);
         }
     }
 
-    if (likely(n == tag_count)) {
-        return 1;
-    }
-
     /*
-     * If we failed, we know which granule.  For the first granule, the
-     * failure address is @ptr, the first byte accessed.  Otherwise the
-     * failure address is the first byte of the nth granule.
+     * If we failed, we know which granule.  Compute the element that
+     * is first in that granule, and signal failure on that element.
      */
-    if (n > 0) {
-        *fault = tag_first + n * TAG_GRANULE;
-    }
-    return 0;
-}
+    if (unlikely(n < tag_count)) {
+        uint64_t fail_ofs;
 
-uint64_t mte_check(CPUARMState *env, uint32_t desc, uint64_t ptr, uintptr_t ra)
-{
-    uint64_t fault;
-    int ret = mte_probe_int(env, desc, ptr, ra, &fault);
-
-    if (unlikely(ret == 0)) {
-        mte_check_fail(env, desc, fault, ra);
-    } else if (ret < 0) {
-        return ptr;
+        fail_ofs = tag_first + n * TAG_GRANULE - ptr;
+        fail_ofs = ROUND_UP(fail_ofs, esize);
+        mte_check_fail(env, mmu_idx, ptr + fail_ofs, ra);
     }
+
+ done:
     return useronly_clean_ptr(ptr);
 }
 
-uint64_t HELPER(mte_check)(CPUARMState *env, uint32_t desc, uint64_t ptr)
+uint64_t HELPER(mte_checkN)(CPUARMState *env, uint32_t desc, uint64_t ptr)
 {
-    return mte_check(env, desc, ptr, GETPC());
-}
-
-/*
- * No-fault version of mte_check, to be used by SVE for MemSingleNF.
- * Returns false if the access is Checked and the check failed.  This
- * is only intended to probe the tag -- the validity of the page must
- * be checked beforehand.
- */
-bool mte_probe(CPUARMState *env, uint32_t desc, uint64_t ptr)
-{
-    uint64_t fault;
-    int ret = mte_probe_int(env, desc, ptr, 0, &fault);
-
-    return ret != 0;
+    return mte_checkN(env, desc, ptr, GETPC());
 }
 
 /*
@@ -901,7 +922,7 @@ uint64_t HELPER(mte_check_zva)(CPUARMState *env, uint32_t desc, uint64_t ptr)
  fail:
     /* Locate the first nibble that differs. */
     i = ctz64(mem_tag ^ ptr_tag) >> 4;
-    mte_check_fail(env, desc, align_ptr + i * TAG_GRANULE, ra);
+    mte_check_fail(env, mmu_idx, align_ptr + i * TAG_GRANULE, ra);
 
  done:
     return useronly_clean_ptr(ptr);

@@ -29,7 +29,6 @@
 #include "audio/audio.h"
 #include "hw/isa/isa.h"
 #include "hw/qdev-properties.h"
-#include "qom/object.h"
 
 //#define DEBUG
 
@@ -52,9 +51,9 @@
 #define SHIFT 1
 
 #define TYPE_ADLIB "adlib"
-OBJECT_DECLARE_SIMPLE_TYPE(AdlibState, ADLIB)
+#define ADLIB(obj) OBJECT_CHECK(AdlibState, (obj), TYPE_ADLIB)
 
-struct AdlibState {
+typedef struct {
     ISADevice parent_obj;
 
     QEMUSoundCard card;
@@ -74,7 +73,7 @@ struct AdlibState {
     QEMUAudioTimeStamp ats;
     FM_OPL *opl;
     PortioList port_list;
-};
+} AdlibState;
 
 static void adlib_stop_opl_timer (AdlibState *s, size_t n)
 {
@@ -186,7 +185,7 @@ static int write_audio (AdlibState *s, int samples)
 static void adlib_callback (void *opaque, int free)
 {
     AdlibState *s = opaque;
-    int samples, to_play, written;
+    int samples, net = 0, to_play, written;
 
     samples = free >> SHIFT;
     if (!(s->active && s->enabled) || !samples) {
@@ -219,6 +218,7 @@ static void adlib_callback (void *opaque, int free)
         written = write_audio (s, samples);
 
         if (written) {
+            net += written;
             samples -= written;
             s->pos = (s->pos + written) % s->samples;
         }

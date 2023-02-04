@@ -793,13 +793,7 @@ pci_region_create_entry(struct pci_bus *bus, struct pci_device *dev,
     return entry;
 }
 
-typedef enum hotplug_type_t {
-    HOTPLUG_NO_SUPPORTED = 0,
-    HOTPLUG_PCIE,
-    HOTPLUG_SHPC
-} hotplug_type_t;
-
-static hotplug_type_t pci_bus_hotplug_support(struct pci_bus *bus, u8 pcie_cap)
+static int pci_bus_hotplug_support(struct pci_bus *bus, u8 pcie_cap)
 {
     u8 shpc_cap;
 
@@ -808,10 +802,6 @@ static hotplug_type_t pci_bus_hotplug_support(struct pci_bus *bus, u8 pcie_cap)
                                           pcie_cap + PCI_EXP_FLAGS);
         u8 port_type = ((pcie_flags & PCI_EXP_FLAGS_TYPE) >>
                        (__builtin_ffs(PCI_EXP_FLAGS_TYPE) - 1));
-
-        if (port_type == PCI_EXP_TYPE_PCI_BRIDGE)
-            goto check_shpc;
-
         u8 downstream_port = (port_type == PCI_EXP_TYPE_DOWNSTREAM) ||
                              (port_type == PCI_EXP_TYPE_ROOT_PORT);
         /*
@@ -825,13 +815,11 @@ static hotplug_type_t pci_bus_hotplug_support(struct pci_bus *bus, u8 pcie_cap)
          */
         u16 slot_implemented = pcie_flags & PCI_EXP_FLAGS_SLOT;
 
-        return downstream_port && slot_implemented ?
-            HOTPLUG_PCIE : HOTPLUG_NO_SUPPORTED;
+        return downstream_port && slot_implemented;
     }
 
-check_shpc:
     shpc_cap = pci_find_capability(bus->bus_dev->bdf, PCI_CAP_ID_SHPC, 0);
-    return !!shpc_cap ? HOTPLUG_SHPC : HOTPLUG_NO_SUPPORTED;
+    return !!shpc_cap;
 }
 
 /* Test whether bridge support forwarding of transactions
@@ -916,7 +904,7 @@ static int pci_bios_check_devices(struct pci_bus *busses)
         u8 pcie_cap = pci_find_capability(bdf, PCI_CAP_ID_EXP, 0);
         u8 qemu_cap = pci_find_resource_reserve_capability(bdf);
 
-        hotplug_type_t hotplug_support = pci_bus_hotplug_support(s, pcie_cap);
+        int hotplug_support = pci_bus_hotplug_support(s, pcie_cap);
         for (type = 0; type < PCI_REGION_TYPE_COUNT; type++) {
             u64 align = (type == PCI_REGION_TYPE_IO) ?
                 PCI_BRIDGE_IO_MIN : PCI_BRIDGE_MEM_MIN;
@@ -960,9 +948,7 @@ static int pci_bios_check_devices(struct pci_bus *busses)
             if (pci_region_align(&s->r[type]) > align)
                  align = pci_region_align(&s->r[type]);
             u64 sum = pci_region_sum(&s->r[type]);
-            int resource_optional = 0;
-            if (hotplug_support == HOTPLUG_PCIE)
-                resource_optional = pcie_cap && (type == PCI_REGION_TYPE_IO);
+            int resource_optional = pcie_cap && (type == PCI_REGION_TYPE_IO);
             if (!sum && hotplug_support && !resource_optional)
                 sum = align; /* reserve min size for hot-plug */
             if (size > sum) {

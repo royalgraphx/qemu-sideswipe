@@ -100,7 +100,7 @@ static int bdsp_s(DisasContext *ctx, int d)
 }
 
 /* Include the auto-generated decoder.  */
-#include "decode-insns.c.inc"
+#include "decode.inc.c"
 
 static void dump_bytes(DisasContext *ctx)
 {

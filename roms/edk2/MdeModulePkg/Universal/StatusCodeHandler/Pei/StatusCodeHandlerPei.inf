@@ -53,9 +53,11 @@
 [Ppis]
   gEfiPeiRscHandlerPpiGuid                      ## CONSUMES
 
-[Pcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial ## CONSUMES
+[FeaturePcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseMemory ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseSerial ## CONSUMES
+
+[Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeMemorySize|1|gEfiMdeModulePkgTokenSpaceGuid.PcdStatusCodeUseMemory    ## SOMETIMES_CONSUMES
 
 [Depex]

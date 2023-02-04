@@ -1,7 +1,7 @@
 /** @file
   Machine Check features.
 
-  Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2017 - 2018, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -57,7 +57,7 @@ EFIAPI
 MceInitialize (
   IN UINTN                             ProcessorNumber,
   IN REGISTER_CPU_FEATURE_INFORMATION  *CpuInfo,
-  IN VOID                              *ConfigData   OPTIONAL,
+  IN VOID                              *ConfigData,  OPTIONAL
   IN BOOLEAN                           State
   )
 {
@@ -102,7 +102,6 @@ McaSupport (
   if (!MceSupport (ProcessorNumber, CpuInfo, ConfigData)) {
     return FALSE;
   }
-
   return (CpuInfo->CpuIdVersionInfoEdx.Bits.MCA == 1);
 }
 
@@ -128,7 +127,7 @@ EFIAPI
 McaInitialize (
   IN UINTN                             ProcessorNumber,
   IN REGISTER_CPU_FEATURE_INFORMATION  *CpuInfo,
-  IN VOID                              *ConfigData   OPTIONAL,
+  IN VOID                              *ConfigData,  OPTIONAL
   IN BOOLEAN                           State
   )
 {
@@ -145,8 +144,7 @@ McaInitialize (
       IS_SKYLAKE_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
       IS_XEON_PHI_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
       IS_PENTIUM_4_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
-      IS_CORE_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel))
-  {
+      IS_CORE_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel)) {
     if (CpuInfo->ProcessorInfo.Location.Thread != 0) {
       return RETURN_SUCCESS;
     }
@@ -154,17 +152,17 @@ McaInitialize (
 
   //
   // The scope of MSR_IA32_MC*_CTL/MSR_IA32_MC*_STATUS is package for below processor type, only program
-  // MSR_IA32_MC*_CTL/MSR_IA32_MC*_STATUS once for each package.
+  // MSR_IA32_MC*_CTL/MSR_IA32_MC*_STATUS for thread 0 core 0 in each package.
   //
   if (IS_NEHALEM_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel)) {
-    if ((CpuInfo->First.Thread == 0) || (CpuInfo->First.Core == 0)) {
+    if ((CpuInfo->ProcessorInfo.Location.Thread != 0) || (CpuInfo->ProcessorInfo.Location.Core != 0)) {
       return RETURN_SUCCESS;
     }
   }
 
   if (State) {
     McgCap.Uint64 = AsmReadMsr64 (MSR_IA32_MCG_CAP);
-    for (BankIndex = 0; BankIndex < (UINT32)McgCap.Bits.Count; BankIndex++) {
+    for (BankIndex = 0; BankIndex < (UINT32) McgCap.Bits.Count; BankIndex++) {
       CPU_REGISTER_TABLE_WRITE64 (
         ProcessorNumber,
         Msr,
@@ -174,7 +172,7 @@ McaInitialize (
     }
 
     if (PcdGetBool (PcdIsPowerOnReset)) {
-      for (BankIndex = 0; BankIndex < (UINTN)McgCap.Bits.Count; BankIndex++) {
+      for (BankIndex = 0; BankIndex < (UINTN) McgCap.Bits.Count; BankIndex++) {
         CPU_REGISTER_TABLE_WRITE64 (
           ProcessorNumber,
           Msr,
@@ -217,7 +215,6 @@ McgCtlSupport (
   if (!McaSupport (ProcessorNumber, CpuInfo, ConfigData)) {
     return FALSE;
   }
-
   McgCap.Uint64 = AsmReadMsr64 (MSR_IA32_MCG_CAP);
   return (McgCap.Bits.MCG_CTL_P == 1);
 }
@@ -244,7 +241,7 @@ EFIAPI
 McgCtlInitialize (
   IN UINTN                             ProcessorNumber,
   IN REGISTER_CPU_FEATURE_INFORMATION  *CpuInfo,
-  IN VOID                              *ConfigData   OPTIONAL,
+  IN VOID                              *ConfigData,  OPTIONAL
   IN BOOLEAN                           State
   )
 {
@@ -252,7 +249,7 @@ McgCtlInitialize (
     ProcessorNumber,
     Msr,
     MSR_IA32_MCG_CTL,
-    (State) ? MAX_UINT64 : 0
+    (State)? MAX_UINT64 : 0
     );
   return RETURN_SUCCESS;
 }
@@ -282,7 +279,7 @@ LmceSupport (
   IN VOID                              *ConfigData  OPTIONAL
   )
 {
-  MSR_IA32_MCG_CAP_REGISTER  McgCap;
+  MSR_IA32_MCG_CAP_REGISTER    McgCap;
 
   if (!McaSupport (ProcessorNumber, CpuInfo, ConfigData)) {
     return FALSE;
@@ -290,10 +287,9 @@ LmceSupport (
 
   McgCap.Uint64 = AsmReadMsr64 (MSR_IA32_MCG_CAP);
   if (ProcessorNumber == 0) {
-    DEBUG ((DEBUG_INFO, "LMCE enable = %x\n", (BOOLEAN)(McgCap.Bits.MCG_LMCE_P != 0)));
+    DEBUG ((EFI_D_INFO, "LMCE eanble = %x\n", (BOOLEAN) (McgCap.Bits.MCG_LMCE_P != 0)));
   }
-
-  return (BOOLEAN)(McgCap.Bits.MCG_LMCE_P != 0);
+  return (BOOLEAN) (McgCap.Bits.MCG_LMCE_P != 0);
 }
 
 /**
@@ -319,31 +315,35 @@ EFIAPI
 LmceInitialize (
   IN UINTN                             ProcessorNumber,
   IN REGISTER_CPU_FEATURE_INFORMATION  *CpuInfo,
-  IN VOID                              *ConfigData   OPTIONAL,
+  IN VOID                              *ConfigData,  OPTIONAL
   IN BOOLEAN                           State
   )
 {
+  MSR_IA32_FEATURE_CONTROL_REGISTER    *MsrRegister;
+
   //
-  // The scope of LcmeOn bit in the MSR_IA32_MISC_ENABLE is core for below processor type, only program
+  // The scope of FastStrings bit in the MSR_IA32_MISC_ENABLE is core for below processor type, only program
   // MSR_IA32_MISC_ENABLE for thread 0 in each core.
   //
   if (IS_SILVERMONT_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
       IS_GOLDMONT_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
-      IS_PENTIUM_4_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel))
-  {
+      IS_PENTIUM_4_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel)) {
     if (CpuInfo->ProcessorInfo.Location.Thread != 0) {
       return RETURN_SUCCESS;
     }
   }
 
-  CPU_REGISTER_TABLE_TEST_THEN_WRITE_FIELD (
-    ProcessorNumber,
-    Msr,
-    MSR_IA32_FEATURE_CONTROL,
-    MSR_IA32_FEATURE_CONTROL_REGISTER,
-    Bits.LmceOn,
-    (State) ? 1 : 0
-    );
-
+  ASSERT (ConfigData != NULL);
+  MsrRegister = (MSR_IA32_FEATURE_CONTROL_REGISTER *) ConfigData;
+  if (MsrRegister[ProcessorNumber].Bits.Lock == 0) {
+    CPU_REGISTER_TABLE_WRITE_FIELD (
+      ProcessorNumber,
+      Msr,
+      MSR_IA32_FEATURE_CONTROL,
+      MSR_IA32_FEATURE_CONTROL_REGISTER,
+      Bits.LmceOn,
+      (State) ? 1 : 0
+      );
+  }
   return RETURN_SUCCESS;
 }

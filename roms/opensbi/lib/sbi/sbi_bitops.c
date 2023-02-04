@@ -39,7 +39,7 @@ unsigned long find_first_bit(const unsigned long *addr,
 	if (tmp == 0UL)		/* Are any bits set? */
 		return result + size;	/* Nope. */
 found:
-	return result + sbi_ffs(tmp);
+	return result + __ffs(tmp);
 }
 
 /**
@@ -69,7 +69,7 @@ unsigned long find_first_zero_bit(const unsigned long *addr,
 	if (tmp == ~0UL)	/* Are any bits zero? */
 		return result + size;	/* Nope. */
 found:
-	return result + sbi_ffz(tmp);
+	return result + ffz(tmp);
 }
 
 /**
@@ -100,7 +100,7 @@ unsigned long find_last_bit(const unsigned long *addr,
 		tmp = addr[--words];
 		if (tmp) {
 found:
-			return words * BITS_PER_LONG + sbi_fls(tmp);
+			return words * BITS_PER_LONG + __fls(tmp);
 		}
 	}
 
@@ -150,7 +150,7 @@ found_first:
 	if (tmp == 0UL)		/* Are any bits set? */
 		return result + size;	/* Nope. */
 found_middle:
-	return result + sbi_ffs(tmp);
+	return result + __ffs(tmp);
 }
 
 /**
@@ -196,5 +196,5 @@ found_first:
 	if (tmp == ~0UL)	/* Are any bits zero? */
 		return result + size;	/* Nope. */
 found_middle:
-	return result + sbi_ffz(tmp);
+	return result + ffz(tmp);
 }

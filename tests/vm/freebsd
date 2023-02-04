@@ -20,16 +20,12 @@ import socket
 import subprocess
 import basevm
 
-FREEBSD_CONFIG = {
-    'cpu'	: "max,sse4.2=off",
-}
-
 class FreeBSDVM(basevm.BaseVM):
     name = "freebsd"
     arch = "x86_64"
 
-    link = "https://download.freebsd.org/ftp/releases/ISO-IMAGES/12.3/FreeBSD-12.3-RELEASE-amd64-disc1.iso.xz"
-    csum = "36dd0de50f1fe5f0a88e181e94657656de26fb64254412f74e80e128e8b938b4"
+    link = "https://download.freebsd.org/ftp/releases/ISO-IMAGES/12.1/FreeBSD-12.1-RELEASE-amd64-disc1.iso.xz"
+    csum = "7394c3f60a1e236e7bd3a05809cf43ae39a3b8e5d42d782004cf2f26b1cfcd88"
     size = "20G"
     pkgs = [
         # build tools
@@ -37,13 +33,11 @@ class FreeBSDVM(basevm.BaseVM):
         "pkgconf",
         "bzip2",
         "python37",
-        "ninja",
 
         # gnu tools
         "bash",
         "gmake",
         "gsed",
-        "gettext",
 
         # libs: crypto
         "gnutls",
@@ -63,12 +57,6 @@ class FreeBSDVM(basevm.BaseVM):
 
         # libs: migration
         "zstd",
-
-        # libs: networking
-        "libslirp",
-
-        # libs: sndio
-        "sndio",
     ]
 
     BUILD_SCRIPT = """
@@ -101,6 +89,7 @@ class FreeBSDVM(basevm.BaseVM):
 
         self.print_step("Booting installer")
         self.boot(img_tmp, extra_args = [
+            "-bios", "pc-bios/bios-256k.bin",
             "-machine", "graphics=off",
             "-device", "VGA",
             "-cdrom", iso
@@ -134,7 +123,7 @@ class FreeBSDVM(basevm.BaseVM):
         self.console_wait_send("IPv6",                  "n")
         self.console_wait_send("Resolver",              "\n")
 
-        self.console_wait_send("Time Zone Selector",    "0\n")
+        self.console_wait_send("Time Zone Selector",    "a\n")
         self.console_wait_send("Confirmation",          "y")
         self.console_wait_send("Time & Date",           "\n")
         self.console_wait_send("Time & Date",           "\n")
@@ -215,4 +204,4 @@ class FreeBSDVM(basevm.BaseVM):
         self.print_step("All done")
 
 if __name__ == "__main__":
-    sys.exit(basevm.main(FreeBSDVM, config=FREEBSD_CONFIG))
+    sys.exit(basevm.main(FreeBSDVM))

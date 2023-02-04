@@ -6,7 +6,6 @@
  */
 
 #include <common.h>
-#include <env.h>
 #include <linux/types.h>
 #include <api_public.h>
 
@@ -24,7 +23,7 @@ void	test_dump_sig(struct api_signature *);
 
 static char buf[BUF_SZ];
 
-int main(int argc, char *const argv[])
+int main(int argc, char * const argv[])
 {
 	int rv = 0, h, i, j, devs_no;
 	struct api_signature *sig = NULL;

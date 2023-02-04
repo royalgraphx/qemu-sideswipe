@@ -9,8 +9,9 @@
 
 **/
 
-#ifndef ASM_MACRO_IO_LIB_H_
-#define ASM_MACRO_IO_LIB_H_
+
+#ifndef __MACRO_IO_LIB_H__
+#define __MACRO_IO_LIB_H__
 
 #define _ASM_FUNC(Name, Section)    \
   .global   Name                  ; \
@@ -19,7 +20,7 @@
   .p2align  2                     ; \
   Name:
 
-#define ASM_FUNC(Name)  _ASM_FUNC(ASM_PFX(Name), .text. ## Name)
+#define ASM_FUNC(Name)            _ASM_FUNC(ASM_PFX(Name), .text. ## Name)
 
 #define MOV32(Reg, Val)                       \
   movw      Reg, #(Val) & 0xffff            ; \
@@ -35,4 +36,4 @@
   movt      Reg, #:upper16:(Sym) - (. + 12) ; \
   ldr       Reg, [pc, Reg]
 
-#endif // ASM_MACRO_IO_LIB_H_
+#endif

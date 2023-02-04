@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: quick
 #
 # Test the combination of -incoming and snapshot=on
 #

@@ -13,8 +13,6 @@
 #include <fastboot.h>
 #include <net.h>
 #include <usb.h>
-#include <watchdog.h>
-#include <linux/stringify.h>
 
 static int do_fastboot_udp(int argc, char *const argv[],
 			   uintptr_t buf_addr, size_t buf_size)
@@ -76,7 +74,6 @@ static int do_fastboot_usb(int argc, char *const argv[],
 			break;
 		if (ctrlc())
 			break;
-		WATCHDOG_RESET();
 		usb_gadget_handle_interrupts(controller_index);
 	}
 
@@ -94,8 +91,7 @@ exit:
 #endif
 }
 
-static int do_fastboot(struct cmd_tbl *cmdtp, int flag, int argc,
-		       char *const argv[])
+static int do_fastboot(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 {
 	uintptr_t buf_addr = (uintptr_t)NULL;
 	size_t buf_size = 0;

@@ -9,7 +9,7 @@
 #include "EmmcDxe.h"
 
 /**
-  Nonblocking I/O callback function when the event is signaled.
+  Nonblocking I/O callback funtion when the event is signaled.
 
   @param[in]  Event     The Event this notify function registered to.
   @param[in]  Context   Pointer to the context data registered to the
@@ -19,28 +19,24 @@
 VOID
 EFIAPI
 AsyncIoCallback (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT                Event,
+  IN VOID                     *Context
   )
 {
-  EMMC_REQUEST  *Request;
-  EFI_STATUS    Status;
+  EMMC_REQUEST                *Request;
+  EFI_STATUS                  Status;
 
   Status = gBS->CloseEvent (Event);
   if (EFI_ERROR (Status)) {
     return;
   }
 
-  Request = (EMMC_REQUEST *)Context;
+  Request = (EMMC_REQUEST *) Context;
 
   DEBUG_CODE_BEGIN ();
-  DEBUG ((
-    DEBUG_INFO,
-    "Emmc Async Request: CmdIndex[%d] Arg[%08x] %r\n",
-    Request->SdMmcCmdBlk.CommandIndex,
-    Request->SdMmcCmdBlk.CommandArgument,
-    Request->Packet.TransactionStatus
-    ));
+    DEBUG ((EFI_D_INFO, "Emmc Async Request: CmdIndex[%d] Arg[%08x] %r\n",
+            Request->SdMmcCmdBlk.CommandIndex, Request->SdMmcCmdBlk.CommandArgument,
+            Request->Packet.TransactionStatus));
   DEBUG_CODE_END ();
 
   if (EFI_ERROR (Request->Packet.TransactionStatus)) {
@@ -69,15 +65,15 @@ AsyncIoCallback (
 **/
 EFI_STATUS
 EmmcSelect (
-  IN     EMMC_DEVICE  *Device,
-  IN     UINT16       Rca
+  IN     EMMC_DEVICE                  *Device,
+  IN     UINT16                       Rca
   )
 {
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL        *PassThru;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
+  EFI_STATUS                          Status;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL       *PassThru;
+  EFI_SD_MMC_COMMAND_BLOCK            SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK             SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET Packet;
 
   PassThru = Device->Private->PassThru;
 
@@ -88,9 +84,9 @@ EmmcSelect (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = EMMC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = EMMC_SELECT_DESELECT_CARD;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SdMmcCmdBlk.CommandIndex = EMMC_SELECT_DESELECT_CARD;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
 
   Status = PassThru->PassThru (PassThru, Device->Slot, &Packet, NULL);
@@ -112,16 +108,16 @@ EmmcSelect (
 **/
 EFI_STATUS
 EmmcSendStatus (
-  IN     EMMC_DEVICE  *Device,
-  IN     UINT16       Rca,
-  OUT UINT32          *DevStatus
+  IN     EMMC_DEVICE                  *Device,
+  IN     UINT16                       Rca,
+     OUT UINT32                       *DevStatus
   )
 {
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL        *PassThru;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
+  EFI_STATUS                          Status;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL       *PassThru;
+  EFI_SD_MMC_COMMAND_BLOCK            SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK             SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET Packet;
 
   PassThru = Device->Private->PassThru;
 
@@ -132,9 +128,9 @@ EmmcSendStatus (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = EMMC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = EMMC_SEND_STATUS;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SdMmcCmdBlk.CommandIndex = EMMC_SEND_STATUS;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
 
   Status = PassThru->PassThru (PassThru, Device->Slot, &Packet, NULL);
@@ -159,16 +155,16 @@ EmmcSendStatus (
 **/
 EFI_STATUS
 EmmcGetCsd (
-  IN     EMMC_DEVICE  *Device,
-  IN     UINT16       Rca,
-  OUT EMMC_CSD        *Csd
+  IN     EMMC_DEVICE                  *Device,
+  IN     UINT16                       Rca,
+     OUT EMMC_CSD                     *Csd
   )
 {
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL        *PassThru;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
+  EFI_STATUS                          Status;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL       *PassThru;
+  EFI_SD_MMC_COMMAND_BLOCK            SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK             SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET Packet;
 
   PassThru = Device->Private->PassThru;
 
@@ -181,9 +177,9 @@ EmmcGetCsd (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = EMMC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = EMMC_SEND_CSD;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR2;
+  SdMmcCmdBlk.CommandIndex = EMMC_SEND_CSD;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR2;
   SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
 
   Status = PassThru->PassThru (PassThru, Device->Slot, &Packet, NULL);
@@ -191,7 +187,7 @@ EmmcGetCsd (
     //
     // For details, refer to SD Host Controller Simplified Spec 3.0 Table 2-12.
     //
-    CopyMem (((UINT8 *)Csd) + 1, &SdMmcStatusBlk.Resp0, sizeof (EMMC_CSD) - 1);
+    CopyMem (((UINT8*)Csd) + 1, &SdMmcStatusBlk.Resp0, sizeof (EMMC_CSD) - 1);
   }
 
   return Status;
@@ -211,16 +207,16 @@ EmmcGetCsd (
 **/
 EFI_STATUS
 EmmcGetCid (
-  IN     EMMC_DEVICE  *Device,
-  IN     UINT16       Rca,
-  OUT EMMC_CID        *Cid
+  IN     EMMC_DEVICE            *Device,
+  IN     UINT16                 Rca,
+     OUT EMMC_CID               *Cid
   )
 {
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL        *PassThru;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
+  EFI_STATUS                          Status;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL       *PassThru;
+  EFI_SD_MMC_COMMAND_BLOCK            SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK             SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET Packet;
 
   PassThru = Device->Private->PassThru;
 
@@ -233,9 +229,9 @@ EmmcGetCid (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = EMMC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = EMMC_SEND_CID;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR2;
+  SdMmcCmdBlk.CommandIndex = EMMC_SEND_CID;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR2;
   SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
 
   Status = PassThru->PassThru (PassThru, Device->Slot, &Packet, NULL);
@@ -243,7 +239,7 @@ EmmcGetCid (
     //
     // For details, refer to SD Host Controller Simplified Spec 3.0 Table 2-12.
     //
-    CopyMem (((UINT8 *)Cid) + 1, &SdMmcStatusBlk.Resp0, sizeof (EMMC_CID) - 1);
+    CopyMem (((UINT8*)Cid) + 1, &SdMmcStatusBlk.Resp0, sizeof (EMMC_CID) - 1);
   }
 
   return Status;
@@ -262,15 +258,15 @@ EmmcGetCid (
 **/
 EFI_STATUS
 EmmcGetExtCsd (
-  IN     EMMC_DEVICE  *Device,
-  OUT EMMC_EXT_CSD    *ExtCsd
+  IN     EMMC_DEVICE                  *Device,
+     OUT EMMC_EXT_CSD                 *ExtCsd
   )
 {
-  EFI_STATUS                           Status;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL        *PassThru;
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
+  EFI_STATUS                          Status;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL       *PassThru;
+  EFI_SD_MMC_COMMAND_BLOCK            SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK             SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET Packet;
 
   PassThru = Device->Private->PassThru;
 
@@ -282,12 +278,12 @@ EmmcGetExtCsd (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = EMMC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = EMMC_SEND_EXT_CSD;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAdtc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SdMmcCmdBlk.CommandIndex = EMMC_SEND_EXT_CSD;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAdtc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SdMmcCmdBlk.CommandArgument = 0x00000000;
-  Packet.InDataBuffer         = ExtCsd;
-  Packet.InTransferLength     = sizeof (EMMC_EXT_CSD);
+  Packet.InDataBuffer     = ExtCsd;
+  Packet.InTransferLength = sizeof (EMMC_EXT_CSD);
 
   Status = PassThru->PassThru (PassThru, Device->Slot, &Packet, NULL);
 
@@ -311,19 +307,19 @@ EmmcGetExtCsd (
 **/
 EFI_STATUS
 EmmcSetExtCsd (
-  IN  EMMC_PARTITION       *Partition,
-  IN  UINT8                Offset,
-  IN  UINT8                Value,
-  IN  EFI_BLOCK_IO2_TOKEN  *Token,
-  IN  BOOLEAN              IsEnd
+  IN  EMMC_PARTITION            *Partition,
+  IN  UINT8                     Offset,
+  IN  UINT8                     Value,
+  IN  EFI_BLOCK_IO2_TOKEN       *Token,
+  IN  BOOLEAN                   IsEnd
   )
 {
-  EFI_STATUS                     Status;
-  EMMC_DEVICE                    *Device;
-  EMMC_REQUEST                   *SetExtCsdReq;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru;
-  UINT32                         CommandArgument;
-  EFI_TPL                        OldTpl;
+  EFI_STATUS                    Status;
+  EMMC_DEVICE                   *Device;
+  EMMC_REQUEST                  *SetExtCsdReq;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL *PassThru;
+  UINT32                        CommandArgument;
+  EFI_TPL                       OldTpl;
 
   SetExtCsdReq = NULL;
 
@@ -337,7 +333,7 @@ EmmcSetExtCsd (
   }
 
   SetExtCsdReq->Signature = EMMC_REQUEST_SIGNATURE;
-  OldTpl                  = gBS->RaiseTPL (TPL_NOTIFY);
+  OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   InsertTailList (&Partition->Queue, &SetExtCsdReq->Link);
   gBS->RestoreTPL (OldTpl);
   SetExtCsdReq->Packet.SdMmcCmdBlk    = &SetExtCsdReq->SdMmcCmdBlk;
@@ -350,7 +346,7 @@ EmmcSetExtCsd (
   //
   // Write the Value to the field specified by Offset.
   //
-  CommandArgument                           = (Value << 8) | (Offset << 16) | BIT24 | BIT25;
+  CommandArgument = (Value << 8) | (Offset << 16) | BIT24 | BIT25;
   SetExtCsdReq->SdMmcCmdBlk.CommandArgument = CommandArgument;
 
   SetExtCsdReq->IsEnd = IsEnd;
@@ -386,7 +382,6 @@ Error:
       if (SetExtCsdReq->Event != NULL) {
         gBS->CloseEvent (SetExtCsdReq->Event);
       }
-
       FreePool (SetExtCsdReq);
     }
   } else {
@@ -420,17 +415,17 @@ Error:
 **/
 EFI_STATUS
 EmmcSetBlkCount (
-  IN  EMMC_PARTITION       *Partition,
-  IN  UINT16               BlockNum,
-  IN  EFI_BLOCK_IO2_TOKEN  *Token,
-  IN  BOOLEAN              IsEnd
+  IN  EMMC_PARTITION            *Partition,
+  IN  UINT16                    BlockNum,
+  IN  EFI_BLOCK_IO2_TOKEN       *Token,
+  IN  BOOLEAN                   IsEnd
   )
 {
-  EFI_STATUS                     Status;
-  EMMC_DEVICE                    *Device;
-  EMMC_REQUEST                   *SetBlkCntReq;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru;
-  EFI_TPL                        OldTpl;
+  EFI_STATUS                    Status;
+  EMMC_DEVICE                   *Device;
+  EMMC_REQUEST                  *SetBlkCntReq;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL *PassThru;
+  EFI_TPL                       OldTpl;
 
   SetBlkCntReq = NULL;
 
@@ -444,16 +439,16 @@ EmmcSetBlkCount (
   }
 
   SetBlkCntReq->Signature = EMMC_REQUEST_SIGNATURE;
-  OldTpl                  = gBS->RaiseTPL (TPL_NOTIFY);
+  OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   InsertTailList (&Partition->Queue, &SetBlkCntReq->Link);
   gBS->RestoreTPL (OldTpl);
   SetBlkCntReq->Packet.SdMmcCmdBlk    = &SetBlkCntReq->SdMmcCmdBlk;
   SetBlkCntReq->Packet.SdMmcStatusBlk = &SetBlkCntReq->SdMmcStatusBlk;
   SetBlkCntReq->Packet.Timeout        = EMMC_GENERIC_TIMEOUT;
 
-  SetBlkCntReq->SdMmcCmdBlk.CommandIndex    = EMMC_SET_BLOCK_COUNT;
-  SetBlkCntReq->SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SetBlkCntReq->SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SetBlkCntReq->SdMmcCmdBlk.CommandIndex = EMMC_SET_BLOCK_COUNT;
+  SetBlkCntReq->SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SetBlkCntReq->SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SetBlkCntReq->SdMmcCmdBlk.CommandArgument = BlockNum;
 
   SetBlkCntReq->IsEnd = IsEnd;
@@ -489,7 +484,6 @@ Error:
       if (SetBlkCntReq->Event != NULL) {
         gBS->CloseEvent (SetBlkCntReq->Event);
       }
-
       FreePool (SetBlkCntReq);
     }
   } else {
@@ -533,22 +527,22 @@ Error:
 **/
 EFI_STATUS
 EmmcProtocolInOut (
-  IN     EMMC_PARTITION       *Partition,
-  IN     UINT8                SecurityProtocol,
-  IN     UINT16               SecurityProtocolSpecificData,
-  IN     UINTN                PayloadBufferSize,
-  OUT VOID                    *PayloadBuffer,
-  IN     BOOLEAN              IsRead,
-  IN     UINT64               Timeout,
-  IN     EFI_BLOCK_IO2_TOKEN  *Token,
-  IN     BOOLEAN              IsEnd
+  IN     EMMC_PARTITION            *Partition,
+  IN     UINT8                     SecurityProtocol,
+  IN     UINT16                    SecurityProtocolSpecificData,
+  IN     UINTN                     PayloadBufferSize,
+     OUT VOID                      *PayloadBuffer,
+  IN     BOOLEAN                   IsRead,
+  IN     UINT64                    Timeout,
+  IN     EFI_BLOCK_IO2_TOKEN       *Token,
+  IN     BOOLEAN                   IsEnd
   )
 {
-  EFI_STATUS                     Status;
-  EMMC_DEVICE                    *Device;
-  EMMC_REQUEST                   *ProtocolReq;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru;
-  EFI_TPL                        OldTpl;
+  EFI_STATUS                    Status;
+  EMMC_DEVICE                   *Device;
+  EMMC_REQUEST                  *ProtocolReq;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL *PassThru;
+  EFI_TPL                       OldTpl;
 
   ProtocolReq = NULL;
 
@@ -562,7 +556,7 @@ EmmcProtocolInOut (
   }
 
   ProtocolReq->Signature = EMMC_REQUEST_SIGNATURE;
-  OldTpl                 = gBS->RaiseTPL (TPL_NOTIFY);
+  OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   InsertTailList (&Partition->Queue, &ProtocolReq->Link);
   gBS->RestoreTPL (OldTpl);
   ProtocolReq->Packet.SdMmcCmdBlk    = &ProtocolReq->SdMmcCmdBlk;
@@ -623,7 +617,6 @@ Error:
       if (ProtocolReq->Event != NULL) {
         gBS->CloseEvent (ProtocolReq->Event);
       }
-
       FreePool (ProtocolReq);
     }
   } else {
@@ -662,20 +655,20 @@ Error:
 **/
 EFI_STATUS
 EmmcRwMultiBlocks (
-  IN  EMMC_PARTITION       *Partition,
-  IN  EFI_LBA              Lba,
-  IN  VOID                 *Buffer,
-  IN  UINTN                BufferSize,
-  IN  BOOLEAN              IsRead,
-  IN  EFI_BLOCK_IO2_TOKEN  *Token,
-  IN  BOOLEAN              IsEnd
+  IN  EMMC_PARTITION            *Partition,
+  IN  EFI_LBA                   Lba,
+  IN  VOID                      *Buffer,
+  IN  UINTN                     BufferSize,
+  IN  BOOLEAN                   IsRead,
+  IN  EFI_BLOCK_IO2_TOKEN       *Token,
+  IN  BOOLEAN                   IsEnd
   )
 {
-  EFI_STATUS                     Status;
-  EMMC_DEVICE                    *Device;
-  EMMC_REQUEST                   *RwMultiBlkReq;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru;
-  EFI_TPL                        OldTpl;
+  EFI_STATUS                    Status;
+  EMMC_DEVICE                   *Device;
+  EMMC_REQUEST                  *RwMultiBlkReq;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL *PassThru;
+  EFI_TPL                       OldTpl;
 
   RwMultiBlkReq = NULL;
 
@@ -689,7 +682,7 @@ EmmcRwMultiBlocks (
   }
 
   RwMultiBlkReq->Signature = EMMC_REQUEST_SIGNATURE;
-  OldTpl                   = gBS->RaiseTPL (TPL_NOTIFY);
+  OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   InsertTailList (&Partition->Queue, &RwMultiBlkReq->Link);
   gBS->RestoreTPL (OldTpl);
   RwMultiBlkReq->Packet.SdMmcCmdBlk    = &RwMultiBlkReq->SdMmcCmdBlk;
@@ -758,7 +751,6 @@ Error:
       if (RwMultiBlkReq->Event != NULL) {
         gBS->CloseEvent (RwMultiBlkReq->Event);
       }
-
       FreePool (RwMultiBlkReq);
     }
   } else {
@@ -793,7 +785,7 @@ Error:
   @retval EFI_WRITE_PROTECTED   The device can not be read/written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the read/write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The read/write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -801,25 +793,25 @@ Error:
 **/
 EFI_STATUS
 EmmcReadWrite (
-  IN     EMMC_PARTITION       *Partition,
-  IN     UINT32               MediaId,
-  IN     EFI_LBA              Lba,
-  IN OUT VOID                 *Buffer,
-  IN     UINTN                BufferSize,
-  IN     BOOLEAN              IsRead,
-  IN OUT EFI_BLOCK_IO2_TOKEN  *Token
+  IN     EMMC_PARTITION                 *Partition,
+  IN     UINT32                         MediaId,
+  IN     EFI_LBA                        Lba,
+  IN OUT VOID                           *Buffer,
+  IN     UINTN                          BufferSize,
+  IN     BOOLEAN                        IsRead,
+  IN OUT EFI_BLOCK_IO2_TOKEN            *Token
   )
 {
-  EFI_STATUS          Status;
-  EMMC_DEVICE         *Device;
-  EFI_BLOCK_IO_MEDIA  *Media;
-  UINTN               BlockSize;
-  UINTN               BlockNum;
-  UINTN               IoAlign;
-  UINT8               PartitionConfig;
-  UINTN               Remaining;
-  UINT32              MaxBlock;
-  BOOLEAN             LastRw;
+  EFI_STATUS                            Status;
+  EMMC_DEVICE                           *Device;
+  EFI_BLOCK_IO_MEDIA                    *Media;
+  UINTN                                 BlockSize;
+  UINTN                                 BlockNum;
+  UINTN                                 IoAlign;
+  UINT8                                 PartitionConfig;
+  UINTN                                 Remaining;
+  UINT32                                MaxBlock;
+  BOOLEAN                               LastRw;
 
   Status = EFI_SUCCESS;
   Device = Partition->Device;
@@ -846,7 +838,6 @@ EmmcReadWrite (
       Token->TransactionStatus = EFI_SUCCESS;
       gBS->SignalEvent (Token->Event);
     }
-
     return EFI_SUCCESS;
   }
 
@@ -855,35 +846,32 @@ EmmcReadWrite (
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  BlockNum = BufferSize / BlockSize;
+  BlockNum  = BufferSize / BlockSize;
   if ((Lba + BlockNum - 1) > Media->LastBlock) {
     return EFI_INVALID_PARAMETER;
   }
 
   IoAlign = Media->IoAlign;
-  if ((IoAlign > 0) && (((UINTN)Buffer & (IoAlign - 1)) != 0)) {
+  if (IoAlign > 0 && (((UINTN) Buffer & (IoAlign - 1)) != 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
   if ((Token != NULL) && (Token->Event != NULL)) {
     Token->TransactionStatus = EFI_SUCCESS;
   }
-
   //
   // Check if needs to switch partition access.
   //
   PartitionConfig = Device->ExtCsd.PartitionConfig;
   if ((PartitionConfig & 0x7) != Partition->PartitionType) {
-    PartitionConfig &= (UINT8) ~0x7;
+    PartitionConfig &= (UINT8)~0x7;
     PartitionConfig |= Partition->PartitionType;
-    Status           = EmmcSetExtCsd (Partition, OFFSET_OF (EMMC_EXT_CSD, PartitionConfig), PartitionConfig, Token, FALSE);
+    Status = EmmcSetExtCsd (Partition, OFFSET_OF (EMMC_EXT_CSD, PartitionConfig), PartitionConfig, Token, FALSE);
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
     Device->ExtCsd.PartitionConfig = PartitionConfig;
   }
-
   //
   // Start to execute data transfer. The max block number in single cmd is 65535 blocks.
   //
@@ -897,31 +885,23 @@ EmmcReadWrite (
     } else {
       BlockNum = MaxBlock;
     }
-
     Status = EmmcSetBlkCount (Partition, (UINT16)BlockNum, Token, FALSE);
     if (EFI_ERROR (Status)) {
       return Status;
     }
 
     BufferSize = BlockNum * BlockSize;
-    Status     = EmmcRwMultiBlocks (Partition, Lba, Buffer, BufferSize, IsRead, Token, LastRw);
+    Status = EmmcRwMultiBlocks (Partition, Lba, Buffer, BufferSize, IsRead, Token, LastRw);
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
-    DEBUG ((
-      DEBUG_BLKIO,
+    DEBUG ((DEBUG_BLKIO,
       "Emmc%a(): Part %d Lba 0x%x BlkNo 0x%x Event %p with %r\n",
-      IsRead ? "Read " : "Write",
-      Partition->PartitionType,
-      Lba,
-      BlockNum,
-      (Token != NULL) ? Token->Event : NULL,
-      Status
-      ));
+      IsRead ? "Read " : "Write", Partition->PartitionType, Lba, BlockNum,
+      (Token != NULL) ? Token->Event : NULL, Status));
 
-    Lba       += BlockNum;
-    Buffer     = (UINT8 *)Buffer + BufferSize;
+    Lba   += BlockNum;
+    Buffer = (UINT8*)Buffer + BufferSize;
     Remaining -= BlockNum;
   }
 
@@ -942,13 +922,13 @@ EmmcReadWrite (
 EFI_STATUS
 EFIAPI
 EmmcReset (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  BOOLEAN                ExtendedVerification
+  IN  EFI_BLOCK_IO_PROTOCOL     *This,
+  IN  BOOLEAN                   ExtendedVerification
   )
 {
-  EFI_STATUS                     Status;
-  EMMC_PARTITION                 *Partition;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru;
+  EFI_STATUS                    Status;
+  EMMC_PARTITION                *Partition;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL *PassThru;
 
   Partition = EMMC_PARTITION_DATA_FROM_BLKIO (This);
 
@@ -974,7 +954,7 @@ EmmcReset (
   @retval EFI_SUCCESS           The data was read correctly from the device.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the read.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHANGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The read request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -987,11 +967,11 @@ EmmcReadBlocks (
   IN     UINT32                 MediaId,
   IN     EFI_LBA                Lba,
   IN     UINTN                  BufferSize,
-  OUT VOID                      *Buffer
+     OUT VOID                   *Buffer
   )
 {
-  EFI_STATUS      Status;
-  EMMC_PARTITION  *Partition;
+  EFI_STATUS             Status;
+  EMMC_PARTITION         *Partition;
 
   Partition = EMMC_PARTITION_DATA_FROM_BLKIO (This);
 
@@ -1013,7 +993,7 @@ EmmcReadBlocks (
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -1022,15 +1002,15 @@ EmmcReadBlocks (
 EFI_STATUS
 EFIAPI
 EmmcWriteBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  UINT32                 MediaId,
-  IN  EFI_LBA                Lba,
-  IN  UINTN                  BufferSize,
-  IN  VOID                   *Buffer
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  UINT32                  MediaId,
+  IN  EFI_LBA                 Lba,
+  IN  UINTN                   BufferSize,
+  IN  VOID                    *Buffer
   )
 {
-  EFI_STATUS      Status;
-  EMMC_PARTITION  *Partition;
+  EFI_STATUS             Status;
+  EMMC_PARTITION         *Partition;
 
   Partition = EMMC_PARTITION_DATA_FROM_BLKIO (This);
 
@@ -1051,7 +1031,7 @@ EmmcWriteBlocks (
 EFI_STATUS
 EFIAPI
 EmmcFlushBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This
+  IN  EFI_BLOCK_IO_PROTOCOL   *This
   )
 {
   //
@@ -1078,19 +1058,18 @@ EmmcResetEx (
   IN  BOOLEAN                 ExtendedVerification
   )
 {
-  EMMC_PARTITION  *Partition;
-  LIST_ENTRY      *Link;
-  LIST_ENTRY      *NextLink;
-  EMMC_REQUEST    *Request;
-  EFI_TPL         OldTpl;
+  EMMC_PARTITION              *Partition;
+  LIST_ENTRY                  *Link;
+  LIST_ENTRY                  *NextLink;
+  EMMC_REQUEST                *Request;
+  EFI_TPL                     OldTpl;
 
   Partition = EMMC_PARTITION_DATA_FROM_BLKIO2 (This);
 
   OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   for (Link = GetFirstNode (&Partition->Queue);
        !IsNull (&Partition->Queue, Link);
-       Link = NextLink)
-  {
+       Link = NextLink) {
     NextLink = GetNextNode (&Partition->Queue, Link);
     RemoveEntryList (Link);
 
@@ -1105,7 +1084,6 @@ EmmcResetEx (
 
     FreePool (Request);
   }
-
   gBS->RestoreTPL (OldTpl);
 
   return EFI_SUCCESS;
@@ -1140,16 +1118,16 @@ EmmcResetEx (
 EFI_STATUS
 EFIAPI
 EmmcReadBlocksEx (
-  IN     EFI_BLOCK_IO2_PROTOCOL  *This,
-  IN     UINT32                  MediaId,
-  IN     EFI_LBA                 Lba,
-  IN OUT EFI_BLOCK_IO2_TOKEN     *Token,
-  IN     UINTN                   BufferSize,
-  OUT VOID                       *Buffer
+  IN     EFI_BLOCK_IO2_PROTOCOL *This,
+  IN     UINT32                 MediaId,
+  IN     EFI_LBA                Lba,
+  IN OUT EFI_BLOCK_IO2_TOKEN    *Token,
+  IN     UINTN                  BufferSize,
+     OUT VOID                   *Buffer
   )
 {
-  EFI_STATUS      Status;
-  EMMC_PARTITION  *Partition;
+  EFI_STATUS             Status;
+  EMMC_PARTITION         *Partition;
 
   Partition = EMMC_PARTITION_DATA_FROM_BLKIO2 (This);
 
@@ -1173,7 +1151,7 @@ EmmcReadBlocksEx (
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -1182,16 +1160,16 @@ EmmcReadBlocksEx (
 EFI_STATUS
 EFIAPI
 EmmcWriteBlocksEx (
-  IN     EFI_BLOCK_IO2_PROTOCOL  *This,
-  IN     UINT32                  MediaId,
-  IN     EFI_LBA                 Lba,
-  IN OUT EFI_BLOCK_IO2_TOKEN     *Token,
-  IN     UINTN                   BufferSize,
-  IN     VOID                    *Buffer
+  IN     EFI_BLOCK_IO2_PROTOCOL *This,
+  IN     UINT32                 MediaId,
+  IN     EFI_LBA                Lba,
+  IN OUT EFI_BLOCK_IO2_TOKEN    *Token,
+  IN     UINTN                  BufferSize,
+  IN     VOID                   *Buffer
   )
 {
-  EFI_STATUS      Status;
-  EMMC_PARTITION  *Partition;
+  EFI_STATUS             Status;
+  EMMC_PARTITION         *Partition;
 
   Partition = EMMC_PARTITION_DATA_FROM_BLKIO2 (This);
 
@@ -1220,7 +1198,7 @@ EmmcFlushBlocksEx (
   //
   // Signal event and return directly.
   //
-  if ((Token != NULL) && (Token->Event != NULL)) {
+  if (Token != NULL && Token->Event != NULL) {
     Token->TransactionStatus = EFI_SUCCESS;
     gBS->SignalEvent (Token->Event);
   }
@@ -1304,27 +1282,27 @@ EmmcFlushBlocksEx (
 EFI_STATUS
 EFIAPI
 EmmcSecurityProtocolInOut (
-  IN     EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN     UINT32                                 MediaId,
-  IN     UINT64                                 Timeout,
-  IN     UINT8                                  SecurityProtocolId,
-  IN     UINT16                                 SecurityProtocolSpecificData,
-  IN     UINTN                                  PayloadBufferSize,
-  OUT VOID                                      *PayloadBuffer,
-  OUT UINTN                                     *PayloadTransferSize,
-  IN     BOOLEAN                                IsRead
+  IN     EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN     UINT32                                   MediaId,
+  IN     UINT64                                   Timeout,
+  IN     UINT8                                    SecurityProtocolId,
+  IN     UINT16                                   SecurityProtocolSpecificData,
+  IN     UINTN                                    PayloadBufferSize,
+     OUT VOID                                     *PayloadBuffer,
+     OUT UINTN                                    *PayloadTransferSize,
+  IN     BOOLEAN                                  IsRead
   )
 {
-  EFI_STATUS          Status;
-  EMMC_PARTITION      *Partition;
-  EMMC_DEVICE         *Device;
-  EFI_BLOCK_IO_MEDIA  *Media;
-  UINTN               BlockSize;
-  UINTN               BlockNum;
-  UINTN               IoAlign;
-  UINTN               Remaining;
-  UINT32              MaxBlock;
-  UINT8               PartitionConfig;
+  EFI_STATUS                       Status;
+  EMMC_PARTITION                   *Partition;
+  EMMC_DEVICE                      *Device;
+  EFI_BLOCK_IO_MEDIA               *Media;
+  UINTN                            BlockSize;
+  UINTN                            BlockNum;
+  UINTN                            IoAlign;
+  UINTN                            Remaining;
+  UINT32                           MaxBlock;
+  UINT8                            PartitionConfig;
 
   Status    = EFI_SUCCESS;
   Partition = EMMC_PARTITION_DATA_FROM_SSP (This);
@@ -1352,10 +1330,10 @@ EmmcSecurityProtocolInOut (
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  BlockNum = PayloadBufferSize / BlockSize;
+  BlockNum  = PayloadBufferSize / BlockSize;
 
   IoAlign = Media->IoAlign;
-  if ((IoAlign > 0) && (((UINTN)PayloadBuffer & (IoAlign - 1)) != 0)) {
+  if (IoAlign > 0 && (((UINTN) PayloadBuffer & (IoAlign - 1)) != 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1363,24 +1341,21 @@ EmmcSecurityProtocolInOut (
   // Security protocol interface is synchronous transfer.
   // Waiting for async I/O list to be empty before any operation.
   //
-  while (!IsListEmpty (&Partition->Queue)) {
-  }
+  while (!IsListEmpty (&Partition->Queue));
 
   //
   // Check if needs to switch partition access.
   //
   PartitionConfig = Device->ExtCsd.PartitionConfig;
   if ((PartitionConfig & 0x7) != Partition->PartitionType) {
-    PartitionConfig &= (UINT8) ~0x7;
+    PartitionConfig &= (UINT8)~0x7;
     PartitionConfig |= Partition->PartitionType;
-    Status           = EmmcSetExtCsd (Partition, OFFSET_OF (EMMC_EXT_CSD, PartitionConfig), PartitionConfig, NULL, FALSE);
+    Status = EmmcSetExtCsd (Partition, OFFSET_OF (EMMC_EXT_CSD, PartitionConfig), PartitionConfig, NULL, FALSE);
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
     Device->ExtCsd.PartitionConfig = PartitionConfig;
   }
-
   //
   // Start to execute data transfer. The max block number in single cmd is 65535 blocks.
   //
@@ -1400,12 +1375,12 @@ EmmcSecurityProtocolInOut (
     }
 
     PayloadBufferSize = BlockNum * BlockSize;
-    Status            = EmmcProtocolInOut (Partition, SecurityProtocolId, SecurityProtocolSpecificData, PayloadBufferSize, PayloadBuffer, IsRead, Timeout, NULL, FALSE);
+    Status = EmmcProtocolInOut (Partition, SecurityProtocolId, SecurityProtocolSpecificData, PayloadBufferSize, PayloadBuffer, IsRead, Timeout, NULL, FALSE);
     if (EFI_ERROR (Status)) {
       return Status;
     }
 
-    PayloadBuffer = (UINT8 *)PayloadBuffer + PayloadBufferSize;
+    PayloadBuffer = (UINT8*)PayloadBuffer + PayloadBufferSize;
     Remaining    -= BlockNum;
     if (PayloadTransferSize != NULL) {
       *PayloadTransferSize += PayloadBufferSize;
@@ -1490,19 +1465,19 @@ EmmcSecurityProtocolInOut (
 EFI_STATUS
 EFIAPI
 EmmcSecurityProtocolIn (
-  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN UINT32                                 MediaId,
-  IN UINT64                                 Timeout,
-  IN UINT8                                  SecurityProtocolId,
-  IN UINT16                                 SecurityProtocolSpecificData,
-  IN UINTN                                  PayloadBufferSize,
-  OUT VOID                                  *PayloadBuffer,
-  OUT UINTN                                 *PayloadTransferSize
+  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN UINT32                                   MediaId,
+  IN UINT64                                   Timeout,
+  IN UINT8                                    SecurityProtocolId,
+  IN UINT16                                   SecurityProtocolSpecificData,
+  IN UINTN                                    PayloadBufferSize,
+  OUT VOID                                    *PayloadBuffer,
+  OUT UINTN                                   *PayloadTransferSize
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                  Status;
 
-  if ((PayloadTransferSize == NULL) && (PayloadBufferSize != 0)) {
+  if ((PayloadTransferSize == NULL) && PayloadBufferSize != 0) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1585,16 +1560,16 @@ EmmcSecurityProtocolIn (
 EFI_STATUS
 EFIAPI
 EmmcSecurityProtocolOut (
-  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN UINT32                                 MediaId,
-  IN UINT64                                 Timeout,
-  IN UINT8                                  SecurityProtocolId,
-  IN UINT16                                 SecurityProtocolSpecificData,
-  IN UINTN                                  PayloadBufferSize,
-  IN VOID                                   *PayloadBuffer
+  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN UINT32                                   MediaId,
+  IN UINT64                                   Timeout,
+  IN UINT8                                    SecurityProtocolId,
+  IN UINT16                                   SecurityProtocolSpecificData,
+  IN UINTN                                    PayloadBufferSize,
+  IN VOID                                     *PayloadBuffer
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS          Status;
 
   Status = EmmcSecurityProtocolInOut (
              This,
@@ -1627,17 +1602,17 @@ EmmcSecurityProtocolOut (
 **/
 EFI_STATUS
 EmmcEraseBlockStart (
-  IN  EMMC_PARTITION       *Partition,
-  IN  EFI_LBA              StartLba,
-  IN  EFI_BLOCK_IO2_TOKEN  *Token,
-  IN  BOOLEAN              IsEnd
+  IN  EMMC_PARTITION            *Partition,
+  IN  EFI_LBA                   StartLba,
+  IN  EFI_BLOCK_IO2_TOKEN       *Token,
+  IN  BOOLEAN                   IsEnd
   )
 {
-  EFI_STATUS                     Status;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru;
-  EMMC_DEVICE                    *Device;
-  EMMC_REQUEST                   *EraseBlockStart;
-  EFI_TPL                        OldTpl;
+  EFI_STATUS                           Status;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL        *PassThru;
+  EMMC_DEVICE                          *Device;
+  EMMC_REQUEST                         *EraseBlockStart;
+  EFI_TPL                              OldTpl;
 
   EraseBlockStart = NULL;
 
@@ -1651,7 +1626,7 @@ EmmcEraseBlockStart (
   }
 
   EraseBlockStart->Signature = EMMC_REQUEST_SIGNATURE;
-  OldTpl                     = gBS->RaiseTPL (TPL_NOTIFY);
+  OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   InsertTailList (&Partition->Queue, &EraseBlockStart->Link);
   gBS->RestoreTPL (OldTpl);
   EraseBlockStart->Packet.SdMmcCmdBlk    = &EraseBlockStart->SdMmcCmdBlk;
@@ -1701,7 +1676,6 @@ Error:
       if (EraseBlockStart->Event != NULL) {
         gBS->CloseEvent (EraseBlockStart->Event);
       }
-
       FreePool (EraseBlockStart);
     }
   } else {
@@ -1735,17 +1709,17 @@ Error:
 **/
 EFI_STATUS
 EmmcEraseBlockEnd (
-  IN  EMMC_PARTITION       *Partition,
-  IN  EFI_LBA              EndLba,
-  IN  EFI_BLOCK_IO2_TOKEN  *Token,
-  IN  BOOLEAN              IsEnd
+  IN  EMMC_PARTITION            *Partition,
+  IN  EFI_LBA                   EndLba,
+  IN  EFI_BLOCK_IO2_TOKEN       *Token,
+  IN  BOOLEAN                   IsEnd
   )
 {
-  EFI_STATUS                     Status;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru;
-  EMMC_DEVICE                    *Device;
-  EMMC_REQUEST                   *EraseBlockEnd;
-  EFI_TPL                        OldTpl;
+  EFI_STATUS                           Status;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL        *PassThru;
+  EMMC_DEVICE                          *Device;
+  EMMC_REQUEST                         *EraseBlockEnd;
+  EFI_TPL                              OldTpl;
 
   EraseBlockEnd = NULL;
 
@@ -1759,7 +1733,7 @@ EmmcEraseBlockEnd (
   }
 
   EraseBlockEnd->Signature = EMMC_REQUEST_SIGNATURE;
-  OldTpl                   = gBS->RaiseTPL (TPL_NOTIFY);
+  OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   InsertTailList (&Partition->Queue, &EraseBlockEnd->Link);
   gBS->RestoreTPL (OldTpl);
   EraseBlockEnd->Packet.SdMmcCmdBlk    = &EraseBlockEnd->SdMmcCmdBlk;
@@ -1809,7 +1783,6 @@ Error:
       if (EraseBlockEnd->Event != NULL) {
         gBS->CloseEvent (EraseBlockEnd->Event);
       }
-
       FreePool (EraseBlockEnd);
     }
   } else {
@@ -1842,16 +1815,16 @@ Error:
 **/
 EFI_STATUS
 EmmcEraseBlock (
-  IN  EMMC_PARTITION       *Partition,
-  IN  EFI_BLOCK_IO2_TOKEN  *Token,
-  IN  BOOLEAN              IsEnd
+  IN  EMMC_PARTITION            *Partition,
+  IN  EFI_BLOCK_IO2_TOKEN       *Token,
+  IN  BOOLEAN                   IsEnd
   )
 {
-  EFI_STATUS                     Status;
-  EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru;
-  EMMC_DEVICE                    *Device;
-  EMMC_REQUEST                   *EraseBlock;
-  EFI_TPL                        OldTpl;
+  EFI_STATUS                           Status;
+  EFI_SD_MMC_PASS_THRU_PROTOCOL        *PassThru;
+  EMMC_DEVICE                          *Device;
+  EMMC_REQUEST                         *EraseBlock;
+  EFI_TPL                              OldTpl;
 
   EraseBlock = NULL;
 
@@ -1865,7 +1838,7 @@ EmmcEraseBlock (
   }
 
   EraseBlock->Signature = EMMC_REQUEST_SIGNATURE;
-  OldTpl                = gBS->RaiseTPL (TPL_NOTIFY);
+  OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   InsertTailList (&Partition->Queue, &EraseBlock->Link);
   gBS->RestoreTPL (OldTpl);
   EraseBlock->Packet.SdMmcCmdBlk    = &EraseBlock->SdMmcCmdBlk;
@@ -1917,7 +1890,6 @@ Error:
       if (EraseBlock->Event != NULL) {
         gBS->CloseEvent (EraseBlock->Event);
       }
-
       FreePool (EraseBlock);
     }
   } else {
@@ -1950,14 +1922,14 @@ Error:
 **/
 EFI_STATUS
 EmmcWriteZeros (
-  IN  EMMC_PARTITION  *Partition,
-  IN  EFI_LBA         StartLba,
-  IN  UINTN           Size
+  IN  EMMC_PARTITION            *Partition,
+  IN  EFI_LBA                   StartLba,
+  IN  UINTN                     Size
   )
 {
-  EFI_STATUS  Status;
-  UINT8       *Buffer;
-  UINT32      MediaId;
+  EFI_STATUS                           Status;
+  UINT8                                *Buffer;
+  UINT32                               MediaId;
 
   Buffer = AllocateZeroPool (Size);
   if (Buffer == NULL) {
@@ -2002,27 +1974,27 @@ EmmcWriteZeros (
 EFI_STATUS
 EFIAPI
 EmmcEraseBlocks (
-  IN     EFI_ERASE_BLOCK_PROTOCOL  *This,
-  IN     UINT32                    MediaId,
-  IN     EFI_LBA                   Lba,
-  IN OUT EFI_ERASE_BLOCK_TOKEN     *Token,
-  IN     UINTN                     Size
+  IN     EFI_ERASE_BLOCK_PROTOCOL      *This,
+  IN     UINT32                        MediaId,
+  IN     EFI_LBA                       Lba,
+  IN OUT EFI_ERASE_BLOCK_TOKEN         *Token,
+  IN     UINTN                         Size
   )
 {
-  EFI_STATUS          Status;
-  EFI_BLOCK_IO_MEDIA  *Media;
-  UINTN               BlockSize;
-  UINTN               BlockNum;
-  EFI_LBA             FirstLba;
-  EFI_LBA             LastLba;
-  EFI_LBA             StartGroupLba;
-  EFI_LBA             EndGroupLba;
-  UINT32              EraseGroupSize;
-  UINT32              Remainder;
-  UINTN               WriteZeroSize;
-  UINT8               PartitionConfig;
-  EMMC_PARTITION      *Partition;
-  EMMC_DEVICE         *Device;
+  EFI_STATUS                            Status;
+  EFI_BLOCK_IO_MEDIA                    *Media;
+  UINTN                                 BlockSize;
+  UINTN                                 BlockNum;
+  EFI_LBA                               FirstLba;
+  EFI_LBA                               LastLba;
+  EFI_LBA                               StartGroupLba;
+  EFI_LBA                               EndGroupLba;
+  UINT32                                EraseGroupSize;
+  UINT32                                Remainder;
+  UINTN                                 WriteZeroSize;
+  UINT8                                 PartitionConfig;
+  EMMC_PARTITION                        *Partition;
+  EMMC_DEVICE                           *Device;
 
   Status    = EFI_SUCCESS;
   Partition = EMMC_PARTITION_DATA_FROM_ERASEBLK (This);
@@ -2045,7 +2017,7 @@ EmmcEraseBlocks (
     return EFI_INVALID_PARAMETER;
   }
 
-  BlockNum = Size / BlockSize;
+  BlockNum  = Size / BlockSize;
   if ((Lba + BlockNum - 1) > Media->LastBlock) {
     return EFI_INVALID_PARAMETER;
   }
@@ -2062,13 +2034,12 @@ EmmcEraseBlocks (
   //
   PartitionConfig = Device->ExtCsd.PartitionConfig;
   if ((PartitionConfig & 0x7) != Partition->PartitionType) {
-    PartitionConfig &= (UINT8) ~0x7;
+    PartitionConfig &= (UINT8)~0x7;
     PartitionConfig |= Partition->PartitionType;
-    Status           = EmmcSetExtCsd (Partition, OFFSET_OF (EMMC_EXT_CSD, PartitionConfig), PartitionConfig, (EFI_BLOCK_IO2_TOKEN *)Token, FALSE);
+    Status = EmmcSetExtCsd (Partition, OFFSET_OF (EMMC_EXT_CSD, PartitionConfig), PartitionConfig, (EFI_BLOCK_IO2_TOKEN*)Token, FALSE);
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
     Device->ExtCsd.PartitionConfig = PartitionConfig;
   }
 
@@ -2087,7 +2058,7 @@ EmmcEraseBlocks (
 
     //
     // If the size to erase is smaller than the erase group size, the whole
-    // erase operation is performed by writing zeros.
+    // erase operation is performed by writting zeros.
     //
     if (BlockNum < EraseGroupSize) {
       Status = EmmcWriteZeros (Partition, FirstLba, Size);
@@ -2108,7 +2079,6 @@ EmmcEraseBlocks (
         Token->TransactionStatus = EFI_SUCCESS;
         gBS->SignalEvent (Token->Event);
       }
-
       return EFI_SUCCESS;
     }
 
@@ -2119,7 +2089,7 @@ EmmcEraseBlocks (
     //
     if (StartGroupLba > FirstLba) {
       WriteZeroSize = (UINTN)(StartGroupLba - FirstLba) * BlockSize;
-      Status        = EmmcWriteZeros (Partition, FirstLba, WriteZeroSize);
+      Status = EmmcWriteZeros (Partition, FirstLba, WriteZeroSize);
       if (EFI_ERROR (Status)) {
         return Status;
       }
@@ -2132,7 +2102,7 @@ EmmcEraseBlocks (
     //
     if (EndGroupLba <= LastLba) {
       WriteZeroSize = (UINTN)(LastLba + 1 - EndGroupLba) * BlockSize;
-      Status        = EmmcWriteZeros (Partition, EndGroupLba, WriteZeroSize);
+      Status = EmmcWriteZeros (Partition, EndGroupLba, WriteZeroSize);
       if (EFI_ERROR (Status)) {
         return Status;
       }
@@ -2155,7 +2125,6 @@ EmmcEraseBlocks (
         Token->TransactionStatus = EFI_SUCCESS;
         gBS->SignalEvent (Token->Event);
       }
-
       return EFI_SUCCESS;
     }
 
@@ -2163,17 +2132,17 @@ EmmcEraseBlocks (
     LastLba  = EndGroupLba - 1;
   }
 
-  Status = EmmcEraseBlockStart (Partition, FirstLba, (EFI_BLOCK_IO2_TOKEN *)Token, FALSE);
+  Status = EmmcEraseBlockStart (Partition, FirstLba, (EFI_BLOCK_IO2_TOKEN*)Token, FALSE);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  Status = EmmcEraseBlockEnd (Partition, LastLba, (EFI_BLOCK_IO2_TOKEN *)Token, FALSE);
+  Status = EmmcEraseBlockEnd (Partition, LastLba, (EFI_BLOCK_IO2_TOKEN*)Token, FALSE);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  Status = EmmcEraseBlock (Partition, (EFI_BLOCK_IO2_TOKEN *)Token, TRUE);
+  Status = EmmcEraseBlock (Partition, (EFI_BLOCK_IO2_TOKEN*)Token, TRUE);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -2189,3 +2158,4 @@ EmmcEraseBlocks (
 
   return Status;
 }
+

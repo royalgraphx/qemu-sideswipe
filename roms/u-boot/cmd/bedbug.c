@@ -6,8 +6,6 @@
 #include <cli.h>
 #include <command.h>
 #include <console.h>
-#include <asm/global_data.h>
-#include <asm/ptrace.h>
 #include <linux/ctype.h>
 #include <net.h>
 #include <bedbug/type.h>
@@ -46,10 +44,10 @@ int bedbug_puts (const char *str)
  * settings.
  * ====================================================================== */
 
-int bedbug_init(void)
+void bedbug_init (void)
 {
 	/* -------------------------------------------------- */
-	return 0;
+	return;
 }				/* bedbug_init */
 
 
@@ -58,8 +56,7 @@ int bedbug_init(void)
  * Entry point from the interpreter to the disassembler.  Repeated calls
  * will resume from the last disassembled address.
  * ====================================================================== */
-int do_bedbug_dis(struct cmd_tbl *cmdtp, int flag, int argc,
-		  char *const argv[])
+int do_bedbug_dis (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	ulong addr;		/* Address to start disassembly from    */
 	ulong len;		/* # of instructions to disassemble     */
@@ -99,8 +96,7 @@ U_BOOT_CMD (ds, 3, 1, do_bedbug_dis,
  * instructions in consecutive memory locations until a '.' (period) is
  * entered on a line by itself.
  * ====================================================================== */
-int do_bedbug_asm(struct cmd_tbl *cmdtp, int flag, int argc,
-		  char *const argv[])
+int do_bedbug_asm (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	long mem_addr;		/* Address to assemble into     */
 	unsigned long instr;	/* Machine code for text        */
@@ -150,8 +146,7 @@ U_BOOT_CMD (as, 2, 0, do_bedbug_asm,
  * CPU-specific break point set routine.
  * ====================================================================== */
 
-int do_bedbug_break(struct cmd_tbl *cmdtp, int flag, int argc,
-		    char *const argv[])
+int do_bedbug_break (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	/* -------------------------------------------------- */
 	if (bug_ctx.do_break)
@@ -247,8 +242,7 @@ void bedbug_main_loop (unsigned long addr, struct pt_regs *regs)
  * stopped flag in the context so that the breakpoint routine will
  * return.
  * ====================================================================== */
-int do_bedbug_continue(struct cmd_tbl *cmdtp, int flag, int argc,
-		       char *const argv[])
+int do_bedbug_continue (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	/* -------------------------------------------------- */
 
@@ -271,8 +265,7 @@ U_BOOT_CMD (continue, 1, 0, do_bedbug_continue,
  * the address passes control to the CPU-specific set breakpoint routine
  * for the current breakpoint number.
  * ====================================================================== */
-int do_bedbug_step(struct cmd_tbl *cmdtp, int flag, int argc,
-		   char *const argv[])
+int do_bedbug_step (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned long addr;	/* Address to stop at */
 
@@ -303,8 +296,7 @@ U_BOOT_CMD (step, 1, 1, do_bedbug_step,
  * the address passes control to the CPU-specific set breakpoint routine
  * for the current breakpoint number.
  * ====================================================================== */
-int do_bedbug_next(struct cmd_tbl *cmdtp, int flag, int argc,
-		   char *const argv[])
+int do_bedbug_next (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned long addr;	/* Address to stop at */
 
@@ -333,8 +325,7 @@ U_BOOT_CMD (next, 1, 1, do_bedbug_next,
  * Interpreter command to print the current stack.  This assumes an EABI
  * architecture, so it starts with GPR R1 and works back up the stack.
  * ====================================================================== */
-int do_bedbug_stack(struct cmd_tbl *cmdtp, int flag, int argc,
-		    char *const argv[])
+int do_bedbug_stack (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned long sp;	/* Stack pointer                */
 	unsigned long func;	/* LR from stack                */
@@ -349,7 +340,7 @@ int do_bedbug_stack(struct cmd_tbl *cmdtp, int flag, int argc,
 		return 1;
 	}
 
-	top = gd->ram_start + gd->ram_size;
+	top = gd->bd->bi_memstart + gd->bd->bi_memsize;
 	depth = 0;
 
 	printf ("Depth     PC\n");
@@ -379,8 +370,7 @@ U_BOOT_CMD (where, 1, 1, do_bedbug_stack,
  * Interpreter command to dump the registers.  Calls the CPU-specific
  * show registers routine.
  * ====================================================================== */
-int do_bedbug_rdump(struct cmd_tbl *cmdtp, int flag, int argc,
-		    char *const argv[])
+int do_bedbug_rdump (cmd_tbl_t * cmdtp, int flag, int argc, char * const argv[])
 {
 	/* -------------------------------------------------- */
 

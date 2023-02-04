@@ -34,6 +34,7 @@
 
 #include "qemu/osdep.h"
 #include "qemu/module.h"
+#include "cpu.h"
 #include "hw/scsi/scsi.h"
 #include "migration/vmstate.h"
 #include "scsi/constants.h"
@@ -45,7 +46,6 @@
 #include "trace.h"
 
 #include <libfdt.h>
-#include "qom/object.h"
 
 /*
  * Virtual SCSI device
@@ -90,13 +90,14 @@ typedef struct vscsi_req {
 } vscsi_req;
 
 #define TYPE_VIO_SPAPR_VSCSI_DEVICE "spapr-vscsi"
-OBJECT_DECLARE_SIMPLE_TYPE(VSCSIState, VIO_SPAPR_VSCSI_DEVICE)
+#define VIO_SPAPR_VSCSI_DEVICE(obj) \
+     OBJECT_CHECK(VSCSIState, (obj), TYPE_VIO_SPAPR_VSCSI_DEVICE)
 
-struct VSCSIState {
+typedef struct {
     SpaprVioDevice vdev;
     SCSIBus bus;
     vscsi_req reqs[VSCSI_REQ_LIMIT];
-};
+} VSCSIState;
 
 static union viosrp_iu *req_iu(vscsi_req *req)
 {
@@ -550,19 +551,19 @@ static void vscsi_transfer_data(SCSIRequest *sreq, uint32_t len)
 }
 
 /* Callback to indicate that the SCSI layer has completed a transfer.  */
-static void vscsi_command_complete(SCSIRequest *sreq, size_t resid)
+static void vscsi_command_complete(SCSIRequest *sreq, uint32_t status, size_t resid)
 {
     VSCSIState *s = VIO_SPAPR_VSCSI_DEVICE(sreq->bus->qbus.parent);
     vscsi_req *req = sreq->hba_private;
     int32_t res_in = 0, res_out = 0;
 
-    trace_spapr_vscsi_command_complete(sreq->tag, sreq->status, req);
+    trace_spapr_vscsi_command_complete(sreq->tag, status, req);
     if (req == NULL) {
         fprintf(stderr, "VSCSI: Can't find request for tag 0x%x\n", sreq->tag);
         return;
     }
 
-    if (sreq->status == CHECK_CONDITION) {
+    if (status == CHECK_CONDITION) {
         req->senselen = scsi_req_get_sense(req->sreq, req->sense,
                                            sizeof(req->sense));
         trace_spapr_vscsi_command_complete_sense_data1(req->senselen,
@@ -573,8 +574,8 @@ static void vscsi_command_complete(SCSIRequest *sreq, size_t resid)
                 req->sense[12], req->sense[13], req->sense[14], req->sense[15]);
     }
 
-    trace_spapr_vscsi_command_complete_status(sreq->status);
-    if (sreq->status == 0) {
+    trace_spapr_vscsi_command_complete_status(status);
+    if (status == 0) {
         /* We handle overflows, not underflows for normal commands,
          * but hopefully nobody cares
          */
@@ -584,7 +585,7 @@ static void vscsi_command_complete(SCSIRequest *sreq, size_t resid)
             res_in = req->data_len;
         }
     }
-    vscsi_send_rsp(s, req, sreq->status, res_in, res_out);
+    vscsi_send_rsp(s, req, status, res_in, res_out);
     vscsi_put_req(req);
 }
 
@@ -783,7 +784,6 @@ static int vscsi_queue_cmd(VSCSIState *s, vscsi_req *req)
     union srp_iu *srp = &req_iu(req)->srp;
     SCSIDevice *sdev;
     int n, lun;
-    size_t cdb_len = sizeof (srp->cmd.cdb) + (srp->cmd.add_cdb_len & ~3);
 
     if ((srp->cmd.lun == 0 || be64_to_cpu(srp->cmd.lun) == SRP_REPORT_LUNS_WLUN)
       && srp->cmd.cdb[0] == REPORT_LUNS) {
@@ -802,7 +802,7 @@ static int vscsi_queue_cmd(VSCSIState *s, vscsi_req *req)
         } return 1;
     }
 
-    req->sreq = scsi_req_new(sdev, req->qtag, lun, srp->cmd.cdb, cdb_len, req);
+    req->sreq = scsi_req_new(sdev, req->qtag, lun, srp->cmd.cdb, req);
     n = scsi_req_enqueue(req->sreq);
 
     trace_spapr_vscsi_queue_cmd(req->qtag, srp->cmd.cdb[0],
@@ -865,7 +865,7 @@ static int vscsi_process_tsk_mgmt(VSCSIState *s, vscsi_req *req)
                 break;
             }
 
-            device_cold_reset(&d->qdev);
+            qdev_reset_all(&d->qdev);
             break;
 
         case SRP_TSK_ABORT_TASK_SET:
@@ -1014,7 +1014,7 @@ static int vscsi_send_capabilities(VSCSIState *s, vscsi_req *req)
     }
 
     /*
-     * Current implementation does not support any migration or
+     * Current implementation does not suppport any migration or
      * reservation capabilities. Construct the response telling the
      * guest not to use them.
      */
@@ -1217,10 +1217,8 @@ static void spapr_vscsi_realize(SpaprVioDevice *dev, Error **errp)
 
     dev->crq.SendFunc = vscsi_do_crq;
 
-    scsi_bus_init(&s->bus, sizeof(s->bus), DEVICE(dev), &vscsi_scsi_info);
-
-    /* ibmvscsi SCSI bus does not allow hotplug. */
-    qbus_set_hotplug_handler(BUS(&s->bus), NULL);
+    scsi_bus_new(&s->bus, sizeof(s->bus), DEVICE(dev),
+                 &vscsi_scsi_info, NULL);
 }
 
 void spapr_vscsi_create(SpaprVioBus *bus)

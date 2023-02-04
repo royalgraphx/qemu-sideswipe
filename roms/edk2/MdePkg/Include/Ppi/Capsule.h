@@ -45,7 +45,7 @@ typedef struct _EFI_PEI_CAPSULE_PPI PEI_CAPSULE_PPI;
                             On output, this variable will contain the size of the
                             coalesced capsule.
 
-  @retval EFI_NOT_FOUND          If: boot mode could not be determined, or the
+  @retval EFI_NOT_FOUND          If: boot modecould not be determined, or the
                                  boot mode is not flash-update, or the capsule descriptors were not found.
   @retval EFI_BUFFER_TOO_SMALL   The capsule could not be coalesced in the provided memory region.
   @retval EFI_SUCCESS            There was no capsule, or the capsule was processed successfully.
@@ -115,16 +115,16 @@ EFI_STATUS
 /// processing, and once memory is available, create a HOB for the capsule.
 ///
 struct _EFI_PEI_CAPSULE_PPI {
-  EFI_PEI_CAPSULE_COALESCE                Coalesce;
-  EFI_PEI_CAPSULE_CHECK_CAPSULE_UPDATE    CheckCapsuleUpdate;
-  EFI_PEI_CAPSULE_CREATE_STATE            CreateState;
+  EFI_PEI_CAPSULE_COALESCE              Coalesce;
+  EFI_PEI_CAPSULE_CHECK_CAPSULE_UPDATE  CheckCapsuleUpdate;
+  EFI_PEI_CAPSULE_CREATE_STATE          CreateState;
 };
 
 ///
 /// Keep name backwards compatible before PI Version 1.4
 ///
-extern EFI_GUID  gPeiCapsulePpiGuid;
+extern EFI_GUID gPeiCapsulePpiGuid;
 
-extern EFI_GUID  gEfiPeiCapsulePpiGuid;
+extern EFI_GUID gEfiPeiCapsulePpiGuid;
 
 #endif // #ifndef _PEI_CAPSULE_PPI_H_

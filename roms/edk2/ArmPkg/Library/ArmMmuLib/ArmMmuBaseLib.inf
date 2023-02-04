@@ -14,8 +14,6 @@
   MODULE_TYPE                    = BASE
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = ArmMmuLib
-
-[Defines.AARCH64]
   CONSTRUCTOR                    = ArmMmuBaseLibConstructor
 
 [Sources.AARCH64]
@@ -23,11 +21,9 @@
   AArch64/ArmMmuLibReplaceEntry.S
 
 [Sources.ARM]
-  Arm/ArmMmuLibConvert.c
   Arm/ArmMmuLibCore.c
-  Arm/ArmMmuLibUpdate.c
-  Arm/ArmMmuLibV7Support.S   |GCC
-  Arm/ArmMmuLibV7Support.asm |RVCT
+  Arm/ArmMmuLibV7Support.S   |GCC 
+  Arm/ArmMmuLibV7Support.asm |RVCT 
 
 [Packages]
   ArmPkg/ArmPkg.dec

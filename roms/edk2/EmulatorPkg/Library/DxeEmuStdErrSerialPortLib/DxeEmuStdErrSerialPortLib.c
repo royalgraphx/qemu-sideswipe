@@ -8,9 +8,13 @@
 
 **/
 
+
 #include <PiDxe.h>
 #include <Library/SerialPortLib.h>
 #include <Library/EmuThunkLib.h>
+
+
+
 
 /**
   Initialize the serial device hardware.
@@ -52,8 +56,8 @@ SerialPortInitialize (
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8  *Buffer,
-  IN UINTN  NumberOfBytes
+  IN UINT8     *Buffer,
+  IN UINTN     NumberOfBytes
   )
 {
   if (gEmuThunk == NULL) {
@@ -62,6 +66,7 @@ SerialPortWrite (
 
   return gEmuThunk->WriteStdErr (Buffer, NumberOfBytes);
 }
+
 
 /**
   Read data from serial device and save the datas in buffer.
@@ -82,8 +87,8 @@ SerialPortWrite (
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8  *Buffer,
-  IN  UINTN  NumberOfBytes
+  OUT UINT8     *Buffer,
+  IN  UINTN     NumberOfBytes
   )
 {
   return 0;
@@ -108,3 +113,5 @@ SerialPortPoll (
 {
   return FALSE;
 }
+
+

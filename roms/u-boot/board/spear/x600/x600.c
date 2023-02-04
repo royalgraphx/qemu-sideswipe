@@ -7,11 +7,8 @@
  */
 
 #include <common.h>
-#include <flash.h>
-#include <init.h>
 #include <micrel.h>
 #include <nand.h>
-#include <net.h>
 #include <netdev.h>
 #include <phy.h>
 #include <rtc.h>
@@ -138,7 +135,7 @@ int board_phy_config(struct phy_device *phydev)
 	return 0;
 }
 
-int board_eth_init(struct bd_info *bis)
+int board_eth_init(bd_t *bis)
 {
 	int ret = 0;
 

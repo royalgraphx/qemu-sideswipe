@@ -68,8 +68,6 @@
   ## SOMETIMES_CONSUMES
   gPeiSecPerformancePpiGuid
   gEfiPeiCoreFvLocationPpiGuid
-  ## CONSUMES
-  gRepublishSecPpiPpiGuid
 
 [Guids]
   ## SOMETIMES_PRODUCES   ## HOB
@@ -77,7 +75,6 @@
 
 [Pcd]
   gUefiCpuPkgTokenSpaceGuid.PcdPeiTemporaryRamStackSize  ## CONSUMES
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMigrateTemporaryRamFirmwareVolumes  ## CONSUMES
 
 [UserExtensions.TianoCore."ExtraFiles"]
   SecCoreExtra.uni

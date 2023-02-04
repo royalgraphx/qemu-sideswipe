@@ -26,15 +26,13 @@
 #include "qapi/error.h"
 #include "qemu/cutils.h"
 #include "qemu/timer.h"
-#include "sysemu/cpu-timers.h"
+#include "sysemu/qtest.h"
+#include "sysemu/cpus.h"
 #include "sysemu/replay.h"
 #include "qemu/main-loop.h"
 #include "block/aio.h"
-#include "block/thread-pool.h"
 #include "qemu/error-report.h"
 #include "qemu/queue.h"
-#include "qemu/compiler.h"
-#include "qom/object.h"
 
 #ifndef _WIN32
 #include <sys/wait.h>
@@ -46,16 +44,6 @@
  * use signalfd to listen for them.  We rely on whatever the current signal
  * handler is to dispatch the signals when we receive them.
  */
-/*
- * Disable CFI checks.
- * We are going to call a signal hander directly. Such handler may or may not
- * have been defined in our binary, so there's no guarantee that the pointer
- * used to set the handler is a cfi-valid pointer. Since the handlers are
- * stored in kernel memory, changing the handler to an attacker-defined
- * function requires being able to call a sigaction() syscall,
- * which is not as easy as overwriting a pointer in memory.
- */
-QEMU_DISABLE_CFI
 static void sigfd_handler(void *opaque)
 {
     int fd = (intptr_t)opaque;
@@ -116,7 +104,7 @@ static int qemu_signal_init(Error **errp)
         return -errno;
     }
 
-    g_unix_set_fd_nonblocking(sigfd, true, NULL);
+    fcntl_setfl(sigfd, O_NONBLOCK);
 
     qemu_set_fd_handler(sigfd, sigfd_handler, NULL, (void *)(intptr_t)sigfd);
 
@@ -172,7 +160,6 @@ int qemu_init_main_loop(Error **errp)
     if (!qemu_aio_context) {
         return -EMFILE;
     }
-    qemu_set_current_aio_context(qemu_aio_context);
     qemu_notify_bh = qemu_bh_new(notify_event_cb, NULL);
     gpollfds = g_array_new(FALSE, FALSE, sizeof(GPollFD));
     src = aio_get_g_source(qemu_aio_context);
@@ -186,78 +173,11 @@ int qemu_init_main_loop(Error **errp)
     return 0;
 }
 
-static void main_loop_update_params(EventLoopBase *base, Error **errp)
-{
-    ERRP_GUARD();
-
-    if (!qemu_aio_context) {
-        error_setg(errp, "qemu aio context not ready");
-        return;
-    }
-
-    aio_context_set_aio_params(qemu_aio_context, base->aio_max_batch, errp);
-    if (*errp) {
-        return;
-    }
-
-    aio_context_set_thread_pool_params(qemu_aio_context, base->thread_pool_min,
-                                       base->thread_pool_max, errp);
-}
-
-MainLoop *mloop;
-
-static void main_loop_init(EventLoopBase *base, Error **errp)
-{
-    MainLoop *m = MAIN_LOOP(base);
-
-    if (mloop) {
-        error_setg(errp, "only one main-loop instance allowed");
-        return;
-    }
-
-    main_loop_update_params(base, errp);
-
-    mloop = m;
-    return;
-}
-
-static bool main_loop_can_be_deleted(EventLoopBase *base)
-{
-    return false;
-}
-
-static void main_loop_class_init(ObjectClass *oc, void *class_data)
-{
-    EventLoopBaseClass *bc = EVENT_LOOP_BASE_CLASS(oc);
-
-    bc->init = main_loop_init;
-    bc->update_params = main_loop_update_params;
-    bc->can_be_deleted = main_loop_can_be_deleted;
-}
-
-static const TypeInfo main_loop_info = {
-    .name = TYPE_MAIN_LOOP,
-    .parent = TYPE_EVENT_LOOP_BASE,
-    .class_init = main_loop_class_init,
-    .instance_size = sizeof(MainLoop),
-};
-
-static void main_loop_register_types(void)
-{
-    type_register_static(&main_loop_info);
-}
-
-type_init(main_loop_register_types)
-
 static int max_priority;
 
 #ifndef _WIN32
 static int glib_pollfds_idx;
 static int glib_n_poll_fds;
-
-void qemu_fd_register(int fd)
-{
-}
 
 static void glib_pollfds_fill(int64_t *cur_timeout)
 {
@@ -338,7 +258,7 @@ static PollingEntry *first_polling_entry;
 int qemu_add_polling_cb(PollingFunc *func, void *opaque)
 {
     PollingEntry **ppe, *pe;
-    pe = g_new0(PollingEntry, 1);
+    pe = g_malloc0(sizeof(PollingEntry));
     pe->func = func;
     pe->opaque = opaque;
     for(ppe = &first_polling_entry; *ppe != NULL; ppe = &(*ppe)->next);
@@ -363,30 +283,20 @@ void qemu_del_polling_cb(PollingFunc *func, void *opaque)
 /* Wait objects support */
 typedef struct WaitObjects {
     int num;
-    int revents[MAXIMUM_WAIT_OBJECTS];
-    HANDLE events[MAXIMUM_WAIT_OBJECTS];
-    WaitObjectFunc *func[MAXIMUM_WAIT_OBJECTS];
-    void *opaque[MAXIMUM_WAIT_OBJECTS];
+    int revents[MAXIMUM_WAIT_OBJECTS + 1];
+    HANDLE events[MAXIMUM_WAIT_OBJECTS + 1];
+    WaitObjectFunc *func[MAXIMUM_WAIT_OBJECTS + 1];
+    void *opaque[MAXIMUM_WAIT_OBJECTS + 1];
 } WaitObjects;
 
 static WaitObjects wait_objects = {0};
 
 int qemu_add_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
 {
-    int i;
     WaitObjects *w = &wait_objects;
-
     if (w->num >= MAXIMUM_WAIT_OBJECTS) {
         return -1;
     }
-
-    for (i = 0; i < w->num; i++) {
-        /* check if the same handle is added twice */
-        if (w->events[i] == handle) {
-            return -1;
-        }
-    }
-
     w->events[w->num] = handle;
     w->func[w->num] = func;
     w->opaque[w->num] = opaque;
@@ -405,7 +315,7 @@ void qemu_del_wait_object(HANDLE handle, WaitObjectFunc *func, void *opaque)
         if (w->events[i] == handle) {
             found = 1;
         }
-        if (found && i < (MAXIMUM_WAIT_OBJECTS - 1)) {
+        if (found) {
             w->events[i] = w->events[i + 1];
             w->func[i] = w->func[i + 1];
             w->opaque[i] = w->opaque[i + 1];
@@ -607,21 +517,17 @@ void main_loop_wait(int nonblocking)
     mlpoll.state = ret < 0 ? MAIN_LOOP_POLL_ERR : MAIN_LOOP_POLL_OK;
     notifier_list_notify(&main_loop_poll_notifiers, &mlpoll);
 
-    if (icount_enabled()) {
-        /*
-         * CPU thread can infinitely wait for event after
-         * missing the warp
-         */
-        icount_start_warp_timer();
-    }
+    /* CPU thread can infinitely wait for event after
+       missing the warp */
+    qemu_start_warp_timer();
     qemu_clock_run_all_timers();
 }
 
 /* Functions to operate on the main QEMU AioContext.  */
 
-QEMUBH *qemu_bh_new_full(QEMUBHFunc *cb, void *opaque, const char *name)
+QEMUBH *qemu_bh_new(QEMUBHFunc *cb, void *opaque)
 {
-    return aio_bh_new_full(qemu_aio_context, cb, opaque, name);
+    return aio_bh_new(qemu_aio_context, cb, opaque);
 }
 
 /*
@@ -657,7 +563,7 @@ void qemu_set_fd_handler(int fd,
 {
     iohandler_init();
     aio_set_fd_handler(iohandler_ctx, fd, false,
-                       fd_read, fd_write, NULL, NULL, opaque);
+                       fd_read, fd_write, NULL, opaque);
 }
 
 void event_notifier_set_handler(EventNotifier *e,
@@ -665,5 +571,66 @@ void event_notifier_set_handler(EventNotifier *e,
 {
     iohandler_init();
     aio_set_event_notifier(iohandler_ctx, e, false,
-                           handler, NULL, NULL);
+                           handler, NULL);
 }
+
+/* reaping of zombies.  right now we're not passing the status to
+   anyone, but it would be possible to add a callback.  */
+#ifndef _WIN32
+typedef struct ChildProcessRecord {
+    int pid;
+    QLIST_ENTRY(ChildProcessRecord) next;
+} ChildProcessRecord;
+
+static QLIST_HEAD(, ChildProcessRecord) child_watches =
+    QLIST_HEAD_INITIALIZER(child_watches);
+
+static QEMUBH *sigchld_bh;
+
+static void sigchld_handler(int signal)
+{
+    qemu_bh_schedule(sigchld_bh);
+}
+
+static void sigchld_bh_handler(void *opaque)
+{
+    ChildProcessRecord *rec, *next;
+
+    QLIST_FOREACH_SAFE(rec, &child_watches, next, next) {
+        if (waitpid(rec->pid, NULL, WNOHANG) == rec->pid) {
+            QLIST_REMOVE(rec, next);
+            g_free(rec);
+        }
+    }
+}
+
+static void qemu_init_child_watch(void)
+{
+    struct sigaction act;
+    sigchld_bh = qemu_bh_new(sigchld_bh_handler, NULL);
+
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = sigchld_handler;
+    act.sa_flags = SA_NOCLDSTOP;
+    sigaction(SIGCHLD, &act, NULL);
+}
+
+int qemu_add_child_watch(pid_t pid)
+{
+    ChildProcessRecord *rec;
+
+    if (!sigchld_bh) {
+        qemu_init_child_watch();
+    }
+
+    QLIST_FOREACH(rec, &child_watches, next) {
+        if (rec->pid == pid) {
+            return 1;
+        }
+    }
+    rec = g_malloc0(sizeof(ChildProcessRecord));
+    rec->pid = pid;
+    QLIST_INSERT_HEAD(&child_watches, rec, next);
+    return 0;
+}
+#endif

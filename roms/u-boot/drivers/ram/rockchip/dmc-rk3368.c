@@ -6,23 +6,18 @@
 #include <common.h>
 #include <clk.h>
 #include <dm.h>
-#include <hang.h>
-#include <log.h>
 #include <dt-bindings/memory/rk3368-dmc.h>
 #include <dt-structs.h>
 #include <ram.h>
 #include <regmap.h>
 #include <syscon.h>
 #include <asm/io.h>
-#include <asm/arch-rockchip/clock.h>
-#include <asm/arch-rockchip/cru_rk3368.h>
-#include <asm/arch-rockchip/grf_rk3368.h>
-#include <asm/arch-rockchip/ddr_rk3368.h>
-#include <asm/arch-rockchip/sdram.h>
-#include <asm/arch-rockchip/sdram_rk3288.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
-#include <linux/err.h>
+#include <asm/arch/clock.h>
+#include <asm/arch/cru_rk3368.h>
+#include <asm/arch/grf_rk3368.h>
+#include <asm/arch/ddr_rk3368.h>
+#include <asm/arch/sdram.h>
+#include <asm/arch/sdram_common.h>
 
 struct dram_info {
 	struct ram_info info;
@@ -604,7 +599,7 @@ static int ddrphy_data_training(struct rk3368_ddr_pctl *pctl,
 static int sdram_col_row_detect(struct udevice *dev)
 {
 	struct dram_info *priv = dev_get_priv(dev);
-	struct rk3368_sdram_params *params = dev_get_plat(dev);
+	struct rk3368_sdram_params *params = dev_get_platdata(dev);
 	struct rk3368_ddr_pctl *pctl = priv->pctl;
 	struct rk3368_msch *msch = priv->msch;
 	const u32 test_pattern = 0x5aa5f00f;
@@ -774,7 +769,7 @@ static void dram_all_config(struct udevice *dev)
 {
 	struct dram_info *priv = dev_get_priv(dev);
 	struct rk3368_pmu_grf *pmugrf = priv->pmugrf;
-	struct rk3368_sdram_params *params = dev_get_plat(dev);
+	struct rk3368_sdram_params *params = dev_get_platdata(dev);
 	const struct rk3288_sdram_channel *info = &params->chan;
 	u32 sys_reg = 0;
 	const int chan = 0;
@@ -798,7 +793,7 @@ static void dram_all_config(struct udevice *dev)
 static int setup_sdram(struct udevice *dev)
 {
 	struct dram_info *priv = dev_get_priv(dev);
-	struct rk3368_sdram_params *params = dev_get_plat(dev);
+	struct rk3368_sdram_params *params = dev_get_platdata(dev);
 
 	struct rk3368_ddr_pctl *pctl = priv->pctl;
 	struct rk3368_ddrphy *ddrphy = priv->phy;
@@ -847,11 +842,7 @@ static int setup_sdram(struct udevice *dev)
 	move_to_access_state(pctl);
 
 	/* TODO(prt): could detect rank in training... */
-#ifdef CONFIG_TARGET_EVB_PX5
-	params->chan.rank = 1;
-#else
 	params->chan.rank = 2;
-#endif
 	/* TODO(prt): bus width is not auto-detected (yet)... */
 	params->chan.bw = 2;  /* 32bit wide bus */
 	params->chan.dbw = params->chan.dbw;  /* 32bit wide bus */
@@ -879,12 +870,12 @@ error:
 }
 #endif
 
-static int rk3368_dmc_of_to_plat(struct udevice *dev)
+static int rk3368_dmc_ofdata_to_platdata(struct udevice *dev)
 {
 	int ret = 0;
 
 #if !CONFIG_IS_ENABLED(OF_PLATDATA)
-	struct rk3368_sdram_params *plat = dev_get_plat(dev);
+	struct rk3368_sdram_params *plat = dev_get_platdata(dev);
 
 	ret = regmap_init_mem(dev_ofnode(dev), &plat->map);
 	if (ret)
@@ -895,9 +886,9 @@ static int rk3368_dmc_of_to_plat(struct udevice *dev)
 }
 
 #if CONFIG_IS_ENABLED(OF_PLATDATA)
-static int conv_of_plat(struct udevice *dev)
+static int conv_of_platdata(struct udevice *dev)
 {
-	struct rk3368_sdram_params *plat = dev_get_plat(dev);
+	struct rk3368_sdram_params *plat = dev_get_platdata(dev);
 	struct dtd_rockchip_rk3368_dmc *of_plat = &plat->of_plat;
 
 	plat->ddr_freq = of_plat->rockchip_ddr_frequency;
@@ -911,7 +902,7 @@ static int conv_of_plat(struct udevice *dev)
 static int rk3368_dmc_probe(struct udevice *dev)
 {
 #ifdef CONFIG_TPL_BUILD
-	struct rk3368_sdram_params *plat = dev_get_plat(dev);
+	struct rk3368_sdram_params *plat = dev_get_platdata(dev);
 	struct rk3368_ddr_pctl *pctl;
 	struct rk3368_ddrphy *ddrphy;
 	struct rk3368_cru *cru;
@@ -923,7 +914,7 @@ static int rk3368_dmc_probe(struct udevice *dev)
 	struct dram_info *priv = dev_get_priv(dev);
 
 #if CONFIG_IS_ENABLED(OF_PLATDATA)
-	ret = conv_of_plat(dev);
+	ret = conv_of_platdata(dev);
 	if (ret)
 		return ret;
 #endif
@@ -992,15 +983,15 @@ static const struct udevice_id rk3368_dmc_ids[] = {
 	{ }
 };
 
-U_BOOT_DRIVER(rockchip_rk3368_dmc) = {
+U_BOOT_DRIVER(dmc_rk3368) = {
 	.name = "rockchip_rk3368_dmc",
 	.id = UCLASS_RAM,
 	.of_match = rk3368_dmc_ids,
 	.ops = &rk3368_dmc_ops,
 	.probe = rk3368_dmc_probe,
-	.priv_auto	= sizeof(struct dram_info),
-	.of_to_plat = rk3368_dmc_of_to_plat,
+	.priv_auto_alloc_size = sizeof(struct dram_info),
+	.ofdata_to_platdata = rk3368_dmc_ofdata_to_platdata,
 	.probe = rk3368_dmc_probe,
-	.priv_auto	= sizeof(struct dram_info),
-	.plat_auto	= sizeof(struct rk3368_sdram_params),
+	.priv_auto_alloc_size = sizeof(struct dram_info),
+	.platdata_auto_alloc_size = sizeof(struct rk3368_sdram_params),
 };

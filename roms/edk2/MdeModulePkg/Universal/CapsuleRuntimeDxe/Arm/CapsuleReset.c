@@ -33,3 +33,4 @@ IsPersistAcrossResetCapsuleSupported (
   //
   return FeaturePcdGet (PcdSupportUpdateCapsuleReset) && !EfiAtRuntime ();
 }
+

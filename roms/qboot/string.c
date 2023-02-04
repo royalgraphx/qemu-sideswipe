@@ -132,11 +132,3 @@ long atol(const char *ptr)
 
     return acc;
 }
-
-uint8_t csum8(uint8_t *buf, uint32_t len)
-{
-	uint32_t s = 0;
-	while (len-- > 0)
-		s += *buf++;
-	return s;
-}

@@ -7,7 +7,6 @@
 
 #include <common.h>
 #include <dm.h>
-#include <log.h>
 #include <power/pmic.h>
 #include <spmi/spmi.h>
 #include <asm/io.h>
@@ -173,21 +172,21 @@ static int pm8916_gpio_probe(struct udevice *dev)
 
 	priv->pid = dev_read_addr(dev);
 	if (priv->pid == FDT_ADDR_T_NONE)
-		return log_msg_ret("bad address", -EINVAL);
+		return -EINVAL;
 
 	/* Do a sanity check */
 	reg = pmic_reg_read(dev->parent, priv->pid + REG_TYPE);
 	if (reg != 0x10)
-		return log_msg_ret("bad type", -ENXIO);
+		return -ENODEV;
 
 	reg = pmic_reg_read(dev->parent, priv->pid + REG_SUBTYPE);
 	if (reg != 0x5 && reg != 0x1)
-		return log_msg_ret("bad subtype", -ENXIO);
+		return -ENODEV;
 
 	return 0;
 }
 
-static int pm8916_gpio_of_to_plat(struct udevice *dev)
+static int pm8916_gpio_ofdata_to_platdata(struct udevice *dev)
 {
 	struct gpio_dev_priv *uc_priv = dev_get_uclass_priv(dev);
 
@@ -209,10 +208,10 @@ U_BOOT_DRIVER(gpio_pm8916) = {
 	.name	= "gpio_pm8916",
 	.id	= UCLASS_GPIO,
 	.of_match = pm8916_gpio_ids,
-	.of_to_plat = pm8916_gpio_of_to_plat,
+	.ofdata_to_platdata = pm8916_gpio_ofdata_to_platdata,
 	.probe	= pm8916_gpio_probe,
 	.ops	= &pm8916_gpio_ops,
-	.priv_auto	= sizeof(struct pm8916_gpio_bank),
+	.priv_auto_alloc_size = sizeof(struct pm8916_gpio_bank),
 };
 
 
@@ -256,23 +255,23 @@ static int pm8941_pwrkey_probe(struct udevice *dev)
 	struct pm8916_gpio_bank *priv = dev_get_priv(dev);
 	int reg;
 
-	priv->pid = dev_read_addr(dev);
+	priv->pid = devfdt_get_addr(dev);
 	if (priv->pid == FDT_ADDR_T_NONE)
-		return log_msg_ret("bad address", -EINVAL);
+		return -EINVAL;
 
 	/* Do a sanity check */
 	reg = pmic_reg_read(dev->parent, priv->pid + REG_TYPE);
 	if (reg != 0x1)
-		return log_msg_ret("bad type", -ENXIO);
+		return -ENODEV;
 
 	reg = pmic_reg_read(dev->parent, priv->pid + REG_SUBTYPE);
 	if (reg != 0x1)
-		return log_msg_ret("bad subtype", -ENXIO);
+		return -ENODEV;
 
 	return 0;
 }
 
-static int pm8941_pwrkey_of_to_plat(struct udevice *dev)
+static int pm8941_pwrkey_ofdata_to_platdata(struct udevice *dev)
 {
 	struct gpio_dev_priv *uc_priv = dev_get_uclass_priv(dev);
 
@@ -294,8 +293,8 @@ U_BOOT_DRIVER(pwrkey_pm8941) = {
 	.name	= "pwrkey_pm8916",
 	.id	= UCLASS_GPIO,
 	.of_match = pm8941_pwrkey_ids,
-	.of_to_plat = pm8941_pwrkey_of_to_plat,
+	.ofdata_to_platdata = pm8941_pwrkey_ofdata_to_platdata,
 	.probe	= pm8941_pwrkey_probe,
 	.ops	= &pm8941_pwrkey_ops,
-	.priv_auto	= sizeof(struct pm8916_gpio_bank),
+	.priv_auto_alloc_size = sizeof(struct pm8916_gpio_bank),
 };

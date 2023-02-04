@@ -11,10 +11,7 @@
 #include <common.h>
 #include <bootretry.h>
 #include <cli.h>
-#include <command.h>
-#include <time.h>
 #include <watchdog.h>
-#include <asm/global_data.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -69,7 +66,7 @@ static char *delete_char (char *buffer, char *p, int *colp, int *np, int plen)
 #define CREAD_HIST_CHAR		('!')
 
 #define getcmd_putch(ch)	putc(ch)
-#define getcmd_getch()		getchar()
+#define getcmd_getch()		getc()
 #define getcmd_cbeep()		getcmd_putch('\a')
 
 #define HIST_MAX		20
@@ -494,10 +491,8 @@ static int cread_line(const char *const prompt, char *buf, unsigned int *len,
 		}
 #endif
 		default:
-			if (ichar >= ' ' && ichar <= '~') {
-				cread_add_char(ichar, insert, &num, &eol_num,
-					       buf, *len);
-			}
+			cread_add_char(ichar, insert, &num, &eol_num, buf,
+				       *len);
 			break;
 		}
 	}
@@ -574,7 +569,13 @@ int cli_readline_into_buffer(const char *const prompt, char *buffer,
 			return -2;	/* timed out */
 		WATCHDOG_RESET();	/* Trigger watchdog, if needed */
 
-		c = getchar();
+#ifdef CONFIG_SHOW_ACTIVITY
+		while (!tstc()) {
+			show_activity(0);
+			WATCHDOG_RESET();
+		}
+#endif
+		c = getc();
 
 		/*
 		 * Special character handling

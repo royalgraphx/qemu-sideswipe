@@ -21,7 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
 #ifndef CHARDEV_INTERNAL_H
 #define CHARDEV_INTERNAL_H
 
@@ -33,7 +32,7 @@
 #define MUX_BUFFER_SIZE 32 /* Must be a power of 2.  */
 #define MUX_BUFFER_MASK (MUX_BUFFER_SIZE - 1)
 
-struct MuxChardev {
+typedef struct MuxChardev {
     Chardev parent;
     CharBackend *backends[MAX_MUX];
     CharBackend chr;
@@ -52,11 +51,9 @@ struct MuxChardev {
     /* Protected by the Chardev chr_write_lock.  */
     int linestart;
     int64_t timestamps_start;
-};
-typedef struct MuxChardev MuxChardev;
+} MuxChardev;
 
-DECLARE_INSTANCE_CHECKER(MuxChardev, MUX_CHARDEV,
-                         TYPE_CHARDEV_MUX)
+#define MUX_CHARDEV(obj) OBJECT_CHECK(MuxChardev, (obj), TYPE_CHARDEV_MUX)
 #define CHARDEV_IS_MUX(chr)                             \
     object_dynamic_cast(OBJECT(chr), TYPE_CHARDEV_MUX)
 
@@ -65,4 +62,4 @@ void mux_chr_send_all_event(Chardev *chr, QEMUChrEvent event);
 
 Object *get_chardevs_root(void);
 
-#endif /* CHARDEV_INTERNAL_H */
+#endif /* CHAR_MUX_H */

@@ -7,10 +7,7 @@
 #include <common.h>
 #include <dm.h>
 #include <i2s.h>
-#include <log.h>
-#include <malloc.h>
 #include <sound.h>
-#include <linux/delay.h>
 
 #define SOUND_BITS_IN_BYTE 8
 
@@ -19,7 +16,7 @@ int sound_setup(struct udevice *dev)
 	struct sound_ops *ops = sound_get_ops(dev);
 
 	if (!ops->setup)
-		return 0;
+		return -ENOSYS;
 
 	return ops->setup(dev);
 }
@@ -34,40 +31,10 @@ int sound_play(struct udevice *dev, void *data, uint data_size)
 	return ops->play(dev, data, data_size);
 }
 
-int sound_stop_play(struct udevice *dev)
-{
-	struct sound_ops *ops = sound_get_ops(dev);
-
-	if (!ops->play)
-		return -ENOSYS;
-
-	return ops->stop_play(dev);
-}
-
-int sound_start_beep(struct udevice *dev, int frequency_hz)
-{
-	struct sound_ops *ops = sound_get_ops(dev);
-
-	if (!ops->start_beep)
-		return -ENOSYS;
-
-	return ops->start_beep(dev, frequency_hz);
-}
-
-int sound_stop_beep(struct udevice *dev)
-{
-	struct sound_ops *ops = sound_get_ops(dev);
-
-	if (!ops->stop_beep)
-		return -ENOSYS;
-
-	return ops->stop_beep(dev);
-}
-
 int sound_beep(struct udevice *dev, int msecs, int frequency_hz)
 {
 	struct sound_uc_priv *uc_priv = dev_get_uclass_priv(dev);
-	struct i2s_uc_priv *i2s_uc_priv;
+	struct i2s_uc_priv *i2s_uc_priv = dev_get_uclass_priv(uc_priv->i2s);
 	unsigned short *data;
 	uint data_size;
 	int ret;
@@ -76,19 +43,7 @@ int sound_beep(struct udevice *dev, int msecs, int frequency_hz)
 	if (ret && ret != -EALREADY)
 		return ret;
 
-	/* Try using the beep interface if available */
-	ret = sound_start_beep(dev, frequency_hz);
-	if (ret != -ENOSYS) {
-		if (ret)
-			return ret;
-		mdelay(msecs);
-		ret = sound_stop_beep(dev);
-
-		return ret;
-	}
-
 	/* Buffer length computation */
-	i2s_uc_priv = dev_get_uclass_priv(uc_priv->i2s);
 	data_size = i2s_uc_priv->samplingrate * i2s_uc_priv->channels;
 	data_size *= (i2s_uc_priv->bitspersample / SOUND_BITS_IN_BYTE);
 	data = malloc(data_size);
@@ -100,20 +55,16 @@ int sound_beep(struct udevice *dev, int msecs, int frequency_hz)
 	sound_create_square_wave(i2s_uc_priv->samplingrate, data, data_size,
 				 frequency_hz, i2s_uc_priv->channels);
 
-	ret = 0;
 	while (msecs >= 1000) {
 		ret = sound_play(dev, data, data_size);
-		if (ret)
-			break;
 		msecs -= 1000;
 	}
-	if (!ret && msecs) {
+	if (msecs) {
 		unsigned long size =
 			(data_size * msecs) / (sizeof(int) * 1000);
 
 		ret = sound_play(dev, data, size);
 	}
-	sound_stop_play(dev);
 
 	free(data);
 
@@ -172,5 +123,5 @@ int sound_find_codec_i2s(struct udevice *dev)
 UCLASS_DRIVER(sound) = {
 	.id		= UCLASS_SOUND,
 	.name		= "sound",
-	.per_device_auto	= sizeof(struct sound_uc_priv),
+	.per_device_auto_alloc_size	= sizeof(struct sound_uc_priv),
 };

@@ -23,12 +23,12 @@
 #define HW_RTC_GOLDFISH_RTC_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define TYPE_GOLDFISH_RTC "goldfish_rtc"
-OBJECT_DECLARE_SIMPLE_TYPE(GoldfishRTCState, GOLDFISH_RTC)
+#define GOLDFISH_RTC(obj) \
+    OBJECT_CHECK(GoldfishRTCState, (obj), TYPE_GOLDFISH_RTC)
 
-struct GoldfishRTCState {
+typedef struct GoldfishRTCState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -42,8 +42,6 @@ struct GoldfishRTCState {
     uint32_t irq_pending;
     uint32_t irq_enabled;
     uint32_t time_high;
-
-    bool big_endian;
-};
+} GoldfishRTCState;
 
 #endif

@@ -1,7 +1,7 @@
 /** @file
   Page table management header file.
 
-  Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2017, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -14,24 +14,23 @@
 #define PAGE_TABLE_LIB_PAGING_CONTEXT_IA32_X64_ATTRIBUTES_PSE              BIT0
 #define PAGE_TABLE_LIB_PAGING_CONTEXT_IA32_X64_ATTRIBUTES_PAE              BIT1
 #define PAGE_TABLE_LIB_PAGING_CONTEXT_IA32_X64_ATTRIBUTES_PAGE_1G_SUPPORT  BIT2
-#define PAGE_TABLE_LIB_PAGING_CONTEXT_IA32_X64_ATTRIBUTES_5_LEVEL          BIT3
 #define PAGE_TABLE_LIB_PAGING_CONTEXT_IA32_X64_ATTRIBUTES_WP_ENABLE        BIT30
 #define PAGE_TABLE_LIB_PAGING_CONTEXT_IA32_X64_ATTRIBUTES_XD_ACTIVATED     BIT31
 // Other bits are reserved for future use
 typedef struct {
-  UINT32    PageTableBase;
-  UINT32    Reserved;
-  UINT32    Attributes;
+  UINT32  PageTableBase;
+  UINT32  Reserved;
+  UINT32  Attributes;
 } PAGE_TABLE_LIB_PAGING_CONTEXT_IA32;
 
 typedef struct {
-  UINT64    PageTableBase;
-  UINT32    Attributes;
+  UINT64  PageTableBase;
+  UINT32  Attributes;
 } PAGE_TABLE_LIB_PAGING_CONTEXT_X64;
 
 typedef union {
-  PAGE_TABLE_LIB_PAGING_CONTEXT_IA32    Ia32;
-  PAGE_TABLE_LIB_PAGING_CONTEXT_X64     X64;
+  PAGE_TABLE_LIB_PAGING_CONTEXT_IA32  Ia32;
+  PAGE_TABLE_LIB_PAGING_CONTEXT_X64   X64;
 } PAGE_TABLE_LIB_PAGING_CONTEXT_DATA;
 
 typedef struct {
@@ -41,8 +40,8 @@ typedef struct {
   // #define IMAGE_FILE_MACHINE_I386            0x014c
   // #define IMAGE_FILE_MACHINE_X64             0x8664
   //
-  UINT16                                MachineType;
-  PAGE_TABLE_LIB_PAGING_CONTEXT_DATA    ContextData;
+  UINT16                                 MachineType;
+  PAGE_TABLE_LIB_PAGING_CONTEXT_DATA     ContextData;
 } PAGE_TABLE_LIB_PAGING_CONTEXT;
 
 #define PAGE_TABLE_POOL_ALIGNMENT   BASE_2MB
@@ -52,10 +51,11 @@ typedef struct {
   (~(EFI_PHYSICAL_ADDRESS)(PAGE_TABLE_POOL_ALIGNMENT - 1))
 
 typedef struct {
-  VOID     *NextPool;
-  UINTN    Offset;
-  UINTN    FreePages;
+  VOID            *NextPool;
+  UINTN           Offset;
+  UINTN           FreePages;
 } PAGE_TABLE_POOL;
+
 
 /**
   Allocates one or more 4KB pages for page table.
@@ -67,7 +67,7 @@ typedef struct {
 **/
 typedef
 VOID *
-(EFIAPI *PAGE_TABLE_LIB_ALLOCATE_PAGES)(
+(EFIAPI *PAGE_TABLE_LIB_ALLOCATE_PAGES) (
   IN UINTN  Pages
   );
 
@@ -77,7 +77,7 @@ VOID *
 
   Caller should make sure BaseAddress and Length is at page boundary.
 
-  Caller need guarantee the TPL <= TPL_NOTIFY, if there is split page request.
+  Caller need guarentee the TPL <= TPL_NOTIFY, if there is split page request.
 
   @param  PagingContext     The paging context. NULL means get page table from current CPU context.
   @param  BaseAddress       The physical address that is the start address of a memory region.
@@ -102,11 +102,11 @@ VOID *
 RETURN_STATUS
 EFIAPI
 AssignMemoryPageAttributes (
-  IN  PAGE_TABLE_LIB_PAGING_CONTEXT  *PagingContext OPTIONAL,
-  IN  PHYSICAL_ADDRESS               BaseAddress,
-  IN  UINT64                         Length,
-  IN  UINT64                         Attributes,
-  IN  PAGE_TABLE_LIB_ALLOCATE_PAGES  AllocatePagesFunc OPTIONAL
+  IN  PAGE_TABLE_LIB_PAGING_CONTEXT     *PagingContext OPTIONAL,
+  IN  PHYSICAL_ADDRESS                  BaseAddress,
+  IN  UINT64                            Length,
+  IN  UINT64                            Attributes,
+  IN  PAGE_TABLE_LIB_ALLOCATE_PAGES     AllocatePagesFunc OPTIONAL
   );
 
 /**
@@ -135,22 +135,7 @@ InitializePageTableLib (
 VOID *
 EFIAPI
 AllocatePageTableMemory (
-  IN UINTN  Pages
-  );
-
-/**
-  Get paging details.
-
-  @param  PagingContextData      The paging context.
-  @param  PageTableBase          Return PageTableBase field.
-  @param  Attributes             Return Attributes field.
-
-**/
-VOID
-GetPagingDetails (
-  IN  PAGE_TABLE_LIB_PAGING_CONTEXT_DATA  *PagingContextData,
-  OUT UINTN                               **PageTableBase     OPTIONAL,
-  OUT UINT32                              **Attributes        OPTIONAL
+  IN UINTN           Pages
   );
 
 #endif

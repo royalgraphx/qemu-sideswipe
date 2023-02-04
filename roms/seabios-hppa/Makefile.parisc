@@ -1,6 +1,6 @@
 # SeaBIOS build system for PA-RISC
 #
-# Copyright (C) 2017-2021  Helge Deller <deller@gmx.de> for PA-RISC
+# Copyright (C) 2017-2019  Helge Deller <deller@gmx.de> for PA-RISC
 #
 # This file may be distributed under the terms of the GNU LGPLv3 license.
 
@@ -38,7 +38,7 @@ SRCBOTH=output.c string.c block.c cdrom.c disk.c kbd.c \
     hw/usb-hid.c hw/usb-msc.c hw/usb-uas.c \
     hw/blockcmd.c hw/floppy.c hw/ata.c hw/ramdisk.c \
     hw/lsi-scsi.c hw/esp-scsi.c hw/megasas.c hw/mpt-scsi.c \
-    parisc/timer.c sha256.c sha512.c
+    parisc/timer.c
 # x86.c fw/smp.c fw/mttr.c malloc.c
 SRC32FLAT=$(SRCBOTH) post.c e820map.c romfile.c optionroms.c \
     pmm.c font.c boot.c bootsplash.c jpeg.c bmp.c tcgbios.c sha1.c \
@@ -68,13 +68,12 @@ EXTRAVERSION=
 CPPFLAGS = -P -MD -MT $@
 
 COMMONCFLAGS := -I$(OUT) -Isrc -Ivgasrc -Os -MD -g \
-    -Wall -Wno-strict-aliasing -Wold-style-definition -Wno-address-of-packed-member \
-    -Wno-stringop-overflow -Wno-array-bounds \
+    -Wall -Wno-strict-aliasing -Wold-style-definition \
     $(call cc-option,$(CC),-Wtype-limits,) \
     -fomit-frame-pointer \
     -freg-struct-return -ffreestanding -fno-delete-null-pointer-checks \
     -fdata-sections -fno-common -fno-merge-constants -mdisable-fpregs \
-    -fno-builtin-printf -fno-ipa-sra
+    -fno-builtin-printf
 COMMONCFLAGS += $(call cc-option,$(CC),-nopie,)
 COMMONCFLAGS += $(call cc-option,$(CC),-fno-pie,)
 COMMONCFLAGS += $(call cc-option,$(CC),-fno-stack-protector,)
@@ -145,7 +144,7 @@ $(OUT)%.lds: %.lds.S
 
 $(OUT)head.o: src/parisc/head.S $(OUT)autoconf.h $(OUT)autoversion.h
 	@echo "  Compile checking $@"
-	$(Q)$(CC) $(CFLAGS32FLAT) -D__ASSEMBLY__ -c $< -o $@
+	$(Q)$(CC) $(CFLAGS32FLAT) -c $< -o $@
 
 
 ################ Main BIOS build rules

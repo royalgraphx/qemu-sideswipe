@@ -51,7 +51,8 @@
 #include <Library/PrintLib.h>
 #include <Library/HandleParsingLib.h>
 
-extern        EFI_HII_HANDLE  gShellDebug1HiiHandle;
+
+extern        EFI_HANDLE                        gShellDebug1HiiHandle;
 
 /**
   Function returns a system configuration table that is stored in the
@@ -65,8 +66,8 @@ extern        EFI_HII_HANDLE  gShellDebug1HiiHandle;
 **/
 EFI_STATUS
 GetSystemConfigurationTable (
-  IN EFI_GUID  *TableGuid,
-  IN OUT VOID  **Table
+  IN EFI_GUID *TableGuid,
+  IN OUT VOID **Table
   );
 
 /**
@@ -312,9 +313,9 @@ ShellCommandRunHexEdit (
 **/
 VOID
 EditorClearLine (
-  IN UINTN  Row,
-  IN UINTN  LastCol,
-  IN UINTN  LastRow
+  IN UINTN Row,
+  IN UINTN LastCol,
+  IN UINTN LastRow
   );
 
 /**
@@ -327,7 +328,7 @@ EditorClearLine (
 **/
 BOOLEAN
 IsValidFileName (
-  IN CONST CHAR16  *Name
+  IN CONST CHAR16 *Name
   );
 
 /**
@@ -340,7 +341,7 @@ IsValidFileName (
 **/
 CHAR16 *
 EditGetDefaultFileName (
-  IN CONST CHAR16  *Extension
+  IN CONST CHAR16 *Extension
   );
 
 /**
@@ -367,10 +368,10 @@ EditGetDefaultFileName (
 **/
 EFI_STATUS
 ReadFileIntoBuffer (
-  IN CONST CHAR16  *FileName,
-  OUT VOID         **Buffer,
-  OUT UINTN        *BufferSize OPTIONAL,
-  OUT BOOLEAN      *ReadOnly
+  IN CONST CHAR16 *FileName,
+  OUT VOID        **Buffer,
+  OUT UINTN       *BufferSize OPTIONAL,
+  OUT BOOLEAN     *ReadOnly
   );
 
 #endif

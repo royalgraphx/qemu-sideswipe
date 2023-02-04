@@ -68,6 +68,7 @@
 	};
 };
 
+/*
 &spi0 {
 	status = "okay";
 
@@ -75,6 +76,7 @@
 		compatible = "mxicy,mx25l12805d", "jedec,spi-nor";
 	};
 };
+*/
 
 &ohci1 {
 	/*

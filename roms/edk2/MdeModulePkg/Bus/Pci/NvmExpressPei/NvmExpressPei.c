@@ -28,12 +28,6 @@ EFI_PEI_PPI_DESCRIPTOR  mNvmeStorageSecurityPpiListTemplate = {
   NULL
 };
 
-EFI_PEI_PPI_DESCRIPTOR  mNvmePassThruPpiListTemplate = {
-  (EFI_PEI_PPI_DESCRIPTOR_PPI | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST),
-  &gEdkiiPeiNvmExpressPassThruPpiGuid,
-  NULL
-};
-
 EFI_PEI_NOTIFY_DESCRIPTOR  mNvmeEndOfPeiNotifyListTemplate = {
   (EFI_PEI_PPI_DESCRIPTOR_NOTIFY_CALLBACK | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST),
   &gEfiEndOfPeiSignalPpiGuid,
@@ -53,19 +47,19 @@ EFI_PEI_NOTIFY_DESCRIPTOR  mNvmeEndOfPeiNotifyListTemplate = {
 **/
 EFI_STATUS
 EnumerateNvmeDevNamespace (
-  IN OUT PEI_NVME_CONTROLLER_PRIVATE_DATA  *Private,
-  IN UINT32                                NamespaceId
+  IN OUT PEI_NVME_CONTROLLER_PRIVATE_DATA    *Private,
+  IN UINT32                                  NamespaceId
   )
 {
-  EFI_STATUS                 Status;
-  NVME_ADMIN_NAMESPACE_DATA  *NamespaceData;
-  PEI_NVME_NAMESPACE_INFO    *NamespaceInfo;
-  UINT32                     DeviceIndex;
-  UINT32                     Lbads;
-  UINT32                     Flbas;
-  UINT32                     LbaFmtIdx;
+  EFI_STATUS                   Status;
+  NVME_ADMIN_NAMESPACE_DATA    *NamespaceData;
+  PEI_NVME_NAMESPACE_INFO      *NamespaceInfo;
+  UINT32                       DeviceIndex;
+  UINT32                       Lbads;
+  UINT32                       Flbas;
+  UINT32                       LbaFmtIdx;
 
-  NamespaceData = (NVME_ADMIN_NAMESPACE_DATA *)AllocateZeroPool (sizeof (NVME_ADMIN_NAMESPACE_DATA));
+  NamespaceData = (NVME_ADMIN_NAMESPACE_DATA *) AllocateZeroPool (sizeof (NVME_ADMIN_NAMESPACE_DATA));
   if (NamespaceData == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -92,8 +86,8 @@ EnumerateNvmeDevNamespace (
     goto Exit;
   }
 
-  DeviceIndex                  = Private->ActiveNamespaceNum;
-  NamespaceInfo                = &Private->NamespaceInfo[DeviceIndex];
+  DeviceIndex   = Private->ActiveNamespaceNum;
+  NamespaceInfo = &Private->NamespaceInfo[DeviceIndex];
   NamespaceInfo->NamespaceId   = NamespaceId;
   NamespaceInfo->NamespaceUuid = NamespaceData->Eui64;
   NamespaceInfo->Controller    = Private;
@@ -110,8 +104,8 @@ EnumerateNvmeDevNamespace (
   NamespaceInfo->Media.RemovableMedia = FALSE;
   NamespaceInfo->Media.MediaPresent   = TRUE;
   NamespaceInfo->Media.ReadOnly       = FALSE;
-  NamespaceInfo->Media.BlockSize      = (UINT32)1 << Lbads;
-  NamespaceInfo->Media.LastBlock      = (EFI_PEI_LBA)NamespaceData->Nsze - 1;
+  NamespaceInfo->Media.BlockSize      = (UINT32) 1 << Lbads;
+  NamespaceInfo->Media.LastBlock      = (EFI_PEI_LBA) NamespaceData->Nsze - 1;
   DEBUG ((
     DEBUG_INFO,
     "%a: Namespace ID %d - BlockSize = 0x%x, LastBlock = 0x%lx\n",
@@ -140,10 +134,10 @@ Exit:
 **/
 EFI_STATUS
 NvmeDiscoverNamespaces (
-  IN OUT PEI_NVME_CONTROLLER_PRIVATE_DATA  *Private
+  IN OUT PEI_NVME_CONTROLLER_PRIVATE_DATA    *Private
   )
 {
-  UINT32  NamespaceId;
+  UINT32    NamespaceId;
 
   Private->ActiveNamespaceNum = 0;
   Private->NamespaceInfo      = AllocateZeroPool (Private->ControllerData->Nn * sizeof (PEI_NVME_NAMESPACE_INFO));
@@ -161,7 +155,6 @@ NvmeDiscoverNamespaces (
     //
     EnumerateNvmeDevNamespace (Private, NamespaceId);
   }
-
   if (Private->ActiveNamespaceNum == 0) {
     return EFI_NOT_FOUND;
   }
@@ -188,7 +181,7 @@ NvmePeimEndOfPei (
   IN VOID                       *Ppi
   )
 {
-  PEI_NVME_CONTROLLER_PRIVATE_DATA  *Private;
+  PEI_NVME_CONTROLLER_PRIVATE_DATA    *Private;
 
   Private = GET_NVME_PEIM_HC_PRIVATE_DATA_FROM_THIS_NOTIFY (NotifyDescriptor);
   NvmeFreeDmaResource (Private);
@@ -208,19 +201,19 @@ NvmePeimEndOfPei (
 EFI_STATUS
 EFIAPI
 NvmExpressPeimEntry (
-  IN EFI_PEI_FILE_HANDLE     FileHandle,
-  IN CONST EFI_PEI_SERVICES  **PeiServices
+  IN EFI_PEI_FILE_HANDLE    FileHandle,
+  IN CONST EFI_PEI_SERVICES **PeiServices
   )
 {
-  EFI_STATUS                             Status;
-  EFI_BOOT_MODE                          BootMode;
-  EDKII_NVM_EXPRESS_HOST_CONTROLLER_PPI  *NvmeHcPpi;
-  UINT8                                  Controller;
-  UINTN                                  MmioBase;
-  UINTN                                  DevicePathLength;
-  EFI_DEVICE_PATH_PROTOCOL               *DevicePath;
-  PEI_NVME_CONTROLLER_PRIVATE_DATA       *Private;
-  EFI_PHYSICAL_ADDRESS                   DeviceAddress;
+  EFI_STATUS                               Status;
+  EFI_BOOT_MODE                            BootMode;
+  EDKII_NVM_EXPRESS_HOST_CONTROLLER_PPI    *NvmeHcPpi;
+  UINT8                                    Controller;
+  UINTN                                    MmioBase;
+  UINTN                                    DevicePathLength;
+  EFI_DEVICE_PATH_PROTOCOL                 *DevicePath;
+  PEI_NVME_CONTROLLER_PRIVATE_DATA         *Private;
+  EFI_PHYSICAL_ADDRESS                     DeviceAddress;
 
   DEBUG ((DEBUG_INFO, "%a: Enters.\n", __FUNCTION__));
 
@@ -240,7 +233,7 @@ NvmExpressPeimEntry (
              &gEdkiiPeiNvmExpressHostControllerPpiGuid,
              0,
              NULL,
-             (VOID **)&NvmeHcPpi
+             (VOID **) &NvmeHcPpi
              );
   if (EFI_ERROR (Status)) {
     DEBUG ((DEBUG_ERROR, "%a: Fail to locate NvmeHostControllerPpi.\n", __FUNCTION__));
@@ -270,10 +263,8 @@ NvmExpressPeimEntry (
                           );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR,
-        "%a: Fail to allocate get the device path for Controller %d.\n",
-        __FUNCTION__,
-        Controller
+        DEBUG_ERROR, "%a: Fail to allocate get the device path for Controller %d.\n",
+        __FUNCTION__, Controller
         ));
       return Status;
     }
@@ -284,10 +275,8 @@ NvmExpressPeimEntry (
     Status = NvmeIsHcDevicePathValid (DevicePath, DevicePathLength);
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR,
-        "%a: The device path is invalid for Controller %d.\n",
-        __FUNCTION__,
-        Controller
+        DEBUG_ERROR, "%a: The device path is invalid for Controller %d.\n",
+        __FUNCTION__, Controller
         ));
       Controller++;
       continue;
@@ -300,13 +289,10 @@ NvmExpressPeimEntry (
     // during S3 resume.
     //
     if ((BootMode == BOOT_ON_S3_RESUME) &&
-        (NvmeS3SkipThisController (DevicePath, DevicePathLength)))
-    {
+        (NvmeS3SkipThisController (DevicePath, DevicePathLength))) {
       DEBUG ((
-        DEBUG_ERROR,
-        "%a: Controller %d is skipped during S3.\n",
-        __FUNCTION__,
-        Controller
+        DEBUG_ERROR, "%a: Controller %d is skipped during S3.\n",
+        __FUNCTION__, Controller
         ));
       Controller++;
       continue;
@@ -318,10 +304,8 @@ NvmExpressPeimEntry (
     Private = AllocateZeroPool (sizeof (PEI_NVME_CONTROLLER_PRIVATE_DATA));
     if (Private == NULL) {
       DEBUG ((
-        DEBUG_ERROR,
-        "%a: Fail to allocate private data for Controller %d.\n",
-        __FUNCTION__,
-        Controller
+        DEBUG_ERROR, "%a: Fail to allocate private data for Controller %d.\n",
+        __FUNCTION__, Controller
         ));
       return EFI_OUT_OF_RESOURCES;
     }
@@ -337,15 +321,12 @@ NvmExpressPeimEntry (
                );
     if (EFI_ERROR (Status)) {
       DEBUG ((
-        DEBUG_ERROR,
-        "%a: Fail to allocate DMA buffers for Controller %d.\n",
-        __FUNCTION__,
-        Controller
+        DEBUG_ERROR, "%a: Fail to allocate DMA buffers for Controller %d.\n",
+        __FUNCTION__, Controller
         ));
       return Status;
     }
-
-    ASSERT (DeviceAddress == ((EFI_PHYSICAL_ADDRESS)(UINTN)Private->Buffer));
+    ASSERT (DeviceAddress == ((EFI_PHYSICAL_ADDRESS) (UINTN) Private->Buffer));
     DEBUG ((DEBUG_INFO, "%a: DMA buffer base at 0x%x\n", __FUNCTION__, Private->Buffer));
 
     //
@@ -364,9 +345,7 @@ NvmExpressPeimEntry (
       DEBUG ((
         DEBUG_ERROR,
         "%a: Controller initialization fail for Controller %d with Status - %r.\n",
-        __FUNCTION__,
-        Controller,
-        Status
+        __FUNCTION__, Controller, Status
         ));
       NvmeFreeDmaResource (Private);
       Controller++;
@@ -384,47 +363,22 @@ NvmExpressPeimEntry (
       DEBUG ((
         DEBUG_ERROR,
         "%a: Namespaces discovery fail for Controller %d with Status - %r.\n",
-        __FUNCTION__,
-        Controller,
-        Status
+        __FUNCTION__, Controller, Status
         ));
       NvmeFreeDmaResource (Private);
       Controller++;
       continue;
     }
 
-    //
-    // Nvm Express Pass Thru PPI
-    //
-    Private->PassThruMode.Attributes = EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_PHYSICAL |
-                                       EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_LOGICAL |
-                                       EFI_NVM_EXPRESS_PASS_THRU_ATTRIBUTES_CMD_SET_NVM;
-    Private->PassThruMode.IoAlign             = sizeof (UINTN);
-    Private->PassThruMode.NvmeVersion         = EDKII_PEI_NVM_EXPRESS_PASS_THRU_PPI_REVISION;
-    Private->NvmePassThruPpi.Mode             = &Private->PassThruMode;
-    Private->NvmePassThruPpi.GetDevicePath    = NvmePassThruGetDevicePath;
-    Private->NvmePassThruPpi.GetNextNameSpace = NvmePassThruGetNextNameSpace;
-    Private->NvmePassThruPpi.PassThru         = NvmePassThru;
-    CopyMem (
-      &Private->NvmePassThruPpiList,
-      &mNvmePassThruPpiListTemplate,
-      sizeof (EFI_PEI_PPI_DESCRIPTOR)
-      );
-    Private->NvmePassThruPpiList.Ppi = &Private->NvmePassThruPpi;
-    PeiServicesInstallPpi (&Private->NvmePassThruPpiList);
-
-    //
-    // Block Io PPI
-    //
-    Private->BlkIoPpi.GetNumberOfBlockDevices = NvmeBlockIoPeimGetDeviceNo;
-    Private->BlkIoPpi.GetBlockDeviceMediaInfo = NvmeBlockIoPeimGetMediaInfo;
-    Private->BlkIoPpi.ReadBlocks              = NvmeBlockIoPeimReadBlocks;
+    Private->BlkIoPpi.GetNumberOfBlockDevices  = NvmeBlockIoPeimGetDeviceNo;
+    Private->BlkIoPpi.GetBlockDeviceMediaInfo  = NvmeBlockIoPeimGetMediaInfo;
+    Private->BlkIoPpi.ReadBlocks               = NvmeBlockIoPeimReadBlocks;
     CopyMem (
       &Private->BlkIoPpiList,
       &mNvmeBlkIoPpiListTemplate,
       sizeof (EFI_PEI_PPI_DESCRIPTOR)
       );
-    Private->BlkIoPpiList.Ppi = &Private->BlkIoPpi;
+    Private->BlkIoPpiList.Ppi                  = &Private->BlkIoPpi;
 
     Private->BlkIo2Ppi.Revision                = EFI_PEI_RECOVERY_BLOCK_IO2_PPI_REVISION;
     Private->BlkIo2Ppi.GetNumberOfBlockDevices = NvmeBlockIoPeimGetDeviceNo2;
@@ -435,7 +389,7 @@ NvmExpressPeimEntry (
       &mNvmeBlkIo2PpiListTemplate,
       sizeof (EFI_PEI_PPI_DESCRIPTOR)
       );
-    Private->BlkIo2PpiList.Ppi = &Private->BlkIo2Ppi;
+    Private->BlkIo2PpiList.Ppi                 = &Private->BlkIo2Ppi;
     PeiServicesInstallPpi (&Private->BlkIoPpiList);
 
     //
@@ -445,8 +399,7 @@ NvmExpressPeimEntry (
       DEBUG ((
         DEBUG_INFO,
         "%a: Security Security Command PPI will be produced for Controller %d.\n",
-        __FUNCTION__,
-        Controller
+        __FUNCTION__, Controller
         ));
       Private->StorageSecurityPpi.Revision           = EDKII_STORAGE_SECURITY_PPI_REVISION;
       Private->StorageSecurityPpi.GetNumberofDevices = NvmeStorageSecurityGetDeviceNo;
@@ -458,7 +411,7 @@ NvmExpressPeimEntry (
         &mNvmeStorageSecurityPpiListTemplate,
         sizeof (EFI_PEI_PPI_DESCRIPTOR)
         );
-      Private->StorageSecurityPpiList.Ppi = &Private->StorageSecurityPpi;
+      Private->StorageSecurityPpiList.Ppi            = &Private->StorageSecurityPpi;
       PeiServicesInstallPpi (&Private->StorageSecurityPpiList);
     }
 
@@ -467,13 +420,11 @@ NvmExpressPeimEntry (
       &mNvmeEndOfPeiNotifyListTemplate,
       sizeof (EFI_PEI_NOTIFY_DESCRIPTOR)
       );
-    PeiServicesNotifyPpi (&Private->EndOfPeiNotifyList);
+    PeiServicesNotifyPpi  (&Private->EndOfPeiNotifyList);
 
     DEBUG ((
-      DEBUG_INFO,
-      "%a: Controller %d has been successfully initialized.\n",
-      __FUNCTION__,
-      Controller
+      DEBUG_INFO, "%a: Controller %d has been successfully initialized.\n",
+      __FUNCTION__, Controller
       ));
     Controller++;
   }

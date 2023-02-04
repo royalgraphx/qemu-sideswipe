@@ -8,7 +8,6 @@
 #include "bregs.h" // struct bregs
 #include "config.h" // CONFIG_*
 #include "farptr.h" // FLATPTR_TO_SEG
-#include "biosvar.h" // GET_IVT
 #include "hw/pci.h" // pci_config_readl
 #include "hw/pcidevice.h" // foreachpci
 #include "hw/pci_ids.h" // PCI_CLASS_DISPLAY_VGA
@@ -309,19 +308,6 @@ fail:
     return NULL;
 }
 
-static int boot_irq_captured(void)
-{
-    return GET_IVT(0x19).segoff != FUNC16(entry_19_official).segoff;
-}
-
-static void boot_irq_restore(void)
-{
-    struct segoff_s seabios;
-
-    seabios = FUNC16(entry_19_official);
-    SET_IVT(0x19, seabios);
-}
-
 // Attempt to map and initialize the option rom on a given PCI device.
 static void
 init_pcirom(struct pci_device *pci, int isvga, u64 *sources)
@@ -341,18 +327,8 @@ init_pcirom(struct pci_device *pci, int isvga, u64 *sources)
     if (! rom)
         // No ROM present.
         return;
-    int irq_was_captured = boot_irq_captured();
-    struct pnp_data *pnp = get_pnp_rom(rom);
     setRomSource(sources, rom, RS_PCIROM | (u32)pci);
     init_optionrom(rom, pci->bdf, isvga);
-    if (boot_irq_captured() && !irq_was_captured &&
-        !file && !isvga && pnp) {
-        // This PCI rom is misbehaving - recapture the boot irqs
-        char *desc = MAKE_FLATPTR(FLATPTR_TO_SEG(rom), pnp->productname);
-        dprintf(1, "PnP optionrom \"%s\" (bdf %pP) captured int19, restoring\n",
-                desc, pci);
-        boot_irq_restore();
-    }
 }
 
 

@@ -12,11 +12,6 @@
  *
  */
 
-/*
- * Not so fast! You might want to read the 9p developer docs first:
- * https://wiki.qemu.org/Documentation/9p
- */
-
 #include "qemu/osdep.h"
 #include "9p.h"
 #include "fsdev/qemu-fsdev.h"
@@ -49,7 +44,7 @@ static V9fsSynthNode *v9fs_add_dir_node(V9fsSynthNode *parent, int mode,
 
     /* Add directory type and remove write bits */
     mode = ((mode & 0777) | S_IFDIR) & ~(S_IWUSR | S_IWGRP | S_IWOTH);
-    node = g_new0(V9fsSynthNode, 1);
+    node = g_malloc0(sizeof(V9fsSynthNode));
     if (attr) {
         /* We are adding .. or . entries */
         node->attr = attr;
@@ -84,21 +79,23 @@ int qemu_v9fs_synth_mkdir(V9fsSynthNode *parent, int mode,
     if (!parent) {
         parent = &synth_root;
     }
-    QEMU_LOCK_GUARD(&synth_mutex);
+    qemu_mutex_lock(&synth_mutex);
     QLIST_FOREACH(tmp, &parent->child, sibling) {
         if (!strcmp(tmp->name, name)) {
             ret = EEXIST;
-            return ret;
+            goto err_out;
         }
     }
     /* Add the name */
-    node = v9fs_add_dir_node(parent, mode, name, NULL, ++synth_node_count);
+    node = v9fs_add_dir_node(parent, mode, name, NULL, synth_node_count++);
     v9fs_add_dir_node(node, parent->attr->mode, "..",
                       parent->attr, parent->attr->inode);
     v9fs_add_dir_node(node, node->attr->mode, ".",
                       node->attr, node->attr->inode);
     *result = node;
     ret = 0;
+err_out:
+    qemu_mutex_unlock(&synth_mutex);
     return ret;
 }
 
@@ -119,18 +116,18 @@ int qemu_v9fs_synth_add_file(V9fsSynthNode *parent, int mode,
         parent = &synth_root;
     }
 
-    QEMU_LOCK_GUARD(&synth_mutex);
+    qemu_mutex_lock(&synth_mutex);
     QLIST_FOREACH(tmp, &parent->child, sibling) {
         if (!strcmp(tmp->name, name)) {
             ret = EEXIST;
-            return ret;
+            goto err_out;
         }
     }
     /* Add file type and remove write bits */
     mode = ((mode & 0777) | S_IFREG);
-    node = g_new0(V9fsSynthNode, 1);
+    node = g_malloc0(sizeof(V9fsSynthNode));
     node->attr         = &node->actual_attr;
-    node->attr->inode  = ++synth_node_count;
+    node->attr->inode  = synth_node_count++;
     node->attr->nlink  = 1;
     node->attr->read   = read;
     node->attr->write  = write;
@@ -139,6 +136,8 @@ int qemu_v9fs_synth_add_file(V9fsSynthNode *parent, int mode,
     pstrcpy(node->name, sizeof(node->name), name);
     QLIST_INSERT_HEAD_RCU(&parent->child, node, sibling);
     ret = 0;
+err_out:
+    qemu_mutex_unlock(&synth_mutex);
     return ret;
 }
 
@@ -182,12 +181,7 @@ static int synth_opendir(FsContext *ctx,
     V9fsSynthOpenState *synth_open;
     V9fsSynthNode *node = *(V9fsSynthNode **)fs_path->data;
 
-    /*
-     * V9fsSynthOpenState contains 'struct dirent' which have OS-specific
-     * properties, thus it's zero cleared on allocation here and below
-     * in synth_open.
-     */
-    synth_open = g_new0(V9fsSynthOpenState, 1);
+    synth_open = g_malloc(sizeof(*synth_open));
     synth_open->node = node;
     node->open_count++;
     fs->private = synth_open;
@@ -225,20 +219,9 @@ static void synth_rewinddir(FsContext *ctx, V9fsFidOpenState *fs)
 static void synth_direntry(V9fsSynthNode *node,
                                 struct dirent *entry, off_t off)
 {
-    size_t sz = strlen(node->name) + 1;
-    /*
-     * 'entry' is always inside of V9fsSynthOpenState which have NAME_MAX
-     * back padding. Ensure we do not overflow it.
-     */
-    g_assert(sizeof(struct dirent) + NAME_MAX >=
-             offsetof(struct dirent, d_name) + sz);
-    memcpy(entry->d_name, node->name, sz);
+    strcpy(entry->d_name, node->name);
     entry->d_ino = node->attr->inode;
-#ifdef CONFIG_DARWIN
-    entry->d_seekoff = off + 1;
-#else
     entry->d_off = off + 1;
-#endif
 }
 
 static struct dirent *synth_get_dentry(V9fsSynthNode *dir,
@@ -282,7 +265,7 @@ static int synth_open(FsContext *ctx, V9fsPath *fs_path,
     V9fsSynthOpenState *synth_open;
     V9fsSynthNode *node = *(V9fsSynthNode **)fs_path->data;
 
-    synth_open = g_new0(V9fsSynthOpenState, 1);
+    synth_open = g_malloc(sizeof(*synth_open));
     synth_open->node = node;
     node->open_count++;
     fs->private = synth_open;
@@ -443,9 +426,7 @@ static int synth_statfs(FsContext *s, V9fsPath *fs_path,
     stbuf->f_bsize = 512;
     stbuf->f_blocks = 0;
     stbuf->f_files = synth_node_count;
-#ifndef CONFIG_DARWIN
     stbuf->f_namelen = NAME_MAX;
-#endif
     return 0;
 }
 

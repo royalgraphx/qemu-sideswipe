@@ -54,7 +54,7 @@ static long kvm_hypercall(unsigned long nr, unsigned long param1,
     register ulong r_param3 asm("4") = param3;
     register long retval asm("2");
 
-    asm volatile ("diag %%r2,%%r4,0x500"
+    asm volatile ("diag 2,4,0x500"
                   : "=d" (retval)
                   : "d" (r_nr), "0" (r_param1), "r"(r_param2), "d"(r_param3)
                   : "memory", "cc");
@@ -220,7 +220,7 @@ int virtio_run(VDev *vdev, int vqid, VirtioCmd *cmd)
 void virtio_setup_ccw(VDev *vdev)
 {
     int i, rc, cfg_size = 0;
-    uint8_t status;
+    unsigned char status = VIRTIO_CONFIG_S_DRIVER_OK;
     struct VirtioFeatureDesc {
         uint32_t features;
         uint8_t index;
@@ -233,10 +233,6 @@ void virtio_setup_ccw(VDev *vdev)
     vdev->guessed_disk_nature = VIRTIO_GDN_NONE;
 
     run_ccw(vdev, CCW_CMD_VDEV_RESET, NULL, 0, false);
-
-    status = VIRTIO_CONFIG_S_ACKNOWLEDGE;
-    rc = run_ccw(vdev, CCW_CMD_WRITE_STATUS, &status, sizeof(status), false);
-    IPL_assert(rc == 0, "Could not write ACKNOWLEDGE status to host");
 
     switch (vdev->senseid.cu_model) {
     case VIRTIO_ID_NET:
@@ -257,10 +253,9 @@ void virtio_setup_ccw(VDev *vdev)
     default:
         panic("Unsupported virtio device\n");
     }
-
-    status |= VIRTIO_CONFIG_S_DRIVER;
-    rc = run_ccw(vdev, CCW_CMD_WRITE_STATUS, &status, sizeof(status), false);
-    IPL_assert(rc == 0, "Could not write DRIVER status to host");
+    IPL_assert(
+        run_ccw(vdev, CCW_CMD_READ_CONF, &vdev->config, cfg_size, false) == 0,
+       "Could not get block device configuration");
 
     /* Feature negotiation */
     for (i = 0; i < ARRAY_SIZE(vdev->guest_features); i++) {
@@ -274,9 +269,6 @@ void virtio_setup_ccw(VDev *vdev)
         IPL_assert(rc == 0, "Could not set features bits");
     }
 
-    rc = run_ccw(vdev, CCW_CMD_READ_CONF, &vdev->config, cfg_size, false);
-    IPL_assert(rc == 0, "Could not get virtio device configuration");
-
     for (i = 0; i < vdev->nr_vqs; i++) {
         VqInfo info = {
             .queue = (unsigned long long) ring_area + (i * VIRTIO_RING_SIZE),
@@ -289,8 +281,9 @@ void virtio_setup_ccw(VDev *vdev)
             .num = 0,
         };
 
-        rc = run_ccw(vdev, CCW_CMD_READ_VQ_CONF, &config, sizeof(config), false);
-        IPL_assert(rc == 0, "Could not get virtio device VQ configuration");
+        IPL_assert(
+            run_ccw(vdev, CCW_CMD_READ_VQ_CONF, &config, sizeof(config), false) == 0,
+            "Could not get block device VQ configuration");
         info.num = config.num;
         vring_init(&vdev->vrings[i], &info);
         vdev->vrings[i].schid = vdev->schid;
@@ -298,10 +291,9 @@ void virtio_setup_ccw(VDev *vdev)
             run_ccw(vdev, CCW_CMD_SET_VQ, &info, sizeof(info), false) == 0,
             "Cannot set VQ info");
     }
-
-    status |= VIRTIO_CONFIG_S_DRIVER_OK;
-    rc = run_ccw(vdev, CCW_CMD_WRITE_STATUS, &status, sizeof(status), false);
-    IPL_assert(rc == 0, "Could not write DRIVER_OK status to host");
+    IPL_assert(
+        run_ccw(vdev, CCW_CMD_WRITE_STATUS, &status, sizeof(status), false) == 0,
+        "Could not write status to host");
 }
 
 bool virtio_is_supported(SubChannelId schid)

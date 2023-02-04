@@ -23,7 +23,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 // Cache of UnixThunk protocol
 //
-EMU_THUNK_PROTOCOL  *mThunk = NULL;
+EMU_THUNK_PROTOCOL   *mThunk = NULL;
+
 
 /**
   The constructor function gets  the pointer of the WinNT thunk functions
@@ -39,7 +40,7 @@ DxeEmuPeCoffLibExtraActionConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_HOB_GUID_TYPE  *GuidHob;
+   EFI_HOB_GUID_TYPE        *GuidHob;
 
   //
   // Retrieve EmuThunkProtocol from GUID'ed HOB
@@ -71,6 +72,8 @@ PeCoffLoaderRelocateImageExtraAction (
     mThunk->PeCoffRelocateImageExtraAction (ImageContext);
   }
 }
+
+
 
 /**
   Performs additional actions just before a PE/COFF image is unloaded.  Any resources

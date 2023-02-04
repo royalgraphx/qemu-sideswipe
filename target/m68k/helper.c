@@ -72,7 +72,8 @@ static int cf_fpu_gdb_get_reg(CPUM68KState *env, GByteArray *mem_buf, int n)
 {
     if (n < 8) {
         float_status s;
-        return gdb_get_reg64(mem_buf, floatx80_to_float64(env->fregs[n].d, &s));
+        return gdb_get_float64(mem_buf,
+                               floatx80_to_float64(env->fregs[n].d, &s));
     }
     switch (n) {
     case 8: /* fpcontrol */
@@ -89,7 +90,7 @@ static int cf_fpu_gdb_set_reg(CPUM68KState *env, uint8_t *mem_buf, int n)
 {
     if (n < 8) {
         float_status s;
-        env->fregs[n].d = float64_to_floatx80(ldq_p(mem_buf), &s);
+        env->fregs[n].d = float64_to_floatx80(ldfq_p(mem_buf), &s);
         return 8;
     }
     switch (n) {
@@ -183,26 +184,16 @@ void HELPER(cf_movec_to)(CPUM68KState *env, uint32_t reg, uint32_t val)
     }
 }
 
-static void raise_exception_ra(CPUM68KState *env, int tt, uintptr_t raddr)
-{
-    CPUState *cs = env_cpu(env);
-
-    cs->exception_index = tt;
-    cpu_loop_exit_restore(cs, raddr);
-}
-
 void HELPER(m68k_movec_to)(CPUM68KState *env, uint32_t reg, uint32_t val)
 {
     switch (reg) {
-    /* MC680[12346]0 */
+    /* MC680[1234]0 */
     case M68K_CR_SFC:
         env->sfc = val & 7;
         return;
-    /* MC680[12346]0 */
     case M68K_CR_DFC:
         env->dfc = val & 7;
         return;
-    /* MC680[12346]0 */
     case M68K_CR_VBR:
         env->vbr = val;
         return;
@@ -216,209 +207,90 @@ void HELPER(m68k_movec_to)(CPUM68KState *env, uint32_t reg, uint32_t val)
             env->cacr = val & 0x80008000;
         } else if (m68k_feature(env, M68K_FEATURE_M68060)) {
             env->cacr = val & 0xf8e0e000;
-        } else {
-            break;
         }
         m68k_switch_sp(env);
         return;
-    /* MC680[46]0 */
+    /* MC680[34]0 */
     case M68K_CR_TC:
-        if (m68k_feature(env, M68K_FEATURE_M68040)
-         || m68k_feature(env, M68K_FEATURE_M68060)) {
-            env->mmu.tcr = val;
-            return;
-        }
-        break;
-    /* MC68040 */
+        env->mmu.tcr = val;
+        return;
     case M68K_CR_MMUSR:
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            env->mmu.mmusr = val;
-            return;
-        }
-        break;
-    /* MC680[46]0 */
+        env->mmu.mmusr = val;
+        return;
     case M68K_CR_SRP:
-        if (m68k_feature(env, M68K_FEATURE_M68040)
-         || m68k_feature(env, M68K_FEATURE_M68060)) {
-            env->mmu.srp = val;
-            return;
-        }
-        break;
-    /* MC680[46]0 */
+        env->mmu.srp = val;
+        return;
     case M68K_CR_URP:
-        if (m68k_feature(env, M68K_FEATURE_M68040)
-         || m68k_feature(env, M68K_FEATURE_M68060)) {
-            env->mmu.urp = val;
-            return;
-        }
-        break;
-    /* MC680[12346]0 */
+        env->mmu.urp = val;
+        return;
     case M68K_CR_USP:
         env->sp[M68K_USP] = val;
         return;
-    /* MC680[234]0 */
     case M68K_CR_MSP:
-        if (m68k_feature(env, M68K_FEATURE_M68020)
-         || m68k_feature(env, M68K_FEATURE_M68030)
-         || m68k_feature(env, M68K_FEATURE_M68040)) {
-            env->sp[M68K_SSP] = val;
-            return;
-        }
-        break;
-    /* MC680[234]0 */
+        env->sp[M68K_SSP] = val;
+        return;
     case M68K_CR_ISP:
-        if (m68k_feature(env, M68K_FEATURE_M68020)
-         || m68k_feature(env, M68K_FEATURE_M68030)
-         || m68k_feature(env, M68K_FEATURE_M68040)) {
-            env->sp[M68K_ISP] = val;
-            return;
-        }
-        break;
+        env->sp[M68K_ISP] = val;
+        return;
     /* MC68040/MC68LC040 */
-    case M68K_CR_ITT0: /* MC68EC040 only: M68K_CR_IACR0 */
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            env->mmu.ttr[M68K_ITTR0] = val;
-            return;
-        }
-        break;
-    /* MC68040/MC68LC040 */
-    case M68K_CR_ITT1: /* MC68EC040 only: M68K_CR_IACR1 */
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            env->mmu.ttr[M68K_ITTR1] = val;
-            return;
-        }
-        break;
-    /* MC68040/MC68LC040 */
-    case M68K_CR_DTT0: /* MC68EC040 only: M68K_CR_DACR0 */
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            env->mmu.ttr[M68K_DTTR0] = val;
-            return;
-        }
-        break;
-    /* MC68040/MC68LC040 */
-    case M68K_CR_DTT1: /* MC68EC040 only: M68K_CR_DACR1 */
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            env->mmu.ttr[M68K_DTTR1] = val;
-            return;
-        }
-        break;
-    /* Unimplemented Registers */
-    case M68K_CR_CAAR:
-    case M68K_CR_PCR:
-    case M68K_CR_BUSCR:
-        cpu_abort(env_cpu(env),
-                  "Unimplemented control register write 0x%x = 0x%x\n",
-                  reg, val);
+    case M68K_CR_ITT0:
+        env->mmu.ttr[M68K_ITTR0] = val;
+        return;
+    case M68K_CR_ITT1:
+         env->mmu.ttr[M68K_ITTR1] = val;
+        return;
+    case M68K_CR_DTT0:
+        env->mmu.ttr[M68K_DTTR0] = val;
+        return;
+    case M68K_CR_DTT1:
+        env->mmu.ttr[M68K_DTTR1] = val;
+        return;
     }
-
-    /* Invalid control registers will generate an exception. */
-    raise_exception_ra(env, EXCP_ILLEGAL, 0);
-    return;
+    cpu_abort(env_cpu(env),
+              "Unimplemented control register write 0x%x = 0x%x\n",
+              reg, val);
 }
 
 uint32_t HELPER(m68k_movec_from)(CPUM68KState *env, uint32_t reg)
 {
     switch (reg) {
-    /* MC680[12346]0 */
+    /* MC680[1234]0 */
     case M68K_CR_SFC:
         return env->sfc;
-    /* MC680[12346]0 */
     case M68K_CR_DFC:
         return env->dfc;
-    /* MC680[12346]0 */
     case M68K_CR_VBR:
         return env->vbr;
-    /* MC680[2346]0 */
+    /* MC680[234]0 */
     case M68K_CR_CACR:
-        if (m68k_feature(env, M68K_FEATURE_M68020)
-         || m68k_feature(env, M68K_FEATURE_M68030)
-         || m68k_feature(env, M68K_FEATURE_M68040)
-         || m68k_feature(env, M68K_FEATURE_M68060)) {
-            return env->cacr;
-        }
-        break;
-    /* MC680[46]0 */
+        return env->cacr;
+    /* MC680[34]0 */
     case M68K_CR_TC:
-        if (m68k_feature(env, M68K_FEATURE_M68040)
-         || m68k_feature(env, M68K_FEATURE_M68060)) {
-            return env->mmu.tcr;
-        }
-        break;
-    /* MC68040 */
+        return env->mmu.tcr;
     case M68K_CR_MMUSR:
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            return env->mmu.mmusr;
-        }
-        break;
-    /* MC680[46]0 */
+        return env->mmu.mmusr;
     case M68K_CR_SRP:
-        if (m68k_feature(env, M68K_FEATURE_M68040)
-         || m68k_feature(env, M68K_FEATURE_M68060)) {
-            return env->mmu.srp;
-        }
-        break;
-    /* MC68040/MC68LC040 */
-    case M68K_CR_URP:
-        if (m68k_feature(env, M68K_FEATURE_M68040)
-         || m68k_feature(env, M68K_FEATURE_M68060)) {
-            return env->mmu.urp;
-        }
-        break;
-    /* MC680[46]0 */
+        return env->mmu.srp;
     case M68K_CR_USP:
         return env->sp[M68K_USP];
-    /* MC680[234]0 */
     case M68K_CR_MSP:
-        if (m68k_feature(env, M68K_FEATURE_M68020)
-         || m68k_feature(env, M68K_FEATURE_M68030)
-         || m68k_feature(env, M68K_FEATURE_M68040)) {
-            return env->sp[M68K_SSP];
-        }
-        break;
-    /* MC680[234]0 */
+        return env->sp[M68K_SSP];
     case M68K_CR_ISP:
-        if (m68k_feature(env, M68K_FEATURE_M68020)
-         || m68k_feature(env, M68K_FEATURE_M68030)
-         || m68k_feature(env, M68K_FEATURE_M68040)) {
-            return env->sp[M68K_ISP];
-        }
-        break;
+        return env->sp[M68K_ISP];
     /* MC68040/MC68LC040 */
-    case M68K_CR_ITT0: /* MC68EC040 only: M68K_CR_IACR0 */
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            return env->mmu.ttr[M68K_ITTR0];
-        }
-        break;
-    /* MC68040/MC68LC040 */
-    case M68K_CR_ITT1: /* MC68EC040 only: M68K_CR_IACR1 */
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            return env->mmu.ttr[M68K_ITTR1];
-        }
-        break;
-    /* MC68040/MC68LC040 */
-    case M68K_CR_DTT0: /* MC68EC040 only: M68K_CR_DACR0 */
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            return env->mmu.ttr[M68K_DTTR0];
-        }
-        break;
-    /* MC68040/MC68LC040 */
-    case M68K_CR_DTT1: /* MC68EC040 only: M68K_CR_DACR1 */
-        if (m68k_feature(env, M68K_FEATURE_M68040)) {
-            return env->mmu.ttr[M68K_DTTR1];
-        }
-        break;
-    /* Unimplemented Registers */
-    case M68K_CR_CAAR:
-    case M68K_CR_PCR:
-    case M68K_CR_BUSCR:
-        cpu_abort(env_cpu(env), "Unimplemented control register read 0x%x\n",
-                  reg);
+    case M68K_CR_URP:
+        return env->mmu.urp;
+    case M68K_CR_ITT0:
+        return env->mmu.ttr[M68K_ITTR0];
+    case M68K_CR_ITT1:
+        return env->mmu.ttr[M68K_ITTR1];
+    case M68K_CR_DTT0:
+        return env->mmu.ttr[M68K_DTTR0];
+    case M68K_CR_DTT1:
+        return env->mmu.ttr[M68K_DTTR1];
     }
-
-    /* Invalid control registers will generate an exception. */
-    raise_exception_ra(env, EXCP_ILLEGAL, 0);
-
-    return 0;
+    cpu_abort(env_cpu(env), "Unimplemented control register read 0x%x\n",
+              reg);
 }
 
 void HELPER(set_macsr)(CPUM68KState *env, uint32_t val)
@@ -460,10 +332,9 @@ void m68k_switch_sp(CPUM68KState *env)
     int new_sp;
 
     env->sp[env->current_sp] = env->aregs[7];
-    if (m68k_feature(env, M68K_FEATURE_M68K)) {
+    if (m68k_feature(env, M68K_FEATURE_M68000)) {
         if (env->sr & SR_S) {
-            /* SR:Master-Mode bit unimplemented then ISP is not available */
-            if (!m68k_feature(env, M68K_FEATURE_MSP) || env->sr & SR_M) {
+            if (env->sr & SR_M) {
                 new_sp = M68K_SSP;
             } else {
                 new_sp = M68K_ISP;
@@ -978,12 +849,16 @@ void m68k_set_irq_level(M68kCPU *cpu, int level, uint8_t vector)
     }
 }
 
+#endif
+
 bool m68k_cpu_tlb_fill(CPUState *cs, vaddr address, int size,
                        MMUAccessType qemu_access_type, int mmu_idx,
                        bool probe, uintptr_t retaddr)
 {
     M68kCPU *cpu = M68K_CPU(cs);
     CPUM68KState *env = &cpu->env;
+
+#ifndef CONFIG_USER_ONLY
     hwaddr physical;
     int prot;
     int access_type;
@@ -1047,12 +922,12 @@ bool m68k_cpu_tlb_fill(CPUState *cs, vaddr address, int size,
     if (!(access_type & ACCESS_STORE)) {
         env->mmu.ssw |= M68K_RW_040;
     }
+#endif
 
     cs->exception_index = EXCP_ACCESS;
     env->mmu.ar = address;
     cpu_loop_exit_restore(cs, retaddr);
 }
-#endif /* !CONFIG_USER_ONLY */
 
 uint32_t HELPER(bitrev)(uint32_t x)
 {

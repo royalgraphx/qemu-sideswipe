@@ -18,7 +18,6 @@
 #include "hw/qdev-properties.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 /* Old and buggy versions of QEMU used the wrong mapping from
  * PCI IRQs to system interrupt lines. Unfortunately the Linux
@@ -72,7 +71,7 @@ enum {
     PCI_VPB_IRQMAP_FORCE_OK,
 };
 
-struct PCIVPBState {
+typedef struct {
     PCIHostState parent_obj;
 
     qemu_irq irq[4];
@@ -101,8 +100,7 @@ struct PCIVPBState {
     uint32_t selfid;
     uint32_t flags;
     uint8_t irq_mapping;
-};
-typedef struct PCIVPBState PCIVPBState;
+} PCIVPBState;
 
 static void pci_vpb_update_window(PCIVPBState *s, int i)
 {
@@ -158,12 +156,12 @@ static const VMStateDescription pci_vpb_vmstate = {
 };
 
 #define TYPE_VERSATILE_PCI "versatile_pci"
-DECLARE_INSTANCE_CHECKER(PCIVPBState, PCI_VPB,
-                         TYPE_VERSATILE_PCI)
+#define PCI_VPB(obj) \
+    OBJECT_CHECK(PCIVPBState, (obj), TYPE_VERSATILE_PCI)
 
 #define TYPE_VERSATILE_PCI_HOST "versatile_pci_host"
-DECLARE_INSTANCE_CHECKER(PCIDevice, PCI_VPB_HOST,
-                         TYPE_VERSATILE_PCI_HOST)
+#define PCI_VPB_HOST(obj) \
+    OBJECT_CHECK(PCIDevice, (obj), TYPE_VERSATILE_PCIHOST)
 
 typedef enum {
     PCI_IMAP0 = 0x0,
@@ -405,9 +403,9 @@ static void pci_vpb_realize(DeviceState *dev, Error **errp)
     memory_region_init(&s->pci_io_space, OBJECT(s), "pci_io", 4 * GiB);
     memory_region_init(&s->pci_mem_space, OBJECT(s), "pci_mem", 4 * GiB);
 
-    pci_root_bus_init(&s->pci_bus, sizeof(s->pci_bus), dev, "pci",
-                      &s->pci_mem_space, &s->pci_io_space,
-                      PCI_DEVFN(11, 0), TYPE_PCI_BUS);
+    pci_root_bus_new_inplace(&s->pci_bus, sizeof(s->pci_bus), dev, "pci",
+                             &s->pci_mem_space, &s->pci_io_space,
+                             PCI_DEVFN(11, 0), TYPE_PCI_BUS);
     h->bus = &s->pci_bus;
 
     object_initialize(&s->pci_dev, sizeof(s->pci_dev), TYPE_VERSATILE_PCI_HOST);

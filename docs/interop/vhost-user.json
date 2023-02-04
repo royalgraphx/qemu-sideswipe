@@ -250,8 +250,7 @@
 #   "type": "gpu",
 #   "binary": "/usr/libexec/qemu/vhost-user-gpu",
 #   "tags": [
-#     "CONFIG_OPENGL=y",
-#     "CONFIG_GBM=y"
+#     "CONFIG_OPENGL_DMABUF=y"
 #   ]
 # }
 #

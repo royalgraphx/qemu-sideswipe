@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2013-2019 Arcturus Networks, Inc.
- *           https://www.arcturusnetworks.com/products/ucp1020/
+ * Copyright 2013-2015 Arcturus Networks, Inc.
+ *           http://www.arcturusnetworks.com/products/ucp1020/
  *           by Oleksandr G Zhadan et al.
  * based on board/freescale/p1_p2_rdb_pc/spl.c
  * original copyright follows:
@@ -10,11 +10,7 @@
 
 #include <common.h>
 #include <command.h>
-#include <env.h>
 #include <hwconfig.h>
-#include <image.h>
-#include <init.h>
-#include <net.h>
 #include <pci.h>
 #include <i2c.h>
 #include <miiphy.h>
@@ -112,9 +108,7 @@ int checkboard(void)
 {
 	printf("Board: %s\n", CONFIG_BOARDNAME_LOCAL);
 	board_gpio_init();
-#ifdef CONFIG_MMC
 	printf("SD/MMC: 4-bit Mode\n");
-#endif
 
 	return 0;
 }
@@ -199,9 +193,7 @@ int last_stage_init(void)
 	static char newkernelargs[256];
 	static u8 id1[16];
 	static u8 id2;
-#ifdef CONFIG_MMC
 	struct mmc *mmc;
-#endif
 	char *sval, *kval;
 
 	if (i2c_read(CONFIG_SYS_I2C_IDT6V49205B, 7, 1, &id1[0], 2) < 0) {
@@ -223,7 +215,6 @@ int last_stage_init(void)
 
 	kval = env_get("kernelargs");
 
-#ifdef CONFIG_MMC
 	mmc = find_mmc_device(0);
 	if (mmc)
 		if (!mmc_init(mmc)) {
@@ -243,7 +234,6 @@ int last_stage_init(void)
 				env_set("kernelargs", mmckargs);
 			}
 		}
-#endif
 	get_arc_info();
 
 	if (kval) {
@@ -262,7 +252,7 @@ int last_stage_init(void)
 	return 0;
 }
 
-int board_eth_init(struct bd_info *bis)
+int board_eth_init(bd_t *bis)
 {
 	struct fsl_pq_mdio_info mdio_info;
 	struct tsec_info_struct tsec_info[4];
@@ -307,7 +297,7 @@ int board_eth_init(struct bd_info *bis)
 }
 
 #ifdef CONFIG_OF_BOARD_SETUP
-int ft_board_setup(void *blob, struct bd_info *bd)
+int ft_board_setup(void *blob, bd_t *bd)
 {
 	phys_addr_t base;
 	phys_size_t size;

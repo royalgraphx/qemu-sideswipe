@@ -10,6 +10,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef _VIRTUAL_KEYBOARD_H_
 #define _VIRTUAL_KEYBOARD_H_
 
+
 #include <Guid/StatusCodeDataTypeId.h>
 #include <Protocol/DevicePath.h>
 #include <Protocol/PlatformVirtualKeyboard.h>
@@ -30,69 +31,70 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 // Driver Binding Externs
 //
-extern EFI_DRIVER_BINDING_PROTOCOL   gVirtualKeyboardDriverBinding;
-extern EFI_COMPONENT_NAME_PROTOCOL   gVirtualKeyboardComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL  gVirtualKeyboardComponentName2;
+extern EFI_DRIVER_BINDING_PROTOCOL  gVirtualKeyboardDriverBinding;
+extern EFI_COMPONENT_NAME_PROTOCOL  gVirtualKeyboardComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL gVirtualKeyboardComponentName2;
+
 
 //
 // VIRTUAL Keyboard Defines
 //
-#define CHAR_SCANCODE  0xe0
-#define CHAR_ESC       0x1b
+#define CHAR_SCANCODE                        0xe0
+#define CHAR_ESC                             0x1b
 
-#define KEYBOARD_TIMEOUT               65536         // 0.07s
-#define KEYBOARD_WAITFORVALUE_TIMEOUT  1000000       // 1s
-#define KEYBOARD_BAT_TIMEOUT           4000000       // 4s
-#define KEYBOARD_TIMER_INTERVAL        500000        // 0.5s
+#define KEYBOARD_TIMEOUT                     65536   // 0.07s
+#define KEYBOARD_WAITFORVALUE_TIMEOUT        1000000 // 1s
+#define KEYBOARD_BAT_TIMEOUT                 4000000 // 4s
+#define KEYBOARD_TIMER_INTERVAL              500000  // 0.5s
 
-#define QUEUE_MAX_COUNT  32
+#define QUEUE_MAX_COUNT                      32
 
-#define KEYBOARD_SCAN_CODE_MAX_COUNT  32
+#define KEYBOARD_SCAN_CODE_MAX_COUNT         32
 
 //
 // VIRTUAL Keyboard Device Structure
 //
-#define VIRTUAL_KEYBOARD_DEV_SIGNATURE                   SIGNATURE_32 ('V', 'K', 'B', 'D')
-#define VIRTUAL_KEYBOARD_CONSOLE_IN_EX_NOTIFY_SIGNATURE  SIGNATURE_32 ('v', 'k', 'c', 'n')
+#define VIRTUAL_KEYBOARD_DEV_SIGNATURE SIGNATURE_32 ('V', 'K', 'B', 'D')
+#define VIRTUAL_KEYBOARD_CONSOLE_IN_EX_NOTIFY_SIGNATURE SIGNATURE_32 ('v', 'k', 'c', 'n')
 
 typedef struct _VIRTUAL_KEYBOARD_CONSOLE_IN_EX_NOTIFY {
-  UINTN                      Signature;
-  EFI_KEY_DATA               KeyData;
-  EFI_KEY_NOTIFY_FUNCTION    KeyNotificationFn;
-  LIST_ENTRY                 NotifyEntry;
+  UINTN                                      Signature;
+  EFI_KEY_DATA                               KeyData;
+  EFI_KEY_NOTIFY_FUNCTION                    KeyNotificationFn;
+  LIST_ENTRY                                 NotifyEntry;
 } VIRTUAL_KEYBOARD_CONSOLE_IN_EX_NOTIFY;
 
 typedef struct {
-  UINTN           Front;
-  UINTN           Rear;
-  EFI_KEY_DATA    Buffer[QUEUE_MAX_COUNT];
+  UINTN                                      Front;
+  UINTN                                      Rear;
+  EFI_KEY_DATA                               Buffer[QUEUE_MAX_COUNT];
 } SIMPLE_QUEUE;
 
 typedef struct {
-  UINT8    Buffer[KEYBOARD_SCAN_CODE_MAX_COUNT];
-  UINTN    Head;
-  UINTN    Tail;
+  UINT8                                      Buffer[KEYBOARD_SCAN_CODE_MAX_COUNT];
+  UINTN                                      Head;
+  UINTN                                      Tail;
 } SCAN_CODE_QUEUE;
 
 typedef struct {
-  UINTN                                Signature;
-  EFI_HANDLE                           Handle;
-  PLATFORM_VIRTUAL_KBD_PROTOCOL        *PlatformVirtual;
-  EFI_SIMPLE_TEXT_INPUT_PROTOCOL       SimpleTextIn;
-  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL    SimpleTextInputEx;
+  UINTN                                      Signature;
+  EFI_HANDLE                                 Handle;
+  PLATFORM_VIRTUAL_KBD_PROTOCOL              *PlatformVirtual;
+  EFI_SIMPLE_TEXT_INPUT_PROTOCOL             SimpleTextIn;
+  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL          SimpleTextInputEx;
 
   //
   // Buffer storing EFI_KEY_DATA
   //
-  SIMPLE_QUEUE                         Queue;
-  SIMPLE_QUEUE                         QueueForNotify;
+  SIMPLE_QUEUE                               Queue;
+  SIMPLE_QUEUE                               QueueForNotify;
 
   //
   // Notification Function List
   //
-  LIST_ENTRY                           NotifyList;
-  EFI_EVENT                            KeyNotifyProcessEvent;
-  EFI_EVENT                            TimerEvent;
+  LIST_ENTRY                                 NotifyList;
+  EFI_EVENT                                  KeyNotifyProcessEvent;
+  EFI_EVENT                                  TimerEvent;
 } VIRTUAL_KEYBOARD_DEV;
 
 #define VIRTUAL_KEYBOARD_DEV_FROM_THIS(a)  CR (a, VIRTUAL_KEYBOARD_DEV, SimpleTextIn, VIRTUAL_KEYBOARD_DEV_SIGNATURE)
@@ -106,7 +108,7 @@ typedef struct {
 //
 // Global Variables
 //
-extern EFI_DRIVER_BINDING_PROTOCOL  gVirtualKeyboardDriverBinding;
+extern EFI_DRIVER_BINDING_PROTOCOL   gVirtualKeyboardDriverBinding;
 
 //
 // Driver Binding Protocol functions
@@ -204,9 +206,9 @@ VirtualKeyboardDriverBindingStop (
                                 This and the language specified by Language was
                                 returned in DriverName.
 
-  @retval EFI_INVALID_PARAMETER Language is NULL.
+  @retval EFI_INVALID_PAVIRTUALETER Language is NULL.
 
-  @retval EFI_INVALID_PARAMETER DriverName is NULL.
+  @retval EFI_INVALID_PAVIRTUALETER DriverName is NULL.
 
   @retval EFI_UNSUPPORTED       The driver specified by This does not support
                                 the language specified by Language.
@@ -219,6 +221,7 @@ VirtualKeyboardComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -271,14 +274,14 @@ VirtualKeyboardComponentNameGetDriverName (
                                 driver specified by This was returned in
                                 DriverName.
 
-  @retval EFI_INVALID_PARAMETER ControllerHandle is NULL.
+  @retval EFI_INVALID_PAVIRTUALETER ControllerHandle is NULL.
 
-  @retval EFI_INVALID_PARAMETER ChildHandle is not NULL and it is not a valid
+  @retval EFI_INVALID_PAVIRTUALETER ChildHandle is not NULL and it is not a valid
                                 EFI_HANDLE.
 
-  @retval EFI_INVALID_PARAMETER Language is NULL.
+  @retval EFI_INVALID_PAVIRTUALETER Language is NULL.
 
-  @retval EFI_INVALID_PARAMETER ControllerName is NULL.
+  @retval EFI_INVALID_PAVIRTUALETER ControllerName is NULL.
 
   @retval EFI_UNSUPPORTED       The driver specified by This is not currently
                                 managing the controller specified by
@@ -291,17 +294,17 @@ VirtualKeyboardComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 VirtualKeyboardComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL      *This,
+  IN  EFI_HANDLE                       ControllerHandle,
+  IN  EFI_HANDLE                       ChildHandle        OPTIONAL,
+  IN  CHAR8                            *Language,
+  OUT CHAR16                           **ControllerName
   );
+
 
 //
 // Simple Text Input Protocol functions
 //
-
 /**
   Reset the Keyboard and do BAT test for it, if (ExtendedVerification == TRUE) then do some extra keyboard validations.
 
@@ -320,7 +323,7 @@ VirtualKeyboardReset (
   );
 
 /**
-  Reset the input device and optionally run diagnostics
+  Reset the input device and optionaly run diagnostics
 
   @param  This                  Protocol instance pointer.
   @param  ExtendedVerification  Driver may perform diagnostics on reset.
@@ -348,7 +351,7 @@ VirtualKeyboardResetEx (
   @retval EFI_DEVICE_ERROR      The device is not functioning correctly and could
                                 not have the setting adjusted.
   @retval EFI_UNSUPPORTED       The device does not have the ability to set its state.
-  @retval EFI_INVALID_PARAMETER KeyToggleState is NULL.
+  @retval EFI_INVALID_PAVIRTUALETER KeyToggleState is NULL.
 
 **/
 EFI_STATUS
@@ -370,8 +373,8 @@ VirtualKeyboardSetState (
 
 
   @retval EFI_SUCCESS             The notification function was registered successfully.
-  @retval EFI_OUT_OF_RESOURCES    Unable to allocate resources for necessary data structures.
-  @retval EFI_INVALID_PARAMETER   KeyData or NotifyHandle is NULL.
+  @retval EFI_OUT_OF_RESOURCES    Unable to allocate resources for necesssary data structures.
+  @retval EFI_INVALID_PAVIRTUALETER   KeyData or NotifyHandle is NULL.
 
 **/
 EFI_STATUS
@@ -390,7 +393,7 @@ VirtualKeyboardRegisterKeyNotify (
   @param  NotificationHandle   The handle of the notification function being unregistered.
 
   @retval EFI_SUCCESS             The notification function was unregistered successfully.
-  @retval EFI_INVALID_PARAMETER   The NotificationHandle is invalid.
+  @retval EFI_INVALID_PAVIRTUALETER   The NotificationHandle is invalid.
 
 **/
 EFI_STATUS
@@ -403,19 +406,18 @@ VirtualKeyboardUnregisterKeyNotify (
 //
 // Private worker functions
 //
-
 /**
   Free keyboard notify list.
 
   @param  ListHead   The list head
 
   @retval EFI_SUCCESS           Free the notify list successfully
-  @retval EFI_INVALID_PARAMETER ListHead is invalid.
+  @retval EFI_INVALID_PAVIRTUALETER ListHead is invalid.
 
 **/
 EFI_STATUS
 VirtualKeyboardFreeNotifyList (
-  IN OUT LIST_ENTRY  *ListHead
+  IN OUT LIST_ENTRY           *ListHead
   );
 
 /**
@@ -427,7 +429,7 @@ VirtualKeyboardFreeNotifyList (
                             state data for the key that was pressed.
 
   @retval TRUE              Key be pressed matches a registered key.
-  @retval FALSE             Match failed.
+  @retval FLASE             Match failed.
 
 **/
 BOOLEAN
@@ -439,7 +441,7 @@ IsKeyRegistered (
 /**
   Waiting on the keyboard event, if there's any key pressed by the user, signal the event
 
-  @param  Event       The event that be signalled when any key has been struck.
+  @param  Event       The event that be siganlled when any key has been stroked.
   @param  Context     Pointer of the protocol EFI_SIMPLE_TEXT_INPUT_PROTOCOL.
 
 **/
@@ -453,7 +455,7 @@ VirtualKeyboardWaitForKey (
 /**
   Waiting on the keyboard event, if there's any key pressed by the user, signal the event
 
-  @param  Event    The event that be signalled when any key has been struck.
+  @param  Event    The event that be siganlled when any key has been stroked.
   @param  Context  Pointer of the protocol EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL.
 
 **/
@@ -476,8 +478,8 @@ VirtualKeyboardWaitForKeyEx (
 VOID
 EFIAPI
 VirtualKeyboardTimerHandler (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT    Event,
+  IN VOID         *Context
   );
 
 /**
@@ -489,8 +491,8 @@ VirtualKeyboardTimerHandler (
 VOID
 EFIAPI
 KeyNotifyProcessHandler (
-  IN  EFI_EVENT  Event,
-  IN  VOID       *Context
+  IN  EFI_EVENT                 Event,
+  IN  VOID                      *Context
   );
 
 /**
@@ -512,24 +514,24 @@ VirtualKeyboardReadKeyStroke (
 
 /**
   Reads the next keystroke from the input device. The WaitForKey Event can
-  be used to test for existence of a keystroke via WaitForEvent () call.
+  be used to test for existance of a keystroke via WaitForEvent () call.
 
   @param  This         Protocol instance pointer.
   @param  KeyData      A pointer to a buffer that is filled in with the keystroke
                        state data for the key that was pressed.
 
   @retval  EFI_SUCCESS           The keystroke information was returned.
-  @retval  EFI_NOT_READY         There was no keystroke data available.
+  @retval  EFI_NOT_READY         There was no keystroke data availiable.
   @retval  EFI_DEVICE_ERROR      The keystroke information was not returned due to
                                  hardware errors.
-  @retval  EFI_INVALID_PARAMETER KeyData is NULL.
+  @retval  EFI_INVALID_PAVIRTUALETER KeyData is NULL.
 
 **/
 EFI_STATUS
 EFIAPI
 VirtualKeyboardReadKeyStrokeEx (
-  IN  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL  *This,
-  OUT EFI_KEY_DATA                       *KeyData
+  IN  EFI_SIMPLE_TEXT_INPUT_EX_PROTOCOL *This,
+  OUT EFI_KEY_DATA                      *KeyData
   );
 
 #endif /* _VIRTUAL_KEYBOARD_H_ */

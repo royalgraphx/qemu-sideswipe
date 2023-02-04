@@ -106,7 +106,7 @@ static int line_out_init(HWVoiceOut *hw, struct audsettings *as,
     out->active = 0;
 
     out->sin.base.sif = &playback_sif.base;
-    qemu_spice.add_interface(&out->sin.base);
+    qemu_spice_add_interface (&out->sin.base);
 #if SPICE_INTERFACE_PLAYBACK_MAJOR > 1 || SPICE_INTERFACE_PLAYBACK_MINOR >= 3
     spice_server_set_playback_rate(&out->sin, settings.freq);
 #endif
@@ -120,13 +120,6 @@ static void line_out_fini (HWVoiceOut *hw)
     spice_server_remove_interface (&out->sin.base);
 }
 
-static size_t line_out_get_free(HWVoiceOut *hw)
-{
-    SpiceVoiceOut *out = container_of(hw, SpiceVoiceOut, hw);
-
-    return audio_rate_peek_bytes(&out->rate, &hw->info);
-}
-
 static void *line_out_get_buffer(HWVoiceOut *hw, size_t *size)
 {
     SpiceVoiceOut *out = container_of(hw, SpiceVoiceOut, hw);
@@ -137,9 +130,12 @@ static void *line_out_get_buffer(HWVoiceOut *hw, size_t *size)
     }
 
     if (out->frame) {
-        *size = MIN((out->fsize - out->fpos) << 2, *size);
+        *size = audio_rate_get_bytes(
+            &hw->info, &out->rate,
+            (out->fsize - out->fpos) * hw->info.bytes_per_frame);
+    } else {
+        audio_rate_start(&out->rate);
     }
-
     return out->frame + out->fpos;
 }
 
@@ -147,16 +143,12 @@ static size_t line_out_put_buffer(HWVoiceOut *hw, void *buf, size_t size)
 {
     SpiceVoiceOut *out = container_of(hw, SpiceVoiceOut, hw);
 
-    audio_rate_add_bytes(&out->rate, size);
+    assert(buf == out->frame + out->fpos && out->fpos <= out->fsize);
+    out->fpos += size >> 2;
 
-    if (buf) {
-        assert(buf == out->frame + out->fpos && out->fpos <= out->fsize);
-        out->fpos += size >> 2;
-
-        if (out->fpos == out->fsize) { /* buffer full */
-            spice_server_playback_put_samples(&out->sin, out->frame);
-            out->frame = NULL;
-        }
+    if (out->fpos == out->fsize) { /* buffer full */
+        spice_server_playback_put_samples(&out->sin, out->frame);
+        out->frame = NULL;
     }
 
     return size;
@@ -222,7 +214,7 @@ static int line_in_init(HWVoiceIn *hw, struct audsettings *as, void *drv_opaque)
     in->active = 0;
 
     in->sin.base.sif = &record_sif.base;
-    qemu_spice.add_interface(&in->sin.base);
+    qemu_spice_add_interface (&in->sin.base);
 #if SPICE_INTERFACE_RECORD_MAJOR > 2 || SPICE_INTERFACE_RECORD_MINOR >= 3
     spice_server_set_record_rate(&in->sin, settings.freq);
 #endif
@@ -239,13 +231,10 @@ static void line_in_fini (HWVoiceIn *hw)
 static size_t line_in_read(HWVoiceIn *hw, void *buf, size_t len)
 {
     SpiceVoiceIn *in = container_of (hw, SpiceVoiceIn, hw);
-    uint64_t to_read = audio_rate_get_bytes(&in->rate, &hw->info, len) >> 2;
+    uint64_t to_read = audio_rate_get_bytes(&hw->info, &in->rate, len) >> 2;
     size_t ready = spice_server_record_get_samples(&in->sin, buf, to_read);
 
-    /*
-     * If the client didn't send new frames, it most likely disconnected.
-     * Generate silence in this case to avoid a stalled audio stream.
-     */
+    /* XXX: do we need this? */
     if (ready == 0) {
         memset(buf, 0, to_read << 2);
         ready = to_read;
@@ -292,7 +281,6 @@ static struct audio_pcm_ops audio_callbacks = {
     .init_out = line_out_init,
     .fini_out = line_out_fini,
     .write    = audio_generic_write,
-    .buffer_get_free = line_out_get_free,
     .get_buffer_out = line_out_get_buffer,
     .put_buffer_out = line_out_put_buffer,
     .enable_out = line_out_enable,
@@ -304,7 +292,6 @@ static struct audio_pcm_ops audio_callbacks = {
     .init_in  = line_in_init,
     .fini_in  = line_in_fini,
     .read     = line_in_read,
-    .run_buffer_in = audio_generic_run_buffer_in,
     .enable_in = line_in_enable,
 #if ((SPICE_INTERFACE_RECORD_MAJOR >= 2) && (SPICE_INTERFACE_RECORD_MINOR >= 2))
     .volume_in = line_in_volume,
@@ -323,10 +310,13 @@ static struct audio_driver spice_audio_driver = {
     .voice_size_in  = sizeof (SpiceVoiceIn),
 };
 
+void qemu_spice_audio_init (void)
+{
+    spice_audio_driver.can_be_default = 1;
+}
+
 static void register_audio_spice(void)
 {
     audio_driver_register(&spice_audio_driver);
 }
 type_init(register_audio_spice);
-
-module_dep("ui-spice-core");

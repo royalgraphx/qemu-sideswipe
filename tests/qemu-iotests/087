@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw quick
 #
 # Test unsupported blockdev-add cases
 #
@@ -143,7 +142,9 @@ run_qemu <<EOF
   "arguments": {
       "qom-type": "secret",
       "id": "sec0",
-      "data": "123456"
+      "props": {
+          "data": "123456"
+      }
   }
 }
 { "execute": "blockdev-add",
@@ -174,7 +175,9 @@ run_qemu <<EOF
   "arguments": {
       "qom-type": "secret",
       "id": "sec0",
-      "data": "123456"
+      "props": {
+          "data": "123456"
+      }
   }
 }
 { "execute": "blockdev-add",

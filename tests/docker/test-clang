@@ -13,7 +13,7 @@
 
 . common.rc
 
-requires_binary clang
+requires clang
 
 cd "$BUILD_DIR"
 

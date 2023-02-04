@@ -4,7 +4,7 @@
 #  This module registers report status code listener to collect performance data
 #  for SMM boot performance records and S3 Suspend Performance Record.
 #
-#  Copyright (c) 2011 - 2021, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
@@ -26,9 +26,7 @@
 #
 
 [Sources]
-  FirmwarePerformanceCommon.c
-  FirmwarePerformanceCommon.h
-  FirmwarePerformanceTraditional.c
+  FirmwarePerformanceSmm.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -36,7 +34,7 @@
 
 [LibraryClasses]
   UefiDriverEntryPoint
-  MmServicesTableLib
+  SmmServicesTableLib
   BaseLib
   DebugLib
   TimerLib
@@ -44,23 +42,26 @@
   PcdLib
   BaseMemoryLib
   MemoryAllocationLib
+  UefiBootServicesTableLib
   SynchronizationLib
   SmmMemLib
 
 [Protocols]
-  gEfiMmRscHandlerProtocolGuid                 ## CONSUMES
+  gEfiSmmRscHandlerProtocolGuid                 ## CONSUMES
 
 [Guids]
   ## SOMETIMES_PRODUCES   ## UNDEFINED # SaveLockBox
+  ## PRODUCES             ## UNDEFINED # SmiHandlerRegister
   ## SOMETIMES_CONSUMES   ## UNDEFINED # StatusCode Data
   gEfiFirmwarePerformanceGuid
+  gEdkiiFpdtExtendedFirmwarePerformanceGuid  ## SOMETIMES_PRODUCES ## UNDEFINED # StatusCode Data
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdProgressCodeS3SuspendStart  ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdProgressCodeS3SuspendEnd    ## CONSUMES
 
 [Depex]
-  gEfiMmRscHandlerProtocolGuid
+  gEfiSmmRscHandlerProtocolGuid
 
 [UserExtensions.TianoCore."ExtraFiles"]
   FirmwarePerformanceSmmExtra.uni

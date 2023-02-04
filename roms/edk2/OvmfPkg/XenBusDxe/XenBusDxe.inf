@@ -51,7 +51,6 @@
   XenHypercallLib
   SynchronizationLib
   PrintLib
-  PcdLib
 
 [Protocols]
   gEfiDriverBindingProtocolGuid
@@ -60,5 +59,3 @@
   gXenBusProtocolGuid
   gXenIoProtocolGuid
 
-[FixedPcd]
-  gUefiOvmfPkgTokenSpaceGuid.PcdXenGrantFrames

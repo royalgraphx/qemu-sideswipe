@@ -13,7 +13,6 @@
 #include "migration/vmstate.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 /* The number of virtual priority levels.  16 user vectors plus the
    unvectored IRQ.  Chained interrupts would require an additional level
@@ -22,9 +21,9 @@
 #define PL190_NUM_PRIO 17
 
 #define TYPE_PL190 "pl190"
-OBJECT_DECLARE_SIMPLE_TYPE(PL190State, PL190)
+#define PL190(obj) OBJECT_CHECK(PL190State, (obj), TYPE_PL190)
 
-struct PL190State {
+typedef struct PL190State {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -42,7 +41,7 @@ struct PL190State {
     int prev_prio[PL190_NUM_PRIO];
     qemu_irq irq;
     qemu_irq fiq;
-};
+} PL190State;
 
 static const unsigned char pl190_id[] =
 { 0x90, 0x11, 0x04, 0x00, 0x0D, 0xf0, 0x05, 0xb1 };

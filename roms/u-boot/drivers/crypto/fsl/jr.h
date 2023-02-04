@@ -8,11 +8,10 @@
 #define __JR_H
 
 #include <linux/compiler.h>
-#include "type.h"
 
 #define JR_SIZE 4
-/* Timeout currently defined as 10 sec */
-#define CONFIG_USEC_DEQ_TIMEOUT	10000000U
+/* Timeout currently defined as 90 sec */
+#define CONFIG_SEC_DEQ_TIMEOUT	90000000U
 
 #define DEFAULT_JR_ID		0
 #define DEFAULT_JR_LIODN	0
@@ -34,6 +33,8 @@
 #define JRNSLIODN_MASK		0x0fff0000
 #define JRSLIODN_SHIFT		0
 #define JRSLIODN_MASK		0x00000fff
+#define JROWN_NS		0x00000008
+#define JRMID_NS		0x00000001
 
 #define JQ_DEQ_ERR		-1
 #define JQ_DEQ_TO_ERR		-2
@@ -42,13 +43,13 @@
 #define RNG4_MAX_HANDLES	2
 
 struct op_ring {
-	caam_dma_addr_t desc;
+	phys_addr_t desc;
 	uint32_t status;
 } __packed;
 
 struct jr_info {
 	void (*callback)(uint32_t status, void *arg);
-	caam_dma_addr_t desc_phys_addr;
+	phys_addr_t desc_phys_addr;
 	uint32_t desc_len;
 	uint32_t op_done;
 	void *arg;
@@ -84,7 +85,7 @@ struct jobring {
 	 * by SEC
 	 */
 	/*Circular  Ring of i/p descriptors */
-	caam_dma_addr_t *input_ring;
+	dma_addr_t *input_ring;
 	/* Circular Ring of o/p descriptors */
 	/* Circula Ring containing info regarding descriptors in i/p
 	 * and o/p ring

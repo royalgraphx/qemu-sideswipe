@@ -38,7 +38,6 @@ static const int kernel_feature_bits[] = {
     VIRTIO_RING_F_INDIRECT_DESC,
     VIRTIO_RING_F_EVENT_IDX,
     VIRTIO_SCSI_F_HOTPLUG,
-    VIRTIO_F_RING_RESET,
     VHOST_INVALID_FEATURE_BIT
 };
 
@@ -121,7 +120,7 @@ static void vhost_scsi_set_status(VirtIODevice *vdev, uint8_t val)
         start = false;
     }
 
-    if (vhost_dev_is_started(&vsc->dev) == start) {
+    if (vsc->dev.started == start) {
         return;
     }
 
@@ -148,7 +147,7 @@ static int vhost_scsi_pre_save(void *opaque)
 
     /* At this point, backend must be stopped, otherwise
      * it might keep writing to memory. */
-    assert(!vhost_dev_is_started(&vsc->dev));
+    assert(!vsc->dev.started);
 
     return 0;
 }
@@ -171,7 +170,6 @@ static void vhost_scsi_realize(DeviceState *dev, Error **errp)
     Error *err = NULL;
     int vhostfd = -1;
     int ret;
-    struct vhost_virtqueue *vqs = NULL;
 
     if (!vs->conf.wwpn) {
         error_setg(errp, "vhost-scsi: missing wwpn");
@@ -179,7 +177,7 @@ static void vhost_scsi_realize(DeviceState *dev, Error **errp)
     }
 
     if (vs->conf.vhostfd) {
-        vhostfd = monitor_fd_param(monitor_cur(), vs->conf.vhostfd, errp);
+        vhostfd = monitor_fd_param(cur_mon, vs->conf.vhostfd, errp);
         if (vhostfd == -1) {
             error_prepend(errp, "vhost-scsi: unable to parse vhostfd: ");
             return;
@@ -210,24 +208,21 @@ static void vhost_scsi_realize(DeviceState *dev, Error **errp)
                 "target SCSI device state or use shared storage over network), "
                 "set 'migratable' property to true to enable migration.");
         if (migrate_add_blocker(vsc->migration_blocker, errp) < 0) {
+            error_free(vsc->migration_blocker);
             goto free_virtio;
         }
     }
 
     vsc->dev.nvqs = VHOST_SCSI_VQ_NUM_FIXED + vs->conf.num_queues;
-    vqs = g_new0(struct vhost_virtqueue, vsc->dev.nvqs);
-    vsc->dev.vqs = vqs;
+    vsc->dev.vqs = g_new0(struct vhost_virtqueue, vsc->dev.nvqs);
     vsc->dev.vq_index = 0;
     vsc->dev.backend_features = 0;
 
     ret = vhost_dev_init(&vsc->dev, (void *)(uintptr_t)vhostfd,
-                         VHOST_BACKEND_TYPE_KERNEL, 0, errp);
+                         VHOST_BACKEND_TYPE_KERNEL, 0);
     if (ret < 0) {
-        /*
-         * vhost_dev_init calls vhost_dev_cleanup on error, which closes
-         * vhostfd, don't double close it.
-         */
-        vhostfd = -1;
+        error_setg(errp, "vhost-scsi: vhost initialization failed: %s",
+                   strerror(-ret));
         goto free_vqs;
     }
 
@@ -240,17 +235,14 @@ static void vhost_scsi_realize(DeviceState *dev, Error **errp)
     return;
 
  free_vqs:
-    g_free(vqs);
     if (!vsc->migratable) {
         migrate_del_blocker(vsc->migration_blocker);
     }
+    g_free(vsc->dev.vqs);
  free_virtio:
-    error_free(vsc->migration_blocker);
     virtio_scsi_common_unrealize(dev);
  close_fd:
-    if (vhostfd >= 0) {
-        close(vhostfd);
-    }
+    close(vhostfd);
     return;
 }
 
@@ -274,19 +266,11 @@ static void vhost_scsi_unrealize(DeviceState *dev)
     virtio_scsi_common_unrealize(dev);
 }
 
-static struct vhost_dev *vhost_scsi_get_vhost(VirtIODevice *vdev)
-{
-    VHostSCSI *s = VHOST_SCSI(vdev);
-    VHostSCSICommon *vsc = VHOST_SCSI_COMMON(s);
-    return &vsc->dev;
-}
-
 static Property vhost_scsi_properties[] = {
     DEFINE_PROP_STRING("vhostfd", VirtIOSCSICommon, conf.vhostfd),
     DEFINE_PROP_STRING("wwpn", VirtIOSCSICommon, conf.wwpn),
     DEFINE_PROP_UINT32("boot_tpgt", VirtIOSCSICommon, conf.boot_tpgt, 0),
-    DEFINE_PROP_UINT32("num_queues", VirtIOSCSICommon, conf.num_queues,
-                       VIRTIO_SCSI_AUTO_NUM_QUEUES),
+    DEFINE_PROP_UINT32("num_queues", VirtIOSCSICommon, conf.num_queues, 1),
     DEFINE_PROP_UINT32("virtqueue_size", VirtIOSCSICommon, conf.virtqueue_size,
                        128),
     DEFINE_PROP_BOOL("seg_max_adjust", VirtIOSCSICommon, conf.seg_max_adjust,
@@ -315,7 +299,6 @@ static void vhost_scsi_class_init(ObjectClass *klass, void *data)
     vdc->get_features = vhost_scsi_common_get_features;
     vdc->set_config = vhost_scsi_common_set_config;
     vdc->set_status = vhost_scsi_set_status;
-    vdc->get_vhost = vhost_scsi_get_vhost;
     fwc->get_dev_path = vhost_scsi_common_get_fw_dev_path;
 }
 

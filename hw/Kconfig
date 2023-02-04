@@ -6,7 +6,6 @@ source audio/Kconfig
 source block/Kconfig
 source char/Kconfig
 source core/Kconfig
-source cxl/Kconfig
 source display/Kconfig
 source dma/Kconfig
 source gpio/Kconfig
@@ -22,18 +21,16 @@ source mem/Kconfig
 source misc/Kconfig
 source net/Kconfig
 source nubus/Kconfig
-source nvme/Kconfig
 source nvram/Kconfig
 source pci-bridge/Kconfig
 source pci-host/Kconfig
 source pcmcia/Kconfig
 source pci/Kconfig
 source rdma/Kconfig
-source remote/Kconfig
 source rtc/Kconfig
 source scsi/Kconfig
 source sd/Kconfig
-source sensor/Kconfig
+source semihosting/Kconfig
 source smbios/Kconfig
 source ssi/Kconfig
 source timer/Kconfig
@@ -50,10 +47,11 @@ source avr/Kconfig
 source cris/Kconfig
 source hppa/Kconfig
 source i386/Kconfig
-source loongarch/Kconfig
+source lm32/Kconfig
 source m68k/Kconfig
 source microblaze/Kconfig
 source mips/Kconfig
+source moxie/Kconfig
 source nios2/Kconfig
 source openrisc/Kconfig
 source ppc/Kconfig
@@ -64,6 +62,7 @@ source sh4/Kconfig
 source sparc/Kconfig
 source sparc64/Kconfig
 source tricore/Kconfig
+source unicore32/Kconfig
 source xtensa/Kconfig
 
 # Symbols used by multiple targets
@@ -81,7 +80,3 @@ config XILINX_AXI
 config XLNX_ZYNQMP
     bool
     select REGISTER
-    select CAN_BUS
-    select PTIMER
-    select XLNX_BBRAM
-    select XLNX_EFUSE_ZYNQMP

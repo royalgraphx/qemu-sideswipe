@@ -11,7 +11,6 @@
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
-
 #ifndef _PRIVILEGE_POLYMORPHIC_H_
 #define _PRIVILEGE_POLYMORPHIC_H_
 
@@ -26,8 +25,8 @@
 VOID
 EFIAPI
 SecureBootHook (
-  IN CHAR16    *VariableName,
-  IN EFI_GUID  *VendorGuid
+  IN CHAR16                                 *VariableName,
+  IN EFI_GUID                               *VendorGuid
   );
 
 /**
@@ -72,11 +71,11 @@ MorLockInitAtEndOfDxe (
 **/
 EFI_STATUS
 SetVariableCheckHandlerMor (
-  IN CHAR16    *VariableName,
-  IN EFI_GUID  *VendorGuid,
-  IN UINT32    Attributes,
-  IN UINTN     DataSize,
-  IN VOID      *Data
+  IN CHAR16     *VariableName,
+  IN EFI_GUID   *VendorGuid,
+  IN UINT32     Attributes,
+  IN UINTN      DataSize,
+  IN VOID       *Data
   );
 
 /**

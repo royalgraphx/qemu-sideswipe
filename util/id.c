@@ -35,7 +35,6 @@ static const char *const id_subsys_str[ID_MAX] = {
     [ID_QDEV]  = "qdev",
     [ID_BLOCK] = "block",
     [ID_CHR] = "chr",
-    [ID_NET] = "net",
 };
 
 /*

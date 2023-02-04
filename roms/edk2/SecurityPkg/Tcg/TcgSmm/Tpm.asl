@@ -3,7 +3,6 @@
   and MemoryClear.
 
 Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
-Copyright (c) Microsoft Corporation.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -42,10 +41,10 @@ DefinitionBlock (
       //
       // Operational region for Smi port access
       //
-      OperationRegion (SMIP, SystemIO, FixedPcdGet16 (PcdSmiCommandIoPort), 1)
+      OperationRegion (SMIP, SystemIO, 0xB2, 1)
       Field (SMIP, ByteAcc, NoLock, Preserve)
       {
-          IOPN, 8
+          IOB2, 8
       }
 
       //
@@ -65,16 +64,16 @@ DefinitionBlock (
       Field (TNVS, AnyAcc, NoLock, Preserve)
       {
         PPIN,   8,  //   Software SMI for Physical Presence Interface
-        PPIP,   32, //   Used for save physical presence parameter
+        PPIP,   32, //   Used for save physical presence paramter
         PPRP,   32, //   Physical Presence request operation response
         PPRQ,   32, //   Physical Presence request operation
         LPPR,   32, //   Last Physical Presence request operation
         FRET,   32, //   Physical Presence function return code
         MCIN,   8,  //   Software SMI for Memory Clear Interface
-        MCIP,   32, //   Used for save the Mor parameter
+        MCIP,   32, //   Used for save the Mor paramter
         MORD,   32, //   Memory Overwrite Request Data
         MRET,   32, //   Memory Overwrite function return code
-        UCRQ,   32  //   Physical Presence request operation to Get User Confirmation Status
+        UCRQ,   32  //   Phyical Presence request operation to Get User Confirmation Status
       }
 
       Method (PTS, 1, Serialized)
@@ -97,7 +96,7 @@ DefinitionBlock (
             //
             // Trigger the SMI interrupt
             //
-            Store (MCIN, IOPN)
+            Store (MCIN, IOB2)
           }
         }
         Return (0)
@@ -197,7 +196,7 @@ DefinitionBlock (
             //
             // Trigger the SMI interrupt
             //
-            Store (PPIN, IOPN)
+            Store (PPIN, IOB2)
             Return (FRET)
 
 
@@ -228,7 +227,7 @@ DefinitionBlock (
             //
             // Trigger the SMI interrupt
             //
-            Store (PPIN, IOPN)
+            Store (PPIN, IOB2)
 
             Store (LPPR, Index (TPM3, 0x01))
             Store (PPRP, Index (TPM3, 0x02))
@@ -256,7 +255,7 @@ DefinitionBlock (
             //
             // Trigger the SMI interrupt
             //
-            Store (PPIN, IOPN)
+            Store (PPIN, IOB2)
             Return (FRET)
           }
           Case (8)
@@ -270,7 +269,7 @@ DefinitionBlock (
             //
             // Trigger the SMI interrupt
             //
-            Store (PPIN, IOPN)
+            Store (PPIN, IOB2)
 
             Return (FRET)
           }
@@ -309,7 +308,7 @@ DefinitionBlock (
             //
             // Trigger the SMI interrupt
             //
-            Store (MCIN, IOPN)
+            Store (MCIN, IOB2)
             Return (MRET)
           }
           Default {BreakPoint}

@@ -32,10 +32,8 @@
 #include "hw/arm/exynos4210.h"
 #include "hw/irq.h"
 #include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
 
 #include "trace.h"
-#include "qom/object.h"
 
 /*
  *  Offsets for UART registers relative to SFR base address
@@ -140,9 +138,10 @@ typedef struct {
 } Exynos4210UartFIFO;
 
 #define TYPE_EXYNOS4210_UART "exynos4210.uart"
-OBJECT_DECLARE_SIMPLE_TYPE(Exynos4210UartState, EXYNOS4210_UART)
+#define EXYNOS4210_UART(obj) \
+    OBJECT_CHECK(Exynos4210UartState, (obj), TYPE_EXYNOS4210_UART)
 
-struct Exynos4210UartState {
+typedef struct Exynos4210UartState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -160,7 +159,7 @@ struct Exynos4210UartState {
 
     uint32_t channel;
 
-};
+} Exynos4210UartState;
 
 
 /* Used only for tracing */
@@ -211,7 +210,7 @@ static void fifo_reset(Exynos4210UartFIFO *q)
     g_free(q->data);
     q->data = NULL;
 
-    q->data = g_malloc0(q->size);
+    q->data = (uint8_t *)g_malloc0(q->size);
 
     q->sp = 0;
     q->rp = 0;
@@ -519,7 +518,6 @@ static uint64_t exynos4210_uart_read(void *opaque, hwaddr offset,
             s->reg[I_(UTRSTAT)] &= ~UTRSTAT_Rx_BUFFER_DATA_READY;
             res = s->reg[I_(URXH)];
         }
-        qemu_chr_fe_accept_input(&s->chr);
         exynos4210_uart_update_dmabusy(s);
         trace_exynos_uart_read(s->channel, offset,
                                exynos4210_uart_regname(offset), res);
@@ -554,11 +552,7 @@ static int exynos4210_uart_can_receive(void *opaque)
 {
     Exynos4210UartState *s = (Exynos4210UartState *)opaque;
 
-    if (s->reg[I_(UFCON)] & UFCON_FIFO_ENABLE) {
-        return fifo_empty_elements_number(&s->rx);
-    } else {
-        return !(s->reg[I_(UTRSTAT)] & UTRSTAT_Rx_BUFFER_DATA_READY);
-    }
+    return fifo_empty_elements_number(&s->rx);
 }
 
 static void exynos4210_uart_receive(void *opaque, const uint8_t *buf, int size)
@@ -628,6 +622,7 @@ static const VMStateDescription vmstate_exynos4210_uart_fifo = {
     .name = "exynos4210.uart.fifo",
     .version_id = 1,
     .minimum_version_id = 1,
+    .post_load = exynos4210_uart_post_load,
     .fields = (VMStateField[]) {
         VMSTATE_UINT32(sp, Exynos4210UartFIFO),
         VMSTATE_UINT32(rp, Exynos4210UartFIFO),
@@ -640,7 +635,6 @@ static const VMStateDescription vmstate_exynos4210_uart = {
     .name = "exynos4210.uart",
     .version_id = 1,
     .minimum_version_id = 1,
-    .post_load = exynos4210_uart_post_load,
     .fields = (VMStateField[]) {
         VMSTATE_STRUCT(rx, Exynos4210UartState, 1,
                        vmstate_exynos4210_uart_fifo, Exynos4210UartFIFO),

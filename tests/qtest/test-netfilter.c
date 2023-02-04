@@ -21,10 +21,11 @@ static void add_one_netfilter(void)
                    " 'arguments': {"
                    "   'qom-type': 'filter-buffer',"
                    "   'id': 'qtest-f0',"
-                   "   'netdev': 'qtest-bn0',"
-                   "   'queue': 'rx',"
-                   "   'interval': 1000"
-                   "}}");
+                   "   'props': {"
+                   "     'netdev': 'qtest-bn0',"
+                   "     'queue': 'rx',"
+                   "     'interval': 1000"
+                   "}}}");
 
     g_assert(response);
     g_assert(!qdict_haskey(response, "error"));
@@ -48,10 +49,11 @@ static void remove_netdev_with_one_netfilter(void)
                    " 'arguments': {"
                    "   'qom-type': 'filter-buffer',"
                    "   'id': 'qtest-f0',"
-                   "   'netdev': 'qtest-bn0',"
-                   "   'queue': 'rx',"
-                   "   'interval': 1000"
-                   "}}");
+                   "   'props': {"
+                   "     'netdev': 'qtest-bn0',"
+                   "     'queue': 'rx',"
+                   "     'interval': 1000"
+                   "}}}");
 
     g_assert(response);
     g_assert(!qdict_haskey(response, "error"));
@@ -85,10 +87,11 @@ static void add_multi_netfilter(void)
                    " 'arguments': {"
                    "   'qom-type': 'filter-buffer',"
                    "   'id': 'qtest-f0',"
-                   "   'netdev': 'qtest-bn0',"
-                   "   'queue': 'rx',"
-                   "   'interval': 1000"
-                   "}}");
+                   "   'props': {"
+                   "     'netdev': 'qtest-bn0',"
+                   "     'queue': 'rx',"
+                   "     'interval': 1000"
+                   "}}}");
 
     g_assert(response);
     g_assert(!qdict_haskey(response, "error"));
@@ -98,10 +101,11 @@ static void add_multi_netfilter(void)
                    " 'arguments': {"
                    "   'qom-type': 'filter-buffer',"
                    "   'id': 'qtest-f1',"
-                   "   'netdev': 'qtest-bn0',"
-                   "   'queue': 'rx',"
-                   "   'interval': 1000"
-                   "}}");
+                   "   'props': {"
+                   "     'netdev': 'qtest-bn0',"
+                   "     'queue': 'rx',"
+                   "     'interval': 1000"
+                   "}}}");
 
     g_assert(response);
     g_assert(!qdict_haskey(response, "error"));
@@ -133,10 +137,11 @@ static void remove_netdev_with_multi_netfilter(void)
                    " 'arguments': {"
                    "   'qom-type': 'filter-buffer',"
                    "   'id': 'qtest-f0',"
-                   "   'netdev': 'qtest-bn0',"
-                   "   'queue': 'rx',"
-                   "   'interval': 1000"
-                   "}}");
+                   "   'props': {"
+                   "     'netdev': 'qtest-bn0',"
+                   "     'queue': 'rx',"
+                   "     'interval': 1000"
+                   "}}}");
 
     g_assert(response);
     g_assert(!qdict_haskey(response, "error"));
@@ -146,10 +151,11 @@ static void remove_netdev_with_multi_netfilter(void)
                    " 'arguments': {"
                    "   'qom-type': 'filter-buffer',"
                    "   'id': 'qtest-f1',"
-                   "   'netdev': 'qtest-bn0',"
-                   "   'queue': 'rx',"
-                   "   'interval': 1000"
-                   "}}");
+                   "   'props': {"
+                   "     'netdev': 'qtest-bn0',"
+                   "     'queue': 'rx',"
+                   "     'interval': 1000"
+                   "}}}");
 
     g_assert(response);
     g_assert(!qdict_haskey(response, "error"));
@@ -178,6 +184,11 @@ int main(int argc, char **argv)
 {
     int ret;
     char *args;
+    const char *devstr = "e1000";
+
+    if (g_str_equal(qtest_get_arch(), "s390x")) {
+        devstr = "virtio-net-ccw";
+    }
 
     g_test_init(&argc, &argv, NULL);
     qtest_add_func("/netfilter/addremove_one", add_one_netfilter);
@@ -187,7 +198,8 @@ int main(int argc, char **argv)
     qtest_add_func("/netfilter/remove_netdev_multi",
                    remove_netdev_with_multi_netfilter);
 
-    args = g_strdup_printf("-nic user,id=qtest-bn0");
+    args = g_strdup_printf("-netdev user,id=qtest-bn0 "
+                           "-device %s,netdev=qtest-bn0", devstr);
     qtest_start(args);
     ret = g_test_run();
 

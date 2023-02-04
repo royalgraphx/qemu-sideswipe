@@ -33,13 +33,11 @@
 #include "qapi/error.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 #define TYPE_AM53C974_DEVICE "am53c974"
 
-typedef struct PCIESPState PCIESPState;
-DECLARE_INSTANCE_CHECKER(PCIESPState, PCI_ESP,
-                         TYPE_AM53C974_DEVICE)
+#define PCI_ESP(obj) \
+    OBJECT_CHECK(PCIESPState, (obj), TYPE_AM53C974_DEVICE)
 
 #define DMA_CMD   0x0
 #define DMA_STC   0x1
@@ -66,7 +64,7 @@ DECLARE_INSTANCE_CHECKER(PCIESPState, PCI_ESP,
 
 #define SBAC_STATUS (1 << 24)
 
-struct PCIESPState {
+typedef struct PCIESPState {
     /*< private >*/
     PCIDevice parent_obj;
     /*< public >*/
@@ -75,14 +73,12 @@ struct PCIESPState {
     uint32_t dma_regs[8];
     uint32_t sbac;
     ESPState esp;
-};
+} PCIESPState;
 
 static void esp_pci_handle_idle(PCIESPState *pci, uint32_t val)
 {
-    ESPState *s = ESP(&pci->esp);
-
     trace_esp_pci_dma_idle(val);
-    esp_dma_enable(s, 0, 0);
+    esp_dma_enable(&pci->esp, 0, 0);
 }
 
 static void esp_pci_handle_blast(PCIESPState *pci, uint32_t val)
@@ -93,18 +89,14 @@ static void esp_pci_handle_blast(PCIESPState *pci, uint32_t val)
 
 static void esp_pci_handle_abort(PCIESPState *pci, uint32_t val)
 {
-    ESPState *s = ESP(&pci->esp);
-
     trace_esp_pci_dma_abort(val);
-    if (s->current_req) {
-        scsi_req_cancel(s->current_req);
+    if (pci->esp.current_req) {
+        scsi_req_cancel(pci->esp.current_req);
     }
 }
 
 static void esp_pci_handle_start(PCIESPState *pci, uint32_t val)
 {
-    ESPState *s = ESP(&pci->esp);
-
     trace_esp_pci_dma_start(val);
 
     pci->dma_regs[DMA_WBC] = pci->dma_regs[DMA_STC];
@@ -115,7 +107,7 @@ static void esp_pci_handle_start(PCIESPState *pci, uint32_t val)
                                | DMA_STAT_DONE | DMA_STAT_ABORT
                                | DMA_STAT_ERROR | DMA_STAT_PWDN);
 
-    esp_dma_enable(s, 0, 1);
+    esp_dma_enable(&pci->esp, 0, 1);
 }
 
 static void esp_pci_dma_write(PCIESPState *pci, uint32_t saddr, uint32_t val)
@@ -161,12 +153,11 @@ static void esp_pci_dma_write(PCIESPState *pci, uint32_t saddr, uint32_t val)
 
 static uint32_t esp_pci_dma_read(PCIESPState *pci, uint32_t saddr)
 {
-    ESPState *s = ESP(&pci->esp);
     uint32_t val;
 
     val = pci->dma_regs[saddr];
     if (saddr == DMA_STAT) {
-        if (s->rregs[ESP_RSTAT] & STAT_INT) {
+        if (pci->esp.rregs[ESP_RSTAT] & STAT_INT) {
             val |= DMA_STAT_SCSIINT;
         }
         if (!(pci->sbac & SBAC_STATUS)) {
@@ -183,7 +174,6 @@ static void esp_pci_io_write(void *opaque, hwaddr addr,
                              uint64_t val, unsigned int size)
 {
     PCIESPState *pci = opaque;
-    ESPState *s = ESP(&pci->esp);
 
     if (size < 4 || addr & 3) {
         /* need to upgrade request: we only support 4-bytes accesses */
@@ -191,7 +181,7 @@ static void esp_pci_io_write(void *opaque, hwaddr addr,
         int shift;
 
         if (addr < 0x40) {
-            current = s->wregs[addr >> 2];
+            current = pci->esp.wregs[addr >> 2];
         } else if (addr < 0x60) {
             current = pci->dma_regs[(addr - 0x40) >> 2];
         } else if (addr < 0x74) {
@@ -211,7 +201,7 @@ static void esp_pci_io_write(void *opaque, hwaddr addr,
 
     if (addr < 0x40) {
         /* SCSI core reg */
-        esp_reg_write(s, addr >> 2, val);
+        esp_reg_write(&pci->esp, addr >> 2, val);
     } else if (addr < 0x60) {
         /* PCI DMA CCB */
         esp_pci_dma_write(pci, (addr - 0x40) >> 2, val);
@@ -228,12 +218,11 @@ static uint64_t esp_pci_io_read(void *opaque, hwaddr addr,
                                 unsigned int size)
 {
     PCIESPState *pci = opaque;
-    ESPState *s = ESP(&pci->esp);
     uint32_t ret;
 
     if (addr < 0x40) {
         /* SCSI core reg */
-        ret = esp_reg_read(s, addr >> 2);
+        ret = esp_reg_read(&pci->esp, addr >> 2);
     } else if (addr < 0x60) {
         /* PCI DMA CCB */
         ret = esp_pci_dma_read(pci, (addr - 0x40) >> 2);
@@ -280,7 +269,7 @@ static void esp_pci_dma_memory_rw(PCIESPState *pci, uint8_t *buf, int len,
         len = pci->dma_regs[DMA_WBC];
     }
 
-    pci_dma_rw(PCI_DEVICE(pci), addr, buf, len, dir, MEMTXATTRS_UNSPECIFIED);
+    pci_dma_rw(PCI_DEVICE(pci), addr, buf, len, dir);
 
     /* update status registers */
     pci->dma_regs[DMA_WBC] -= len;
@@ -315,9 +304,7 @@ static const MemoryRegionOps esp_pci_io_ops = {
 static void esp_pci_hard_reset(DeviceState *dev)
 {
     PCIESPState *pci = PCI_ESP(dev);
-    ESPState *s = ESP(&pci->esp);
-
-    esp_hard_reset(s);
+    esp_hard_reset(&pci->esp);
     pci->dma_regs[DMA_CMD] &= ~(DMA_CMD_DIR | DMA_CMD_INTE_D | DMA_CMD_INTE_P
                               | DMA_CMD_MDL | DMA_CMD_DIAG | DMA_CMD_MASK);
     pci->dma_regs[DMA_WBC] &= ~0xffff;
@@ -330,24 +317,23 @@ static void esp_pci_hard_reset(DeviceState *dev)
 
 static const VMStateDescription vmstate_esp_pci_scsi = {
     .name = "pciespscsi",
-    .version_id = 2,
+    .version_id = 1,
     .minimum_version_id = 1,
-    .pre_save = esp_pre_save,
     .fields = (VMStateField[]) {
         VMSTATE_PCI_DEVICE(parent_obj, PCIESPState),
         VMSTATE_BUFFER_UNSAFE(dma_regs, PCIESPState, 0, 8 * sizeof(uint32_t)),
-        VMSTATE_UINT8_V(esp.mig_version_id, PCIESPState, 2),
         VMSTATE_STRUCT(esp, PCIESPState, 0, vmstate_esp, ESPState),
         VMSTATE_END_OF_LIST()
     }
 };
 
-static void esp_pci_command_complete(SCSIRequest *req, size_t resid)
+static void esp_pci_command_complete(SCSIRequest *req, uint32_t status,
+                                     size_t resid)
 {
     ESPState *s = req->hba_private;
     PCIESPState *pci = container_of(s, PCIESPState, esp);
 
-    esp_command_complete(req, resid);
+    esp_command_complete(req, status, resid);
     pci->dma_regs[DMA_WBC] = 0;
     pci->dma_regs[DMA_STAT] |= DMA_STAT_DONE;
 }
@@ -366,12 +352,8 @@ static void esp_pci_scsi_realize(PCIDevice *dev, Error **errp)
 {
     PCIESPState *pci = PCI_ESP(dev);
     DeviceState *d = DEVICE(dev);
-    ESPState *s = ESP(&pci->esp);
+    ESPState *s = &pci->esp;
     uint8_t *pci_conf;
-
-    if (!qdev_realize(DEVICE(s), NULL, errp)) {
-        return;
-    }
 
     pci_conf = dev->config;
 
@@ -388,22 +370,14 @@ static void esp_pci_scsi_realize(PCIDevice *dev, Error **errp)
     pci_register_bar(dev, 0, PCI_BASE_ADDRESS_SPACE_IO, &pci->io);
     s->irq = pci_allocate_irq(dev);
 
-    scsi_bus_init(&s->bus, sizeof(s->bus), d, &esp_pci_scsi_info);
+    scsi_bus_new(&s->bus, sizeof(s->bus), d, &esp_pci_scsi_info, NULL);
 }
 
-static void esp_pci_scsi_exit(PCIDevice *d)
+static void esp_pci_scsi_uninit(PCIDevice *d)
 {
     PCIESPState *pci = PCI_ESP(d);
-    ESPState *s = ESP(&pci->esp);
 
-    qemu_free_irq(s->irq);
-}
-
-static void esp_pci_init(Object *obj)
-{
-    PCIESPState *pci = PCI_ESP(obj);
-
-    object_initialize_child(obj, "esp", &pci->esp, TYPE_ESP);
+    qemu_free_irq(pci->esp.irq);
 }
 
 static void esp_pci_class_init(ObjectClass *klass, void *data)
@@ -412,7 +386,7 @@ static void esp_pci_class_init(ObjectClass *klass, void *data)
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->realize = esp_pci_scsi_realize;
-    k->exit = esp_pci_scsi_exit;
+    k->exit = esp_pci_scsi_uninit;
     k->vendor_id = PCI_VENDOR_ID_AMD;
     k->device_id = PCI_DEVICE_ID_AMD_SCSI;
     k->revision = 0x10;
@@ -426,7 +400,6 @@ static void esp_pci_class_init(ObjectClass *klass, void *data)
 static const TypeInfo esp_pci_info = {
     .name = TYPE_AM53C974_DEVICE,
     .parent = TYPE_PCI_DEVICE,
-    .instance_init = esp_pci_init,
     .instance_size = sizeof(PCIESPState),
     .class_init = esp_pci_class_init,
     .interfaces = (InterfaceInfo[]) {
@@ -435,15 +408,14 @@ static const TypeInfo esp_pci_info = {
     },
 };
 
-struct DC390State {
+typedef struct {
     PCIESPState pci;
     eeprom_t *eeprom;
-};
-typedef struct DC390State DC390State;
+} DC390State;
 
 #define TYPE_DC390_DEVICE "dc390"
-DECLARE_INSTANCE_CHECKER(DC390State, DC390,
-                         TYPE_DC390_DEVICE)
+#define DC390(obj) \
+    OBJECT_CHECK(DC390State, obj, TYPE_DC390_DEVICE)
 
 #define EE_ADAPT_SCSI_ID 64
 #define EE_MODE2         65
@@ -549,7 +521,7 @@ static void dc390_class_init(ObjectClass *klass, void *data)
 }
 
 static const TypeInfo dc390_info = {
-    .name = TYPE_DC390_DEVICE,
+    .name = "dc390",
     .parent = TYPE_AM53C974_DEVICE,
     .instance_size = sizeof(DC390State),
     .class_init = dc390_class_init,

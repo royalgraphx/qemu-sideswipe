@@ -15,6 +15,7 @@
 
 **/
 
+
 #ifndef _EFI_PEI_CORE_FV_LOCATION_H_
 #define _EFI_PEI_CORE_FV_LOCATION_H_
 
@@ -36,6 +37,6 @@ typedef struct {
   VOID    *PeiCoreFvLocation;
 } EFI_PEI_CORE_FV_LOCATION_PPI;
 
-extern EFI_GUID  gEfiPeiCoreFvLocationPpiGuid;
+extern EFI_GUID gEfiPeiCoreFvLocationPpiGuid;
 
 #endif // _EFI_PEI_CORE_FV_LOCATION_H_

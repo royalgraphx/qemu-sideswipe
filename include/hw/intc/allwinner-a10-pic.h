@@ -2,10 +2,9 @@
 #define ALLWINNER_A10_PIC_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define TYPE_AW_A10_PIC  "allwinner-a10-pic"
-OBJECT_DECLARE_SIMPLE_TYPE(AwA10PICState, AW_A10_PIC)
+#define AW_A10_PIC(obj) OBJECT_CHECK(AwA10PICState, (obj), TYPE_AW_A10_PIC)
 
 #define AW_A10_PIC_VECTOR       0
 #define AW_A10_PIC_BASE_ADDR    4
@@ -20,7 +19,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(AwA10PICState, AW_A10_PIC)
 #define AW_A10_PIC_INT_NR       95
 #define AW_A10_PIC_REG_NUM      DIV_ROUND_UP(AW_A10_PIC_INT_NR, 32)
 
-struct AwA10PICState {
+typedef struct AwA10PICState {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
@@ -38,6 +37,6 @@ struct AwA10PICState {
     uint32_t enable[AW_A10_PIC_REG_NUM];
     uint32_t mask[AW_A10_PIC_REG_NUM];
     /*priority setting here*/
-};
+} AwA10PICState;
 
 #endif

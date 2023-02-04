@@ -16,13 +16,14 @@
 	 */
 	.globl	image_base
 image_base:
-	.short	IMAGE_DOS_SIGNATURE		/* 'MZ' */
+	.ascii	"MZ"
 	.skip	58				/* 'MZ' + pad + offset == 64 */
 	.long	pe_header - image_base		/* Offset to the PE header */
 pe_header:
-	.long	IMAGE_NT_SIGNATURE		/* 'PE' */
+	.ascii	"PE"
+	.short	0
 coff_header:
-	.short	IMAGE_FILE_MACHINE_THUMB	/* Mixed ARM/Thumb */
+	.short	0x1c2				/* Mixed ARM/Thumb */
 	.short	2				/* nr_sections */
 	.long	0				/* TimeDateStamp */
 	.long	0				/* PointerToSymbolTable */
@@ -35,7 +36,7 @@ coff_header:
 		 IMAGE_FILE_32BIT_MACHINE | \
 		 IMAGE_FILE_DEBUG_STRIPPED)
 optional_header:
-	.short	IMAGE_NT_OPTIONAL_HDR32_MAGIC	/* PE32 format */
+	.short	0x10b				/* PE32 format */
 	.byte	0x02				/* MajorLinkerVersion */
 	.byte	0x14				/* MinorLinkerVersion */
 	.long	_edata - _start			/* SizeOfCode */

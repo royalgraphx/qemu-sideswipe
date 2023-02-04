@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -49,14 +49,12 @@ int qbus_walk_children(BusState *bus,
         }
     }
 
-    WITH_RCU_READ_LOCK_GUARD() {
-        QTAILQ_FOREACH_RCU(kid, &bus->children, sibling) {
-            err = qdev_walk_children(kid->child,
-                                     pre_devfn, pre_busfn,
-                                     post_devfn, post_busfn, opaque);
-            if (err < 0) {
-                return err;
-            }
+    QTAILQ_FOREACH(kid, &bus->children, sibling) {
+        err = qdev_walk_children(kid->child,
+                                 pre_devfn, pre_busfn,
+                                 post_devfn, post_busfn, opaque);
+        if (err < 0) {
+            return err;
         }
     }
 
@@ -92,15 +90,12 @@ static void bus_reset_child_foreach(Object *obj, ResettableChildCallback cb,
     BusState *bus = BUS(obj);
     BusChild *kid;
 
-    WITH_RCU_READ_LOCK_GUARD() {
-        QTAILQ_FOREACH_RCU(kid, &bus->children, sibling) {
-            cb(OBJECT(kid->child), opaque, type);
-        }
+    QTAILQ_FOREACH(kid, &bus->children, sibling) {
+        cb(OBJECT(kid->child), opaque, type);
     }
 }
 
-static void qbus_init_internal(BusState *bus, DeviceState *parent,
-                               const char *name)
+static void qbus_init(BusState *bus, DeviceState *parent, const char *name)
 {
     const char *typename = object_get_typename(OBJECT(bus));
     BusClass *bc;
@@ -152,19 +147,19 @@ static void bus_unparent(Object *obj)
     bus->parent = NULL;
 }
 
-void qbus_init(void *bus, size_t size, const char *typename,
-               DeviceState *parent, const char *name)
+void qbus_create_inplace(void *bus, size_t size, const char *typename,
+                         DeviceState *parent, const char *name)
 {
     object_initialize(bus, size, typename);
-    qbus_init_internal(bus, parent, name);
+    qbus_init(bus, parent, name);
 }
 
-BusState *qbus_new(const char *typename, DeviceState *parent, const char *name)
+BusState *qbus_create(const char *typename, DeviceState *parent, const char *name)
 {
     BusState *bus;
 
     bus = BUS(object_new(typename));
-    qbus_init_internal(bus, parent, name);
+    qbus_init(bus, parent, name);
 
     return bus;
 }
@@ -199,11 +194,9 @@ static void bus_set_realized(Object *obj, bool value, Error **errp)
 
         /* TODO: recursive realization */
     } else if (!value && bus->realized) {
-        WITH_RCU_READ_LOCK_GUARD() {
-            QTAILQ_FOREACH_RCU(kid, &bus->children, sibling) {
-                DeviceState *dev = kid->child;
-                qdev_unrealize(dev);
-            }
+        QTAILQ_FOREACH(kid, &bus->children, sibling) {
+            DeviceState *dev = kid->child;
+            qdev_unrealize(dev);
         }
         if (bc->unrealize) {
             bc->unrealize(bus);

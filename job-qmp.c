@@ -27,135 +27,133 @@
 #include "qemu/job.h"
 #include "qapi/qapi-commands-job.h"
 #include "qapi/error.h"
-#include "trace/trace-root.h"
+#include "trace-root.h"
 
-/*
- * Get a job using its ID. Called with job_mutex held.
- */
-static Job *find_job_locked(const char *id, Error **errp)
+/* Get a job using its ID and acquire its AioContext */
+static Job *find_job(const char *id, AioContext **aio_context, Error **errp)
 {
     Job *job;
 
-    job = job_get_locked(id);
+    *aio_context = NULL;
+
+    job = job_get(id);
     if (!job) {
         error_setg(errp, "Job not found");
         return NULL;
     }
+
+    *aio_context = job->aio_context;
+    aio_context_acquire(*aio_context);
 
     return job;
 }
 
 void qmp_job_cancel(const char *id, Error **errp)
 {
-    Job *job;
-
-    JOB_LOCK_GUARD();
-    job = find_job_locked(id, errp);
+    AioContext *aio_context;
+    Job *job = find_job(id, &aio_context, errp);
 
     if (!job) {
         return;
     }
 
     trace_qmp_job_cancel(job);
-    job_user_cancel_locked(job, true, errp);
+    job_user_cancel(job, true, errp);
+    aio_context_release(aio_context);
 }
 
 void qmp_job_pause(const char *id, Error **errp)
 {
-    Job *job;
-
-    JOB_LOCK_GUARD();
-    job = find_job_locked(id, errp);
+    AioContext *aio_context;
+    Job *job = find_job(id, &aio_context, errp);
 
     if (!job) {
         return;
     }
 
     trace_qmp_job_pause(job);
-    job_user_pause_locked(job, errp);
+    job_user_pause(job, errp);
+    aio_context_release(aio_context);
 }
 
 void qmp_job_resume(const char *id, Error **errp)
 {
-    Job *job;
-
-    JOB_LOCK_GUARD();
-    job = find_job_locked(id, errp);
+    AioContext *aio_context;
+    Job *job = find_job(id, &aio_context, errp);
 
     if (!job) {
         return;
     }
 
     trace_qmp_job_resume(job);
-    job_user_resume_locked(job, errp);
+    job_user_resume(job, errp);
+    aio_context_release(aio_context);
 }
 
 void qmp_job_complete(const char *id, Error **errp)
 {
-    Job *job;
-
-    JOB_LOCK_GUARD();
-    job = find_job_locked(id, errp);
+    AioContext *aio_context;
+    Job *job = find_job(id, &aio_context, errp);
 
     if (!job) {
         return;
     }
 
     trace_qmp_job_complete(job);
-    job_complete_locked(job, errp);
+    job_complete(job, errp);
+    aio_context_release(aio_context);
 }
 
 void qmp_job_finalize(const char *id, Error **errp)
 {
-    Job *job;
-
-    JOB_LOCK_GUARD();
-    job = find_job_locked(id, errp);
+    AioContext *aio_context;
+    Job *job = find_job(id, &aio_context, errp);
 
     if (!job) {
         return;
     }
 
     trace_qmp_job_finalize(job);
-    job_ref_locked(job);
-    job_finalize_locked(job, errp);
+    job_ref(job);
+    job_finalize(job, errp);
 
-    job_unref_locked(job);
+    /*
+     * Job's context might have changed via job_finalize (and job_txn_apply
+     * automatically acquires the new one), so make sure we release the correct
+     * one.
+     */
+    aio_context = job->aio_context;
+    job_unref(job);
+    aio_context_release(aio_context);
 }
 
 void qmp_job_dismiss(const char *id, Error **errp)
 {
-    Job *job;
-
-    JOB_LOCK_GUARD();
-    job = find_job_locked(id, errp);
+    AioContext *aio_context;
+    Job *job = find_job(id, &aio_context, errp);
 
     if (!job) {
         return;
     }
 
     trace_qmp_job_dismiss(job);
-    job_dismiss_locked(&job, errp);
+    job_dismiss(&job, errp);
+    aio_context_release(aio_context);
 }
 
-/* Called with job_mutex held. */
-static JobInfo *job_query_single_locked(Job *job, Error **errp)
+static JobInfo *job_query_single(Job *job, Error **errp)
 {
     JobInfo *info;
-    uint64_t progress_current;
-    uint64_t progress_total;
 
     assert(!job_is_internal(job));
-    progress_get_snapshot(&job->progress, &progress_current,
-                          &progress_total);
 
     info = g_new(JobInfo, 1);
     *info = (JobInfo) {
         .id                 = g_strdup(job->id),
         .type               = job_type(job),
         .status             = job->status,
-        .current_progress   = progress_current,
-        .total_progress     = progress_total,
+        .current_progress   = job->progress.current,
+        .total_progress     = job->progress.total,
         .has_error          = !!job->err,
         .error              = job->err ? \
                               g_strdup(error_get_pretty(job->err)) : NULL,
@@ -166,23 +164,28 @@ static JobInfo *job_query_single_locked(Job *job, Error **errp)
 
 JobInfoList *qmp_query_jobs(Error **errp)
 {
-    JobInfoList *head = NULL, **tail = &head;
+    JobInfoList *head = NULL, **p_next = &head;
     Job *job;
 
-    JOB_LOCK_GUARD();
-
-    for (job = job_next_locked(NULL); job; job = job_next_locked(job)) {
-        JobInfo *value;
+    for (job = job_next(NULL); job; job = job_next(job)) {
+        JobInfoList *elem;
+        AioContext *aio_context;
 
         if (job_is_internal(job)) {
             continue;
         }
-        value = job_query_single_locked(job, errp);
-        if (!value) {
+        elem = g_new0(JobInfoList, 1);
+        aio_context = job->aio_context;
+        aio_context_acquire(aio_context);
+        elem->value = job_query_single(job, errp);
+        aio_context_release(aio_context);
+        if (!elem->value) {
+            g_free(elem);
             qapi_free_JobInfoList(head);
             return NULL;
         }
-        QAPI_LIST_APPEND(tail, value);
+        *p_next = elem;
+        p_next = &elem->next;
     }
 
     return head;

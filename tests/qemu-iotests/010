@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # Nolan II qcow2 corruption - wrong used cluster
 #

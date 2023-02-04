@@ -30,13 +30,11 @@
 #include <libcacard.h>
 
 #include "qemu/thread.h"
-#include "qemu/lockable.h"
 #include "qemu/main-loop.h"
 #include "qemu/module.h"
 #include "ccid.h"
 #include "hw/qdev-properties.h"
 #include "qapi/error.h"
-#include "qom/object.h"
 
 #define DPRINTF(card, lvl, fmt, ...) \
 do {\
@@ -47,9 +45,8 @@ do {\
 
 
 #define TYPE_EMULATED_CCID "ccid-card-emulated"
-typedef struct EmulatedState EmulatedState;
-DECLARE_INSTANCE_CHECKER(EmulatedState, EMULATED_CCID_CARD,
-                         TYPE_EMULATED_CCID)
+#define EMULATED_CCID_CARD(obj) \
+    OBJECT_CHECK(EmulatedState, (obj), TYPE_EMULATED_CCID)
 
 #define BACKEND_NSS_EMULATED_NAME "nss-emulated"
 #define BACKEND_CERTIFICATES_NAME "certificates"
@@ -61,6 +58,7 @@ enum {
 
 #define DEFAULT_BACKEND BACKEND_NSS_EMULATED
 
+typedef struct EmulatedState EmulatedState;
 
 enum {
     EMUL_READER_INSERT = 0,
@@ -140,7 +138,7 @@ static void emulated_apdu_from_guest(CCIDCardState *base,
     const uint8_t *apdu, uint32_t len)
 {
     EmulatedState *card = EMULATED_CCID_CARD(base);
-    EmulEvent *event = g_malloc(sizeof(EmulEvent) + len);
+    EmulEvent *event = (EmulEvent *)g_malloc(sizeof(EmulEvent) + len);
 
     assert(event);
     event->p.data.type = EMUL_GUEST_APDU;
@@ -245,34 +243,34 @@ static void *handle_apdu_thread(void* arg)
             card->quit_apdu_thread = 0; /* debugging */
             break;
         }
-        WITH_QEMU_LOCK_GUARD(&card->vreader_mutex) {
-            while (!QSIMPLEQ_EMPTY(&card->guest_apdu_list)) {
-                event = QSIMPLEQ_FIRST(&card->guest_apdu_list);
-                assert((unsigned long)event > 1000);
-                QSIMPLEQ_REMOVE_HEAD(&card->guest_apdu_list, entry);
-                if (event->p.data.type != EMUL_GUEST_APDU) {
-                    DPRINTF(card, 1, "unexpected message in handle_apdu_thread\n");
-                    g_free(event);
-                    continue;
-                }
-                if (card->reader == NULL) {
-                    DPRINTF(card, 1, "reader is NULL\n");
-                    g_free(event);
-                    continue;
-                }
-                recv_len = sizeof(recv_data);
-                reader_status = vreader_xfr_bytes(card->reader,
-                        event->p.data.data, event->p.data.len,
-                        recv_data, &recv_len);
-                DPRINTF(card, 2, "got back apdu of length %d\n", recv_len);
-                if (reader_status == VREADER_OK) {
-                    emulated_push_response_apdu(card, recv_data, recv_len);
-                } else {
-                    emulated_push_error(card, reader_status);
-                }
+        qemu_mutex_lock(&card->vreader_mutex);
+        while (!QSIMPLEQ_EMPTY(&card->guest_apdu_list)) {
+            event = QSIMPLEQ_FIRST(&card->guest_apdu_list);
+            assert((unsigned long)event > 1000);
+            QSIMPLEQ_REMOVE_HEAD(&card->guest_apdu_list, entry);
+            if (event->p.data.type != EMUL_GUEST_APDU) {
+                DPRINTF(card, 1, "unexpected message in handle_apdu_thread\n");
                 g_free(event);
+                continue;
             }
+            if (card->reader == NULL) {
+                DPRINTF(card, 1, "reader is NULL\n");
+                g_free(event);
+                continue;
+            }
+            recv_len = sizeof(recv_data);
+            reader_status = vreader_xfr_bytes(card->reader,
+                    event->p.data.data, event->p.data.len,
+                    recv_data, &recv_len);
+            DPRINTF(card, 2, "got back apdu of length %d\n", recv_len);
+            if (reader_status == VREADER_OK) {
+                emulated_push_response_apdu(card, recv_data, recv_len);
+            } else {
+                emulated_push_error(card, reader_status);
+            }
+            g_free(event);
         }
+        qemu_mutex_unlock(&card->vreader_mutex);
     }
     return NULL;
 }
@@ -301,7 +299,7 @@ static void *event_thread(void *arg)
             } else {
                 if (event->reader != card->reader) {
                     fprintf(stderr,
-                        "ERROR: wrong reader: quitting event_thread\n");
+                        "ERROR: wrong reader: quiting event_thread\n");
                     break;
                 }
             }
@@ -352,6 +350,7 @@ static void *event_thread(void *arg)
         case VEVENT_LAST: /* quit */
             vevent_delete(event);
             return NULL;
+            break;
         default:
             break;
         }
@@ -366,7 +365,7 @@ static void card_event_handler(EventNotifier *notifier)
     EmulEvent *event, *next;
 
     event_notifier_test_and_clear(&card->notifier);
-    QEMU_LOCK_GUARD(&card->event_list_mutex);
+    qemu_mutex_lock(&card->event_list_mutex);
     QSIMPLEQ_FOREACH_SAFE(event, &card->event_list, entry, next) {
         DPRINTF(card, 2, "event %s\n", emul_event_to_string(event->p.gen.type));
         switch (event->p.gen.type) {
@@ -399,6 +398,7 @@ static void card_event_handler(EventNotifier *notifier)
         g_free(event);
     }
     QSIMPLEQ_INIT(&card->event_list);
+    qemu_mutex_unlock(&card->event_list_mutex);
 }
 
 static int init_event_notifier(EmulatedState *card, Error **errp)
@@ -612,8 +612,6 @@ static const TypeInfo emulated_card_info = {
     .instance_size = sizeof(EmulatedState),
     .class_init    = emulated_class_initfn,
 };
-module_obj(TYPE_EMULATED_CCID);
-module_kconfig(USB);
 
 static void ccid_card_emulated_register_types(void)
 {

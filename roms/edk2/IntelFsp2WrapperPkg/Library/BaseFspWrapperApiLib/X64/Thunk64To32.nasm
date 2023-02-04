@@ -43,7 +43,7 @@ ASM_PFX(AsmExecute32BitCode):
     cli
 
     ;
-    ; save original GDTR and CS
+    ; save orignal GDTR and CS
     ;
     mov     rax, ds
     push    rax
@@ -190,7 +190,7 @@ ReloadCS:
     pop     rdi
     popfq
     ;
-    ; Switch to original GDT and CS. here rsp is pointer to the original GDT descriptor.
+    ; Switch to orignal GDT and CS. here rsp is pointer to the orignal GDT descriptor.
     ;
     lgdt    [rsp]
     ;
@@ -198,7 +198,7 @@ ReloadCS:
     ;
     add     rsp, 0x10
     ;
-    ; switch to original CS and GDTR
+    ; switch to orignal CS and GDTR
     ;
     pop     r9                 ; get  CS
     shl     r9,  32            ; rcx[32..47] <- Cs

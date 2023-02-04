@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Reads the current Local Descriptor Table Register(LDTR) selector.
 
@@ -25,3 +28,4 @@ AsmReadLdtr (
     sldt    ax
   }
 }
+

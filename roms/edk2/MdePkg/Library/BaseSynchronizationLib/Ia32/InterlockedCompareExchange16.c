@@ -7,6 +7,9 @@
 
 **/
 
+
+
+
 /**
   Performs an atomic compare exchange operation on a 16-bit unsigned integer.
 
@@ -27,9 +30,9 @@
 UINT16
 EFIAPI
 InternalSyncCompareExchange16 (
-  IN      volatile UINT16  *Value,
-  IN      UINT16           CompareValue,
-  IN      UINT16           ExchangeValue
+  IN      volatile UINT16           *Value,
+  IN      UINT16                    CompareValue,
+  IN      UINT16                    ExchangeValue
   )
 {
   _asm {
@@ -39,3 +42,4 @@ InternalSyncCompareExchange16 (
     lock    cmpxchg [ecx], dx
   }
 }
+

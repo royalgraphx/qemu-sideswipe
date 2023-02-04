@@ -9,7 +9,7 @@
 
 #include "UefiLibInternal.h"
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_GRAPHICS_OUTPUT_BLT_PIXEL  mEfiColors[16] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_GRAPHICS_OUTPUT_BLT_PIXEL mEfiColors[16] = {
   { 0x00, 0x00, 0x00, 0x00 },
   { 0x98, 0x00, 0x00, 0x00 },
   { 0x00, 0x98, 0x00, 0x00 },
@@ -59,17 +59,17 @@ InternalPrint (
   UINTN       BufferSize;
 
   ASSERT (Format != NULL);
-  ASSERT (((UINTN)Format & BIT0) == 0);
+  ASSERT (((UINTN) Format & BIT0) == 0);
   ASSERT (Console != NULL);
 
   BufferSize = (PcdGet32 (PcdUefiLibMaxPrintBufferSize) + 1) * sizeof (CHAR16);
 
-  Buffer = (CHAR16 *)AllocatePool (BufferSize);
+  Buffer = (CHAR16 *) AllocatePool(BufferSize);
   ASSERT (Buffer != NULL);
 
   Return = UnicodeVSPrint (Buffer, BufferSize, Format, Marker);
 
-  if ((Console != NULL) && (Return > 0)) {
+  if (Console != NULL && Return > 0) {
     //
     // To be extra safe make sure Console has been initialized
     //
@@ -111,8 +111,8 @@ Print (
   ...
   )
 {
-  VA_LIST  Marker;
-  UINTN    Return;
+  VA_LIST Marker;
+  UINTN   Return;
 
   VA_START (Marker, Format);
 
@@ -150,17 +150,18 @@ ErrorPrint (
   ...
   )
 {
-  VA_LIST  Marker;
-  UINTN    Return;
+  VA_LIST Marker;
+  UINTN   Return;
 
   VA_START (Marker, Format);
 
-  Return = InternalPrint (Format, gST->StdErr, Marker);
+  Return = InternalPrint( Format, gST->StdErr, Marker);
 
   VA_END (Marker);
 
   return Return;
 }
+
 
 /**
   Internal function which prints a formatted ASCII string to the console output device
@@ -198,7 +199,7 @@ AsciiInternalPrint (
 
   BufferSize = (PcdGet32 (PcdUefiLibMaxPrintBufferSize) + 1) * sizeof (CHAR16);
 
-  Buffer = (CHAR16 *)AllocatePool (BufferSize);
+  Buffer = (CHAR16 *) AllocatePool(BufferSize);
   ASSERT (Buffer != NULL);
 
   Return = UnicodeVSPrintAsciiFormat (Buffer, BufferSize, Format, Marker);
@@ -244,14 +245,13 @@ AsciiPrint (
   ...
   )
 {
-  VA_LIST  Marker;
-  UINTN    Return;
-
+  VA_LIST Marker;
+  UINTN   Return;
   ASSERT (Format != NULL);
 
   VA_START (Marker, Format);
 
-  Return = AsciiInternalPrint (Format, gST->ConOut, Marker);
+  Return = AsciiInternalPrint( Format, gST->ConOut, Marker);
 
   VA_END (Marker);
 
@@ -284,14 +284,14 @@ AsciiErrorPrint (
   ...
   )
 {
-  VA_LIST  Marker;
-  UINTN    Return;
+  VA_LIST Marker;
+  UINTN   Return;
 
   ASSERT (Format != NULL);
 
   VA_START (Marker, Format);
 
-  Return = AsciiInternalPrint (Format, gST->StdErr, Marker);
+  Return = AsciiInternalPrint( Format, gST->StdErr, Marker);
 
   VA_END (Marker);
 
@@ -333,45 +333,45 @@ AsciiErrorPrint (
 **/
 UINTN
 InternalPrintGraphic (
-  IN UINTN                          PointX,
-  IN UINTN                          PointY,
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *Foreground,
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *Background,
-  IN CHAR16                         *Buffer,
-  IN UINTN                          PrintNum
+  IN UINTN                            PointX,
+  IN UINTN                            PointY,
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL    *Foreground,
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL    *Background,
+  IN CHAR16                           *Buffer,
+  IN UINTN                            PrintNum
   )
 {
-  EFI_STATUS                       Status;
-  UINT32                           HorizontalResolution;
-  UINT32                           VerticalResolution;
-  UINT32                           ColorDepth;
-  UINT32                           RefreshRate;
-  EFI_HII_FONT_PROTOCOL            *HiiFont;
-  EFI_IMAGE_OUTPUT                 *Blt;
-  EFI_FONT_DISPLAY_INFO            FontInfo;
-  EFI_HII_ROW_INFO                 *RowInfoArray;
-  UINTN                            RowInfoArraySize;
-  EFI_GRAPHICS_OUTPUT_PROTOCOL     *GraphicsOutput;
-  EFI_UGA_DRAW_PROTOCOL            *UgaDraw;
-  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL  *Sto;
-  EFI_HANDLE                       ConsoleHandle;
-  UINTN                            Width;
-  UINTN                            Height;
-  UINTN                            Delta;
+  EFI_STATUS                          Status;
+  UINT32                              HorizontalResolution;
+  UINT32                              VerticalResolution;
+  UINT32                              ColorDepth;
+  UINT32                              RefreshRate;
+  EFI_HII_FONT_PROTOCOL               *HiiFont;
+  EFI_IMAGE_OUTPUT                    *Blt;
+  EFI_FONT_DISPLAY_INFO               FontInfo;
+  EFI_HII_ROW_INFO                    *RowInfoArray;
+  UINTN                               RowInfoArraySize;
+  EFI_GRAPHICS_OUTPUT_PROTOCOL        *GraphicsOutput;
+  EFI_UGA_DRAW_PROTOCOL               *UgaDraw;
+  EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL     *Sto;
+  EFI_HANDLE                          ConsoleHandle;
+  UINTN                               Width;
+  UINTN                               Height;
+  UINTN                               Delta;
 
-  HorizontalResolution = 0;
-  VerticalResolution   = 0;
-  Blt                  = NULL;
-  RowInfoArray         = NULL;
+  HorizontalResolution  = 0;
+  VerticalResolution    = 0;
+  Blt                   = NULL;
+  RowInfoArray          = NULL;
 
   ConsoleHandle = gST->ConsoleOutHandle;
 
-  ASSERT (ConsoleHandle != NULL);
+  ASSERT( ConsoleHandle != NULL);
 
   Status = gBS->HandleProtocol (
                   ConsoleHandle,
                   &gEfiGraphicsOutputProtocolGuid,
-                  (VOID **)&GraphicsOutput
+                  (VOID **) &GraphicsOutput
                   );
 
   UgaDraw = NULL;
@@ -384,10 +384,9 @@ InternalPrintGraphic (
     Status = gBS->HandleProtocol (
                     ConsoleHandle,
                     &gEfiUgaDrawProtocolGuid,
-                    (VOID **)&UgaDraw
+                    (VOID **) &UgaDraw
                     );
   }
-
   if (EFI_ERROR (Status)) {
     goto Error;
   }
@@ -395,7 +394,7 @@ InternalPrintGraphic (
   Status = gBS->HandleProtocol (
                   ConsoleHandle,
                   &gEfiSimpleTextOutProtocolGuid,
-                  (VOID **)&Sto
+                  (VOID **) &Sto
                   );
 
   if (EFI_ERROR (Status)) {
@@ -404,25 +403,25 @@ InternalPrintGraphic (
 
   if (GraphicsOutput != NULL) {
     HorizontalResolution = GraphicsOutput->Mode->Info->HorizontalResolution;
-    VerticalResolution   = GraphicsOutput->Mode->Info->VerticalResolution;
-  } else if ((UgaDraw != NULL) && FeaturePcdGet (PcdUgaConsumeSupport)) {
+    VerticalResolution = GraphicsOutput->Mode->Info->VerticalResolution;
+  } else if (UgaDraw != NULL && FeaturePcdGet (PcdUgaConsumeSupport)) {
     UgaDraw->GetMode (UgaDraw, &HorizontalResolution, &VerticalResolution, &ColorDepth, &RefreshRate);
   } else {
     goto Error;
   }
 
-  ASSERT ((HorizontalResolution != 0) && (VerticalResolution != 0));
+  ASSERT ((HorizontalResolution != 0) && (VerticalResolution !=0));
 
-  Status = gBS->LocateProtocol (&gEfiHiiFontProtocolGuid, NULL, (VOID **)&HiiFont);
+  Status = gBS->LocateProtocol (&gEfiHiiFontProtocolGuid, NULL, (VOID **) &HiiFont);
   if (EFI_ERROR (Status)) {
     goto Error;
   }
 
-  Blt = (EFI_IMAGE_OUTPUT *)AllocateZeroPool (sizeof (EFI_IMAGE_OUTPUT));
+  Blt = (EFI_IMAGE_OUTPUT *) AllocateZeroPool (sizeof (EFI_IMAGE_OUTPUT));
   ASSERT (Blt != NULL);
 
-  Blt->Width  = (UINT16)(HorizontalResolution);
-  Blt->Height = (UINT16)(VerticalResolution);
+  Blt->Width        = (UINT16) (HorizontalResolution);
+  Blt->Height       = (UINT16) (VerticalResolution);
 
   ZeroMem (&FontInfo, sizeof (EFI_FONT_DISPLAY_INFO));
 
@@ -435,7 +434,6 @@ InternalPrintGraphic (
       sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL)
       );
   }
-
   if (Background != NULL) {
     CopyMem (&FontInfo.BackgroundColor, Background, sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL));
   } else {
@@ -450,24 +448,25 @@ InternalPrintGraphic (
     Blt->Image.Screen = GraphicsOutput;
 
     Status = HiiFont->StringToImage (
-                        HiiFont,
-                        EFI_HII_IGNORE_IF_NO_GLYPH | EFI_HII_OUT_FLAG_CLIP |
-                        EFI_HII_OUT_FLAG_CLIP_CLEAN_X | EFI_HII_OUT_FLAG_CLIP_CLEAN_Y |
-                        EFI_HII_IGNORE_LINE_BREAK | EFI_HII_DIRECT_TO_SCREEN,
-                        Buffer,
-                        &FontInfo,
-                        &Blt,
-                        PointX,
-                        PointY,
-                        &RowInfoArray,
-                        &RowInfoArraySize,
-                        NULL
-                        );
+                         HiiFont,
+                         EFI_HII_IGNORE_IF_NO_GLYPH | EFI_HII_OUT_FLAG_CLIP |
+                         EFI_HII_OUT_FLAG_CLIP_CLEAN_X | EFI_HII_OUT_FLAG_CLIP_CLEAN_Y |
+                         EFI_HII_IGNORE_LINE_BREAK | EFI_HII_DIRECT_TO_SCREEN,
+                         Buffer,
+                         &FontInfo,
+                         &Blt,
+                         PointX,
+                         PointY,
+                         &RowInfoArray,
+                         &RowInfoArraySize,
+                         NULL
+                         );
     if (EFI_ERROR (Status)) {
       goto Error;
     }
+
   } else if (FeaturePcdGet (PcdUgaConsumeSupport)) {
-    ASSERT (UgaDraw != NULL);
+    ASSERT (UgaDraw!= NULL);
 
     //
     // Ensure Width * Height * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL) doesn't overflow.
@@ -476,7 +475,7 @@ InternalPrintGraphic (
       goto Error;
     }
 
-    Blt->Image.Bitmap = AllocateZeroPool ((UINT32)Blt->Width * Blt->Height * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL));
+    Blt->Image.Bitmap = AllocateZeroPool ((UINT32) Blt->Width * Blt->Height * sizeof (EFI_GRAPHICS_OUTPUT_BLT_PIXEL));
     ASSERT (Blt->Image.Bitmap != NULL);
 
     //
@@ -484,19 +483,19 @@ InternalPrintGraphic (
     //  we ask StringToImage to print the string to blt buffer, then blt to device using UgaDraw.
     //
     Status = HiiFont->StringToImage (
-                        HiiFont,
-                        EFI_HII_IGNORE_IF_NO_GLYPH | EFI_HII_OUT_FLAG_CLIP |
-                        EFI_HII_OUT_FLAG_CLIP_CLEAN_X | EFI_HII_OUT_FLAG_CLIP_CLEAN_Y |
-                        EFI_HII_IGNORE_LINE_BREAK,
-                        Buffer,
-                        &FontInfo,
-                        &Blt,
-                        PointX,
-                        PointY,
-                        &RowInfoArray,
-                        &RowInfoArraySize,
-                        NULL
-                        );
+                         HiiFont,
+                         EFI_HII_IGNORE_IF_NO_GLYPH | EFI_HII_OUT_FLAG_CLIP |
+                         EFI_HII_OUT_FLAG_CLIP_CLEAN_X | EFI_HII_OUT_FLAG_CLIP_CLEAN_Y |
+                         EFI_HII_IGNORE_LINE_BREAK,
+                         Buffer,
+                         &FontInfo,
+                         &Blt,
+                         PointX,
+                         PointY,
+                         &RowInfoArray,
+                         &RowInfoArraySize,
+                         NULL
+                         );
 
     if (!EFI_ERROR (Status)) {
       ASSERT (RowInfoArray != NULL);
@@ -515,10 +514,9 @@ InternalPrintGraphic (
         Height = 0;
         Delta  = 0;
       }
-
       Status = UgaDraw->Blt (
                           UgaDraw,
-                          (EFI_UGA_PIXEL *)Blt->Image.Bitmap,
+                          (EFI_UGA_PIXEL *) Blt->Image.Bitmap,
                           EfiUgaBltBufferToVideo,
                           PointX,
                           PointY,
@@ -531,12 +529,10 @@ InternalPrintGraphic (
     } else {
       goto Error;
     }
-
     FreePool (Blt->Image.Bitmap);
   } else {
     goto Error;
   }
-
   //
   // Calculate the number of actual printed characters
   //
@@ -554,7 +550,6 @@ Error:
   if (Blt != NULL) {
     FreePool (Blt);
   }
-
   return 0;
 }
 
@@ -603,28 +598,28 @@ Error:
 UINTN
 EFIAPI
 PrintXY (
-  IN UINTN                          PointX,
-  IN UINTN                          PointY,
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *ForeGround  OPTIONAL,
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *BackGround  OPTIONAL,
-  IN CONST CHAR16                   *Format,
+  IN UINTN                            PointX,
+  IN UINTN                            PointY,
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL    *ForeGround, OPTIONAL
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL    *BackGround, OPTIONAL
+  IN CONST CHAR16                     *Format,
   ...
   )
 {
-  VA_LIST  Marker;
-  CHAR16   *Buffer;
-  UINTN    BufferSize;
-  UINTN    PrintNum;
-  UINTN    ReturnNum;
+  VA_LIST                             Marker;
+  CHAR16                              *Buffer;
+  UINTN                               BufferSize;
+  UINTN                               PrintNum;
+  UINTN                               ReturnNum;
 
   ASSERT (Format != NULL);
-  ASSERT (((UINTN)Format & BIT0) == 0);
+  ASSERT (((UINTN) Format & BIT0) == 0);
 
   VA_START (Marker, Format);
 
   BufferSize = (PcdGet32 (PcdUefiLibMaxPrintBufferSize) + 1) * sizeof (CHAR16);
 
-  Buffer = (CHAR16 *)AllocatePool (BufferSize);
+  Buffer = (CHAR16 *) AllocatePool (BufferSize);
   ASSERT (Buffer != NULL);
 
   PrintNum = UnicodeVSPrint (Buffer, BufferSize, Format, Marker);
@@ -682,19 +677,19 @@ PrintXY (
 UINTN
 EFIAPI
 AsciiPrintXY (
-  IN UINTN                          PointX,
-  IN UINTN                          PointY,
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *ForeGround  OPTIONAL,
-  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL  *BackGround  OPTIONAL,
-  IN CONST CHAR8                    *Format,
+  IN UINTN                            PointX,
+  IN UINTN                            PointY,
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL    *ForeGround, OPTIONAL
+  IN EFI_GRAPHICS_OUTPUT_BLT_PIXEL    *BackGround, OPTIONAL
+  IN CONST CHAR8                      *Format,
   ...
   )
 {
-  VA_LIST  Marker;
-  CHAR16   *Buffer;
-  UINTN    BufferSize;
-  UINTN    PrintNum;
-  UINTN    ReturnNum;
+  VA_LIST                             Marker;
+  CHAR16                              *Buffer;
+  UINTN                               BufferSize;
+  UINTN                               PrintNum;
+  UINTN                               ReturnNum;
 
   ASSERT (Format != NULL);
 
@@ -702,7 +697,7 @@ AsciiPrintXY (
 
   BufferSize = (PcdGet32 (PcdUefiLibMaxPrintBufferSize) + 1) * sizeof (CHAR16);
 
-  Buffer = (CHAR16 *)AllocatePool (BufferSize);
+  Buffer = (CHAR16 *) AllocatePool (BufferSize);
   ASSERT (Buffer != NULL);
 
   PrintNum = UnicodeSPrintAsciiFormat (Buffer, BufferSize, Format, Marker);
@@ -737,30 +732,30 @@ AsciiPrintXY (
   @return         Null-terminated Unicode string is that is the formatted
                   string appended to String.
 **/
-CHAR16 *
+CHAR16*
 EFIAPI
 CatVSPrint (
-  IN  CHAR16        *String  OPTIONAL,
+  IN  CHAR16  *String, OPTIONAL
   IN  CONST CHAR16  *FormatString,
   IN  VA_LIST       Marker
   )
 {
-  UINTN    CharactersRequired;
-  UINTN    SizeRequired;
-  CHAR16   *BufferToReturn;
-  VA_LIST  ExtraMarker;
+  UINTN   CharactersRequired;
+  UINTN   SizeRequired;
+  CHAR16  *BufferToReturn;
+  VA_LIST ExtraMarker;
 
   VA_COPY (ExtraMarker, Marker);
-  CharactersRequired = SPrintLength (FormatString, ExtraMarker);
+  CharactersRequired = SPrintLength(FormatString, ExtraMarker);
   VA_END (ExtraMarker);
 
   if (String != NULL) {
-    SizeRequired = StrSize (String) + (CharactersRequired * sizeof (CHAR16));
+    SizeRequired = StrSize(String) + (CharactersRequired * sizeof(CHAR16));
   } else {
-    SizeRequired = sizeof (CHAR16) + (CharactersRequired * sizeof (CHAR16));
+    SizeRequired = sizeof(CHAR16) + (CharactersRequired * sizeof(CHAR16));
   }
 
-  BufferToReturn = AllocatePool (SizeRequired);
+  BufferToReturn = AllocatePool(SizeRequired);
 
   if (BufferToReturn == NULL) {
     return NULL;
@@ -769,12 +764,12 @@ CatVSPrint (
   }
 
   if (String != NULL) {
-    StrCpyS (BufferToReturn, SizeRequired / sizeof (CHAR16), String);
+    StrCpyS(BufferToReturn, SizeRequired / sizeof(CHAR16), String);
   }
 
-  UnicodeVSPrint (BufferToReturn + StrLen (BufferToReturn), (CharactersRequired+1) * sizeof (CHAR16), FormatString, Marker);
+  UnicodeVSPrint(BufferToReturn + StrLen(BufferToReturn), (CharactersRequired+1) * sizeof(CHAR16), FormatString, Marker);
 
-  ASSERT (StrSize (BufferToReturn) == SizeRequired);
+  ASSERT(StrSize(BufferToReturn)==SizeRequired);
 
   return (BufferToReturn);
 }
@@ -805,16 +800,17 @@ CatVSPrint (
 CHAR16 *
 EFIAPI
 CatSPrint (
-  IN  CHAR16        *String  OPTIONAL,
+  IN  CHAR16  *String, OPTIONAL
   IN  CONST CHAR16  *FormatString,
   ...
   )
 {
-  VA_LIST  Marker;
-  CHAR16   *NewString;
+  VA_LIST   Marker;
+  CHAR16    *NewString;
 
   VA_START (Marker, FormatString);
-  NewString = CatVSPrint (String, FormatString, Marker);
+  NewString = CatVSPrint(String, FormatString, Marker);
   VA_END (Marker);
   return NewString;
 }
+

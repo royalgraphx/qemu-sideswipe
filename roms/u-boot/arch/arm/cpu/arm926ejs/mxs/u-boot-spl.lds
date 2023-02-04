@@ -15,7 +15,7 @@ OUTPUT_ARCH(arm)
 ENTRY(_start)
 SECTIONS
 {
-	. = IMAGE_TEXT_BASE;
+	. = CONFIG_SPL_TEXT_BASE;
 
 	. = ALIGN(4);
 	.text	:

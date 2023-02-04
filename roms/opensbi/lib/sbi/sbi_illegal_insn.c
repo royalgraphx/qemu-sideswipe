@@ -8,16 +8,13 @@
  */
 
 #include <sbi/riscv_asm.h>
-#include <sbi/riscv_barrier.h>
 #include <sbi/riscv_encoding.h>
 #include <sbi/sbi_bitops.h>
 #include <sbi/sbi_emulate_csr.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_illegal_insn.h>
-#include <sbi/sbi_pmu.h>
 #include <sbi/sbi_trap.h>
 #include <sbi/sbi_unpriv.h>
-#include <sbi/sbi_console.h>
 
 typedef int (*illegal_insn_func)(ulong insn, struct sbi_trap_regs *regs);
 
@@ -34,32 +31,24 @@ static int truly_illegal_insn(ulong insn, struct sbi_trap_regs *regs)
 	return sbi_trap_redirect(regs, &trap);
 }
 
-static int misc_mem_opcode_insn(ulong insn, struct sbi_trap_regs *regs)
-{
-	/* Errata workaround: emulate `fence.tso` as `fence rw, rw`. */
-	if ((insn & INSN_MASK_FENCE_TSO) == INSN_MATCH_FENCE_TSO) {
-		smp_mb();
-		return 0;
-	}
-
-	return truly_illegal_insn(insn, regs);
-}
-
 static int system_opcode_insn(ulong insn, struct sbi_trap_regs *regs)
 {
 	int do_write, rs1_num = (insn >> 15) & 0x1f;
 	ulong rs1_val = GET_RS1(insn, regs);
 	int csr_num   = (u32)insn >> 20;
-	ulong prev_mode = (regs->mstatus & MSTATUS_MPP) >> MSTATUS_MPP_SHIFT;
 	ulong csr_val, new_csr_val;
 
-	if (prev_mode == PRV_M) {
-		sbi_printf("%s: Failed to access CSR %#x from M-mode",
-			__func__, csr_num);
-		return SBI_EFAIL;
-	}
-
-	/* TODO: Ensure that we got CSR read/write instruction */
+	/*
+	 * WFI always traps as illegal instruction when executed from
+	 * VS/VU mode so we just forward it to HS-mode.
+	 */
+#if __riscv_xlen == 32
+	if ((regs->mstatusH & MSTATUSH_MPV) &&
+#else
+	if ((regs->mstatus & MSTATUS_MPV) &&
+#endif
+	    (insn & INSN_MASK_WFI) == INSN_MATCH_WFI)
+		return truly_illegal_insn(insn, regs);
 
 	if (sbi_emulate_csr_read(csr_num, regs, &csr_val))
 		return truly_illegal_insn(insn, regs);
@@ -100,11 +89,11 @@ static int system_opcode_insn(ulong insn, struct sbi_trap_regs *regs)
 	return 0;
 }
 
-static const illegal_insn_func illegal_insn_table[32] = {
+static illegal_insn_func illegal_insn_table[32] = {
 	truly_illegal_insn, /* 0 */
 	truly_illegal_insn, /* 1 */
 	truly_illegal_insn, /* 2 */
-	misc_mem_opcode_insn, /* 3 */
+	truly_illegal_insn, /* 3 */
 	truly_illegal_insn, /* 4 */
 	truly_illegal_insn, /* 5 */
 	truly_illegal_insn, /* 6 */
@@ -139,23 +128,13 @@ int sbi_illegal_insn_handler(ulong insn, struct sbi_trap_regs *regs)
 {
 	struct sbi_trap_info uptrap;
 
-	/*
-	 * We only deal with 32-bit (or longer) illegal instructions. If we
-	 * see instruction is zero OR instruction is 16-bit then we fetch and
-	 * check the instruction encoding using unprivilege access.
-	 *
-	 * The program counter (PC) in RISC-V world is always 2-byte aligned
-	 * so handling only 32-bit (or longer) illegal instructions also help
-	 * the case where MTVAL CSR contains instruction address for illegal
-	 * instruction trap.
-	 */
-
-	sbi_pmu_ctr_incr_fw(SBI_PMU_FW_ILLEGAL_INSN);
 	if (unlikely((insn & 3) != 3)) {
-		insn = sbi_get_insn(regs->mepc, &uptrap);
-		if (uptrap.cause) {
-			uptrap.epc = regs->mepc;
-			return sbi_trap_redirect(regs, &uptrap);
+		if (insn == 0) {
+			insn = sbi_get_insn(regs->mepc, &uptrap);
+			if (uptrap.cause) {
+				uptrap.epc = regs->mepc;
+				return sbi_trap_redirect(regs, &uptrap);
+			}
 		}
 		if ((insn & 3) != 3)
 			return truly_illegal_insn(insn, regs);

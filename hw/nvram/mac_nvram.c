@@ -25,7 +25,7 @@
 
 #include "qemu/osdep.h"
 #include "hw/nvram/chrp_nvram.h"
-#include "hw/nvram/mac_nvram.h"
+#include "hw/ppc/mac.h"
 #include "hw/qdev-properties.h"
 #include "migration/vmstate.h"
 #include "qemu/cutils.h"
@@ -141,7 +141,7 @@ static void pmac_format_nvram_partition_of(MacIONVRAMState *nvr, int off,
 
     /* OpenBIOS nvram variables partition */
     sysp_end = chrp_nvram_create_system_partition(&nvr->data[off],
-                                                  DEF_SYSTEM_SIZE, len) + off;
+                                                  DEF_SYSTEM_SIZE) + off;
 
     /* Free space partition */
     chrp_nvram_create_free_partition(&nvr->data[sysp_end], len - sysp_end);

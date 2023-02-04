@@ -32,7 +32,6 @@
 #include "qemu/bswap.h"
 #include "qemu/module.h"
 #include "qemu/log.h"
-#include "qom/object.h"
 
 /* Debug messages configuration */
 #define EXYNOS4210_FIMD_DEBUG              0
@@ -294,9 +293,10 @@ struct Exynos4210fimdWindow {
 };
 
 #define TYPE_EXYNOS4210_FIMD "exynos4210.fimd"
-OBJECT_DECLARE_SIMPLE_TYPE(Exynos4210fimdState, EXYNOS4210_FIMD)
+#define EXYNOS4210_FIMD(obj) \
+    OBJECT_CHECK(Exynos4210fimdState, (obj), TYPE_EXYNOS4210_FIMD)
 
-struct Exynos4210fimdState {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -325,7 +325,7 @@ struct Exynos4210fimdState {
     uint8_t *ifb;           /* Internal frame buffer */
     bool invalidate;        /* Image needs to be redrawn */
     bool enabled;           /* Display controller is enabled */
-};
+} Exynos4210fimdState;
 
 /* Perform byte/halfword/word swap of data according to WINCON */
 static inline void fimd_swap_data(unsigned int swap_ctl, uint64_t *data)
@@ -1275,14 +1275,12 @@ static void exynos4210_fimd_update(void *opaque)
     bool blend = false;
     uint8_t *host_fb_addr;
     bool is_dirty = false;
-    int global_width;
+    const int global_width = (s->vidtcon[2] & FIMD_VIDTCON2_SIZE_MASK) + 1;
 
     if (!s || !s->console || !s->enabled ||
         surface_bits_per_pixel(qemu_console_surface(s->console)) == 0) {
         return;
     }
-
-    global_width = (s->vidtcon[2] & FIMD_VIDTCON2_SIZE_MASK) + 1;
     exynos4210_update_resolution(s);
     surface = qemu_console_surface(s->console);
 

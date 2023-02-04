@@ -17,8 +17,8 @@
  */
 
 #include "qemu/osdep.h"
-#include "../libqtest.h"
-#include "qgraph.h"
+#include "libqtest.h"
+#include "libqos/qgraph.h"
 #include "pci.h"
 #include "qemu/module.h"
 #include "sdhci.h"

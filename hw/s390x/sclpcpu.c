@@ -17,6 +17,7 @@
 #include "hw/s390x/sclp.h"
 #include "qemu/module.h"
 #include "hw/s390x/event-facility.h"
+#include "cpu.h"
 #include "sysemu/cpus.h"
 
 typedef struct ConfigMgtData {

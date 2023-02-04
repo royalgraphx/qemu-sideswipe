@@ -1,5 +1,5 @@
 // /** @file
-// initializes MemoryOverwriteRequestControl variable
+// Initilizes MemoryOverwriteRequestControl variable
 //
 // This module will clear MOR_CLEAR_MEMORY_BIT bit if it is set.
 //

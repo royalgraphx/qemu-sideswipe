@@ -16,9 +16,8 @@
 
 #include "hw/sd/sd.h"
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
-struct BCM2835GpioState {
+typedef struct BCM2835GpioState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -32,9 +31,10 @@ struct BCM2835GpioState {
     uint32_t lev0, lev1;
     uint8_t sd_fsel;
     qemu_irq out[54];
-};
+} BCM2835GpioState;
 
 #define TYPE_BCM2835_GPIO "bcm2835_gpio"
-OBJECT_DECLARE_SIMPLE_TYPE(BCM2835GpioState, BCM2835_GPIO)
+#define BCM2835_GPIO(obj) \
+    OBJECT_CHECK(BCM2835GpioState, (obj), TYPE_BCM2835_GPIO)
 
 #endif

@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 #include "BaseLibInternals.h"
 
 /**
@@ -43,11 +46,11 @@
 VOID
 EFIAPI
 AsmEnablePaging64 (
-  IN      UINT16  Cs,
-  IN      UINT64  EntryPoint,
-  IN      UINT64  Context1   OPTIONAL,
-  IN      UINT64  Context2   OPTIONAL,
-  IN      UINT64  NewStack
+  IN      UINT16                    Cs,
+  IN      UINT64                    EntryPoint,
+  IN      UINT64                    Context1,  OPTIONAL
+  IN      UINT64                    Context2,  OPTIONAL
+  IN      UINT64                    NewStack
   )
 {
   ASSERT (EntryPoint != 0);

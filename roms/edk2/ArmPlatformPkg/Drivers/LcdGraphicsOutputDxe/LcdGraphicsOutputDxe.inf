@@ -2,7 +2,7 @@
 #
 #  Component description file for LcdGraphicsOutputDxe module
 #
-#  Copyright (c) 2011 - 2020, Arm Limited. All rights reserved.<BR>
+#  Copyright (c) 2011-2012, ARM Ltd. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -17,9 +17,8 @@
   ENTRY_POINT                    = LcdGraphicsOutputDxeInitialize
 
 [Sources.common]
-  LcdGraphicsOutputBlt.c
   LcdGraphicsOutputDxe.c
-  LcdGraphicsOutputDxe.h
+  LcdGraphicsOutputBlt.c
 
 [Packages]
   ArmPlatformPkg/ArmPlatformPkg.dec
@@ -39,7 +38,6 @@
   UefiLib
 
 [Protocols]
-  gEfiCpuArchProtocolGuid
   gEfiDevicePathProtocolGuid
   gEfiGraphicsOutputProtocolGuid
 

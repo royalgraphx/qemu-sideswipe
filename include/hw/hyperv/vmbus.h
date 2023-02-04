@@ -16,15 +16,15 @@
 #include "migration/vmstate.h"
 #include "hw/hyperv/vmbus-proto.h"
 #include "qemu/uuid.h"
-#include "qom/object.h"
 
 #define TYPE_VMBUS_DEVICE "vmbus-dev"
 
-OBJECT_DECLARE_TYPE(VMBusDevice, VMBusDeviceClass,
-                    VMBUS_DEVICE)
-
-#define TYPE_VMBUS "vmbus"
-OBJECT_DECLARE_SIMPLE_TYPE(VMBus, VMBUS)
+#define VMBUS_DEVICE(obj) \
+    OBJECT_CHECK(VMBusDevice, (obj), TYPE_VMBUS_DEVICE)
+#define VMBUS_DEVICE_CLASS(klass) \
+    OBJECT_CLASS_CHECK(VMBusDeviceClass, (klass), TYPE_VMBUS_DEVICE)
+#define VMBUS_DEVICE_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(VMBusDeviceClass, (obj), TYPE_VMBUS_DEVICE)
 
 /*
  * Object wrapping a GPADL -- GPA Descriptor List -- an array of guest physical
@@ -40,10 +40,11 @@ typedef struct VMBusChannel VMBusChannel;
  * Base class for VMBus devices.  Includes one or more channels.  Identified by
  * class GUID and instance GUID.
  */
+typedef struct VMBusDevice VMBusDevice;
 
 typedef void(*VMBusChannelNotifyCb)(struct VMBusChannel *chan);
 
-struct VMBusDeviceClass {
+typedef struct VMBusDeviceClass {
     DeviceClass parent;
 
     QemuUUID classid;
@@ -75,7 +76,7 @@ struct VMBusDeviceClass {
      * side, when there's work to do with the data in the channel ring buffers.
      */
     VMBusChannelNotifyCb chan_notify_cb;
-};
+} VMBusDeviceClass;
 
 struct VMBusDevice {
     DeviceState parent;
@@ -222,5 +223,8 @@ int vmbus_map_sgl(VMBusChanReq *req, DMADirection dir, struct iovec *iov,
  */
 void vmbus_unmap_sgl(VMBusChanReq *req, DMADirection dir, struct iovec *iov,
                      unsigned iov_cnt, size_t accessed);
+
+void vmbus_save_req(QEMUFile *f, VMBusChanReq *req);
+void *vmbus_load_req(QEMUFile *f, VMBusDevice *dev, uint32_t size);
 
 #endif

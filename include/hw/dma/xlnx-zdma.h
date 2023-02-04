@@ -32,7 +32,6 @@
 #include "hw/sysbus.h"
 #include "hw/register.h"
 #include "sysemu/dma.h"
-#include "qom/object.h"
 
 #define ZDMA_R_MAX (0x204 / 4)
 
@@ -51,12 +50,12 @@ typedef union {
     uint32_t words[4];
 } XlnxZDMADescr;
 
-struct XlnxZDMA {
+typedef struct XlnxZDMA {
     SysBusDevice parent_obj;
     MemoryRegion iomem;
     MemTxAttrs attr;
     MemoryRegion *dma_mr;
-    AddressSpace dma_as;
+    AddressSpace *dma_as;
     qemu_irq irq_zdma_ch_imr;
 
     struct {
@@ -75,10 +74,11 @@ struct XlnxZDMA {
     /* We don't model the common bufs. Must be at least 16 bytes
        to model write only mode.  */
     uint8_t buf[2048];
-};
+} XlnxZDMA;
 
 #define TYPE_XLNX_ZDMA "xlnx.zdma"
 
-OBJECT_DECLARE_SIMPLE_TYPE(XlnxZDMA, XLNX_ZDMA)
+#define XLNX_ZDMA(obj) \
+     OBJECT_CHECK(XlnxZDMA, (obj), TYPE_XLNX_ZDMA)
 
 #endif /* XLNX_ZDMA_H */

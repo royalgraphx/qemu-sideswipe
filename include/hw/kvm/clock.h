@@ -15,11 +15,11 @@
 
 #ifdef CONFIG_KVM
 
-void kvmclock_create(bool create_always);
+void kvmclock_create(void);
 
 #else /* CONFIG_KVM */
 
-static inline void kvmclock_create(bool create_always)
+static inline void kvmclock_create(void)
 {
 }
 

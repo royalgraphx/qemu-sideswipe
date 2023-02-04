@@ -1,10 +1,19 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * Given a hdata dump, output the device tree.
+/* Copyright 2013-2019 IBM Corp.
  *
- * Copyright 2013-2020 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
+/* Given a hdata dump, output the device tree. */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -38,11 +47,7 @@ struct spira_ntuple;
 static void *ntuple_addr(const struct spira_ntuple *n);
 
 /* Stuff which core expects. */
-struct cpu_thread *my_fake_cpu;
-static struct cpu_thread *this_cpu(void)
-{
-	return my_fake_cpu;
-}
+#define __this_cpu ((struct cpu_thread *)NULL)
 
 unsigned long tb_hz = 512000000;
 
@@ -63,24 +68,18 @@ unsigned long tb_hz = 512000000;
 #define PVR_TYPE_P8NVL	0x004c
 #define PVR_TYPE_P9	0x004e
 #define PVR_TYPE_P9P	0x004f
-#define PVR_TYPE_P10	0x0080
 #define PVR_P8E		0x004b0201
 #define PVR_P8		0x004d0200
 #define PVR_P8NVL	0x004c0100
 #define PVR_P9		0x004e0200
 #define PVR_P9P		0x004f0100
-#define PVR_P10		0x00800100
 
 #define SPR_PVR		0x11f	/* RO: Processor version register */
-
-#define MSR_SF		0x8000000000000000ULL
-#define MSR_HV		0x1000000000000000ULL
 
 #define __CPU_H
 struct cpu_thread {
 	uint32_t			pir;
 	uint32_t			chip_id;
-	bool				is_fused_core;
 };
 struct cpu_job *__cpu_queue_job(struct cpu_thread *cpu,
 				const char *name,
@@ -101,8 +100,6 @@ static inline struct cpu_job *cpu_queue_job(struct cpu_thread *cpu,
 
 struct cpu_thread __boot_cpu, *boot_cpu = &__boot_cpu;
 static unsigned long fake_pvr = PVR_P8;
-
-unsigned int cpu_thread_count = 8;
 
 static inline unsigned long mfspr(unsigned int spr)
 {
@@ -148,6 +145,7 @@ static bool spira_check_ptr(const void *ptr, const char *file, unsigned int line
 #include "../hdif.c"
 #include "../iohub.c"
 #include "../memory.c"
+#include "../paca.c"
 #include "../pcia.c"
 #include "../spira.c"
 #include "../vpd.c"
@@ -315,7 +313,7 @@ int main(int argc, char *argv[])
 			blobs = true;
 			opt_count++;
 		} else if (strcmp(argv[i], "-8E") == 0) {
-			fake_pvr = PVR_P8E;
+			fake_pvr = PVR_P8;
 			proc_gen = proc_gen_p8;
 			opt_count++;
 		} else if (strcmp(argv[i], "-8") == 0) {
@@ -329,10 +327,6 @@ int main(int argc, char *argv[])
 		} else if (strcmp(argv[i], "-9P") == 0) {
 			fake_pvr = PVR_P9P;
 			proc_gen = proc_gen_p9;
-			opt_count++;
-		} else if (strcmp(argv[i], "-10") == 0) {
-			fake_pvr = PVR_P10;
-			proc_gen = proc_gen_p10;
 			opt_count++;
 		}
 	}
@@ -353,17 +347,13 @@ int main(int argc, char *argv[])
 		     "  -8 Force PVR to POWER8\n"
 		     "  -8E Force PVR to POWER8E\n"
 		     "  -9 Force PVR to POWER9 (nimbus)\n"
-		     "  -9P Force PVR to POWER9P (Axone)\n"
-		     "  -10 Force PVR to POWER10\n"
 		     "\n"
-		     "When no PVR is specified -8 is assumed"
+		     "When no PVR is specified -7 is assumed"
 		     "\n"
 		     "Pipe to 'dtc -I dtb -O dts' for human readable output\n");
 	}
 
-	/* We don't have phys mapping for P8 */
-	if (proc_gen != proc_gen_p8)
-		phys_map_init(fake_pvr);
+	phys_map_init();
 
 	/* Copy in spira dump (assumes little has changed!). */
 	if (new_spira) {

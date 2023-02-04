@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw quick
 #
 # Test corner cases with unusual block geometries
 #
@@ -38,7 +37,7 @@ trap "_cleanup; exit \$status" 0 1 2 3 15
 . ./common.filter
 
 _supported_fmt qcow2
-_supported_proto file fuse
+_supported_proto file
 # This test assumes that discard leaves zero clusters; see test 177 for
 # other tests that also work in older images
 _unsupported_imgopts 'compat=0.10'

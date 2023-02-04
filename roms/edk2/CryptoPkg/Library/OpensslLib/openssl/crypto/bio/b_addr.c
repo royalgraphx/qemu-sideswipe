@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -7,14 +7,10 @@
  * https://www.openssl.org/source/license.html
  */
 
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE
-#endif
-
 #include <assert.h>
 #include <string.h>
 
-#include "bio_local.h"
+#include "bio_lcl.h"
 #include <openssl/crypto.h>
 
 #ifndef OPENSSL_NO_SOCK
@@ -26,7 +22,7 @@ CRYPTO_RWLOCK *bio_lookup_lock;
 static CRYPTO_ONCE bio_lookup_init = CRYPTO_ONCE_STATIC_INIT;
 
 /*
- * Throughout this file and bio_local.h, the existence of the macro
+ * Throughout this file and bio_lcl.h, the existence of the macro
  * AI_PASSIVE is used to detect the availability of struct addrinfo,
  * getnameinfo() and getaddrinfo().  If that macro doesn't exist,
  * we use our own implementation instead, using gethostbyname,
@@ -679,7 +675,7 @@ int BIO_lookup_ex(const char *host, const char *service, int lookup_type,
 
     if (1) {
 #ifdef AI_PASSIVE
-        int gai_ret = 0, old_ret = 0;
+        int gai_ret = 0;
         struct addrinfo hints;
 
         memset(&hints, 0, sizeof(hints));
@@ -687,22 +683,13 @@ int BIO_lookup_ex(const char *host, const char *service, int lookup_type,
         hints.ai_family = family;
         hints.ai_socktype = socktype;
         hints.ai_protocol = protocol;
-# ifdef AI_ADDRCONFIG
-#  ifdef AF_UNSPEC
-        if (family == AF_UNSPEC)
-#  endif
-            hints.ai_flags |= AI_ADDRCONFIG;
-# endif
 
         if (lookup_type == BIO_LOOKUP_SERVER)
             hints.ai_flags |= AI_PASSIVE;
 
         /* Note that |res| SHOULD be a 'struct addrinfo **' thanks to
-         * macro magic in bio_local.h
+         * macro magic in bio_lcl.h
          */
-# if defined(AI_ADDRCONFIG) && defined(AI_NUMERICHOST)
-      retry:
-# endif
         switch ((gai_ret = getaddrinfo(host, service, &hints, res))) {
 # ifdef EAI_SYSTEM
         case EAI_SYSTEM:
@@ -710,25 +697,12 @@ int BIO_lookup_ex(const char *host, const char *service, int lookup_type,
             BIOerr(BIO_F_BIO_LOOKUP_EX, ERR_R_SYS_LIB);
             break;
 # endif
-# ifdef EAI_MEMORY
-        case EAI_MEMORY:
-            BIOerr(BIO_F_BIO_LOOKUP_EX, ERR_R_MALLOC_FAILURE);
-            break;
-# endif
         case 0:
             ret = 1;             /* Success */
             break;
         default:
-# if defined(AI_ADDRCONFIG) && defined(AI_NUMERICHOST)
-            if (hints.ai_flags & AI_ADDRCONFIG) {
-                hints.ai_flags &= ~AI_ADDRCONFIG;
-                hints.ai_flags |= AI_NUMERICHOST;
-                old_ret = gai_ret;
-                goto retry;
-            }
-# endif
             BIOerr(BIO_F_BIO_LOOKUP_EX, ERR_R_SYS_LIB);
-            ERR_add_error_data(1, gai_strerror(old_ret ? old_ret : gai_ret));
+            ERR_add_error_data(1, gai_strerror(gai_ret));
             break;
         }
     } else {

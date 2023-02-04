@@ -16,7 +16,7 @@
   MODULE_TYPE                    = DXE_SMM_DRIVER
   PI_SPECIFICATION_VERSION       = 0x0001000A
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = GenericStatusCodeTraditionalEntry
+  ENTRY_POINT                    = GenericStatusCodeSmmEntry
 
 #
 # The following information is for reference only and not required by the build tools.
@@ -25,16 +25,15 @@
 #
 
 [Sources]
-  ReportStatusCodeRouterCommon.c
-  ReportStatusCodeRouterCommon.h
-  ReportStatusCodeRouterTraditional.c
+  ReportStatusCodeRouterSmm.c
+  ReportStatusCodeRouterSmm.h
 
 [Packages]
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
-  MmServicesTableLib
+  SmmServicesTableLib
   UefiDriverEntryPoint
   DebugLib
   BaseLib
@@ -42,8 +41,8 @@
   MemoryAllocationLib
 
 [Protocols]
-  gEfiMmRscHandlerProtocolGuid               ## PRODUCES
-  gEfiMmStatusCodeProtocolGuid               ## PRODUCES
+  gEfiSmmRscHandlerProtocolGuid               ## PRODUCES
+  gEfiSmmStatusCodeProtocolGuid               ## PRODUCES
 
 [Depex]
   TRUE

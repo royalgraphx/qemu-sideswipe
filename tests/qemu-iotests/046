@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto aio quick
 #
 # Test concurrent cluster allocations
 #
@@ -38,7 +37,7 @@ trap "_cleanup; exit \$status" 0 1 2 3 15
 . ./common.filter
 
 _supported_fmt qcow2
-_supported_proto file fuse
+_supported_proto file
 # data_file does not support compressed clusters
 _unsupported_imgopts data_file
 
@@ -48,8 +47,6 @@ size=128M
 echo
 echo "== creating backing file for COW tests =="
 
-TEST_IMG_SAVE=$TEST_IMG
-TEST_IMG="$TEST_IMG.base"
 _make_test_img $size
 
 backing_io()
@@ -70,7 +67,8 @@ backing_io()
 
 backing_io 0 32 write | $QEMU_IO "$TEST_IMG" | _filter_qemu_io
 
-TEST_IMG=$TEST_IMG_SAVE
+mv "$TEST_IMG" "$TEST_IMG.base"
+
 _make_test_img -b "$TEST_IMG.base" -F $IMGFMT 6G
 
 echo
@@ -187,8 +185,7 @@ EOF
 }
 
 overlay_io | $QEMU_IO blkdebug::"$TEST_IMG" | _filter_qemu_io |\
-    sed -e 's/[0-9]*\/[0-9]* bytes at offset [0-9]*/XXX\/XXX bytes at offset XXX/g' \
-        -e 's/^[0-9]* KiB/XXX KiB/g'
+	sed -e 's/bytes at offset [0-9]*/bytes at offset XXX/g'
 
 echo
 echo "== Verify image content =="

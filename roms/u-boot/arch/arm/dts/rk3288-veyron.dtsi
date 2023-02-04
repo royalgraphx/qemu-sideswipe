@@ -16,7 +16,11 @@
 
 	chosen {
 		stdout-path = &uart2;
-		u-boot,spl-boot-order = &spi_flash;
+	};
+
+	config {
+		u-boot,dm-pre-reloc;
+		u-boot,boot0 = &spi_flash;
 	};
 
 	firmware {
@@ -303,7 +307,7 @@
 
 	spi_flash: spiflash@0 {
 		u-boot,dm-pre-reloc;
-		compatible = "spidev", "jedec,spi-nor";
+		compatible = "spidev", "spi-flash";
 		spi-max-frequency = <20000000>; /* Reduce for Dediprog em100 pro */
 		reg = <0>;
 	};
@@ -480,7 +484,6 @@
 	max98090: max98090@10 {
 		compatible = "maxim,max98090";
 		reg = <0x10>;
-		#sound-dai-cells = <0>;
 		interrupt-parent = <&gpio6>;
 		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
 		pinctrl-names = "default";

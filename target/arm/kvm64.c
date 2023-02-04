@@ -16,7 +16,7 @@
 #include <linux/elf.h>
 #include <linux/kvm.h>
 
-#include "qapi/error.h"
+#include "qemu-common.h"
 #include "cpu.h"
 #include "qemu/timer.h"
 #include "qemu/error-report.h"
@@ -208,7 +208,7 @@ static int insert_hw_watchpoint(target_ulong addr,
                                 target_ulong len, int type)
 {
     HWWatchpoint wp = {
-        .wcr = R_DBGWCR_E_MASK, /* E=1, enable */
+        .wcr = 1, /* E=1, enable */
         .wvr = addr & (~0x7ULL),
         .details = { .vaddr = addr, .len = len }
     };
@@ -221,19 +221,19 @@ static int insert_hw_watchpoint(target_ulong addr,
      * HMC=0 SSC=0 PAC=3 will hit EL0 or EL1, any security state,
      * valid whether EL3 is implemented or not
      */
-    wp.wcr = FIELD_DP64(wp.wcr, DBGWCR, PAC, 3);
+    wp.wcr = deposit32(wp.wcr, 1, 2, 3);
 
     switch (type) {
     case GDB_WATCHPOINT_READ:
-        wp.wcr = FIELD_DP64(wp.wcr, DBGWCR, LSC, 1);
+        wp.wcr = deposit32(wp.wcr, 3, 2, 1);
         wp.details.flags = BP_MEM_READ;
         break;
     case GDB_WATCHPOINT_WRITE:
-        wp.wcr = FIELD_DP64(wp.wcr, DBGWCR, LSC, 2);
+        wp.wcr = deposit32(wp.wcr, 3, 2, 2);
         wp.details.flags = BP_MEM_WRITE;
         break;
     case GDB_WATCHPOINT_ACCESS:
-        wp.wcr = FIELD_DP64(wp.wcr, DBGWCR, LSC, 3);
+        wp.wcr = deposit32(wp.wcr, 3, 2, 3);
         wp.details.flags = BP_MEM_ACCESS;
         break;
     default:
@@ -252,8 +252,8 @@ static int insert_hw_watchpoint(target_ulong addr,
             int bits = ctz64(len);
 
             wp.wvr &= ~((1 << bits) - 1);
-            wp.wcr = FIELD_DP64(wp.wcr, DBGWCR, MASK, bits);
-            wp.wcr = FIELD_DP64(wp.wcr, DBGWCR, BAS, 0xff);
+            wp.wcr = deposit32(wp.wcr, 24, 4, bits);
+            wp.wcr = deposit32(wp.wcr, 5, 8, 0xff);
         } else {
             return -ENOBUFS;
         }
@@ -330,6 +330,7 @@ int kvm_arch_remove_hw_breakpoint(target_ulong addr,
     switch (type) {
     case GDB_BREAKPOINT_HW:
         return delete_hw_breakpoint(addr);
+        break;
     case GDB_WATCHPOINT_READ:
     case GDB_WATCHPOINT_WRITE:
     case GDB_WATCHPOINT_ACCESS:
@@ -397,20 +398,19 @@ static CPUWatchpoint *find_hw_watchpoint(CPUState *cpu, target_ulong addr)
     return NULL;
 }
 
-static bool kvm_arm_set_device_attr(CPUState *cs, struct kvm_device_attr *attr,
-                                    const char *name)
+static bool kvm_arm_pmu_set_attr(CPUState *cs, struct kvm_device_attr *attr)
 {
     int err;
 
     err = kvm_vcpu_ioctl(cs, KVM_HAS_DEVICE_ATTR, attr);
     if (err != 0) {
-        error_report("%s: KVM_HAS_DEVICE_ATTR: %s", name, strerror(-err));
+        error_report("PMU: KVM_HAS_DEVICE_ATTR: %s", strerror(-err));
         return false;
     }
 
     err = kvm_vcpu_ioctl(cs, KVM_SET_DEVICE_ATTR, attr);
     if (err != 0) {
-        error_report("%s: KVM_SET_DEVICE_ATTR: %s", name, strerror(-err));
+        error_report("PMU: KVM_SET_DEVICE_ATTR: %s", strerror(-err));
         return false;
     }
 
@@ -427,7 +427,7 @@ void kvm_arm_pmu_init(CPUState *cs)
     if (!ARM_CPU(cs)->has_pmu) {
         return;
     }
-    if (!kvm_arm_set_device_attr(cs, &attr, "PMU")) {
+    if (!kvm_arm_pmu_set_attr(cs, &attr)) {
         error_report("failed to init PMU");
         abort();
     }
@@ -444,25 +444,8 @@ void kvm_arm_pmu_set_irq(CPUState *cs, int irq)
     if (!ARM_CPU(cs)->has_pmu) {
         return;
     }
-    if (!kvm_arm_set_device_attr(cs, &attr, "PMU")) {
+    if (!kvm_arm_pmu_set_attr(cs, &attr)) {
         error_report("failed to set irq for PMU");
-        abort();
-    }
-}
-
-void kvm_arm_pvtime_init(CPUState *cs, uint64_t ipa)
-{
-    struct kvm_device_attr attr = {
-        .group = KVM_ARM_VCPU_PVTIME_CTRL,
-        .attr = KVM_ARM_VCPU_PVTIME_IPA,
-        .addr = (uint64_t)&ipa,
-    };
-
-    if (ARM_CPU(cs)->kvm_steal_time == ON_OFF_AUTO_OFF) {
-        return;
-    }
-    if (!kvm_arm_set_device_attr(cs, &attr, "PVTIME IPA")) {
-        error_report("failed to init PVTIME IPA");
         abort();
     }
 }
@@ -490,12 +473,6 @@ static int read_sys_reg64(int fd, uint64_t *pret, uint64_t id)
     return ioctl(fd, KVM_GET_ONE_REG, &idreg);
 }
 
-static bool kvm_arm_pauth_supported(void)
-{
-    return (kvm_check_extension(kvm_state, KVM_CAP_ARM_PTRAUTH_ADDRESS) &&
-            kvm_check_extension(kvm_state, KVM_CAP_ARM_PTRAUTH_GENERIC));
-}
-
 bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf)
 {
     /* Identify the feature bits corresponding to the host CPU, and
@@ -505,8 +482,8 @@ bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf)
      */
     int fdarray[3];
     bool sve_supported;
-    bool pmu_supported = false;
     uint64_t features = 0;
+    uint64_t t;
     int err;
 
     /* Old kernels may not know about the PREFERRED_TARGET ioctl: however
@@ -525,29 +502,6 @@ bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf)
      * to use the preferred target
      */
     struct kvm_vcpu_init init = { .target = -1, };
-
-    /*
-     * Ask for SVE if supported, so that we can query ID_AA64ZFR0,
-     * which is otherwise RAZ.
-     */
-    sve_supported = kvm_arm_sve_supported();
-    if (sve_supported) {
-        init.features[0] |= 1 << KVM_ARM_VCPU_SVE;
-    }
-
-    /*
-     * Ask for Pointer Authentication if supported, so that we get
-     * the unsanitized field values for AA64ISAR1_EL1.
-     */
-    if (kvm_arm_pauth_supported()) {
-        init.features[0] |= (1 << KVM_ARM_VCPU_PTRAUTH_ADDRESS |
-                             1 << KVM_ARM_VCPU_PTRAUTH_GENERIC);
-    }
-
-    if (kvm_arm_pmu_supported()) {
-        init.features[0] |= 1 << KVM_ARM_VCPU_PMU_V3;
-        pmu_supported = true;
-    }
 
     if (!kvm_arm_create_scratch_host_vcpu(cpus_to_try, fdarray, &init)) {
         return false;
@@ -580,8 +534,6 @@ bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf)
     } else {
         err |= read_sys_reg64(fdarray[2], &ahcf->isar.id_aa64pfr1,
                               ARM64_SYS_REG(3, 0, 0, 4, 1));
-        err |= read_sys_reg64(fdarray[2], &ahcf->isar.id_aa64smfr0,
-                              ARM64_SYS_REG(3, 0, 0, 4, 5));
         err |= read_sys_reg64(fdarray[2], &ahcf->isar.id_aa64dfr0,
                               ARM64_SYS_REG(3, 0, 0, 5, 0));
         err |= read_sys_reg64(fdarray[2], &ahcf->isar.id_aa64dfr1,
@@ -604,10 +556,6 @@ bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf)
          * than skipping the reads and leaving 0, as we must avoid
          * considering the values in every case.
          */
-        err |= read_sys_reg32(fdarray[2], &ahcf->isar.id_pfr0,
-                              ARM64_SYS_REG(3, 0, 0, 1, 0));
-        err |= read_sys_reg32(fdarray[2], &ahcf->isar.id_pfr1,
-                              ARM64_SYS_REG(3, 0, 0, 1, 1));
         err |= read_sys_reg32(fdarray[2], &ahcf->isar.id_dfr0,
                               ARM64_SYS_REG(3, 0, 0, 1, 2));
         err |= read_sys_reg32(fdarray[2], &ahcf->isar.id_mmfr0,
@@ -641,12 +589,6 @@ bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf)
                               ARM64_SYS_REG(3, 0, 0, 3, 1));
         err |= read_sys_reg32(fdarray[2], &ahcf->isar.mvfr2,
                               ARM64_SYS_REG(3, 0, 0, 3, 2));
-        err |= read_sys_reg32(fdarray[2], &ahcf->isar.id_pfr2,
-                              ARM64_SYS_REG(3, 0, 0, 3, 4));
-        err |= read_sys_reg32(fdarray[2], &ahcf->isar.id_dfr1,
-                              ARM64_SYS_REG(3, 0, 0, 3, 5));
-        err |= read_sys_reg32(fdarray[2], &ahcf->isar.id_mmfr5,
-                              ARM64_SYS_REG(3, 0, 0, 3, 6));
 
         /*
          * DBGDIDR is a bit complicated because the kernel doesn't
@@ -677,30 +619,21 @@ bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf)
             dbgdidr |= (1 << 15); /* RES1 bit */
             ahcf->isar.dbgdidr = dbgdidr;
         }
-
-        if (pmu_supported) {
-            /* PMCR_EL0 is only accessible if the vCPU has feature PMU_V3 */
-            err |= read_sys_reg64(fdarray[2], &ahcf->isar.reset_pmcr_el0,
-                                  ARM64_SYS_REG(3, 3, 9, 12, 0));
-        }
-
-        if (sve_supported) {
-            /*
-             * There is a range of kernels between kernel commit 73433762fcae
-             * and f81cb2c3ad41 which have a bug where the kernel doesn't
-             * expose SYS_ID_AA64ZFR0_EL1 via the ONE_REG API unless the VM has
-             * enabled SVE support, which resulted in an error rather than RAZ.
-             * So only read the register if we set KVM_ARM_VCPU_SVE above.
-             */
-            err |= read_sys_reg64(fdarray[2], &ahcf->isar.id_aa64zfr0,
-                                  ARM64_SYS_REG(3, 0, 0, 4, 4));
-        }
     }
+
+    sve_supported = ioctl(fdarray[0], KVM_CHECK_EXTENSION, KVM_CAP_ARM_SVE) > 0;
 
     kvm_arm_destroy_scratch_host_vcpu(fdarray);
 
     if (err < 0) {
         return false;
+    }
+
+    /* Add feature bits that can't appear until after VCPU init. */
+    if (sve_supported) {
+        t = ahcf->isar.id_aa64pfr0;
+        t = FIELD_DP64(t, ID_AA64PFR0, SVE, 1);
+        ahcf->isar.id_aa64pfr0 = t;
     }
 
     /*
@@ -719,36 +652,6 @@ bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf)
     return true;
 }
 
-void kvm_arm_steal_time_finalize(ARMCPU *cpu, Error **errp)
-{
-    bool has_steal_time = kvm_arm_steal_time_supported();
-
-    if (cpu->kvm_steal_time == ON_OFF_AUTO_AUTO) {
-        if (!has_steal_time || !arm_feature(&cpu->env, ARM_FEATURE_AARCH64)) {
-            cpu->kvm_steal_time = ON_OFF_AUTO_OFF;
-        } else {
-            cpu->kvm_steal_time = ON_OFF_AUTO_ON;
-        }
-    } else if (cpu->kvm_steal_time == ON_OFF_AUTO_ON) {
-        if (!has_steal_time) {
-            error_setg(errp, "'kvm-steal-time' cannot be enabled "
-                             "on this host");
-            return;
-        } else if (!arm_feature(&cpu->env, ARM_FEATURE_AARCH64)) {
-            /*
-             * DEN0057A chapter 2 says "This specification only covers
-             * systems in which the Execution state of the hypervisor
-             * as well as EL1 of virtual machines is AArch64.". And,
-             * to ensure that, the smc/hvc calls are only specified as
-             * smc64/hvc64.
-             */
-            error_setg(errp, "'kvm-steal-time' cannot be enabled "
-                             "for AArch32 guests");
-            return;
-        }
-    }
-}
-
 bool kvm_arm_aarch32_supported(void)
 {
     return kvm_check_extension(kvm_state, KVM_CAP_ARM_EL1_32BIT);
@@ -759,20 +662,17 @@ bool kvm_arm_sve_supported(void)
     return kvm_check_extension(kvm_state, KVM_CAP_ARM_SVE);
 }
 
-bool kvm_arm_steal_time_supported(void)
-{
-    return kvm_check_extension(kvm_state, KVM_CAP_STEAL_TIME);
-}
-
 QEMU_BUILD_BUG_ON(KVM_ARM64_SVE_VQ_MIN != 1);
 
-uint32_t kvm_arm_sve_get_vls(CPUState *cs)
+void kvm_arm_sve_get_vls(CPUState *cs, unsigned long *map)
 {
     /* Only call this function if kvm_arm_sve_supported() returns true. */
     static uint64_t vls[KVM_ARM64_SVE_VLS_WORDS];
     static bool probed;
     uint32_t vq = 0;
-    int i;
+    int i, j;
+
+    bitmap_clear(map, 0, ARM_MAX_VQ);
 
     /*
      * KVM ensures all host CPUs support the same set of vector lengths.
@@ -813,23 +713,45 @@ uint32_t kvm_arm_sve_get_vls(CPUState *cs)
         if (vq > ARM_MAX_VQ) {
             warn_report("KVM supports vector lengths larger than "
                         "QEMU can enable");
-            vls[0] &= MAKE_64BIT_MASK(0, ARM_MAX_VQ);
         }
     }
 
-    return vls[0];
+    for (i = 0; i < KVM_ARM64_SVE_VLS_WORDS; ++i) {
+        if (!vls[i]) {
+            continue;
+        }
+        for (j = 1; j <= 64; ++j) {
+            vq = j + i * 64;
+            if (vq > ARM_MAX_VQ) {
+                return;
+            }
+            if (vls[i] & (1UL << (j - 1))) {
+                set_bit(vq - 1, map);
+            }
+        }
+    }
 }
 
 static int kvm_arm_sve_set_vls(CPUState *cs)
 {
-    ARMCPU *cpu = ARM_CPU(cs);
-    uint64_t vls[KVM_ARM64_SVE_VLS_WORDS] = { cpu->sve_vq.map };
+    uint64_t vls[KVM_ARM64_SVE_VLS_WORDS] = {0};
     struct kvm_one_reg reg = {
         .id = KVM_REG_ARM64_SVE_VLS,
         .addr = (uint64_t)&vls[0],
     };
+    ARMCPU *cpu = ARM_CPU(cs);
+    uint32_t vq;
+    int i, j;
 
     assert(cpu->sve_max_vq <= KVM_ARM64_SVE_VQ_MAX);
+
+    for (vq = 1; vq <= cpu->sve_max_vq; ++vq) {
+        if (test_bit(vq - 1, cpu->sve_vq_map)) {
+            i = (vq - 1) / 64;
+            j = (vq - 1) % 64;
+            vls[i] |= 1UL << j;
+        }
+    }
 
     return kvm_vcpu_ioctl(cs, KVM_SET_ONE_REG, &reg);
 }
@@ -842,7 +764,6 @@ int kvm_arch_init_vcpu(CPUState *cs)
     uint64_t mpidr;
     ARMCPU *cpu = ARM_CPU(cs);
     CPUARMState *env = &cpu->env;
-    uint64_t psciver;
 
     if (cpu->kvm_target == QEMU_KVM_ARM_TARGET_NONE ||
         !object_dynamic_cast(OBJECT(cpu), TYPE_AARCH64_CPU)) {
@@ -854,11 +775,11 @@ int kvm_arch_init_vcpu(CPUState *cs)
 
     /* Determine init features for this CPU */
     memset(cpu->kvm_init_features, 0, sizeof(cpu->kvm_init_features));
-    if (cs->start_powered_off) {
+    if (cpu->start_powered_off) {
         cpu->kvm_init_features[0] |= 1 << KVM_ARM_VCPU_POWER_OFF;
     }
     if (kvm_check_extension(cs->kvm_state, KVM_CAP_ARM_PSCI_0_2)) {
-        cpu->psci_version = QEMU_PSCI_VERSION_0_2;
+        cpu->psci_version = 2;
         cpu->kvm_init_features[0] |= 1 << KVM_ARM_VCPU_PSCI_0_2;
     }
     if (!arm_feature(&cpu->env, ARM_FEATURE_AARCH64)) {
@@ -876,10 +797,6 @@ int kvm_arch_init_vcpu(CPUState *cs)
         assert(kvm_arm_sve_supported());
         cpu->kvm_init_features[0] |= 1 << KVM_ARM_VCPU_SVE;
     }
-    if (cpu_isar_feature(aa64_pauth, cpu)) {
-        cpu->kvm_init_features[0] |= (1 << KVM_ARM_VCPU_PTRAUTH_ADDRESS |
-                                      1 << KVM_ARM_VCPU_PTRAUTH_GENERIC);
-    }
 
     /* Do KVM_ARM_VCPU_INIT ioctl */
     ret = kvm_arm_vcpu_init(cs);
@@ -896,17 +813,6 @@ int kvm_arch_init_vcpu(CPUState *cs)
         if (ret) {
             return ret;
         }
-    }
-
-    /*
-     * KVM reports the exact PSCI version it is implementing via a
-     * special sysreg. If it is present, use its contents to determine
-     * what to report to the guest in the dtb (it is the PSCI version,
-     * in the same 15-bits major 16-bits minor format that PSCI_VERSION
-     * returns).
-     */
-    if (!kvm_get_one_reg(cs, KVM_REG_ARM_PSCI_VERSION, &psciver)) {
-        cpu->psci_version = psciver;
     }
 
     /*
@@ -981,6 +887,7 @@ static void kvm_inject_arm_sea(CPUState *c)
 {
     ARMCPU *cpu = ARM_CPU(c);
     CPUARMState *env = &cpu->env;
+    CPUClass *cc = CPU_GET_CLASS(c);
     uint32_t esr;
     bool same_el;
 
@@ -996,7 +903,7 @@ static void kvm_inject_arm_sea(CPUState *c)
 
     env->exception.syndrome = esr;
 
-    arm_cpu_do_interrupt(c);
+    cc->do_interrupt(c);
 }
 
 #define AARCH64_CORE_REG(x)   (KVM_REG_ARM64 | KVM_REG_SIZE_U64 | \
@@ -1016,7 +923,7 @@ static int kvm_arch_put_fpsimd(CPUState *cs)
 
     for (i = 0; i < 32; i++) {
         uint64_t *q = aa64_vfp_qreg(env, i);
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
         uint64_t fp_val[2] = { q[1], q[0] };
         reg.addr = (uintptr_t)fp_val;
 #else
@@ -1235,7 +1142,7 @@ static int kvm_arch_get_fpsimd(CPUState *cs)
         if (ret) {
             return ret;
         } else {
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
             uint64_t t;
             t = q[0], q[0] = q[1], q[1] = t;
 #endif
@@ -1436,10 +1343,14 @@ void kvm_arch_on_sigbus_vcpu(CPUState *c, int code, void *addr)
 {
     ram_addr_t ram_addr;
     hwaddr paddr;
+    Object *obj = qdev_get_machine();
+    VirtMachineState *vms = VIRT_MACHINE(obj);
+    bool acpi_enabled = virt_is_acpi_enabled(vms);
 
     assert(code == BUS_MCEERR_AR || code == BUS_MCEERR_AO);
 
-    if (acpi_ghes_present() && addr) {
+    if (acpi_enabled && addr &&
+            object_property_get_bool(obj, "ras", NULL)) {
         ram_addr = qemu_ram_addr_from_host(addr);
         if (ram_addr != RAM_ADDR_INVALID &&
             kvm_physical_memory_addr_from_host(c->kvm_state, addr, &paddr)) {
@@ -1523,6 +1434,7 @@ bool kvm_arm_handle_debug(CPUState *cs, struct kvm_debug_exit_arch *debug_exit)
 {
     int hsr_ec = syn_get_ec(debug_exit->hsr);
     ARMCPU *cpu = ARM_CPU(cs);
+    CPUClass *cc = CPU_GET_CLASS(cs);
     CPUARMState *env = &cpu->env;
 
     /* Ensure PC is synchronised */
@@ -1576,7 +1488,7 @@ bool kvm_arm_handle_debug(CPUState *cs, struct kvm_debug_exit_arch *debug_exit)
     env->exception.vaddress = debug_exit->far;
     env->exception.target_el = 1;
     qemu_mutex_lock_iothread();
-    arm_cpu_do_interrupt(cs);
+    cc->do_interrupt(cs);
     qemu_mutex_unlock_iothread();
 
     return false;

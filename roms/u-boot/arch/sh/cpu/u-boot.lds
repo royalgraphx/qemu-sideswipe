@@ -25,7 +25,6 @@ ENTRY(_start)
 
 SECTIONS
 {
-	. = CONFIG_SYS_TEXT_BASE;
 	reloc_dst = .;
 
 	PROVIDE (_ftext = .);
@@ -76,7 +75,6 @@ SECTIONS
 
 	PROVIDE (__init_end = .);
 	PROVIDE (reloc_dst_end = .);
-	PROVIDE (_end = .);
 
 	PROVIDE (bss_start = .);
 	PROVIDE (__bss_start = .);

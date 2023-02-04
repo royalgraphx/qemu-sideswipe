@@ -13,7 +13,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/EmuThunkLib.h>
 #include <Library/BaseMemoryLib.h>
 
-EMU_THUNK_PROTOCOL  *gEmuThunk = NULL;
+EMU_THUNK_PROTOCOL   *gEmuThunk = NULL;
+
 
 /**
   The constructor function caches the pointer of EMU Thunk protocol.
@@ -31,7 +32,7 @@ DxeEmuLibConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_HOB_GUID_TYPE  *GuidHob;
+  EFI_HOB_GUID_TYPE        *GuidHob;
 
   GuidHob = GetFirstGuidHob (&gEmuThunkProtocolGuid);
   ASSERT (GuidHob != NULL);
@@ -41,6 +42,7 @@ DxeEmuLibConstructor (
 
   return EFI_SUCCESS;
 }
+
 
 /**
   Serach the EMU IO Thunk database for a matching EMU IO Thunk
@@ -60,8 +62,8 @@ GetIoThunkInstance (
   IN  UINTN     Instance
   )
 {
-  EFI_STATUS             Status;
-  EMU_IO_THUNK_PROTOCOL  *EmuIoThunk;
+  EFI_STATUS              Status;
+  EMU_IO_THUNK_PROTOCOL   *EmuIoThunk;
 
   for (Status = EFI_SUCCESS, EmuIoThunk = NULL; !EFI_ERROR (Status); ) {
     Status = gEmuThunk->GetNextProtocol (FALSE, &EmuIoThunk);

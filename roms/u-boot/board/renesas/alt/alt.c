@@ -6,20 +6,13 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <env.h>
-#include <hang.h>
-#include <init.h>
 #include <malloc.h>
 #include <dm.h>
-#include <asm/global_data.h>
 #include <dm/platform_data/serial_sh.h>
-#include <env_internal.h>
+#include <environment.h>
 #include <asm/processor.h>
 #include <asm/mach-types.h>
 #include <asm/io.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
 #include <linux/errno.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/gpio.h>
@@ -35,6 +28,7 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#define CLK2MHZ(clk)	(clk / 1000 / 1000)
 void s_init(void)
 {
 	struct rcar_rwdt *rwdt = (struct rcar_rwdt *)RWDT_BASE;
@@ -99,7 +93,7 @@ int dram_init_banksize(void)
 
 /* KSZ8041RNLI */
 #define PHY_CONTROL1		0x1E
-#define PHY_LED_MODE		0xC000
+#define PHY_LED_MODE		0xC0000
 #define PHY_LED_MODE_ACK	0x4000
 int board_phy_config(struct phy_device *phydev)
 {
@@ -111,10 +105,10 @@ int board_phy_config(struct phy_device *phydev)
 	return 0;
 }
 
-void reset_cpu(void)
+void reset_cpu(ulong addr)
 {
 	struct udevice *dev;
-	const u8 pmic_bus = 7;
+	const u8 pmic_bus = 1;
 	const u8 pmic_addr = 0x58;
 	u8 data;
 	int ret;

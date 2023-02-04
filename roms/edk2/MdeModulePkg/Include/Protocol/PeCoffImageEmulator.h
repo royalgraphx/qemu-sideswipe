@@ -1,6 +1,13 @@
 /** @file
   Copyright (c) 2019, Linaro, Ltd. All rights reserved.<BR>
-  SPDX-License-Identifier: BSD-2-Clause-Patent
+
+  This program and the accompanying materials are licensed and made available
+  under the terms and conditions of the BSD License which accompanies this
+  distribution.  The full text of the license may be found at
+  http://opensource.org/licenses/bsd-license.php
+
+  THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "AS IS" BASIS,
+  WITHOUT WARRANTIES OR REPRESENTATIONS OF ANY KIND, EITHER EXPRESS OR IMPLIED.
 
 **/
 
@@ -27,7 +34,7 @@ typedef struct _EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL EDKII_PECOFF_IMAGE_EMULATOR
 **/
 typedef
 BOOLEAN
-(EFIAPI *EDKII_PECOFF_IMAGE_EMULATOR_IS_IMAGE_SUPPORTED)(
+(EFIAPI *EDKII_PECOFF_IMAGE_EMULATOR_IS_IMAGE_SUPPORTED) (
   IN  EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL    *This,
   IN  UINT16                                  ImageType,
   IN  EFI_DEVICE_PATH_PROTOCOL                *DevicePath   OPTIONAL
@@ -57,7 +64,7 @@ BOOLEAN
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EDKII_PECOFF_IMAGE_EMULATOR_REGISTER_IMAGE)(
+(EFIAPI *EDKII_PECOFF_IMAGE_EMULATOR_REGISTER_IMAGE) (
   IN      EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL    *This,
   IN      EFI_PHYSICAL_ADDRESS                    ImageBase,
   IN      UINT64                                  ImageSize,
@@ -77,12 +84,12 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EDKII_PECOFF_IMAGE_EMULATOR_UNREGISTER_IMAGE)(
+(EFIAPI *EDKII_PECOFF_IMAGE_EMULATOR_UNREGISTER_IMAGE) (
   IN  EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL    *This,
   IN  EFI_PHYSICAL_ADDRESS                    ImageBase
   );
 
-#define EDKII_PECOFF_IMAGE_EMULATOR_VERSION  0x1
+#define EDKII_PECOFF_IMAGE_EMULATOR_VERSION         0x1
 
 typedef struct _EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL {
   EDKII_PECOFF_IMAGE_EMULATOR_IS_IMAGE_SUPPORTED    IsImageSupported;
@@ -95,6 +102,6 @@ typedef struct _EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL {
   UINT16                                            MachineType;
 } EDKII_PECOFF_IMAGE_EMULATOR_PROTOCOL;
 
-extern EFI_GUID  gEdkiiPeCoffImageEmulatorProtocolGuid;
+extern EFI_GUID gEdkiiPeCoffImageEmulatorProtocolGuid;
 
 #endif

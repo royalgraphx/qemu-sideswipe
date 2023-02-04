@@ -99,7 +99,7 @@ static uint64_t amdvi_readq(AMDVIState *s, hwaddr addr)
 }
 
 /* internal write */
-static void amdvi_writeq_raw(AMDVIState *s, hwaddr addr, uint64_t val)
+static void amdvi_writeq_raw(AMDVIState *s, uint64_t val, hwaddr addr)
 {
     stq_le_p(&s->mmior[addr], val);
 }
@@ -181,7 +181,7 @@ static void amdvi_log_event(AMDVIState *s, uint64_t *evt)
     }
 
     if (dma_memory_write(&address_space_memory, s->evtlog + s->evtlog_tail,
-                         evt, AMDVI_EVENT_LEN, MEMTXATTRS_UNSPECIFIED)) {
+                         evt, AMDVI_EVENT_LEN)) {
         trace_amdvi_evntlog_fail(s->evtlog, s->evtlog_tail);
     }
 
@@ -201,18 +201,15 @@ static void amdvi_setevent_bits(uint64_t *buffer, uint64_t value, int start,
 /*
  * AMDVi event structure
  *    0:15   -> DeviceID
- *    48:63  -> event type + miscellaneous info
- *    64:127 -> related address
+ *    55:63  -> event type + miscellaneous info
+ *    63:127 -> related address
  */
 static void amdvi_encode_event(uint64_t *evt, uint16_t devid, uint64_t addr,
                                uint16_t info)
 {
-    evt[0] = 0;
-    evt[1] = 0;
-
     amdvi_setevent_bits(evt, devid, 0, 16);
-    amdvi_setevent_bits(evt, info, 48, 16);
-    amdvi_setevent_bits(evt, addr, 64, 64);
+    amdvi_setevent_bits(evt, info, 55, 8);
+    amdvi_setevent_bits(evt, addr, 63, 64);
 }
 /* log an error encountered during a page walk
  *
@@ -221,7 +218,7 @@ static void amdvi_encode_event(uint64_t *evt, uint16_t devid, uint64_t addr,
 static void amdvi_page_fault(AMDVIState *s, uint16_t devid,
                              hwaddr addr, uint16_t info)
 {
-    uint64_t evt[2];
+    uint64_t evt[4];
 
     info |= AMDVI_EVENT_IOPF_I | AMDVI_EVENT_IOPF;
     amdvi_encode_event(evt, devid, addr, info);
@@ -237,7 +234,7 @@ static void amdvi_page_fault(AMDVIState *s, uint16_t devid,
 static void amdvi_log_devtab_error(AMDVIState *s, uint16_t devid,
                                    hwaddr devtab, uint16_t info)
 {
-    uint64_t evt[2];
+    uint64_t evt[4];
 
     info |= AMDVI_EVENT_DEV_TAB_HW_ERROR;
 
@@ -251,8 +248,7 @@ static void amdvi_log_devtab_error(AMDVIState *s, uint16_t devid,
  */
 static void amdvi_log_command_error(AMDVIState *s, hwaddr addr)
 {
-    uint64_t evt[2];
-    uint16_t info = AMDVI_EVENT_COMMAND_HW_ERROR;
+    uint64_t evt[4], info = AMDVI_EVENT_COMMAND_HW_ERROR;
 
     amdvi_encode_event(evt, 0, addr, info);
     amdvi_log_event(s, evt);
@@ -265,7 +261,7 @@ static void amdvi_log_command_error(AMDVIState *s, hwaddr addr)
 static void amdvi_log_illegalcom_error(AMDVIState *s, uint16_t info,
                                        hwaddr addr)
 {
-    uint64_t evt[2];
+    uint64_t evt[4];
 
     info |= AMDVI_EVENT_ILLEGAL_COMMAND_ERROR;
     amdvi_encode_event(evt, 0, addr, info);
@@ -280,7 +276,7 @@ static void amdvi_log_illegalcom_error(AMDVIState *s, uint16_t info,
 static void amdvi_log_illegaldevtab_error(AMDVIState *s, uint16_t devid,
                                           hwaddr addr, uint16_t info)
 {
-    uint64_t evt[2];
+    uint64_t evt[4];
 
     info |= AMDVI_EVENT_ILLEGAL_DEVTAB_ENTRY;
     amdvi_encode_event(evt, devid, addr, info);
@@ -292,7 +288,7 @@ static void amdvi_log_illegaldevtab_error(AMDVIState *s, uint16_t devid,
 static void amdvi_log_pagetab_error(AMDVIState *s, uint16_t devid,
                                     hwaddr addr, uint16_t info)
 {
-    uint64_t evt[2];
+    uint64_t evt[4];
 
     info |= AMDVI_EVENT_PAGE_TAB_HW_ERROR;
     amdvi_encode_event(evt, devid, addr, info);
@@ -380,14 +376,13 @@ static void amdvi_completion_wait(AMDVIState *s, uint64_t *cmd)
     }
     if (extract64(cmd[0], 0, 1)) {
         if (dma_memory_write(&address_space_memory, addr, &data,
-                             AMDVI_COMPLETION_DATA_SIZE,
-                             MEMTXATTRS_UNSPECIFIED)) {
+            AMDVI_COMPLETION_DATA_SIZE)) {
             trace_amdvi_completion_wait_fail(addr);
         }
     }
     /* set completion interrupt */
     if (extract64(cmd[0], 1, 1)) {
-        amdvi_assign_orq(s, AMDVI_MMIO_STATUS, AMDVI_MMIO_STATUS_COMP_INT);
+        amdvi_test_mask(s, AMDVI_MMIO_STATUS, AMDVI_MMIO_STATUS_COMP_INT);
         /* generate interrupt */
         amdvi_generate_msi_interrupt(s);
     }
@@ -507,7 +502,7 @@ static void amdvi_cmdbuf_exec(AMDVIState *s)
     uint64_t cmd[2];
 
     if (dma_memory_read(&address_space_memory, s->cmdbuf + s->cmdbuf_head,
-                        cmd, AMDVI_COMMAND_SIZE, MEMTXATTRS_UNSPECIFIED)) {
+        cmd, AMDVI_COMMAND_SIZE)) {
         trace_amdvi_command_read_fail(s->cmdbuf, s->cmdbuf_head);
         amdvi_log_command_error(s, s->cmdbuf + s->cmdbuf_head);
         return;
@@ -558,7 +553,7 @@ static void amdvi_cmdbuf_run(AMDVIState *s)
         trace_amdvi_command_exec(s->cmdbuf_head, s->cmdbuf_tail, s->cmdbuf);
         amdvi_cmdbuf_exec(s);
         s->cmdbuf_head += AMDVI_COMMAND_SIZE;
-        amdvi_writeq_raw(s, AMDVI_MMIO_COMMAND_HEAD, s->cmdbuf_head);
+        amdvi_writeq_raw(s, s->cmdbuf_head, AMDVI_MMIO_COMMAND_HEAD);
 
         /* wrap head pointer */
         if (s->cmdbuf_head >= s->cmdbuf_len * AMDVI_COMMAND_SIZE) {
@@ -841,7 +836,7 @@ static bool amdvi_get_dte(AMDVIState *s, int devid, uint64_t *entry)
     uint32_t offset = devid * AMDVI_DEVTAB_ENTRY_SIZE;
 
     if (dma_memory_read(&address_space_memory, s->devtab + offset, entry,
-                        AMDVI_DEVTAB_ENTRY_SIZE, MEMTXATTRS_UNSPECIFIED)) {
+        AMDVI_DEVTAB_ENTRY_SIZE)) {
         trace_amdvi_dte_get_fail(s->devtab, offset);
         /* log error accessing dte */
         amdvi_log_devtab_error(s, devid, s->devtab + offset, 0);
@@ -865,8 +860,8 @@ static inline uint8_t get_pte_translation_mode(uint64_t pte)
 
 static inline uint64_t pte_override_page_mask(uint64_t pte)
 {
-    uint8_t page_mask = 13;
-    uint64_t addr = (pte & AMDVI_DEV_PT_ROOT_MASK) >> 12;
+    uint8_t page_mask = 12;
+    uint64_t addr = (pte & AMDVI_DEV_PT_ROOT_MASK) ^ AMDVI_DEV_PT_ROOT_MASK;
     /* find the first zero bit */
     while (addr & 1) {
         page_mask++;
@@ -886,8 +881,7 @@ static inline uint64_t amdvi_get_pte_entry(AMDVIState *s, uint64_t pte_addr,
 {
     uint64_t pte;
 
-    if (dma_memory_read(&address_space_memory, pte_addr,
-                        &pte, sizeof(pte), MEMTXATTRS_UNSPECIFIED)) {
+    if (dma_memory_read(&address_space_memory, pte_addr, &pte, sizeof(pte))) {
         trace_amdvi_get_pte_hwerror(pte_addr);
         amdvi_log_pagetab_error(s, devid, pte_addr, 0);
         pte = 0;
@@ -917,7 +911,7 @@ static void amdvi_page_walk(AMDVIAddressSpace *as, uint64_t *dte,
         }
 
         /* we are at the leaf page table or page table encodes a huge page */
-        do {
+        while (level > 0) {
             pte_perms = amdvi_get_perms(pte);
             present = pte & 1;
             if (!present || perms != (perms & pte_perms)) {
@@ -936,7 +930,10 @@ static void amdvi_page_walk(AMDVIAddressSpace *as, uint64_t *dte,
             }
             oldlevel = level;
             level = get_pte_translation_mode(pte);
-        } while (level > 0 && level < 7);
+            if (level == 0x7) {
+                break;
+            }
+        }
 
         if (level == 0x7) {
             page_mask = pte_override_page_mask(pte);
@@ -1051,7 +1048,7 @@ static int amdvi_get_irte(AMDVIState *s, MSIMessage *origin, uint64_t *dte,
     trace_amdvi_ir_irte(irte_root, offset);
 
     if (dma_memory_read(&address_space_memory, irte_root + offset,
-                        irte, sizeof(*irte), MEMTXATTRS_UNSPECIFIED)) {
+                        irte, sizeof(*irte))) {
         trace_amdvi_ir_err("failed to get irte");
         return -AMDVI_IR_GET_IRTE;
     }
@@ -1111,7 +1108,7 @@ static int amdvi_get_irte_ga(AMDVIState *s, MSIMessage *origin, uint64_t *dte,
     trace_amdvi_ir_irte(irte_root, offset);
 
     if (dma_memory_read(&address_space_memory, irte_root + offset,
-                        irte, sizeof(*irte), MEMTXATTRS_UNSPECIFIED)) {
+                        irte, sizeof(*irte))) {
         trace_amdvi_ir_err("failed to get irte_ga");
         return -AMDVI_IR_GET_IRTE;
     }
@@ -1406,7 +1403,7 @@ static AddressSpace *amdvi_host_dma_iommu(PCIBus *bus, void *opaque, int devfn)
 
     /* allocate memory during the first run */
     if (!iommu_as) {
-        iommu_as = g_new0(AMDVIAddressSpace *, PCI_DEVFN_MAX);
+        iommu_as = g_malloc0(sizeof(AMDVIAddressSpace *) * PCI_DEVFN_MAX);
         s->address_spaces[bus_num] = iommu_as;
     }
 
@@ -1414,7 +1411,7 @@ static AddressSpace *amdvi_host_dma_iommu(PCIBus *bus, void *opaque, int devfn)
     if (!iommu_as[devfn]) {
         snprintf(name, sizeof(name), "amd_iommu_devfn_%d", devfn);
 
-        iommu_as[devfn] = g_new0(AMDVIAddressSpace, 1);
+        iommu_as[devfn] = g_malloc0(sizeof(AMDVIAddressSpace));
         iommu_as[devfn]->bus_num = (uint8_t)bus_num;
         iommu_as[devfn]->devfn = (uint8_t)devfn;
         iommu_as[devfn]->iommu_state = s;
@@ -1529,7 +1526,7 @@ static void amdvi_init(AMDVIState *s)
             AMDVI_MAX_PH_ADDR | AMDVI_MAX_GVA_ADDR | AMDVI_MAX_VA_ADDR);
 }
 
-static void amdvi_sysbus_reset(DeviceState *dev)
+static void amdvi_reset(DeviceState *dev)
 {
     AMDVIState *s = AMD_IOMMU_DEVICE(dev);
 
@@ -1537,10 +1534,11 @@ static void amdvi_sysbus_reset(DeviceState *dev)
     amdvi_init(s);
 }
 
-static void amdvi_sysbus_realize(DeviceState *dev, Error **errp)
+static void amdvi_realize(DeviceState *dev, Error **errp)
 {
     int ret = 0;
     AMDVIState *s = AMD_IOMMU_DEVICE(dev);
+    X86IOMMUState *x86_iommu = X86_IOMMU_DEVICE(dev);
     MachineState *ms = MACHINE(qdev_get_machine());
     PCMachineState *pcms = PC_MACHINE(ms);
     X86MachineState *x86ms = X86_MACHINE(ms);
@@ -1550,6 +1548,7 @@ static void amdvi_sysbus_realize(DeviceState *dev, Error **errp)
                                      amdvi_uint64_equal, g_free, g_free);
 
     /* This device should take care of IOMMU PCI properties */
+    x86_iommu->type = TYPE_AMD;
     if (!qdev_realize(DEVICE(&s->pci), &bus->qbus, errp)) {
         return;
     }
@@ -1586,27 +1585,27 @@ static void amdvi_sysbus_realize(DeviceState *dev, Error **errp)
     amdvi_init(s);
 }
 
-static const VMStateDescription vmstate_amdvi_sysbus = {
+static const VMStateDescription vmstate_amdvi = {
     .name = "amd-iommu",
     .unmigratable = 1
 };
 
-static void amdvi_sysbus_instance_init(Object *klass)
+static void amdvi_instance_init(Object *klass)
 {
     AMDVIState *s = AMD_IOMMU_DEVICE(klass);
 
     object_initialize(&s->pci, sizeof(s->pci), TYPE_AMD_IOMMU_PCI);
 }
 
-static void amdvi_sysbus_class_init(ObjectClass *klass, void *data)
+static void amdvi_class_init(ObjectClass *klass, void* data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    X86IOMMUClass *dc_class = X86_IOMMU_DEVICE_CLASS(klass);
+    X86IOMMUClass *dc_class = X86_IOMMU_CLASS(klass);
 
-    dc->reset = amdvi_sysbus_reset;
-    dc->vmsd = &vmstate_amdvi_sysbus;
+    dc->reset = amdvi_reset;
+    dc->vmsd = &vmstate_amdvi;
     dc->hotpluggable = false;
-    dc_class->realize = amdvi_sysbus_realize;
+    dc_class->realize = amdvi_realize;
     dc_class->int_remap = amdvi_int_remap;
     /* Supported by the pc-q35-* machine types */
     dc->user_creatable = true;
@@ -1614,27 +1613,18 @@ static void amdvi_sysbus_class_init(ObjectClass *klass, void *data)
     dc->desc = "AMD IOMMU (AMD-Vi) DMA Remapping device";
 }
 
-static const TypeInfo amdvi_sysbus = {
+static const TypeInfo amdvi = {
     .name = TYPE_AMD_IOMMU_DEVICE,
     .parent = TYPE_X86_IOMMU_DEVICE,
     .instance_size = sizeof(AMDVIState),
-    .instance_init = amdvi_sysbus_instance_init,
-    .class_init = amdvi_sysbus_class_init
+    .instance_init = amdvi_instance_init,
+    .class_init = amdvi_class_init
 };
 
-static void amdvi_pci_class_init(ObjectClass *klass, void *data)
-{
-    DeviceClass *dc = DEVICE_CLASS(klass);
-
-    set_bit(DEVICE_CATEGORY_MISC, dc->categories);
-    dc->desc = "AMD IOMMU (AMD-Vi) DMA Remapping device";
-}
-
-static const TypeInfo amdvi_pci = {
-    .name = TYPE_AMD_IOMMU_PCI,
+static const TypeInfo amdviPCI = {
+    .name = "AMDVI-PCI",
     .parent = TYPE_PCI_DEVICE,
     .instance_size = sizeof(AMDVIPCIState),
-    .class_init = amdvi_pci_class_init,
     .interfaces = (InterfaceInfo[]) {
         { INTERFACE_CONVENTIONAL_PCI_DEVICE },
         { },
@@ -1655,11 +1645,11 @@ static const TypeInfo amdvi_iommu_memory_region_info = {
     .class_init = amdvi_iommu_memory_region_class_init,
 };
 
-static void amdvi_register_types(void)
+static void amdviPCI_register_types(void)
 {
-    type_register_static(&amdvi_pci);
-    type_register_static(&amdvi_sysbus);
+    type_register_static(&amdviPCI);
+    type_register_static(&amdvi);
     type_register_static(&amdvi_iommu_memory_region_info);
 }
 
-type_init(amdvi_register_types);
+type_init(amdviPCI_register_types);

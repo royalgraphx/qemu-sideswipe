@@ -16,11 +16,9 @@ TOOL_INCLUDE = -I Pccts/h
 #OBJECTS = VfrSyntax.o VfrServices.o DLGLexer.o EfiVfrParser.o ATokenBuffer.o DLexerBase.o AParser.o
 OBJECTS = AParser.o DLexerBase.o ATokenBuffer.o EfiVfrParser.o VfrLexer.o VfrSyntax.o \
           VfrFormPkg.o VfrError.o VfrUtilityLib.o VfrCompiler.o
-ifeq ($(CXX), llvm)
-VFR_CPPFLAGS = -Wno-deprecated-register -DPCCTS_USE_NAMESPACE_STD $(BUILD_CPPFLAGS)
-else
+
 VFR_CPPFLAGS = -DPCCTS_USE_NAMESPACE_STD $(BUILD_CPPFLAGS)
-endif
+
 # keep BUILD_OPTFLAGS last
 VFR_CXXFLAGS = $(BUILD_OPTFLAGS)
 
@@ -38,9 +36,9 @@ include $(MAKEROOT)/Makefiles/header.makefile
 APPLICATION = $(MAKEROOT)/bin/$(APPNAME)
 
 .PHONY:all
-all: $(MAKEROOT)/bin $(APPLICATION)
+all: $(MAKEROOT)/bin $(APPLICATION) 
 
-$(APPLICATION): $(OBJECTS)
+$(APPLICATION): $(OBJECTS) 
 	$(LINKER) -o $(APPLICATION) $(VFR_LFLAGS) $(OBJECTS) -L$(MAKEROOT)/libs $(LIBS)
 
 VfrCompiler.o: ../Include/Common/BuildVersion.h
@@ -70,7 +68,7 @@ AParser.o: Pccts/h/AParser.cpp
 
 VfrSyntax.o: VfrSyntax.cpp
 	$(BUILD_CXX) -c $(VFR_CPPFLAGS) $(INC) $(VFR_CXXFLAGS) $? -o $@
-
+	
 clean: localClean
 
 localClean:

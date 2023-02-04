@@ -7,22 +7,13 @@
 #include <common.h>
 #include <errno.h>
 #include <dm.h>
-#include <log.h>
-#include <linux/delay.h>
-#include <linux/err.h>
 #include <power/pmic.h>
 #include <power/regulator.h>
 #include <regmap.h>
 #include <syscon.h>
 #include <linux/bitops.h>
 #include <linux/ioport.h>
-#include <dm/device-internal.h>
 #include <dm/read.h>
-#ifdef CONFIG_MMC_OMAP36XX_PINS
-#include <asm/arch/sys_proto.h>
-#include <asm/io.h>
-#include <asm/arch/mux.h>
-#endif
 
 struct pbias_reg_info {
 	u32 enable;
@@ -65,7 +56,7 @@ static int pbias_read(struct udevice *dev, uint reg, uint8_t *buff, int len)
 	return regmap_read(priv->regmap, priv->offset, (u32 *)buff);
 }
 
-static int pbias_of_to_plat(struct udevice *dev)
+static int pbias_ofdata_to_platdata(struct udevice *dev)
 {
 	struct pbias_priv *priv = dev_get_priv(dev);
 	struct udevice *syscon;
@@ -103,8 +94,7 @@ static int pbias_bind(struct udevice *dev)
 {
 	int children;
 
-	children = pmic_bind_children(dev, dev_ofnode(dev),
-				      pmic_children_info);
+	children = pmic_bind_children(dev, dev->node, pmic_children_info);
 	if (!children)
 		debug("%s: %s - no child found\n", __func__, dev->name);
 
@@ -131,8 +121,8 @@ U_BOOT_DRIVER(pbias_pmic) = {
 	.of_match = pbias_ids,
 	.bind = pbias_bind,
 	.ops = &pbias_ops,
-	.of_to_plat = pbias_of_to_plat,
-	.priv_auto	= sizeof(struct pbias_priv),
+	.ofdata_to_platdata = pbias_ofdata_to_platdata,
+	.priv_auto_alloc_size = sizeof(struct pbias_priv),
 };
 
 static const struct pbias_reg_info pbias_mmc_omap2430 = {
@@ -181,9 +171,9 @@ static const struct pbias_reg_info *pbias_reg_infos[] = {
 static int pbias_regulator_probe(struct udevice *dev)
 {
 	const struct pbias_reg_info **p = pbias_reg_infos;
-	struct dm_regulator_uclass_plat *uc_pdata;
+	struct dm_regulator_uclass_platdata *uc_pdata;
 
-	uc_pdata = dev_get_uclass_plat(dev);
+	uc_pdata = dev_get_uclass_platdata(dev);
 
 	while (*p) {
 		int rc;
@@ -210,7 +200,7 @@ static int pbias_regulator_probe(struct udevice *dev)
 	}
 
 	uc_pdata->type = REGULATOR_TYPE_OTHER;
-	dev_set_priv(dev, (void *)*p);
+	dev->priv = (void *)*p;
 
 	return 0;
 }
@@ -233,17 +223,14 @@ static int pbias_regulator_get_value(struct udevice *dev)
 static int pbias_regulator_set_value(struct udevice *dev, int uV)
 {
 	const struct pbias_reg_info *p = dev_get_priv(dev);
-	int rc, ret;
+	int rc;
 	u32 reg;
-#ifdef CONFIG_MMC_OMAP36XX_PINS
-	u32 wkup_ctrl = readl(OMAP34XX_CTRL_WKUP_CTRL);
-#endif
 
 	rc = pmic_read(dev->parent, 0, (uint8_t *)&reg, sizeof(reg));
 	if (rc)
 		return rc;
 
-	if (uV == 3300000)
+	if (uV == 3000000)
 		reg |= p->vmode;
 	else if (uV == 1800000)
 		reg &= ~p->vmode;
@@ -253,23 +240,7 @@ static int pbias_regulator_set_value(struct udevice *dev, int uV)
 	debug("Setting %s voltage to %s\n", p->name,
 	      (reg & p->vmode) ? "3.0v" : "1.8v");
 
-#ifdef CONFIG_MMC_OMAP36XX_PINS
-	if (get_cpu_family() == CPU_OMAP36XX) {
-		/* Disable extended drain IO before changing PBIAS */
-		wkup_ctrl &= ~OMAP34XX_CTRL_WKUP_CTRL_GPIO_IO_PWRDNZ;
-		writel(wkup_ctrl, OMAP34XX_CTRL_WKUP_CTRL);
-	}
-#endif
-	ret = pmic_write(dev->parent, 0, (uint8_t *)&reg, sizeof(reg));
-#ifdef CONFIG_MMC_OMAP36XX_PINS
-	if (get_cpu_family() == CPU_OMAP36XX) {
-		/* Enable extended drain IO after changing PBIAS */
-		writel(wkup_ctrl |
-				OMAP34XX_CTRL_WKUP_CTRL_GPIO_IO_PWRDNZ,
-				OMAP34XX_CTRL_WKUP_CTRL);
-	}
-#endif
-	return ret;
+	return pmic_write(dev->parent, 0, (uint8_t *)&reg, sizeof(reg));
 }
 
 static int pbias_regulator_get_enable(struct udevice *dev)
@@ -293,19 +264,8 @@ static int pbias_regulator_set_enable(struct udevice *dev, bool enable)
 	const struct pbias_reg_info *p = dev_get_priv(dev);
 	int rc;
 	u32 reg;
-#ifdef CONFIG_MMC_OMAP36XX_PINS
-	u32 wkup_ctrl = readl(OMAP34XX_CTRL_WKUP_CTRL);
-#endif
 
 	debug("Turning %s %s\n", enable ? "on" : "off", p->name);
-
-#ifdef CONFIG_MMC_OMAP36XX_PINS
-	if (get_cpu_family() == CPU_OMAP36XX) {
-		/* Disable extended drain IO before changing PBIAS */
-		wkup_ctrl &= ~OMAP34XX_CTRL_WKUP_CTRL_GPIO_IO_PWRDNZ;
-		writel(wkup_ctrl, OMAP34XX_CTRL_WKUP_CTRL);
-	}
-#endif
 
 	rc = pmic_read(dev->parent, 0, (uint8_t *)&reg, sizeof(reg));
 	if (rc)
@@ -318,16 +278,6 @@ static int pbias_regulator_set_enable(struct udevice *dev, bool enable)
 		reg |= p->disable_val;
 
 	rc = pmic_write(dev->parent, 0, (uint8_t *)&reg, sizeof(reg));
-
-#ifdef CONFIG_MMC_OMAP36XX_PINS
-	if (get_cpu_family() == CPU_OMAP36XX) {
-		/* Enable extended drain IO after changing PBIAS */
-		writel(wkup_ctrl |
-				OMAP34XX_CTRL_WKUP_CTRL_GPIO_IO_PWRDNZ,
-				OMAP34XX_CTRL_WKUP_CTRL);
-	}
-#endif
-
 	if (rc)
 		return rc;
 

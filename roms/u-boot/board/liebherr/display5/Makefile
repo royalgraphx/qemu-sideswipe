@@ -5,7 +5,7 @@
 # SPDX-License-Identifier:    GPL-2.0+
 #
 ifdef CONFIG_SPL_BUILD
-obj-y = spl.o
+obj-y = common.o spl.o
 else
-obj-y := display5.o
+obj-y := common.o display5.o
 endif

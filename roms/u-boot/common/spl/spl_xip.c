@@ -5,8 +5,6 @@
  */
 
 #include <common.h>
-#include <image.h>
-#include <log.h>
 #include <spl.h>
 
 static int spl_xip(struct spl_image_info *spl_image,

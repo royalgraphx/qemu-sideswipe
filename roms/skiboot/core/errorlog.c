@@ -1,12 +1,24 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+/* Copyright 2013-2017 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /* This file contains the front end for OPAL error logging. It is used
  * to construct a struct errorlog representing the event/error to be
  * logged which is then passed to the platform specific backend to log
  * the actual errors.
- *
- * Copyright 2013-2017 IBM Corp.
  */
-
 #include <skiboot.h>
 #include <lock.h>
 #include <errorlog.h>
@@ -93,10 +105,10 @@ void log_add_section(struct errorlog *buf, uint32_t tag)
 	tmp = (struct elog_user_data_section *)(buf->user_data_dump +
 						buf->user_section_size);
 	/* Use DESC if no other tag provided */
-	tmp->tag = tag ? cpu_to_be32(tag) : cpu_to_be32(OPAL_ELOG_SEC_DESC);
-	tmp->size = cpu_to_be16(size);
+	tmp->tag = tag ? tag : 0x44455343;
+	tmp->size = size;
 
-	buf->user_section_size += size;
+	buf->user_section_size += tmp->size;
 	buf->user_section_count++;
 }
 
@@ -133,7 +145,6 @@ void log_append_data(struct errorlog *buf, unsigned char *data, uint16_t size)
 	struct elog_user_data_section *section;
 	uint8_t n_sections;
 	char *buffer;
-	uint16_t ssize;
 
 	if (!buf) {
 		prerror("ELOG: Cannot update user data. Buffer is invalid\n");
@@ -155,14 +166,13 @@ void log_append_data(struct errorlog *buf, unsigned char *data, uint16_t size)
 
 	while (--n_sections) {
 		section = (struct elog_user_data_section *)buffer;
-		buffer += be16_to_cpu(section->size);
+		buffer += section->size;
 	}
 
 	section = (struct elog_user_data_section *)buffer;
-	ssize = be16_to_cpu(section->size);
-	buffer += ssize;
+	buffer += section->size;
 	memcpy(buffer, data, size);
-	section->size = cpu_to_be16(ssize + size);
+	section->size += size;
 	buf->user_section_size += size;
 }
 

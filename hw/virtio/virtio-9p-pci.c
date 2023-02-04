@@ -15,25 +15,23 @@
 
 #include "qemu/osdep.h"
 
-#include "hw/virtio/virtio-pci.h"
+#include "virtio-pci.h"
 #include "hw/9pfs/virtio-9p.h"
 #include "hw/qdev-properties.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 /*
  * virtio-9p-pci: This extends VirtioPCIProxy.
  */
 
 #define TYPE_VIRTIO_9P_PCI "virtio-9p-pci-base"
-typedef struct V9fsPCIState V9fsPCIState;
-DECLARE_INSTANCE_CHECKER(V9fsPCIState, VIRTIO_9P_PCI,
-                         TYPE_VIRTIO_9P_PCI)
+#define VIRTIO_9P_PCI(obj) \
+        OBJECT_CHECK(V9fsPCIState, (obj), TYPE_VIRTIO_9P_PCI)
 
-struct V9fsPCIState {
+typedef struct V9fsPCIState {
     VirtIOPCIProxy parent_obj;
     V9fsVirtioState vdev;
-};
+} V9fsPCIState;
 
 static void virtio_9p_pci_realize(VirtIOPCIProxy *vpci_dev, Error **errp)
 {

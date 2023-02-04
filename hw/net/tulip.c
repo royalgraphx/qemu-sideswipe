@@ -18,7 +18,7 @@
 #include "trace.h"
 #include "net/eth.h"
 
-struct TULIPState {
+typedef struct TULIPState {
     PCIDevice dev;
     MemoryRegion io;
     MemoryRegion memory;
@@ -44,7 +44,7 @@ struct TULIPState {
 
     uint32_t rx_status;
     uint8_t filter[16][6];
-};
+} TULIPState;
 
 static const VMStateDescription vmstate_pci_tulip = {
     .name = "tulip",
@@ -70,36 +70,32 @@ static const VMStateDescription vmstate_pci_tulip = {
 static void tulip_desc_read(TULIPState *s, hwaddr p,
         struct tulip_descriptor *desc)
 {
-    const MemTxAttrs attrs = { .memory = true };
-
     if (s->csr[0] & CSR0_DBO) {
-        ldl_be_pci_dma(&s->dev, p, &desc->status, attrs);
-        ldl_be_pci_dma(&s->dev, p + 4, &desc->control, attrs);
-        ldl_be_pci_dma(&s->dev, p + 8, &desc->buf_addr1, attrs);
-        ldl_be_pci_dma(&s->dev, p + 12, &desc->buf_addr2, attrs);
+        desc->status = ldl_be_pci_dma(&s->dev, p);
+        desc->control = ldl_be_pci_dma(&s->dev, p + 4);
+        desc->buf_addr1 = ldl_be_pci_dma(&s->dev, p + 8);
+        desc->buf_addr2 = ldl_be_pci_dma(&s->dev, p + 12);
     } else {
-        ldl_le_pci_dma(&s->dev, p, &desc->status, attrs);
-        ldl_le_pci_dma(&s->dev, p + 4, &desc->control, attrs);
-        ldl_le_pci_dma(&s->dev, p + 8, &desc->buf_addr1, attrs);
-        ldl_le_pci_dma(&s->dev, p + 12, &desc->buf_addr2, attrs);
+        desc->status = ldl_le_pci_dma(&s->dev, p);
+        desc->control = ldl_le_pci_dma(&s->dev, p + 4);
+        desc->buf_addr1 = ldl_le_pci_dma(&s->dev, p + 8);
+        desc->buf_addr2 = ldl_le_pci_dma(&s->dev, p + 12);
     }
 }
 
 static void tulip_desc_write(TULIPState *s, hwaddr p,
         struct tulip_descriptor *desc)
 {
-    const MemTxAttrs attrs = { .memory = true };
-
     if (s->csr[0] & CSR0_DBO) {
-        stl_be_pci_dma(&s->dev, p, desc->status, attrs);
-        stl_be_pci_dma(&s->dev, p + 4, desc->control, attrs);
-        stl_be_pci_dma(&s->dev, p + 8, desc->buf_addr1, attrs);
-        stl_be_pci_dma(&s->dev, p + 12, desc->buf_addr2, attrs);
+        stl_be_pci_dma(&s->dev, p, desc->status);
+        stl_be_pci_dma(&s->dev, p + 4, desc->control);
+        stl_be_pci_dma(&s->dev, p + 8, desc->buf_addr1);
+        stl_be_pci_dma(&s->dev, p + 12, desc->buf_addr2);
     } else {
-        stl_le_pci_dma(&s->dev, p, desc->status, attrs);
-        stl_le_pci_dma(&s->dev, p + 4, desc->control, attrs);
-        stl_le_pci_dma(&s->dev, p + 8, desc->buf_addr1, attrs);
-        stl_le_pci_dma(&s->dev, p + 12, desc->buf_addr2, attrs);
+        stl_le_pci_dma(&s->dev, p, desc->status);
+        stl_le_pci_dma(&s->dev, p + 4, desc->control);
+        stl_le_pci_dma(&s->dev, p + 8, desc->buf_addr1);
+        stl_le_pci_dma(&s->dev, p + 12, desc->buf_addr2);
     }
 }
 
@@ -870,10 +866,11 @@ static const MemoryRegionOps tulip_ops = {
 
 static void tulip_idblock_crc(TULIPState *s, uint16_t *srom)
 {
-    int word;
+    int word, n;
     int bit;
     unsigned char bitval, crc;
     const int len = 9;
+    n = 0;
     crc = -1;
 
     for (word = 0; word < len; word++) {
@@ -886,6 +883,7 @@ static void tulip_idblock_crc(TULIPState *s, uint16_t *srom)
                 srom[len - 1] = (srom[len - 1] & 0xff00) | (unsigned short)crc;
                 break;
             }
+            n++;
             bitval = ((srom[word] >> bit) & 1) ^ ((crc >> 7) & 1);
             crc = crc << 1;
             if (bitval == 1) {
@@ -965,8 +963,6 @@ static void pci_tulip_realize(PCIDevice *pci_dev, Error **errp)
     pci_conf = s->dev.config;
     pci_conf[PCI_INTERRUPT_PIN] = 1; /* interrupt pin A */
 
-    qemu_macaddr_default_if_unset(&s->c.macaddr);
-
     s->eeprom = eeprom93xx_new(&pci_dev->qdev, 64);
     tulip_fill_eeprom(s);
 
@@ -980,6 +976,8 @@ static void pci_tulip_realize(PCIDevice *pci_dev, Error **errp)
     pci_register_bar(&s->dev, 1, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->memory);
 
     s->irq = pci_allocate_irq(&s->dev);
+
+    qemu_macaddr_default_if_unset(&s->c.macaddr);
 
     s->nic = qemu_new_nic(&net_tulip_info, &s->c,
                           object_get_typename(OBJECT(pci_dev)),

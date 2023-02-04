@@ -13,7 +13,6 @@
 #include "qemu/module.h"
 #include "hw/audio/wm8750.h"
 #include "audio/audio.h"
-#include "qom/object.h"
 
 #define IN_PORT_N	3
 #define OUT_PORT_N	3
@@ -27,9 +26,9 @@ typedef struct {
     int dac_hz;
 } WMRate;
 
-OBJECT_DECLARE_SIMPLE_TYPE(WM8750State, WM8750)
+#define WM8750(obj) OBJECT_CHECK(WM8750State, (obj), TYPE_WM8750)
 
-struct WM8750State {
+typedef struct WM8750State {
     I2CSlave parent_obj;
 
     uint8_t i2c_data[2];
@@ -55,7 +54,7 @@ struct WM8750State {
     const WMRate *rate;
     uint8_t rate_vmstate;
     int adc_hz, dac_hz, ext_adc_hz, ext_dac_hz, master;
-};
+} WM8750State;
 
 /* pow(10.0, -i / 20.0) * 255, i = 0..42 */
 static const uint8_t wm8750_vol_db_table[] = {

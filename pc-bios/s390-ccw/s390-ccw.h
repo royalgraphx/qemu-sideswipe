@@ -27,10 +27,12 @@ typedef unsigned long long __u64;
 #define false 0
 #define PAGE_SIZE 4096
 
+#ifndef EIO
 #define EIO     1
+#endif
+#ifndef EBUSY
 #define EBUSY   2
-#define ENODEV  3
-
+#endif
 #ifndef NULL
 #define NULL    0
 #endif
@@ -57,7 +59,6 @@ void write_subsystem_identification(void);
 void write_iplb_location(void);
 extern char stack[PAGE_SIZE * 8] __attribute__((__aligned__(PAGE_SIZE)));
 unsigned int get_loadparm_index(void);
-void main(void);
 
 /* sclp.c */
 void sclp_print(const char *string);
@@ -70,14 +71,13 @@ int sclp_read(char *str, size_t count);
 unsigned long virtio_load_direct(ulong rec_list1, ulong rec_list2,
                                  ulong subchan_id, void *load_addr);
 bool virtio_is_supported(SubChannelId schid);
-int virtio_blk_setup_device(SubChannelId schid);
+void virtio_blk_setup_device(SubChannelId schid);
 int virtio_read(ulong sector, void *load_addr);
 
 /* bootmap.c */
 void zipl_load(void);
 
 /* jump2ipl.c */
-void write_reset_psw(uint64_t psw);
 void jump_to_IPL_code(uint64_t address);
 void jump_to_low_kernel(void);
 
@@ -90,7 +90,6 @@ bool menu_is_enabled_enum(void);
 
 #define MAX_BOOT_ENTRIES  31
 
-__attribute__ ((__noreturn__))
 static inline void panic(const char *string)
 {
     sclp_print(string);

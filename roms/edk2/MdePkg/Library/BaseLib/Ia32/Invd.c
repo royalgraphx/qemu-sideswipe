@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Executes a INVD instruction.
 
@@ -23,3 +26,4 @@ AsmInvd (
     invd
   }
 }
+

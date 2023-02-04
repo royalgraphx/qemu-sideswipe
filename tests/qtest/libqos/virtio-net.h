@@ -19,9 +19,9 @@
 #ifndef TESTS_LIBQOS_VIRTIO_NET_H
 #define TESTS_LIBQOS_VIRTIO_NET_H
 
-#include "qgraph.h"
-#include "virtio.h"
-#include "virtio-pci.h"
+#include "libqos/qgraph.h"
+#include "libqos/virtio.h"
+#include "libqos/virtio-pci.h"
 
 typedef struct QVirtioNet QVirtioNet;
 typedef struct QVirtioNetPCI QVirtioNetPCI;

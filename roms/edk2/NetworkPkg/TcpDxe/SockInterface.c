@@ -21,12 +21,12 @@
 **/
 BOOLEAN
 SockTokenExistedInList (
-  IN LIST_ENTRY  *List,
-  IN EFI_EVENT   Event
+  IN LIST_ENTRY     *List,
+  IN EFI_EVENT      Event
   )
 {
-  LIST_ENTRY  *ListEntry;
-  SOCK_TOKEN  *SockToken;
+  LIST_ENTRY      *ListEntry;
+  SOCK_TOKEN      *SockToken;
 
   NET_LIST_FOR_EACH (ListEntry, List) {
     SockToken = NET_LIST_USER_STRUCT (
@@ -56,20 +56,22 @@ SockTokenExistedInList (
 **/
 BOOLEAN
 SockTokenExisted (
-  IN SOCKET     *Sock,
-  IN EFI_EVENT  Event
+  IN SOCKET    *Sock,
+  IN EFI_EVENT Event
   )
 {
+
   if (SockTokenExistedInList (&Sock->SndTokenList, Event) ||
       SockTokenExistedInList (&Sock->ProcessingSndTokenList, Event) ||
       SockTokenExistedInList (&Sock->RcvTokenList, Event) ||
       SockTokenExistedInList (&Sock->ListenTokenList, Event)
-      )
-  {
+        ) {
+
     return TRUE;
   }
 
   if ((Sock->ConnectionToken != NULL) && (Sock->ConnectionToken->Event == Event)) {
+
     return TRUE;
   }
 
@@ -93,27 +95,28 @@ SockTokenExisted (
 **/
 SOCK_TOKEN *
 SockBufferToken (
-  IN SOCKET      *Sock,
-  IN LIST_ENTRY  *List,
-  IN VOID        *Token,
-  IN UINT32      DataLen
+  IN SOCKET         *Sock,
+  IN LIST_ENTRY     *List,
+  IN VOID           *Token,
+  IN UINT32         DataLen
   )
 {
   SOCK_TOKEN  *SockToken;
 
   SockToken = AllocateZeroPool (sizeof (SOCK_TOKEN));
   if (NULL == SockToken) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockBufferIOToken: No Memory to allocate SockToken\n")
+      (EFI_D_ERROR,
+      "SockBufferIOToken: No Memory to allocate SockToken\n")
       );
 
     return NULL;
   }
 
-  SockToken->Sock          = Sock;
-  SockToken->Token         = (SOCK_COMPLETION_TOKEN *)Token;
-  SockToken->RemainDataLen = DataLen;
+  SockToken->Sock           = Sock;
+  SockToken->Token          = (SOCK_COMPLETION_TOKEN *) Token;
+  SockToken->RemainDataLen  = DataLen;
   InsertTailList (List, &SockToken->TokenList);
 
   return SockToken;
@@ -130,15 +133,15 @@ SockBufferToken (
 **/
 EFI_STATUS
 SockDestroyChild (
-  IN OUT SOCKET  *Sock
+  IN OUT SOCKET *Sock
   )
 {
-  EFI_STATUS      Status;
-  TCP_PROTO_DATA  *ProtoData;
-  TCP_CB          *Tcb;
-  EFI_GUID        *IpProtocolGuid;
-  EFI_GUID        *TcpProtocolGuid;
-  VOID            *SockProtocol;
+  EFI_STATUS       Status;
+  TCP_PROTO_DATA   *ProtoData;
+  TCP_CB           *Tcb;
+  EFI_GUID         *IpProtocolGuid;
+  EFI_GUID         *TcpProtocolGuid;
+  VOID             *SockProtocol;
 
   ASSERT ((Sock != NULL) && (Sock->ProtoHandler != NULL));
 
@@ -149,14 +152,13 @@ SockDestroyChild (
   Sock->InDestroy = TRUE;
 
   if (Sock->IpVersion == IP_VERSION_4) {
-    IpProtocolGuid  = &gEfiIp4ProtocolGuid;
+    IpProtocolGuid = &gEfiIp4ProtocolGuid;
     TcpProtocolGuid = &gEfiTcp4ProtocolGuid;
   } else {
-    IpProtocolGuid  = &gEfiIp6ProtocolGuid;
+    IpProtocolGuid = &gEfiIp6ProtocolGuid;
     TcpProtocolGuid = &gEfiTcp6ProtocolGuid;
   }
-
-  ProtoData = (TCP_PROTO_DATA *)Sock->ProtoReserved;
+  ProtoData = (TCP_PROTO_DATA *) Sock->ProtoReserved;
   Tcb       = ProtoData->TcpPcb;
 
   ASSERT (Tcb != NULL);
@@ -188,10 +190,11 @@ SockDestroyChild (
                   );
 
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockDestroyChild: Open protocol installed on socket failed with %r\n",
-       Status)
+      (EFI_D_ERROR,
+      "SockDestroyChild: Open protocol installed on socket failed with %r\n",
+      Status)
       );
   }
 
@@ -199,18 +202,20 @@ SockDestroyChild (
   // Uninstall the protocol installed on this sock
   //
   gBS->UninstallMultipleProtocolInterfaces (
-         Sock->SockHandle,
-         TcpProtocolGuid,
-         SockProtocol,
-         NULL
-         );
+        Sock->SockHandle,
+        TcpProtocolGuid,
+        SockProtocol,
+        NULL
+        );
 
-  Status = EfiAcquireLockOrFail (&(Sock->Lock));
+
+  Status            = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockDestroyChild: Get the lock to access socket failed with %r\n",
-       Status)
+      (EFI_D_ERROR,
+      "SockDestroyChild: Get the lock to access socket failed with %r\n",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
@@ -222,14 +227,16 @@ SockDestroyChild (
   Status = Sock->ProtoHandler (Sock, SOCK_DETACH, NULL);
 
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockDestroyChild: Protocol detach socket failed with %r\n",
-       Status)
+      (EFI_D_ERROR,
+      "SockDestroyChild: Protocol detach socket failed with %r\n",
+      Status)
       );
 
     Sock->InDestroy = FALSE;
   } else if (SOCK_IS_CONFIGURED (Sock)) {
+
     SockConnFlush (Sock);
     SockSetState (Sock, SO_CLOSED);
 
@@ -248,17 +255,17 @@ SockDestroyChild (
 
 /**
   Create a socket and its associated protocol control block
-  with the initial data SockInitData and protocol specific
+  with the intial data SockInitData and protocol specific
   data ProtoData.
 
-  @param[in]  SockInitData         Initial data to setting the socket.
+  @param[in]  SockInitData         Inital data to setting the socket.
 
-  @return Pointer to the newly created socket. If NULL, an error condition occurred.
+  @return Pointer to the newly created socket. If NULL, an error condition occured.
 
 **/
 SOCKET *
 SockCreateChild (
-  IN SOCK_INIT_DATA  *SockInitData
+  IN SOCK_INIT_DATA *SockInitData
   )
 {
   SOCKET      *Sock;
@@ -271,9 +278,10 @@ SockCreateChild (
   //
   Sock = SockCreate (SockInitData);
   if (NULL == Sock) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockCreateChild: No resource to create a new socket\n")
+      (EFI_D_ERROR,
+      "SockCreateChild: No resource to create a new socket\n")
       );
 
     return NULL;
@@ -281,14 +289,14 @@ SockCreateChild (
 
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockCreateChild: Get the lock to access socket failed with %r\n",
-       Status)
+      (EFI_D_ERROR,
+      "SockCreateChild: Get the lock to access socket failed with %r\n",
+      Status)
       );
     goto ERROR;
   }
-
   //
   // inform the protocol layer to attach the socket
   // with a new protocol control block
@@ -296,10 +304,11 @@ SockCreateChild (
   Status = Sock->ProtoHandler (Sock, SOCK_ATTACH, NULL);
   EfiReleaseLock (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockCreateChild: Protocol failed to attach a socket with %r\n",
-       Status)
+      (EFI_D_ERROR,
+      "SockCreateChild: Protocol failed to attach a socket with %r\n",
+      Status)
       );
     goto ERROR;
   }
@@ -330,13 +339,13 @@ ERROR:
   // Uninstall the protocol installed on this sock
   //
   gBS->UninstallMultipleProtocolInterfaces (
-         Sock->SockHandle,
-         TcpProtocolGuid,
-         SockProtocol,
-         NULL
-         );
-  SockDestroy (Sock);
-  return NULL;
+        Sock->SockHandle,
+        TcpProtocolGuid,
+        SockProtocol,
+        NULL
+        );
+   SockDestroy (Sock);
+   return NULL;
 }
 
 /**
@@ -352,18 +361,19 @@ ERROR:
 **/
 EFI_STATUS
 SockConfigure (
-  IN SOCKET  *Sock,
-  IN VOID    *ConfigData
+  IN SOCKET *Sock,
+  IN VOID   *ConfigData
   )
 {
   EFI_STATUS  Status;
 
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockConfigure: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockConfigure: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
@@ -387,7 +397,7 @@ OnExit:
 /**
   Initiate a connection establishment process.
 
-  @param[in]  Sock             Pointer to the socket to initiate the
+  @param[in]  Sock             Pointer to the socket to initiate the initate the
                                connection.
   @param[in]  Token            Pointer to the token used for the connection
                                operation.
@@ -404,8 +414,8 @@ OnExit:
 **/
 EFI_STATUS
 SockConnect (
-  IN SOCKET  *Sock,
-  IN VOID    *Token
+  IN SOCKET *Sock,
+  IN VOID   *Token
   )
 {
   EFI_STATUS  Status;
@@ -413,10 +423,11 @@ SockConnect (
 
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockConnect: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockConnect: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
@@ -428,23 +439,26 @@ SockConnect (
   }
 
   if (SOCK_IS_UNCONFIGURED (Sock)) {
+
     Status = EFI_NOT_STARTED;
     goto OnExit;
   }
 
   if (!SOCK_IS_CLOSED (Sock) || !SOCK_IS_CONFIGURED_ACTIVE (Sock)) {
+
     Status = EFI_ACCESS_DENIED;
     goto OnExit;
   }
 
-  Event = ((SOCK_COMPLETION_TOKEN *)Token)->Event;
+  Event = ((SOCK_COMPLETION_TOKEN *) Token)->Event;
 
   if (SockTokenExisted (Sock, Event)) {
+
     Status = EFI_ACCESS_DENIED;
     goto OnExit;
   }
 
-  Sock->ConnectionToken = (SOCK_COMPLETION_TOKEN *)Token;
+  Sock->ConnectionToken = (SOCK_COMPLETION_TOKEN *) Token;
   SockSetState (Sock, SO_CONNECTING);
   Status = Sock->ProtoHandler (Sock, SOCK_CONNECT, NULL);
 
@@ -460,7 +474,7 @@ OnExit:
   @param[in]  Sock             Pointer to the socket to accept connections.
   @param[in]  Token            The token to accept a connection.
 
-  @retval EFI_SUCCESS          Either a connection is accepted or the Token is
+  @retval EFI_SUCCESS          Either a connection is accpeted or the Token is
                                buffered for further acception.
   @retval EFI_ACCESS_DENIED    Failed to get the lock to access the socket, or the
                                socket is closed, or the socket is not configured to
@@ -474,24 +488,25 @@ OnExit:
 **/
 EFI_STATUS
 SockAccept (
-  IN SOCKET  *Sock,
-  IN VOID    *Token
+  IN SOCKET *Sock,
+  IN VOID   *Token
   )
 {
-  EFI_TCP4_LISTEN_TOKEN  *ListenToken;
-  LIST_ENTRY             *ListEntry;
-  EFI_STATUS             Status;
-  SOCKET                 *Socket;
-  EFI_EVENT              Event;
+  EFI_TCP4_LISTEN_TOKEN *ListenToken;
+  LIST_ENTRY            *ListEntry;
+  EFI_STATUS            Status;
+  SOCKET                *Socket;
+  EFI_EVENT             Event;
 
   ASSERT (SockStream == Sock->Type);
 
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockAccept: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockAccept: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
@@ -503,28 +518,32 @@ SockAccept (
   }
 
   if (SOCK_IS_UNCONFIGURED (Sock)) {
+
     Status = EFI_NOT_STARTED;
     goto Exit;
   }
 
   if (!SOCK_IS_LISTENING (Sock)) {
+
     Status = EFI_ACCESS_DENIED;
     goto Exit;
   }
 
-  Event = ((SOCK_COMPLETION_TOKEN *)Token)->Event;
+  Event = ((SOCK_COMPLETION_TOKEN *) Token)->Event;
 
   if (SockTokenExisted (Sock, Event)) {
+
     Status = EFI_ACCESS_DENIED;
     goto Exit;
   }
 
-  ListenToken = (EFI_TCP4_LISTEN_TOKEN *)Token;
+  ListenToken = (EFI_TCP4_LISTEN_TOKEN *) Token;
 
   //
   // Check if a connection has already in this Sock->ConnectionList
   //
   NET_LIST_FOR_EACH (ListEntry, &Sock->ConnectionList) {
+
     Socket = NET_LIST_USER_STRUCT (ListEntry, SOCKET, ConnectionList);
 
     if (SOCK_IS_CONNECTED (Socket)) {
@@ -538,9 +557,9 @@ SockAccept (
       Socket->Parent->ConnCnt--;
 
       DEBUG (
-        (DEBUG_NET,
-         "SockAccept: Accept a socket, now conncount is %d",
-         Socket->Parent->ConnCnt)
+        (EFI_D_NET,
+        "SockAccept: Accept a socket, now conncount is %d",
+        Socket->Parent->ConnCnt)
         );
       Socket->Parent = NULL;
 
@@ -552,6 +571,7 @@ SockAccept (
   // Buffer this token for latter incoming connection request
   //
   if (NULL == SockBufferToken (Sock, &(Sock->ListenTokenList), Token, 0)) {
+
     Status = EFI_OUT_OF_RESOURCES;
   }
 
@@ -581,8 +601,8 @@ Exit:
 **/
 EFI_STATUS
 SockSend (
-  IN SOCKET  *Sock,
-  IN VOID    *Token
+  IN SOCKET *Sock,
+  IN VOID   *Token
   )
 {
   SOCK_IO_TOKEN           *SndToken;
@@ -597,10 +617,11 @@ SockSend (
 
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockSend: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockSend: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
@@ -611,8 +632,8 @@ SockSend (
     goto Exit;
   }
 
-  SndToken = (SOCK_IO_TOKEN *)Token;
-  TxData   = (EFI_TCP4_TRANSMIT_DATA *)SndToken->Packet.TxData;
+  SndToken  = (SOCK_IO_TOKEN *) Token;
+  TxData    = (EFI_TCP4_TRANSMIT_DATA *) SndToken->Packet.TxData;
 
   if (SOCK_IS_UNCONFIGURED (Sock)) {
     Status = EFI_NOT_STARTED;
@@ -620,6 +641,7 @@ SockSend (
   }
 
   if (!(SOCK_IS_CONNECTING (Sock) || SOCK_IS_CONNECTED (Sock))) {
+
     Status = EFI_ACCESS_DENIED;
     goto Exit;
   }
@@ -642,6 +664,7 @@ SockSend (
   FreeSpace = SockGetFreeSpace (Sock, SOCK_SND_BUF);
 
   if ((FreeSpace < Sock->SndBuffer.LowWater) || !SOCK_IS_CONNECTED (Sock)) {
+
     SockToken = SockBufferToken (
                   Sock,
                   &Sock->SndTokenList,
@@ -653,6 +676,7 @@ SockSend (
       Status = EFI_OUT_OF_RESOURCES;
     }
   } else {
+
     SockToken = SockBufferToken (
                   Sock,
                   &Sock->ProcessingSndTokenList,
@@ -662,9 +686,9 @@ SockSend (
 
     if (NULL == SockToken) {
       DEBUG (
-        (DEBUG_ERROR,
-         "SockSend: Failed to buffer IO token into socket processing SndToken List\n",
-         Status)
+        (EFI_D_ERROR,
+        "SockSend: Failed to buffer IO token into socket processing SndToken List\n",
+        Status)
         );
 
       Status = EFI_OUT_OF_RESOURCES;
@@ -675,9 +699,9 @@ SockSend (
 
     if (EFI_ERROR (Status)) {
       DEBUG (
-        (DEBUG_ERROR,
-         "SockSend: Failed to process Snd Data\n",
-         Status)
+        (EFI_D_ERROR,
+        "SockSend: Failed to process Snd Data\n",
+        Status)
         );
 
       RemoveEntryList (&(SockToken->TokenList));
@@ -711,44 +735,48 @@ Exit:
 **/
 EFI_STATUS
 SockRcv (
-  IN SOCKET  *Sock,
-  IN VOID    *Token
+  IN SOCKET *Sock,
+  IN VOID   *Token
   )
 {
-  SOCK_IO_TOKEN  *RcvToken;
-  UINT32         RcvdBytes;
-  EFI_STATUS     Status;
-  EFI_EVENT      Event;
+  SOCK_IO_TOKEN *RcvToken;
+  UINT32        RcvdBytes;
+  EFI_STATUS    Status;
+  EFI_EVENT     Event;
 
   ASSERT (SockStream == Sock->Type);
 
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockRcv: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockRcv: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
   }
 
   if (SOCK_IS_NO_MAPPING (Sock)) {
+
     Status = EFI_NO_MAPPING;
     goto Exit;
   }
 
   if (SOCK_IS_UNCONFIGURED (Sock)) {
+
     Status = EFI_NOT_STARTED;
     goto Exit;
   }
 
   if (!(SOCK_IS_CONNECTED (Sock) || SOCK_IS_CONNECTING (Sock))) {
+
     Status = EFI_ACCESS_DENIED;
     goto Exit;
   }
 
-  RcvToken = (SOCK_IO_TOKEN *)Token;
+  RcvToken = (SOCK_IO_TOKEN *) Token;
 
   //
   // check if a token is already in the token buffer of this socket
@@ -759,13 +787,14 @@ SockRcv (
     goto Exit;
   }
 
-  RcvToken  = (SOCK_IO_TOKEN *)Token;
+  RcvToken  = (SOCK_IO_TOKEN *) Token;
   RcvdBytes = GET_RCV_DATASIZE (Sock);
 
   //
   // check whether an error has happened before
   //
   if (EFI_ABORTED != Sock->SockError) {
+
     SIGNAL_TOKEN (&(RcvToken->Token), Sock->SockError);
     Sock->SockError = EFI_ABORTED;
     goto Exit;
@@ -776,6 +805,7 @@ SockRcv (
   // data buffered in Sock->RcvBuffer
   //
   if (SOCK_IS_NO_MORE_DATA (Sock) && (0 == RcvdBytes)) {
+
     Status = EFI_CONNECTION_FIN;
     goto Exit;
   }
@@ -785,6 +815,7 @@ SockRcv (
 
     Status = Sock->ProtoHandler (Sock, SOCK_CONSUMED, NULL);
   } else {
+
     if (NULL == SockBufferToken (Sock, &Sock->RcvTokenList, RcvToken, 0)) {
       Status = EFI_OUT_OF_RESOURCES;
     }
@@ -806,7 +837,7 @@ Exit:
 **/
 EFI_STATUS
 SockFlush (
-  IN OUT SOCKET  *Sock
+  IN OUT SOCKET *Sock
   )
 {
   EFI_STATUS  Status;
@@ -815,26 +846,29 @@ SockFlush (
 
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockFlush: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockFlush: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
   }
 
   if (!SOCK_IS_CONFIGURED (Sock)) {
+
     Status = EFI_ACCESS_DENIED;
     goto Exit;
   }
 
   Status = Sock->ProtoHandler (Sock, SOCK_FLUSH, NULL);
   if (EFI_ERROR (Status)) {
+
     DEBUG (
-      (DEBUG_ERROR,
-       "SockFlush: Protocol failed handling SOCK_FLUSH with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockFlush: Protocol failed handling SOCK_FLUSH with %r",
+      Status)
       );
 
     goto Exit;
@@ -872,9 +906,9 @@ Exit:
 **/
 EFI_STATUS
 SockClose (
-  IN OUT SOCKET   *Sock,
-  IN     VOID     *Token,
-  IN     BOOLEAN  OnAbort
+  IN OUT SOCKET  *Sock,
+  IN     VOID    *Token,
+  IN     BOOLEAN OnAbort
   )
 {
   EFI_STATUS  Status;
@@ -885,9 +919,9 @@ SockClose (
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
     DEBUG (
-      (DEBUG_ERROR,
-       "SockClose: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockClose: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
@@ -908,7 +942,7 @@ SockClose (
     goto Exit;
   }
 
-  Event = ((SOCK_COMPLETION_TOKEN *)Token)->Event;
+  Event = ((SOCK_COMPLETION_TOKEN *) Token)->Event;
 
   if (SockTokenExisted (Sock, Event)) {
     Status = EFI_ACCESS_DENIED;
@@ -947,18 +981,18 @@ SockCancel (
   IN     VOID    *Token
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS     Status;
 
-  Status = EFI_SUCCESS;
+  Status    = EFI_SUCCESS;
 
   ASSERT (SockStream == Sock->Type);
 
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
     DEBUG (
-      (DEBUG_ERROR,
-       "SockCancel: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockCancel: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
@@ -972,7 +1006,7 @@ SockCancel (
   //
   // 1. Check ConnectionToken.
   //
-  if ((Token == NULL) || ((SOCK_COMPLETION_TOKEN *)Token == Sock->ConnectionToken)) {
+  if (Token == NULL || (SOCK_COMPLETION_TOKEN *) Token == Sock->ConnectionToken) {
     if (Sock->ConnectionToken != NULL) {
       SIGNAL_TOKEN (Sock->ConnectionToken, EFI_ABORTED);
       Sock->ConnectionToken = NULL;
@@ -988,7 +1022,7 @@ SockCancel (
   // 2. Check ListenTokenList.
   //
   Status = SockCancelToken (Token, &Sock->ListenTokenList);
-  if ((Token != NULL) && !EFI_ERROR (Status)) {
+  if (Token != NULL && !EFI_ERROR (Status)) {
     goto Exit;
   }
 
@@ -996,7 +1030,7 @@ SockCancel (
   // 3. Check RcvTokenList.
   //
   Status = SockCancelToken (Token, &Sock->RcvTokenList);
-  if ((Token != NULL) && !EFI_ERROR (Status)) {
+  if (Token != NULL && !EFI_ERROR (Status)) {
     goto Exit;
   }
 
@@ -1004,7 +1038,7 @@ SockCancel (
   // 4. Check SndTokenList.
   //
   Status = SockCancelToken (Token, &Sock->SndTokenList);
-  if ((Token != NULL) && !EFI_ERROR (Status)) {
+  if (Token != NULL && !EFI_ERROR (Status)) {
     goto Exit;
   }
 
@@ -1017,6 +1051,7 @@ Exit:
   EfiReleaseLock (&(Sock->Lock));
   return Status;
 }
+
 
 /**
   Get the mode data of the low layer protocol.
@@ -1031,8 +1066,8 @@ Exit:
 **/
 EFI_STATUS
 SockGetMode (
-  IN     SOCKET  *Sock,
-  IN OUT VOID    *Mode
+  IN     SOCKET *Sock,
+  IN OUT VOID   *Mode
   )
 {
   return Sock->ProtoHandler (Sock, SOCK_MODE, Mode);
@@ -1055,8 +1090,8 @@ SockGetMode (
 **/
 EFI_STATUS
 SockRoute (
-  IN SOCKET  *Sock,
-  IN VOID    *RouteInfo
+  IN SOCKET    *Sock,
+  IN VOID      *RouteInfo
   )
 {
   EFI_STATUS  Status;
@@ -1064,9 +1099,9 @@ SockRoute (
   Status = EfiAcquireLockOrFail (&(Sock->Lock));
   if (EFI_ERROR (Status)) {
     DEBUG (
-      (DEBUG_ERROR,
-       "SockRoute: Get the access for socket failed with %r",
-       Status)
+      (EFI_D_ERROR,
+      "SockRoute: Get the access for socket failed with %r",
+      Status)
       );
 
     return EFI_ACCESS_DENIED;
@@ -1088,3 +1123,4 @@ Exit:
   EfiReleaseLock (&(Sock->Lock));
   return Status;
 }
+

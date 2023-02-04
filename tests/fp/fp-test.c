@@ -116,14 +116,14 @@ static void usage_complete(int argc, char *argv[])
 }
 
 /* keep wrappers separate but do not bother defining headers for all of them */
-#include "wrap.c.inc"
+#include "wrap.inc.c"
 
 static void not_implemented(void)
 {
     fprintf(stderr, "Not implemented.\n");
 }
 
-static bool is_allowed(unsigned op, int rmode)
+static bool blacklisted(unsigned op, int rmode)
 {
     /* odd has not been implemented for any 80-bit ops */
     if (rmode == softfloat_round_odd) {
@@ -161,10 +161,10 @@ static bool is_allowed(unsigned op, int rmode)
         case F32_TO_EXTF80:
         case F64_TO_EXTF80:
         case F128_TO_EXTF80:
-            return false;
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
 static void do_testfloat(int op, int rmode, bool exact)
@@ -194,7 +194,7 @@ static void do_testfloat(int op, int rmode, bool exact)
     verCases_writeFunctionName(stderr);
     fputs("\n", stderr);
 
-    if (!is_allowed(op, rmode)) {
+    if (blacklisted(op, rmode)) {
         not_implemented();
         return;
     }
@@ -717,7 +717,7 @@ static void do_testfloat(int op, int rmode, bool exact)
         test_abz_f128(true_abz_f128M, subj_abz_f128M);
         break;
     case F128_MULADD:
-        test_abcz_f128(slow_f128M_mulAdd, qemu_f128M_mulAdd);
+        not_implemented();
         break;
     case F128_SQRT:
         test_az_f128(slow_f128M_sqrt, qemu_f128M_sqrt);
@@ -921,8 +921,7 @@ static void parse_args(int argc, char *argv[])
     }
 }
 
-static G_NORETURN
-void run_test(void)
+static void QEMU_NORETURN run_test(void)
 {
     unsigned int i;
 
@@ -964,21 +963,18 @@ void run_test(void)
             verCases_usesExact = !!(attrs & FUNC_ARG_EXACT);
 
             for (k = 0; k < 3; k++) {
-                FloatX80RoundPrec qsf_prec80 = floatx80_precision_x;
-                int prec80 = 80;
+                int prec80 = 32;
                 int l;
 
                 if (k == 1) {
                     prec80 = 64;
-                    qsf_prec80 = floatx80_precision_d;
                 } else if (k == 2) {
-                    prec80 = 32;
-                    qsf_prec80 = floatx80_precision_s;
+                    prec80 = 80;
                 }
 
                 verCases_roundingPrecision = 0;
                 slow_extF80_roundingPrecision = prec80;
-                qsf.floatx80_rounding_precision = qsf_prec80;
+                qsf.floatx80_rounding_precision = prec80;
 
                 if (attrs & FUNC_EFF_ROUNDINGPRECISION) {
                     verCases_roundingPrecision = prec80;

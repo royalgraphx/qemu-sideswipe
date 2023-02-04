@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Performs an atomic compare exchange operation on a 32-bit unsigned integer.
 
@@ -26,9 +29,9 @@
 UINT32
 EFIAPI
 InternalSyncCompareExchange32 (
-  IN      volatile UINT32  *Value,
-  IN      UINT32           CompareValue,
-  IN      UINT32           ExchangeValue
+  IN      volatile UINT32           *Value,
+  IN      UINT32                    CompareValue,
+  IN      UINT32                    ExchangeValue
   )
 {
   _asm {
@@ -38,3 +41,4 @@ InternalSyncCompareExchange32 (
     lock    cmpxchg [ecx], edx
   }
 }
+

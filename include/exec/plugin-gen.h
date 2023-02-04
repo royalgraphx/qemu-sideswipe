@@ -19,8 +19,7 @@ struct DisasContextBase;
 
 #ifdef CONFIG_PLUGIN
 
-bool plugin_gen_tb_start(CPUState *cpu, const struct DisasContextBase *db,
-                         bool supress);
+bool plugin_gen_tb_start(CPUState *cpu, const TranslationBlock *tb);
 void plugin_gen_tb_end(CPUState *cpu);
 void plugin_gen_insn_start(CPUState *cpu, const struct DisasContextBase *db);
 void plugin_gen_insn_end(void);
@@ -28,20 +27,12 @@ void plugin_gen_insn_end(void);
 void plugin_gen_disable_mem_helpers(void);
 void plugin_gen_empty_mem_callback(TCGv addr, uint32_t info);
 
-static inline void plugin_insn_append(abi_ptr pc, const void *from, size_t size)
+static inline void plugin_insn_append(const void *from, size_t size)
 {
     struct qemu_plugin_insn *insn = tcg_ctx->plugin_insn;
-    abi_ptr off;
 
     if (insn == NULL) {
         return;
-    }
-    off = pc - insn->vaddr;
-    if (off < insn->data->len) {
-        g_byte_array_set_size(insn->data, off);
-    } else if (off > insn->data->len) {
-        /* we have an unexpected gap */
-        g_assert_not_reached();
     }
 
     insn->data = g_byte_array_append(insn->data, from, size);
@@ -49,8 +40,8 @@ static inline void plugin_insn_append(abi_ptr pc, const void *from, size_t size)
 
 #else /* !CONFIG_PLUGIN */
 
-static inline bool
-plugin_gen_tb_start(CPUState *cpu, const struct DisasContextBase *db, bool sup)
+static inline
+bool plugin_gen_tb_start(CPUState *cpu, const TranslationBlock *tb)
 {
     return false;
 }
@@ -71,7 +62,7 @@ static inline void plugin_gen_disable_mem_helpers(void)
 static inline void plugin_gen_empty_mem_callback(TCGv addr, uint32_t info)
 { }
 
-static inline void plugin_insn_append(abi_ptr pc, const void *from, size_t size)
+static inline void plugin_insn_append(const void *from, size_t size)
 { }
 
 #endif /* CONFIG_PLUGIN */

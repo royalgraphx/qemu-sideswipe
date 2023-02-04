@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 #include "BaseLibInternals.h"
 
 /**
@@ -22,7 +25,7 @@
 VOID
 EFIAPI
 AsmWriteIdtr (
-  IN      CONST IA32_DESCRIPTOR  *Idtr
+  IN      CONST IA32_DESCRIPTOR     *Idtr
   )
 {
   ASSERT (Idtr != NULL);

@@ -12,7 +12,7 @@
 #
 from __future__ import print_function
 import Common.LongFilePathOs as os, codecs, re
-import shlex
+import distutils.util
 import Common.EdkLogger as EdkLogger
 from io import BytesIO
 from Common.BuildToolError import *
@@ -152,7 +152,7 @@ class Ucs2Codec(codecs.Codec):
 
 TheUcs2Codec = Ucs2Codec()
 def Ucs2Search(name):
-    if name in ['ucs-2', 'ucs_2']:
+    if name == 'ucs-2':
         return codecs.CodecInfo(
             name=name,
             encode=TheUcs2Codec.encode,
@@ -233,7 +233,7 @@ class UniFileClassObject(object):
     # Get Language definition
     #
     def GetLangDef(self, File, Line):
-        Lang = shlex.split(Line.split(u"//")[0])
+        Lang = distutils.util.split_quoted((Line.split(u"//")[0]))
         if len(Lang) != 3:
             try:
                 FileIn = UniFileClassObject.OpenUniFile(LongFilePath(File.Path))
@@ -371,12 +371,13 @@ class UniFileClassObject(object):
     # Pre-process before parse .uni file
     #
     def PreProcess(self, File):
+        if not os.path.exists(File.Path) or not os.path.isfile(File.Path):
+            EdkLogger.error("Unicode File Parser", FILE_NOT_FOUND, ExtraData=File.Path)
+
         try:
             FileIn = UniFileClassObject.OpenUniFile(LongFilePath(File.Path))
         except UnicodeError as X:
             EdkLogger.error("build", FILE_READ_FAILURE, "File read failure: %s" % str(X), ExtraData=File.Path);
-        except OSError:
-            EdkLogger.error("Unicode File Parser", FILE_NOT_FOUND, ExtraData=File.Path)
         except:
             EdkLogger.error("build", FILE_OPEN_FAILURE, ExtraData=File.Path);
 

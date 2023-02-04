@@ -18,7 +18,7 @@
 
 /**
   TemporaryRamDone() disables the use of Temporary RAM. If present, this service is invoked
-  by the PEI Foundation after the EFI_PEI_PERMANENT_MEMORY_INSTALLED_PPI is installed.
+  by the PEI Foundation after the EFI_PEI_PERMANANT_MEMORY_INSTALLED_PPI is installed.
 
   @retval EFI_SUCCESS           Use of Temporary RAM was disabled.
   @retval EFI_INVALID_PARAMETER Temporary RAM could not be disabled.
@@ -26,7 +26,7 @@
 **/
 typedef
 EFI_STATUS
-(EFIAPI *EFI_PEI_TEMPORARY_RAM_DONE)(
+(EFIAPI * EFI_PEI_TEMPORARY_RAM_DONE) (
   VOID
   );
 
@@ -38,9 +38,9 @@ EFI_STATUS
 /// Permanent RAM to be enabled and accessed at the same time with no side effects.
 ///
 typedef struct _EFI_PEI_TEMPORARY_RAM_DONE_PPI {
-  EFI_PEI_TEMPORARY_RAM_DONE    TemporaryRamDone;
+  EFI_PEI_TEMPORARY_RAM_DONE TemporaryRamDone;
 } EFI_PEI_TEMPORARY_RAM_DONE_PPI;
 
-extern EFI_GUID  gEfiTemporaryRamDonePpiGuid;
+extern EFI_GUID gEfiTemporaryRamDonePpiGuid;
 
 #endif

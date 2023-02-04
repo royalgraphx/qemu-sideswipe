@@ -31,7 +31,6 @@
 #include "qapi/error.h"
 #include "qemu/module.h"
 #include "qemu/option.h"
-#include "qemu/memalign.h"
 
 typedef struct BDRVRawState {
     uint64_t offset;
@@ -182,8 +181,8 @@ static void raw_reopen_abort(BDRVReopenState *state)
 }
 
 /* Check and adjust the offset, against 'offset' and 'size' options. */
-static inline int raw_adjust_offset(BlockDriverState *bs, int64_t *offset,
-                                    int64_t bytes, bool is_write)
+static inline int raw_adjust_offset(BlockDriverState *bs, uint64_t *offset,
+                                    uint64_t bytes, bool is_write)
 {
     BDRVRawState *s = bs->opaque;
 
@@ -202,9 +201,9 @@ static inline int raw_adjust_offset(BlockDriverState *bs, int64_t *offset,
     return 0;
 }
 
-static int coroutine_fn raw_co_preadv(BlockDriverState *bs, int64_t offset,
-                                      int64_t bytes, QEMUIOVector *qiov,
-                                      BdrvRequestFlags flags)
+static int coroutine_fn raw_co_preadv(BlockDriverState *bs, uint64_t offset,
+                                      uint64_t bytes, QEMUIOVector *qiov,
+                                      int flags)
 {
     int ret;
 
@@ -217,9 +216,9 @@ static int coroutine_fn raw_co_preadv(BlockDriverState *bs, int64_t offset,
     return bdrv_co_preadv(bs->file, offset, bytes, qiov, flags);
 }
 
-static int coroutine_fn raw_co_pwritev(BlockDriverState *bs, int64_t offset,
-                                       int64_t bytes, QEMUIOVector *qiov,
-                                       BdrvRequestFlags flags)
+static int coroutine_fn raw_co_pwritev(BlockDriverState *bs, uint64_t offset,
+                                       uint64_t bytes, QEMUIOVector *qiov,
+                                       int flags)
 {
     void *buf = NULL;
     BlockDriver *drv;
@@ -258,8 +257,6 @@ static int coroutine_fn raw_co_pwritev(BlockDriverState *bs, int64_t offset,
         qemu_iovec_add(&local_qiov, buf, 512);
         qemu_iovec_concat(&local_qiov, qiov, 512, qiov->size - 512);
         qiov = &local_qiov;
-
-        flags &= ~BDRV_REQ_REGISTERED_BUF;
     }
 
     ret = raw_adjust_offset(bs, &offset, bytes, true);
@@ -292,12 +289,12 @@ static int coroutine_fn raw_co_block_status(BlockDriverState *bs,
 }
 
 static int coroutine_fn raw_co_pwrite_zeroes(BlockDriverState *bs,
-                                             int64_t offset, int64_t bytes,
+                                             int64_t offset, int bytes,
                                              BdrvRequestFlags flags)
 {
     int ret;
 
-    ret = raw_adjust_offset(bs, &offset, bytes, true);
+    ret = raw_adjust_offset(bs, (uint64_t *)&offset, bytes, true);
     if (ret) {
         return ret;
     }
@@ -305,11 +302,11 @@ static int coroutine_fn raw_co_pwrite_zeroes(BlockDriverState *bs,
 }
 
 static int coroutine_fn raw_co_pdiscard(BlockDriverState *bs,
-                                        int64_t offset, int64_t bytes)
+                                        int64_t offset, int bytes)
 {
     int ret;
 
-    ret = raw_adjust_offset(bs, &offset, bytes, true);
+    ret = raw_adjust_offset(bs, (uint64_t *)&offset, bytes, true);
     if (ret) {
         return ret;
     }
@@ -413,8 +410,7 @@ static void raw_lock_medium(BlockDriverState *bs, bool locked)
     bdrv_lock_medium(bs->file->bs, locked);
 }
 
-static int coroutine_fn raw_co_ioctl(BlockDriverState *bs,
-                                     unsigned long int req, void *buf)
+static int raw_co_ioctl(BlockDriverState *bs, unsigned long int req, void *buf)
 {
     BDRVRawState *s = bs->opaque;
     if (s->offset || s->has_size) {
@@ -460,13 +456,13 @@ static int raw_open(BlockDriverState *bs, QDict *options, int flags,
         file_role = BDRV_CHILD_FILTERED | BDRV_CHILD_PRIMARY;
     }
 
-    bdrv_open_child(NULL, options, "file", bs, &child_of_bds,
-                    file_role, false, errp);
+    bs->file = bdrv_open_child(NULL, options, "file", bs, &child_of_bds,
+                               file_role, false, errp);
     if (!bs->file) {
         return -EINVAL;
     }
 
-    bs->sg = bdrv_is_sg(bs->file->bs);
+    bs->sg = bs->file->bs->sg;
     bs->supported_write_flags = BDRV_REQ_WRITE_UNCHANGED |
         (BDRV_REQ_FUA & bs->file->bs->supported_write_flags);
     bs->supported_zero_flags = BDRV_REQ_WRITE_UNCHANGED |
@@ -492,7 +488,7 @@ static int raw_open(BlockDriverState *bs, QDict *options, int flags,
         return ret;
     }
 
-    if (bdrv_is_sg(bs) && (s->offset || s->has_size)) {
+    if (bs->sg && (s->offset || s->has_size)) {
         error_setg(errp, "Cannot use offset/size with SCSI generic devices");
         return -EINVAL;
     }
@@ -536,10 +532,10 @@ static int raw_probe_geometry(BlockDriverState *bs, HDGeometry *geo)
 
 static int coroutine_fn raw_co_copy_range_from(BlockDriverState *bs,
                                                BdrvChild *src,
-                                               int64_t src_offset,
+                                               uint64_t src_offset,
                                                BdrvChild *dst,
-                                               int64_t dst_offset,
-                                               int64_t bytes,
+                                               uint64_t dst_offset,
+                                               uint64_t bytes,
                                                BdrvRequestFlags read_flags,
                                                BdrvRequestFlags write_flags)
 {
@@ -555,10 +551,10 @@ static int coroutine_fn raw_co_copy_range_from(BlockDriverState *bs,
 
 static int coroutine_fn raw_co_copy_range_to(BlockDriverState *bs,
                                              BdrvChild *src,
-                                             int64_t src_offset,
+                                             uint64_t src_offset,
                                              BdrvChild *dst,
-                                             int64_t dst_offset,
-                                             int64_t bytes,
+                                             uint64_t dst_offset,
+                                             uint64_t bytes,
                                              BdrvRequestFlags read_flags,
                                              BdrvRequestFlags write_flags)
 {
@@ -579,30 +575,6 @@ static const char *const raw_strong_runtime_opts[] = {
     NULL
 };
 
-static void raw_cancel_in_flight(BlockDriverState *bs)
-{
-    bdrv_cancel_in_flight(bs->file->bs);
-}
-
-static void raw_child_perm(BlockDriverState *bs, BdrvChild *c,
-                           BdrvChildRole role,
-                           BlockReopenQueue *reopen_queue,
-                           uint64_t parent_perm, uint64_t parent_shared,
-                           uint64_t *nperm, uint64_t *nshared)
-{
-    bdrv_default_perms(bs, c, role, reopen_queue, parent_perm,
-                       parent_shared, nperm, nshared);
-
-    /*
-     * bdrv_default_perms() may add WRITE and/or RESIZE (see comment in
-     * bdrv_default_perms_for_storage() for an explanation) but we only need
-     * them if they are in parent_perm. Drop WRITE and RESIZE whenever possible
-     * to avoid permission conflicts.
-     */
-    *nperm &= ~(BLK_PERM_WRITE | BLK_PERM_RESIZE);
-    *nperm |= parent_perm & (BLK_PERM_WRITE | BLK_PERM_RESIZE);
-}
-
 BlockDriver bdrv_raw = {
     .format_name          = "raw",
     .instance_size        = sizeof(BDRVRawState),
@@ -611,7 +583,7 @@ BlockDriver bdrv_raw = {
     .bdrv_reopen_commit   = &raw_reopen_commit,
     .bdrv_reopen_abort    = &raw_reopen_abort,
     .bdrv_open            = &raw_open,
-    .bdrv_child_perm      = raw_child_perm,
+    .bdrv_child_perm      = bdrv_default_perms,
     .bdrv_co_create_opts  = &raw_co_create_opts,
     .bdrv_co_preadv       = &raw_co_preadv,
     .bdrv_co_pwritev      = &raw_co_pwritev,
@@ -636,7 +608,6 @@ BlockDriver bdrv_raw = {
     .bdrv_has_zero_init   = &raw_has_zero_init,
     .strong_runtime_opts  = raw_strong_runtime_opts,
     .mutable_opts         = mutable_opts,
-    .bdrv_cancel_in_flight = raw_cancel_in_flight,
 };
 
 static void bdrv_raw_init(void)

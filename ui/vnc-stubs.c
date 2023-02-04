@@ -10,12 +10,10 @@ int vnc_display_pw_expire(const char *id, time_t expires)
 {
     return -ENODEV;
 };
-void vnc_parse(const char *str)
+QemuOpts *vnc_parse(const char *str, Error **errp)
 {
-    if (strcmp(str, "none") == 0) {
-        return;
-    }
-    error_setg(&error_fatal, "VNC support is disabled");
+    error_setg(errp, "VNC support is disabled");
+    return NULL;
 }
 int vnc_init_func(void *opaque, QemuOpts *opts, Error **errp)
 {

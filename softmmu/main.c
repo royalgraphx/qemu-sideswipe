@@ -23,27 +23,31 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu-main.h"
+#include "qemu-common.h"
 #include "sysemu/sysemu.h"
 
 #ifdef CONFIG_SDL
+#if defined(__APPLE__) || defined(main)
 #include <SDL.h>
-#endif
-
-int qemu_default_main(void)
-{
-    int status;
-
-    status = qemu_main_loop();
-    qemu_cleanup();
-
-    return status;
-}
-
-int (*qemu_main)(void) = qemu_default_main;
-
 int main(int argc, char **argv)
 {
-    qemu_init(argc, argv);
-    return qemu_main();
+    return qemu_main(argc, argv, NULL);
+}
+#undef main
+#define main qemu_main
+#endif
+#endif /* CONFIG_SDL */
+
+#ifdef CONFIG_COCOA
+#undef main
+#define main qemu_main
+#endif /* CONFIG_COCOA */
+
+int main(int argc, char **argv, char **envp)
+{
+    qemu_init(argc, argv, envp);
+    qemu_main_loop();
+    qemu_cleanup();
+
+    return 0;
 }

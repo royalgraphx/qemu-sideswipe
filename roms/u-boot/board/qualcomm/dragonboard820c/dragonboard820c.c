@@ -5,12 +5,7 @@
  * (C) Copyright 2017 Jorge Ramirez-Ortiz <jorge.ramirez-ortiz@linaro.org>
  */
 
-#include <cpu_func.h>
-#include <init.h>
 #include <asm/arch/sysmap-apq8096.h>
-#include <env.h>
-#include <asm/cache.h>
-#include <asm/global_data.h>
 #include <linux/arm-smccc.h>
 #include <linux/psci.h>
 #include <common.h>
@@ -127,7 +122,7 @@ int board_init(void)
 	return 0;
 }
 
-void reset_cpu(void)
+void reset_cpu(ulong addr)
 {
 	psci_system_reset();
 }

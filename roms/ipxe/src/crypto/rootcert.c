@@ -123,6 +123,5 @@ static void rootcert_init ( void ) {
 
 /** Root certificate initialiser */
 struct startup_fn rootcert_startup_fn __startup_fn ( STARTUP_LATE ) = {
-	.name = "rootcert",
 	.startup = rootcert_init,
 };

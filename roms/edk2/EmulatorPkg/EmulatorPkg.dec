@@ -2,16 +2,15 @@
 #
 # This is the Emu Emulation Environment Platform
 #
-# Copyright (c) 2008 - 2019, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2008 - 2011, Intel Corporation. All rights reserved.<BR>
 # Portions copyright (c) 2011, Apple Inc. All rights reserved.
-# (C) Copyright 2020 Hewlett Packard Enterprise Development LP<BR>
 #
 #    SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
 
 [Defines]
-  DEC_SPECIFICATION              = 0x00010005
+  DEC_VERSION                    = 0x00010005
   PACKAGE_NAME                   = EmulatorPkg
   PACKAGE_GUID                   = 36E48BD7-7D92-5A47-A2CD-513F072E3300
   PACKAGE_VERSION                = 0.1
@@ -28,7 +27,6 @@
   KeyMap|Include/Library/KeyMapLib.h
   PpiListLib|Include/Library/PpiListLib.h
   SmbiosLib|Include/Library/SmbiosLib.h
-  EmuMagicPageLib|Include/Library/EmuMagicPageLib.h
 
 [Protocols]
   gEmuThunkProtocolGuid          = { 0x5CF32E0B, 0x8EDF, 0x2E44, { 0x9C, 0xDA, 0x93, 0x20, 0x5E, 0x99, 0xEC, 0x1C } }
@@ -46,7 +44,6 @@
   gEmuSystemConfigGuid       = { 0xF8626165, 0x6CEB, 0x924A, { 0xBA, 0xFC, 0xF1, 0x3A, 0xB9, 0xD6, 0x57, 0x28 } }
   gEmuVirtualDisksGuid       = { 0xf2ba331a, 0x8985, 0x11db, { 0xa4, 0x06, 0x00, 0x40, 0xd0, 0x2b, 0x18, 0x35 } }
   gEmuPhysicalDisksGuid      = { 0xf2bdcc96, 0x8985, 0x11db, { 0x87, 0x19, 0x00, 0x40, 0xd0, 0x2b, 0x18, 0x35 } }
-  gEmuRedfishServiceGuid     = { 0x3fb208ac, 0x2185, 0x498c, { 0xbf, 0x46, 0xdc, 0x23, 0xda, 0x58, 0x7b, 0x55 } }
 
 [PcdsFeatureFlag]
   ## If TRUE, if symbols only load on breakpoints and gdb entry
@@ -69,23 +66,12 @@
   gEmulatorPkgTokenSpaceGuid.PcdEmuApCount|L"0"|VOID*|0x00001019
 
   ## Magic page to implement PEI Services Table Pointer Lib
-  gEmulatorPkgTokenSpaceGuid.PcdPeiServicesTablePage|0x1013000000|UINT64|0x0000101b
+  gEmulatorPkgTokenSpaceGuid.PcdPeiServicesTablePage|0x1003000000|UINT64|0x0000101b
 
   ## Size of the packet filter
   gEmulatorPkgTokenSpaceGuid.PcdNetworkPacketFilterSize|524288|UINT32|0x0000101c
 
-  ## Platform level Redfish Service control PCD
-  # These PCDs are used to stop the Redfish sevice when secure boot is disabled
-  # or exit boot service.
-  gEmulatorPkgTokenSpaceGuid.PcdRedfishServieStopIfSecureBootDisabled|TRUE|BOOLEAN|0x00001020
-  gEmulatorPkgTokenSpaceGuid.PcdRedfishServieStopIfExitbootService|TRUE|BOOLEAN|0x00001021
-  ##
-  # edk2 Redfish implementation on Emulator package is designed to access
-  # to Redfish simulator.
-  # https://github.com/DMTF/Redfish-Profile-Simulator
-  # The user ID and password are fixed as below.
-  gEmulatorPkgTokenSpaceGuid.PcdRedfishServieUserId|"admin"|VOID*|0x00001022
-  gEmulatorPkgTokenSpaceGuid.PcdRedfishServiePassword|"pwd123456"|VOID*|0x00001023
+
 
 [PcdsFixedAtBuild, PcdsPatchableInModule]
   gEmulatorPkgTokenSpaceGuid.PcdEmuBootMode|1|UINT32|0x00001006
@@ -108,13 +94,6 @@
   gEmulatorPkgTokenSpaceGuid.PcdEmuGop|L"GOP Window"|VOID*|0x00001018
   gEmulatorPkgTokenSpaceGuid.PcdEmuFileSystem|L"."|VOID*|0x00001004
   gEmulatorPkgTokenSpaceGuid.PcdEmuSerialPort|L"/dev/ttyS0"|VOID*|0x00001002
-
-  #
-  # On Unix host, this is the network interface name on host system that will
-  #  be used in UEFI.
-  # On Win host, this is the network interface index number on Windows that
-  #  will be used in UEFI. For example, string L"0" is the first network
-  #  interface.
   gEmulatorPkgTokenSpaceGuid.PcdEmuNetworkInterface|L"en0"|VOID*|0x0000100d
 
   gEmulatorPkgTokenSpaceGuid.PcdEmuCpuModel|L"Intel(R) Processor Model"|VOID*|0x00001007

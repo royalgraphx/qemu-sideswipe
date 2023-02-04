@@ -16,7 +16,6 @@
 #include "qemu/cutils.h"
 #include "qemu/module.h"
 #include "qemu/option.h"
-#include "qemu/memalign.h"
 
 typedef struct {
     BdrvChild *test_file;
@@ -32,7 +31,7 @@ typedef struct BlkverifyRequest {
     uint64_t bytes;
     int flags;
 
-    int (*request_fn)(BdrvChild *, int64_t, int64_t, QEMUIOVector *,
+    int (*request_fn)(BdrvChild *, int64_t, unsigned int, QEMUIOVector *,
                       BdrvRequestFlags);
 
     int ret;                    /* test image result */
@@ -44,7 +43,7 @@ typedef struct BlkverifyRequest {
     QEMUIOVector *raw_qiov;     /* cloned I/O vector for raw file */
 } BlkverifyRequest;
 
-static void G_GNUC_PRINTF(2, 3) blkverify_err(BlkverifyRequest *r,
+static void GCC_FMT_ATTR(2, 3) blkverify_err(BlkverifyRequest *r,
                                              const char *fmt, ...)
 {
     va_list ap;
@@ -113,6 +112,7 @@ static int blkverify_open(BlockDriverState *bs, QDict *options, int flags,
 {
     BDRVBlkverifyState *s = bs->opaque;
     QemuOpts *opts;
+    Error *local_err = NULL;
     int ret;
 
     opts = qemu_opts_create(&runtime_opts, NULL, 0, &error_abort);
@@ -122,18 +122,23 @@ static int blkverify_open(BlockDriverState *bs, QDict *options, int flags,
     }
 
     /* Open the raw file */
-    ret = bdrv_open_file_child(qemu_opt_get(opts, "x-raw"), options, "raw",
-                               bs, errp);
-    if (ret < 0) {
+    bs->file = bdrv_open_child(qemu_opt_get(opts, "x-raw"), options, "raw",
+                               bs, &child_of_bds,
+                               BDRV_CHILD_FILTERED | BDRV_CHILD_PRIMARY,
+                               false, &local_err);
+    if (local_err) {
+        ret = -EINVAL;
+        error_propagate(errp, local_err);
         goto fail;
     }
 
     /* Open the test file */
     s->test_file = bdrv_open_child(qemu_opt_get(opts, "x-image"), options,
                                    "test", bs, &child_of_bds, BDRV_CHILD_DATA,
-                                   false, errp);
-    if (!s->test_file) {
+                                   false, &local_err);
+    if (local_err) {
         ret = -EINVAL;
+        error_propagate(errp, local_err);
         goto fail;
     }
 
@@ -219,8 +224,8 @@ blkverify_co_prwv(BlockDriverState *bs, BlkverifyRequest *r, uint64_t offset,
 }
 
 static int coroutine_fn
-blkverify_co_preadv(BlockDriverState *bs, int64_t offset, int64_t bytes,
-                    QEMUIOVector *qiov, BdrvRequestFlags flags)
+blkverify_co_preadv(BlockDriverState *bs, uint64_t offset, uint64_t bytes,
+                    QEMUIOVector *qiov, int flags)
 {
     BlkverifyRequest r;
     QEMUIOVector raw_qiov;
@@ -232,8 +237,8 @@ blkverify_co_preadv(BlockDriverState *bs, int64_t offset, int64_t bytes,
     qemu_iovec_init(&raw_qiov, qiov->niov);
     qemu_iovec_clone(&raw_qiov, qiov, buf);
 
-    ret = blkverify_co_prwv(bs, &r, offset, bytes, qiov, &raw_qiov,
-                            flags & ~BDRV_REQ_REGISTERED_BUF, false);
+    ret = blkverify_co_prwv(bs, &r, offset, bytes, qiov, &raw_qiov, flags,
+                            false);
 
     cmp_offset = qemu_iovec_compare(qiov, &raw_qiov);
     if (cmp_offset != -1) {
@@ -248,14 +253,14 @@ blkverify_co_preadv(BlockDriverState *bs, int64_t offset, int64_t bytes,
 }
 
 static int coroutine_fn
-blkverify_co_pwritev(BlockDriverState *bs, int64_t offset, int64_t bytes,
-                     QEMUIOVector *qiov, BdrvRequestFlags flags)
+blkverify_co_pwritev(BlockDriverState *bs, uint64_t offset, uint64_t bytes,
+                     QEMUIOVector *qiov, int flags)
 {
     BlkverifyRequest r;
     return blkverify_co_prwv(bs, &r, offset, bytes, qiov, qiov, flags, true);
 }
 
-static int coroutine_fn blkverify_co_flush(BlockDriverState *bs)
+static int blkverify_co_flush(BlockDriverState *bs)
 {
     BDRVBlkverifyState *s = bs->opaque;
 

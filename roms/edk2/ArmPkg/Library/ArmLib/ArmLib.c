@@ -1,7 +1,7 @@
 /** @file
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
-  Copyright (c) 2011 - 2021, ARM Ltd. All rights reserved.<BR>
+  Copyright (c) 2011 - 2014, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -10,25 +10,31 @@
 #include <Base.h>
 
 #include <Library/ArmLib.h>
+#include <Library/DebugLib.h>
+#include <Library/PcdLib.h>
 
 #include "ArmLibPrivate.h"
 
 VOID
 EFIAPI
 ArmSetAuxCrBit (
-  IN  UINT32  Bits
+  IN  UINT32    Bits
   )
 {
-  ArmWriteAuxCr (ArmReadAuxCr () | Bits);
+  UINT32 val = ArmReadAuxCr();
+  val |= Bits;
+  ArmWriteAuxCr(val);
 }
 
 VOID
 EFIAPI
 ArmUnsetAuxCrBit (
-  IN  UINT32  Bits
+  IN  UINT32    Bits
   )
 {
-  ArmWriteAuxCr (ArmReadAuxCr () & ~Bits);
+  UINT32 val = ArmReadAuxCr();
+  val &= ~Bits;
+  ArmWriteAuxCr(val);
 }
 
 //
@@ -38,19 +44,25 @@ ArmUnsetAuxCrBit (
 VOID
 EFIAPI
 ArmSetCpuActlrBit (
-  IN  UINTN  Bits
+  IN  UINTN    Bits
   )
 {
-  ArmWriteCpuActlr (ArmReadCpuActlr () | Bits);
+  UINTN Value;
+  Value =  ArmReadCpuActlr ();
+  Value |= Bits;
+  ArmWriteCpuActlr (Value);
 }
 
 VOID
 EFIAPI
 ArmUnsetCpuActlrBit (
-  IN  UINTN  Bits
+  IN  UINTN    Bits
   )
 {
-  ArmWriteCpuActlr (ArmReadCpuActlr () & ~Bits);
+  UINTN Value;
+  Value = ArmReadCpuActlr ();
+  Value &= ~Bits;
+  ArmWriteCpuActlr (Value);
 }
 
 UINTN
@@ -77,7 +89,7 @@ ArmCacheWritebackGranule (
   VOID
   )
 {
-  UINTN  CWG;
+  UINTN   CWG;
 
   CWG = (ArmCacheInfo () >> 24) & 0xf; // CTR_EL0.CWG
 

@@ -46,3 +46,4 @@ LegacyBiosPlatformInstall (
   );
 
 #endif
+

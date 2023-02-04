@@ -2,10 +2,6 @@ config PL022
     bool
     select SSI
 
-config SIFIVE_SPI
-    bool
-    select SSI
-
 config SSI
     bool
 

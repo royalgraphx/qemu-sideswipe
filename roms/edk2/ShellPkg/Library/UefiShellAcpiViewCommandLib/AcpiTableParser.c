@@ -1,14 +1,8 @@
 /** @file
   ACPI table parser
 
-  Copyright (c) 2016 - 2020, ARM Limited. All rights reserved.
+  Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
-
-  @par Glossary:
-    - Sbbr or SBBR   - Server Base Boot Requirements
-
-  @par Reference(s):
-    - Arm Server Base Boot Requirements 1.2, September 2019
 **/
 
 #include <Uefi.h>
@@ -17,16 +11,11 @@
 #include "AcpiParser.h"
 #include "AcpiTableParser.h"
 #include "AcpiView.h"
-#include "AcpiViewConfig.h"
-
-#if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
-  #include "Arm/SbbrValidator.h"
-#endif
 
 /**
   A list of registered ACPI table parsers.
 **/
-STATIC ACPI_TABLE_PARSER  mTableParserList[MAX_ACPI_TABLE_PARSERS];
+STATIC ACPI_TABLE_PARSER mTableParserList[MAX_ACPI_TABLE_PARSERS];
 
 /**
   Register the ACPI table Parser
@@ -46,11 +35,11 @@ STATIC ACPI_TABLE_PARSER  mTableParserList[MAX_ACPI_TABLE_PARSERS];
 EFI_STATUS
 EFIAPI
 RegisterParser (
-  IN  UINT32                 Signature,
-  IN  PARSE_ACPI_TABLE_PROC  ParserProc
+  IN  UINT32                  Signature,
+  IN  PARSE_ACPI_TABLE_PROC   ParserProc
   )
 {
-  UINT32  Index;
+  UINT32 Index;
 
   if ((ParserProc == NULL) || (Signature == ACPI_PARSER_SIGNATURE_NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -70,12 +59,12 @@ RegisterParser (
 
   // Find the first free slot and register the parser
   for (Index = 0;
-       Index < (sizeof (mTableParserList) / sizeof (mTableParserList[0]));
-       Index++)
+      Index < (sizeof (mTableParserList) / sizeof (mTableParserList[0]));
+      Index++)
   {
     if (mTableParserList[Index].Signature == ACPI_PARSER_SIGNATURE_NULL) {
       mTableParserList[Index].Signature = Signature;
-      mTableParserList[Index].Parser    = ParserProc;
+      mTableParserList[Index].Parser = ParserProc;
       return EFI_SUCCESS;
     }
   }
@@ -98,10 +87,10 @@ RegisterParser (
 EFI_STATUS
 EFIAPI
 DeregisterParser (
-  IN  UINT32  Signature
+  IN  UINT32                  Signature
   )
 {
-  UINT32  Index;
+  UINT32 Index;
 
   if (Signature == ACPI_PARSER_SIGNATURE_NULL) {
     return EFI_INVALID_PARAMETER;
@@ -113,7 +102,7 @@ DeregisterParser (
   {
     if (Signature == mTableParserList[Index].Signature) {
       mTableParserList[Index].Signature = ACPI_PARSER_SIGNATURE_NULL;
-      mTableParserList[Index].Parser    = NULL;
+      mTableParserList[Index].Parser = NULL;
       return EFI_SUCCESS;
     }
   }
@@ -138,11 +127,11 @@ DeregisterParser (
 EFI_STATUS
 EFIAPI
 GetParser (
-  IN  UINT32                 Signature,
-  OUT PARSE_ACPI_TABLE_PROC  *ParserProc
+  IN  UINT32                   Signature,
+  OUT PARSE_ACPI_TABLE_PROC *  ParserProc
   )
 {
-  UINT32  Index;
+  UINT32 Index;
 
   if ((ParserProc == NULL) || (Signature == ACPI_PARSER_SIGNATURE_NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -179,16 +168,15 @@ GetParser (
 VOID
 EFIAPI
 ProcessAcpiTable (
-  IN UINT8  *Ptr
+  IN UINT8* Ptr
   )
 {
-  EFI_STATUS             Status;
-  BOOLEAN                Trace;
-  CONST UINT32           *AcpiTableSignature;
-  CONST UINT32           *AcpiTableLength;
-  CONST UINT8            *AcpiTableRevision;
-  CONST UINT8            *SignaturePtr;
-  PARSE_ACPI_TABLE_PROC  ParserProc;
+  EFI_STATUS    Status;
+  BOOLEAN       Trace;
+  CONST UINT32* AcpiTableSignature;
+  CONST UINT32* AcpiTableLength;
+  CONST UINT8*  AcpiTableRevision;
+  PARSE_ACPI_TABLE_PROC ParserProc;
 
   ParseAcpiHeader (
     Ptr,
@@ -205,34 +193,8 @@ ProcessAcpiTable (
 
   if (Trace) {
     DumpRaw (Ptr, *AcpiTableLength);
-
-    // Do not process the ACPI table any further if the table length read
-    // is invalid. The ACPI table should at least contain the table header.
-    if (*AcpiTableLength < sizeof (EFI_ACPI_DESCRIPTION_HEADER)) {
-      SignaturePtr = (CONST UINT8 *)AcpiTableSignature;
-      IncrementErrorCount ();
-      Print (
-        L"ERROR: Invalid %c%c%c%c table length. Length = %d\n",
-        SignaturePtr[0],
-        SignaturePtr[1],
-        SignaturePtr[2],
-        SignaturePtr[3],
-        *AcpiTableLength
-        );
-      return;
-    }
-
-    if (GetConsistencyChecking ()) {
-      VerifyChecksum (TRUE, Ptr, *AcpiTableLength);
-    }
+    VerifyChecksum (TRUE, Ptr, *AcpiTableLength);
   }
-
- #if defined (MDE_CPU_ARM) || defined (MDE_CPU_AARCH64)
-  if (GetMandatoryTableValidate ()) {
-    ArmSbbrIncrementTableCount (*AcpiTableSignature);
-  }
-
- #endif
 
   Status = GetParser (*AcpiTableSignature, &ParserProc);
   if (EFI_ERROR (Status)) {
@@ -240,7 +202,6 @@ ProcessAcpiTable (
     if (Trace) {
       DumpAcpiHeader (Ptr);
     }
-
     return;
   }
 

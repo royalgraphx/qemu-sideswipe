@@ -30,8 +30,9 @@ AllocatePool (
   IN UINTN  AllocationSize
   )
 {
-  return (VOID *)malloc (AllocationSize);
+  return (VOID*) malloc (AllocationSize);
 }
+
 
 /**
   Allocates and zeros a buffer of type EfiBootServicesData.
@@ -52,7 +53,7 @@ AllocateZeroPool (
   IN UINTN  AllocationSize
   )
 {
-  VOID  *Buffer;
+  VOID *Buffer;
 
   Buffer = AllocatePool (AllocationSize);
   if (Buffer == NULL) {
@@ -63,6 +64,7 @@ AllocateZeroPool (
 
   return Buffer;
 }
+
 
 /**
   Reallocates a buffer of type EfiBootServicesData.
@@ -93,7 +95,7 @@ ReallocatePool (
   IN VOID   *OldBuffer  OPTIONAL
   )
 {
-  VOID  *NewBuffer;
+  VOID *NewBuffer;
 
   NewBuffer = AllocatePool (NewSize);
   if (NewBuffer == NULL) {
@@ -141,9 +143,9 @@ AllocateCopyPool (
   if (Memory != NULL) {
     Memory = CopyMem (Memory, Buffer, AllocationSize);
   }
-
   return Memory;
 }
+
 
 /**
   Frees a buffer that was previously allocated with one of the pool allocation functions in the
@@ -162,8 +164,9 @@ AllocateCopyPool (
 VOID
 EFIAPI
 FreePool (
-  IN VOID  *Buffer
+  IN VOID   *Buffer
   )
 {
-  free ((void *)Buffer);
+  free ((void *) Buffer);
 }
+

@@ -24,13 +24,14 @@
 #include "qemu/osdep.h"
 #include "qapi/error.h"
 #include "ui/console.h"
+#include "hw/hw.h"
+#include "hw/boards.h"
 #include "hw/loader.h"
 #include "framebuffer.h"
 #include "ui/pixel_ops.h"
 #include "hw/m68k/next-cube.h"
-#include "qom/object.h"
 
-OBJECT_DECLARE_SIMPLE_TYPE(NeXTFbState, NEXTFB)
+#define NEXTFB(obj) OBJECT_CHECK(NeXTFbState, (obj), TYPE_NEXTFB)
 
 struct NeXTFbState {
     SysBusDevice parent_obj;
@@ -43,6 +44,7 @@ struct NeXTFbState {
     uint32_t rows;
     int invalidate;
 };
+typedef struct NeXTFbState NeXTFbState;
 
 static void nextfb_draw_line(void *opaque, uint8_t *d, const uint8_t *s,
                              int width, int pitch)
@@ -126,7 +128,7 @@ static void nextfb_class_init(ObjectClass *oc, void *data)
     set_bit(DEVICE_CATEGORY_DISPLAY, dc->categories);
     dc->realize = nextfb_realize;
 
-    /* Note: This device does not have any state that we have to reset or migrate */
+    /* Note: This device does not any state that we have to reset or migrate */
 }
 
 static const TypeInfo nextfb_info = {

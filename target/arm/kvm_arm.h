@@ -214,6 +214,8 @@ bool kvm_arm_create_scratch_host_vcpu(const uint32_t *cpus_to_try,
  */
 void kvm_arm_destroy_scratch_host_vcpu(int *fdarray);
 
+#define TYPE_ARM_HOST_CPU "host-" TYPE_ARM_CPU
+
 /**
  * ARMHostCPUFeatures: information about the host CPU (identified
  * by asking the host kernel)
@@ -239,12 +241,13 @@ bool kvm_arm_get_host_cpu_features(ARMHostCPUFeatures *ahcf);
 /**
  * kvm_arm_sve_get_vls:
  * @cs: CPUState
+ * @map: bitmap to fill in
  *
  * Get all the SVE vector lengths supported by the KVM host, setting
  * the bits corresponding to their length in quadwords minus one
- * (vq - 1) up to ARM_MAX_VQ.  Return the resulting map.
+ * (vq - 1) in @map up to ARM_MAX_VQ.
  */
-uint32_t kvm_arm_sve_get_vls(CPUState *cs);
+void kvm_arm_sve_get_vls(CPUState *cs, unsigned long *map);
 
 /**
  * kvm_arm_set_cpu_features_from_host:
@@ -263,24 +266,6 @@ void kvm_arm_set_cpu_features_from_host(ARMCPU *cpu);
  * are the CPU properties with "kvm-" prefixed names.
  */
 void kvm_arm_add_vcpu_properties(Object *obj);
-
-/**
- * kvm_arm_steal_time_finalize:
- * @cpu: ARMCPU for which to finalize kvm-steal-time
- * @errp: Pointer to Error* for error propagation
- *
- * Validate the kvm-steal-time property selection and set its default
- * based on KVM support and guest configuration.
- */
-void kvm_arm_steal_time_finalize(ARMCPU *cpu, Error **errp);
-
-/**
- * kvm_arm_steal_time_supported:
- *
- * Returns: true if KVM can enable steal time reporting
- * and false otherwise.
- */
-bool kvm_arm_steal_time_supported(void);
 
 /**
  * kvm_arm_aarch32_supported:
@@ -308,12 +293,10 @@ bool kvm_arm_sve_supported(void);
 /**
  * kvm_arm_get_max_vm_ipa_size:
  * @ms: Machine state handle
- * @fixed_ipa: True when the IPA limit is fixed at 40. This is the case
- * for legacy KVM.
  *
  * Returns the number of bits in the IPA address space supported by KVM
  */
-int kvm_arm_get_max_vm_ipa_size(MachineState *ms, bool *fixed_ipa);
+int kvm_arm_get_max_vm_ipa_size(MachineState *ms);
 
 /**
  * kvm_arm_sync_mpstate_to_kvm:
@@ -351,30 +334,28 @@ void kvm_arm_get_virtual_time(CPUState *cs);
  */
 void kvm_arm_put_virtual_time(CPUState *cs);
 
-void kvm_arm_vm_state_change(void *opaque, bool running, RunState state);
+void kvm_arm_vm_state_change(void *opaque, int running, RunState state);
 
 int kvm_arm_vgic_probe(void);
 
 void kvm_arm_pmu_set_irq(CPUState *cs, int irq);
 void kvm_arm_pmu_init(CPUState *cs);
-
-/**
- * kvm_arm_pvtime_init:
- * @cs: CPUState
- * @ipa: Per-vcpu guest physical base address of the pvtime structures
- *
- * Initializes PVTIME for the VCPU, setting the PVTIME IPA to @ipa.
- */
-void kvm_arm_pvtime_init(CPUState *cs, uint64_t ipa);
-
 int kvm_arm_set_irq(int cpu, int irqtype, int irq, int level);
 
 #else
 
-/*
- * It's safe to call these functions without KVM support.
- * They should either do nothing or return "not supported".
- */
+static inline void kvm_arm_set_cpu_features_from_host(ARMCPU *cpu)
+{
+    /*
+     * This should never actually be called in the "not KVM" case,
+     * but set up the fields to indicate an error anyway.
+     */
+    cpu->kvm_target = QEMU_KVM_ARM_TARGET_NONE;
+    cpu->host_cpu_probe_failed = true;
+}
+
+static inline void kvm_arm_add_vcpu_properties(Object *obj) {}
+
 static inline bool kvm_arm_aarch32_supported(void)
 {
     return false;
@@ -390,59 +371,23 @@ static inline bool kvm_arm_sve_supported(void)
     return false;
 }
 
-static inline bool kvm_arm_steal_time_supported(void)
+static inline int kvm_arm_get_max_vm_ipa_size(MachineState *ms)
 {
-    return false;
-}
-
-/*
- * These functions should never actually be called without KVM support.
- */
-static inline void kvm_arm_set_cpu_features_from_host(ARMCPU *cpu)
-{
-    g_assert_not_reached();
-}
-
-static inline void kvm_arm_add_vcpu_properties(Object *obj)
-{
-    g_assert_not_reached();
-}
-
-static inline int kvm_arm_get_max_vm_ipa_size(MachineState *ms, bool *fixed_ipa)
-{
-    g_assert_not_reached();
+    return -ENOENT;
 }
 
 static inline int kvm_arm_vgic_probe(void)
 {
-    g_assert_not_reached();
+    return 0;
 }
 
-static inline void kvm_arm_pmu_set_irq(CPUState *cs, int irq)
-{
-    g_assert_not_reached();
-}
+static inline void kvm_arm_pmu_set_irq(CPUState *cs, int irq) {}
+static inline void kvm_arm_pmu_init(CPUState *cs) {}
 
-static inline void kvm_arm_pmu_init(CPUState *cs)
-{
-    g_assert_not_reached();
-}
+static inline void kvm_arm_sve_get_vls(CPUState *cs, unsigned long *map) {}
 
-static inline void kvm_arm_pvtime_init(CPUState *cs, uint64_t ipa)
-{
-    g_assert_not_reached();
-}
-
-static inline void kvm_arm_steal_time_finalize(ARMCPU *cpu, Error **errp)
-{
-    g_assert_not_reached();
-}
-
-static inline uint32_t kvm_arm_sve_get_vls(CPUState *cs)
-{
-    g_assert_not_reached();
-}
-
+static inline void kvm_arm_get_virtual_time(CPUState *cs) {}
+static inline void kvm_arm_put_virtual_time(CPUState *cs) {}
 #endif
 
 static inline const char *gic_class_name(void)
@@ -461,7 +406,13 @@ static inline const char *gic_class_name(void)
 static inline const char *gicv3_class_name(void)
 {
     if (kvm_irqchip_in_kernel()) {
+#ifdef TARGET_AARCH64
         return "kvm-arm-gicv3";
+#else
+        error_report("KVM GICv3 acceleration is not supported on this "
+                     "platform");
+        exit(1);
+#endif
     } else {
         if (kvm_enabled()) {
             error_report("Userspace GICv3 is not supported with KVM");
@@ -522,8 +473,8 @@ static inline const char *its_class_name(void)
         /* KVM implementation requires this capability */
         return kvm_direct_msi_enabled() ? "arm-its-kvm" : NULL;
     } else {
-        /* Software emulation based model */
-        return "arm-gicv3-its";
+        /* Software emulation is not implemented yet */
+        return NULL;
     }
 }
 

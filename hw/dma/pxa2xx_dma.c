@@ -18,7 +18,6 @@
 #include "migration/vmstate.h"
 #include "qapi/error.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 #define PXA255_DMA_NUM_CHANNELS 16
 #define PXA27X_DMA_NUM_CHANNELS 32
@@ -35,9 +34,9 @@ typedef struct {
 } PXA2xxDMAChannel;
 
 #define TYPE_PXA2XX_DMA "pxa2xx-dma"
-OBJECT_DECLARE_SIMPLE_TYPE(PXA2xxDMAState, PXA2XX_DMA)
+#define PXA2XX_DMA(obj) OBJECT_CHECK(PXA2xxDMAState, (obj), TYPE_PXA2XX_DMA)
 
-struct PXA2xxDMAState {
+typedef struct PXA2xxDMAState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -59,7 +58,7 @@ struct PXA2xxDMAState {
 
     /* Flag to avoid recursive DMA invocations.  */
     int running;
-};
+} PXA2xxDMAState;
 
 #define DCSR0	0x0000	/* DMA Control / Status register for Channel 0 */
 #define DCSR31	0x007c	/* DMA Control / Status register for Channel 31 */
@@ -525,7 +524,7 @@ static bool is_version_0(void *opaque, int version_id)
     return version_id == 0;
 }
 
-static const VMStateDescription vmstate_pxa2xx_dma_chan = {
+static VMStateDescription vmstate_pxa2xx_dma_chan = {
     .name = "pxa2xx_dma_chan",
     .version_id = 1,
     .minimum_version_id = 1,
@@ -540,7 +539,7 @@ static const VMStateDescription vmstate_pxa2xx_dma_chan = {
     },
 };
 
-static const VMStateDescription vmstate_pxa2xx_dma = {
+static VMStateDescription vmstate_pxa2xx_dma = {
     .name = "pxa2xx_dma",
     .version_id = 1,
     .minimum_version_id = 0,

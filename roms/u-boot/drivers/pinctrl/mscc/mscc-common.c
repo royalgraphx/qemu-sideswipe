@@ -14,48 +14,24 @@
 #include <config.h>
 #include <dm.h>
 #include <dm/device-internal.h>
-#include <dm/device_compat.h>
-#include <dm/devres.h>
 #include <dm/lists.h>
 #include <dm/pinctrl.h>
 #include <dm/root.h>
 #include <errno.h>
 #include <fdtdec.h>
-#include <linux/bitops.h>
 #include <linux/io.h>
 #include "mscc-common.h"
 
-static void mscc_writel(unsigned int offset, void *addr)
-{
-	if (offset < 32)
-		writel(BIT(offset), addr);
-	else
-		writel(BIT(offset % 32), addr + 4);
-}
-
-static unsigned int mscc_readl(unsigned int offset, void *addr)
-{
-	if (offset < 32)
-		return readl(addr);
-	else
-		return readl(addr + 4);
-}
-
-static void mscc_setbits(unsigned int offset, void *addr)
-{
-	if (offset < 32)
-		writel(readl(addr) | BIT(offset), addr);
-	else
-		writel(readl(addr + 4) | BIT(offset % 32), addr + 4);
-}
-
-static void mscc_clrbits(unsigned int offset, void *addr)
-{
-	if (offset < 32)
-		writel(readl(addr) & ~BIT(offset), addr);
-	else
-		writel(readl(addr + 4) & ~BIT(offset % 32), addr + 4);
-}
+#define MSCC_GPIO_OUT_SET	0x0
+#define MSCC_GPIO_OUT_CLR	0x4
+#define MSCC_GPIO_OUT		0x8
+#define MSCC_GPIO_IN		0xc
+#define MSCC_GPIO_OE		0x10
+#define MSCC_GPIO_INTR		0x14
+#define MSCC_GPIO_INTR_ENA	0x18
+#define MSCC_GPIO_INTR_IDENT	0x1c
+#define MSCC_GPIO_ALT0		0x20
+#define MSCC_GPIO_ALT1		0x24
 
 static int mscc_get_functions_count(struct udevice *dev)
 {
@@ -91,7 +67,7 @@ static int mscc_pinmux_set_mux(struct udevice *dev,
 {
 	struct mscc_pinctrl *info = dev_get_priv(dev);
 	struct mscc_pin_caps *pin = info->mscc_pins[pin_selector].drv_data;
-	int f, offset, regoff;
+	int f;
 
 	f = mscc_pin_function_idx(pin_selector, selector, info->mscc_pins);
 	if (f < 0)
@@ -103,22 +79,15 @@ static int mscc_pinmux_set_mux(struct udevice *dev,
 	 * This is racy because both registers can't be updated at the same time
 	 * but it doesn't matter much for now.
 	 */
-	offset = pin->pin;
-	regoff = info->mscc_gpios[MSCC_GPIO_ALT0];
-	if (offset >= 32) {
-		offset = offset % 32;
-		regoff = info->mscc_gpios[MSCC_GPIO_ALT1];
-	}
-
 	if (f & BIT(0))
-		mscc_setbits(offset, info->regs + regoff);
+		setbits_le32(info->regs + MSCC_GPIO_ALT0, BIT(pin->pin));
 	else
-		mscc_clrbits(offset, info->regs + regoff);
+		clrbits_le32(info->regs + MSCC_GPIO_ALT0, BIT(pin->pin));
 
 	if (f & BIT(1))
-		mscc_setbits(offset, info->regs + regoff + 4);
+		setbits_le32(info->regs + MSCC_GPIO_ALT1, BIT(pin->pin - 1));
 	else
-		mscc_clrbits(offset, info->regs + regoff + 4);
+		clrbits_le32(info->regs + MSCC_GPIO_ALT1, BIT(pin->pin - 1));
 
 	return 0;
 }
@@ -151,8 +120,8 @@ static int mscc_create_group_func_map(struct udevice *dev,
 		}
 
 		info->func[f].ngroups = npins;
-		info->func[f].groups = devm_kzalloc(dev, npins * sizeof(char *),
-						    GFP_KERNEL);
+		info->func[f].groups = devm_kzalloc(dev, npins *
+						    sizeof(char *), GFP_KERNEL);
 		if (!info->func[f].groups)
 			return -ENOMEM;
 
@@ -181,15 +150,9 @@ static int mscc_gpio_get(struct udevice *dev, unsigned int offset)
 	struct mscc_pinctrl *info = dev_get_priv(dev->parent);
 	unsigned int val;
 
-	if (mscc_readl(offset, info->regs + info->mscc_gpios[MSCC_GPIO_OE]) &
-	    BIT(offset % 32))
-		val = mscc_readl(offset,
-				 info->regs + info->mscc_gpios[MSCC_GPIO_OUT]);
-	else
-		val = mscc_readl(offset,
-				 info->regs + info->mscc_gpios[MSCC_GPIO_IN]);
+	val = readl(info->regs + MSCC_GPIO_IN);
 
-	return !!(val & BIT(offset % 32));
+	return !!(val & BIT(offset));
 }
 
 static int mscc_gpio_set(struct udevice *dev, unsigned int offset, int value)
@@ -197,11 +160,9 @@ static int mscc_gpio_set(struct udevice *dev, unsigned int offset, int value)
 	struct mscc_pinctrl *info = dev_get_priv(dev->parent);
 
 	if (value)
-		mscc_writel(offset,
-			    info->regs + info->mscc_gpios[MSCC_GPIO_OUT_SET]);
+		writel(BIT(offset), info->regs + MSCC_GPIO_OUT_SET);
 	else
-		mscc_writel(offset,
-			    info->regs + info->mscc_gpios[MSCC_GPIO_OUT_CLR]);
+		writel(BIT(offset), info->regs + MSCC_GPIO_OUT_CLR);
 
 	return 0;
 }
@@ -211,16 +172,16 @@ static int mscc_gpio_get_direction(struct udevice *dev, unsigned int offset)
 	struct mscc_pinctrl *info = dev_get_priv(dev->parent);
 	unsigned int val;
 
-	val = mscc_readl(offset, info->regs + info->mscc_gpios[MSCC_GPIO_OE]);
+	val = readl(info->regs + MSCC_GPIO_OE);
 
-	return (val & BIT(offset % 32)) ? GPIOF_OUTPUT : GPIOF_INPUT;
+	return (val & BIT(offset)) ? GPIOF_OUTPUT : GPIOF_INPUT;
 }
 
 static int mscc_gpio_direction_input(struct udevice *dev, unsigned int offset)
 {
 	struct mscc_pinctrl *info = dev_get_priv(dev->parent);
 
-	mscc_clrbits(offset, info->regs + info->mscc_gpios[MSCC_GPIO_OE]);
+	clrbits_le32(info->regs + MSCC_GPIO_OE, BIT(offset));
 
 	return 0;
 }
@@ -230,7 +191,7 @@ static int mscc_gpio_direction_output(struct udevice *dev,
 {
 	struct mscc_pinctrl *info = dev_get_priv(dev->parent);
 
-	mscc_setbits(offset, info->regs + info->mscc_gpios[MSCC_GPIO_OE]);
+	setbits_le32(info->regs + MSCC_GPIO_OE, BIT(offset));
 
 	return mscc_gpio_set(dev, offset, value);
 }
@@ -254,8 +215,7 @@ const struct pinctrl_ops mscc_pinctrl_ops = {
 
 int mscc_pinctrl_probe(struct udevice *dev, int num_func,
 		       const struct mscc_pin_data *mscc_pins, int num_pins,
-		       char * const *function_names,
-		       const unsigned long *mscc_gpios)
+		       char *const *function_names)
 {
 	struct mscc_pinctrl *priv = dev_get_priv(dev);
 	int ret;
@@ -270,7 +230,6 @@ int mscc_pinctrl_probe(struct udevice *dev, int num_func,
 	priv->mscc_pins = mscc_pins;
 	priv->num_pins = num_pins;
 	priv->function_names = function_names;
-	priv->mscc_gpios = mscc_gpios;
 	ret = mscc_pinctrl_register(dev, priv);
 
 	return ret;

@@ -1,7 +1,7 @@
 'virt' generic virtual platform (``virt``)
 ==========================================
 
-The ``virt`` board is a platform which does not correspond to any
+The `virt` board is a platform which does not correspond to any
 real hardware; it is designed for use in virtual machines.
 It is the recommended board type if you simply want to run
 a guest such as Linux and do not care about reproducing the
@@ -43,8 +43,6 @@ The virt board supports:
 - Secure-World-only devices if the CPU has TrustZone:
 
   - A second PL011 UART
-  - A second PL061 GPIO controller, with GPIO lines for triggering
-    a system reset or system poweroff
   - A secure flash memory
   - 16MB of secure RAM
 
@@ -52,14 +50,10 @@ Supported guest CPU types:
 
 - ``cortex-a7`` (32-bit)
 - ``cortex-a15`` (32-bit; the default)
-- ``cortex-a35`` (64-bit)
 - ``cortex-a53`` (64-bit)
 - ``cortex-a57`` (64-bit)
 - ``cortex-a72`` (64-bit)
-- ``cortex-a76`` (64-bit)
-- ``a64fx`` (64-bit)
 - ``host`` (with KVM only)
-- ``neoverse-n1`` (64-bit)
 - ``max`` (same as ``host`` for KVM; best possible emulation with TCG)
 
 Note that the default is ``cortex-a15``, so for an AArch64 guest you must
@@ -99,17 +93,14 @@ gic-version
   Valid values are:
 
   ``2``
-    GICv2. Note that this limits the number of CPUs to 8.
+    GICv2
   ``3``
-    GICv3. This allows up to 512 CPUs.
-  ``4``
-    GICv4. Requires ``virtualization`` to be ``on``; allows up to 317 CPUs.
+    GICv3
   ``host``
     Use the same GIC version the host provides, when using KVM
   ``max``
     Use the best GIC version possible (same as host when using KVM;
-    with TCG this is currently ``3`` if ``virtualization`` is ``off`` and
-    ``4`` if ``virtualization`` is ``on``, but this may change in future)
+    currently same as ``3``` for TCG, but this may change in future)
 
 its
   Set ``on``/``off`` to enable/disable ITS instantiation. The default is ``on``
@@ -126,19 +117,6 @@ iommu
 ras
   Set ``on``/``off`` to enable/disable reporting host memory errors to a guest
   using ACPI and guest external abort exceptions. The default is off.
-
-dtb-randomness
-  Set ``on``/``off`` to pass random seeds via the guest DTB
-  rng-seed and kaslr-seed nodes (in both "/chosen" and
-  "/secure-chosen") to use for features like the random number
-  generator and address space randomisation. The default is
-  ``on``. You will want to disable it if your trusted boot chain
-  will verify the DTB it is passed, since this option causes the
-  DTB to be non-deterministic. It would be the responsibility of
-  the firmware to come up with a seed and pass it on if it wants to.
-
-dtb-kaslr-seed
-  A deprecated synonym for dtb-randomness.
 
 Linux guest kernel configuration
 """"""""""""""""""""""""""""""""

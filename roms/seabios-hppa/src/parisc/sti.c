@@ -10,10 +10,10 @@
 #include "std/optionrom.h"
 #include "vgahw.h"
 #include "parisc/sticore.h"
-#include "parisc/hppa_hardware.h"
 #include "output.h"
 #include "pdc.h"
-#include "hppa.h"
+
+#define PAGE0 ((volatile struct zeropage *) 0UL)
 
 static int sti_enabled;
 
@@ -26,14 +26,13 @@ static struct sti_init_flags sti_init_flags = {
         .no_chg_bet = 1,
         .no_chg_bei = 1,
         .init_cmap_tx = 1,
-        .clear = 1,
 };
 
 static struct sti_glob_cfg_ext sti_glob_ext_cfg = {
 };
 
 static struct sti_glob_cfg sti_glob_cfg = {
-        .region_ptrs = { 0, ARTIST_FB_ADDR, 0xf8100000, 0xf8380000, 0, 0, 0, 0 },
+        .region_ptrs = { 0, 0xf9000000, 0xf8100000, 0xf8380000, 0, 0, 0, 0 },
         .ext_ptr = (u32)&sti_glob_ext_cfg,
 };
 
@@ -84,7 +83,7 @@ static void sti_putchar(struct sti_rom *rom, int row, int column, const char c)
     sti_font_inptr.dest_x = column * font->width;
     sti_font_inptr.dest_y = row * font->height;
     sti_font_inptr.index = c;
-    sti_font_inptr.font_start_addr = (u32) font;
+    sti_font_inptr.font_start_addr = (u32)rom + rom->font_start;
 
     sti_unpmv(&sti_font_flags, &sti_font_inptr,
         &sti_font_outptr, &sti_glob_cfg);

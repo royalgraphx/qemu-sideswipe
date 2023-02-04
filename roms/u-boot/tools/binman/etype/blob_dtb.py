@@ -5,8 +5,10 @@
 # Entry-type module for U-Boot device tree files
 #
 
-from binman.entry import Entry
-from binman.etype.blob import Entry_blob
+import state
+
+from entry import Entry
+from blob import Entry_blob
 
 class Entry_blob_dtb(Entry_blob):
     """A blob that holds a device tree
@@ -16,42 +18,16 @@ class Entry_blob_dtb(Entry_blob):
     'state' module.
     """
     def __init__(self, section, etype, node):
-        # Put this here to allow entry-docs and help to work without libfdt
-        global state
-        from binman import state
-
-        super().__init__(section, etype, node)
+        Entry_blob.__init__(self, section, etype, node)
 
     def ObtainContents(self):
         """Get the device-tree from the list held by the 'state' module"""
         self._filename = self.GetDefaultFilename()
-        self._pathname, _ = state.GetFdtContents(self.GetFdtEtype())
-        return super().ReadBlobContents()
+        self._pathname, data = state.GetFdtContents(self._filename)
+        self.SetContents(data)
+        return True
 
     def ProcessContents(self):
         """Re-read the DTB contents so that we get any calculated properties"""
-        _, indata = state.GetFdtContents(self.GetFdtEtype())
-        data = self.CompressData(indata)
-        return self.ProcessContentsUpdate(data)
-
-    def GetFdtEtype(self):
-        """Get the entry type of this device tree
-
-        This can be 'u-boot-dtb', 'u-boot-spl-dtb' or 'u-boot-tpl-dtb'
-        Returns:
-            Entry type if any, e.g. 'u-boot-dtb'
-        """
-        return None
-
-    def GetFdts(self):
-        fname = self.GetDefaultFilename()
-        return {self.GetFdtEtype(): [self, fname]}
-
-    def WriteData(self, data, decomp=True):
-        ok = super().WriteData(data, decomp)
-
-        # Update the state module, since it has the authoritative record of the
-        # device trees used. If we don't do this, then state.GetFdtContents()
-        # will still return the old contents
-        state.UpdateFdtContents(self.GetFdtEtype(), data)
-        return ok
+        _, data = state.GetFdtContents(self._filename)
+        self.SetContents(data)

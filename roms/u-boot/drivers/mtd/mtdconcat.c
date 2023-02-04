@@ -10,8 +10,6 @@
  */
 
 #ifndef __UBOOT__
-#include <log.h>
-#include <dm/devres.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -21,7 +19,6 @@
 #include <asm/div64.h>
 #else
 #include <div64.h>
-#include <linux/bug.h>
 #include <linux/compat.h>
 #endif
 

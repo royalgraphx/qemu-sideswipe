@@ -15,7 +15,7 @@
 
 #include <Protocol/MonotonicCounter.h>
 
-UINT64  gCurrentMonotonicCount = 0;
+UINT64 gCurrentMonotonicCount = 0;
 
 EFI_STATUS
 EFIAPI
@@ -48,6 +48,7 @@ GetNextHighMonotonicCount (
   return EFI_SUCCESS;
 }
 
+
 EFI_STATUS
 EFIAPI
 MonotonicCounterDriverInitialize (
@@ -59,7 +60,7 @@ MonotonicCounterDriverInitialize (
   EFI_HANDLE  Handle = NULL;
 
   // Make sure the Monotonic Counter Architectural Protocol is not already installed in the system
-  ASSERT_PROTOCOL_ALREADY_INSTALLED (NULL, &gEfiMonotonicCounterArchProtocolGuid);
+  ASSERT_PROTOCOL_ALREADY_INSTALLED(NULL, &gEfiMonotonicCounterArchProtocolGuid);
 
   // Fill in the EFI Boot Services and EFI Runtime Services Monotonic Counter Fields
   gBS->GetNextMonotonicCount     = GetNextMonotonicCount;
@@ -68,8 +69,7 @@ MonotonicCounterDriverInitialize (
   // Install the Monotonic Counter Architectural Protocol onto a new handle
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &Handle,
-                  &gEfiMonotonicCounterArchProtocolGuid,
-                  NULL,
+                  &gEfiMonotonicCounterArchProtocolGuid,    NULL,
                   NULL
                   );
   return Status;

@@ -26,9 +26,9 @@
 UINT64
 EFIAPI
 InternalMathDivRemU64x32 (
-  IN      UINT64  Dividend,
-  IN      UINT32  Divisor,
-  OUT     UINT32  *Remainder
+  IN      UINT64                    Dividend,
+  IN      UINT32                    Divisor,
+  OUT     UINT32                    *Remainder
   )
 {
   _asm {
@@ -46,3 +46,4 @@ RemainderNull:
     pop     edx
   }
 }
+

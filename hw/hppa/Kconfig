@@ -1,10 +1,9 @@
-config HPPA_B160L
+config DINO
     bool
     imply PCI_DEVICES
     imply E1000_PCI
     imply VIRTIO_VGA
-    select DINO
-    select LASI
+    select PCI
     select SERIAL
     select ISA_BUS
     select I8259

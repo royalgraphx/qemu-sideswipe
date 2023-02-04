@@ -25,13 +25,10 @@
 
 #include <common.h>
 #include <command.h>
-#include <env.h>
-#include <env_internal.h>
-#include <asm/global_data.h>
+#include <environment.h>
 #include <linux/stddef.h>
 #include <search.h>
 #include <errno.h>
-#include <u-boot/crc.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -39,7 +36,7 @@ DECLARE_GLOBAL_DATA_PTR;
 extern void *nvram_read(void *dest, const long src, size_t count);
 extern void nvram_write(long dest, const void *src, size_t count);
 #else
-static env_t *env_ptr = (env_t *)CONFIG_ENV_ADDR;
+env_t *env_ptr = (env_t *)CONFIG_ENV_ADDR;
 #endif
 
 #ifdef CONFIG_SYS_NVRAM_ACCESS_ROUTINE
@@ -65,7 +62,7 @@ static int env_nvram_load(void)
 #else
 	memcpy(buf, (void *)CONFIG_ENV_ADDR, CONFIG_ENV_SIZE);
 #endif
-	return env_import(buf, 1, H_EXTERNAL);
+	return env_import(buf, 1);
 }
 
 static int env_nvram_save(void)

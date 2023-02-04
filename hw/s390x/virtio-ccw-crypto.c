@@ -14,15 +14,6 @@
 #include "qapi/error.h"
 #include "qemu/module.h"
 #include "virtio-ccw.h"
-#include "hw/virtio/virtio-crypto.h"
-
-#define TYPE_VIRTIO_CRYPTO_CCW "virtio-crypto-ccw"
-OBJECT_DECLARE_SIMPLE_TYPE(VirtIOCryptoCcw, VIRTIO_CRYPTO_CCW)
-
-struct VirtIOCryptoCcw {
-    VirtioCcwDevice parent_obj;
-    VirtIOCrypto vdev;
-};
 
 static void virtio_ccw_crypto_realize(VirtioCcwDevice *ccw_dev, Error **errp)
 {

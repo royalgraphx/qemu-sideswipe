@@ -24,7 +24,6 @@
 #include "hw/ppc/xive.h"
 #include "hw/ppc/xive_regs.h"
 #include "hw/qdev-properties.h"
-#include "trace.h"
 
 /*
  * XIVE Virtualization Controller BAR and Thread Managment BAR that we
@@ -149,19 +148,12 @@ static void spapr_xive_end_pic_print_info(SpaprXive *xive, XiveEND *end,
     xive_end_queue_pic_print_info(end, 6, mon);
 }
 
-/*
- * kvm_irqchip_in_kernel() will cause the compiler to turn this
- * info a nop if CONFIG_KVM isn't defined.
- */
-#define spapr_xive_in_kernel(xive) \
-    (kvm_irqchip_in_kernel() && (xive)->fd != -1)
-
-static void spapr_xive_pic_print_info(SpaprXive *xive, Monitor *mon)
+void spapr_xive_pic_print_info(SpaprXive *xive, Monitor *mon)
 {
     XiveSource *xsrc = &xive->source;
     int i;
 
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         Error *local_err = NULL;
 
         kvmppc_xive_synchronize_state(xive, &local_err);
@@ -185,7 +177,7 @@ static void spapr_xive_pic_print_info(SpaprXive *xive, Monitor *mon)
                        xive_source_irq_is_lsi(xsrc, i) ? "LSI" : "MSI",
                        pq & XIVE_ESB_VAL_P ? 'P' : '-',
                        pq & XIVE_ESB_VAL_Q ? 'Q' : '-',
-                       xive_source_is_asserted(xsrc, i) ? 'A' : ' ',
+                       xsrc->status[i] & XIVE_STATUS_ASSERTED ? 'A' : ' ',
                        xive_eas_is_masked(eas) ? "M" : " ",
                        (int) xive_get_field64(EAS_END_DATA, eas->w));
 
@@ -297,13 +289,19 @@ static void spapr_xive_realize(DeviceState *dev, Error **errp)
     XiveENDSource *end_xsrc = &xive->end_source;
     Error *local_err = NULL;
 
-    /* Set by spapr_irq_init() */
-    g_assert(xive->nr_irqs);
-    g_assert(xive->nr_ends);
-
     sxc->parent_realize(dev, &local_err);
     if (local_err) {
         error_propagate(errp, local_err);
+        return;
+    }
+
+    if (!xive->nr_irqs) {
+        error_setg(errp, "Number of interrupt needs to be greater 0");
+        return;
+    }
+
+    if (!xive->nr_ends) {
+        error_setg(errp, "Number of interrupt needs to be greater 0");
         return;
     }
 
@@ -331,7 +329,7 @@ static void spapr_xive_realize(DeviceState *dev, Error **errp)
     sysbus_init_mmio(SYS_BUS_DEVICE(xive), &end_xsrc->esb_mmio);
 
     /* Set the mapping address of the END ESB pages after the source ESBs */
-    xive->end_base = xive->vc_base + xive_source_esb_len(xsrc);
+    xive->end_base = xive->vc_base + (1ull << xsrc->esb_shift) * xsrc->nr_irqs;
 
     /*
      * Allocate the routing tables
@@ -480,29 +478,6 @@ static uint8_t spapr_xive_get_block_id(XiveRouter *xrtr)
     return SPAPR_XIVE_BLOCK_ID;
 }
 
-static int spapr_xive_get_pq(XiveRouter *xrtr, uint8_t blk, uint32_t idx,
-                             uint8_t *pq)
-{
-    SpaprXive *xive = SPAPR_XIVE(xrtr);
-
-    assert(SPAPR_XIVE_BLOCK_ID == blk);
-
-    *pq = xive_source_esb_get(&xive->source, idx);
-    return 0;
-}
-
-static int spapr_xive_set_pq(XiveRouter *xrtr, uint8_t blk, uint32_t idx,
-                             uint8_t *pq)
-{
-    SpaprXive *xive = SPAPR_XIVE(xrtr);
-
-    assert(SPAPR_XIVE_BLOCK_ID == blk);
-
-    *pq = xive_source_esb_set(&xive->source, idx, *pq);
-    return 0;
-}
-
-
 static const VMStateDescription vmstate_spapr_xive_end = {
     .name = TYPE_SPAPR_XIVE "/end",
     .version_id = 1,
@@ -532,10 +507,8 @@ static const VMStateDescription vmstate_spapr_xive_eas = {
 
 static int vmstate_spapr_xive_pre_save(void *opaque)
 {
-    SpaprXive *xive = SPAPR_XIVE(opaque);
-
-    if (spapr_xive_in_kernel(xive)) {
-        return kvmppc_xive_pre_save(xive);
+    if (kvm_irqchip_in_kernel()) {
+        return kvmppc_xive_pre_save(SPAPR_XIVE(opaque));
     }
 
     return 0;
@@ -547,10 +520,8 @@ static int vmstate_spapr_xive_pre_save(void *opaque)
  */
 static int spapr_xive_post_load(SpaprInterruptController *intc, int version_id)
 {
-    SpaprXive *xive = SPAPR_XIVE(intc);
-
-    if (spapr_xive_in_kernel(xive)) {
-        return kvmppc_xive_post_load(xive, version_id);
+    if (kvm_irqchip_in_kernel()) {
+        return kvmppc_xive_post_load(SPAPR_XIVE(intc), version_id);
     }
 
     return 0;
@@ -580,8 +551,6 @@ static int spapr_xive_claim_irq(SpaprInterruptController *intc, int lisn,
 
     assert(lisn < xive->nr_irqs);
 
-    trace_spapr_xive_claim_irq(lisn, lsi);
-
     if (xive_eas_is_valid(&xive->eat[lisn])) {
         error_setg(errp, "IRQ %d is not free", lisn);
         return -EBUSY;
@@ -595,7 +564,7 @@ static int spapr_xive_claim_irq(SpaprInterruptController *intc, int lisn,
         xive_source_irq_set_lsi(xsrc, lisn);
     }
 
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         return kvmppc_xive_source_reset_one(xsrc, lisn, errp);
     }
 
@@ -607,8 +576,6 @@ static void spapr_xive_free_irq(SpaprInterruptController *intc, int lisn)
     SpaprXive *xive = SPAPR_XIVE(intc);
     assert(lisn < xive->nr_irqs);
 
-    trace_spapr_xive_free_irq(lisn);
-
     xive->eat[lisn].w &= cpu_to_be64(~EAS_VALID);
 }
 
@@ -617,7 +584,6 @@ static Property spapr_xive_properties[] = {
     DEFINE_PROP_UINT32("nr-ends", SpaprXive, nr_ends, 0),
     DEFINE_PROP_UINT64("vc-base", SpaprXive, vc_base, SPAPR_XIVE_VC_BASE),
     DEFINE_PROP_UINT64("tm-base", SpaprXive, tm_base, SPAPR_XIVE_TM_BASE),
-    DEFINE_PROP_UINT8("hv-prio", SpaprXive, hv_prio, 7),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -675,9 +641,7 @@ static void spapr_xive_set_irq(SpaprInterruptController *intc, int irq, int val)
 {
     SpaprXive *xive = SPAPR_XIVE(intc);
 
-    trace_spapr_xive_set_irq(irq, val);
-
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         kvmppc_xive_source_set_irq(&xive->source, irq, val);
     } else {
         xive_source_set_irq(&xive->source, irq, val);
@@ -717,13 +681,12 @@ static void spapr_xive_dt(SpaprInterruptController *intc, uint32_t nr_servers,
         cpu_to_be32(16), /* 64K */
     };
     /*
-     * QEMU/KVM only needs to define a single range to reserve the
-     * escalation priority. A priority bitmask would have been more
-     * appropriate.
+     * The following array is in sync with the reserved priorities
+     * defined by the 'spapr_xive_priority_is_reserved' routine.
      */
     uint32_t plat_res_int_priorities[] = {
-        cpu_to_be32(xive->hv_prio),    /* start */
-        cpu_to_be32(0xff - xive->hv_prio), /* count */
+        cpu_to_be32(7),    /* start */
+        cpu_to_be32(0xf8), /* count */
     };
 
     /* Thread Interrupt Management Area : User (ring 3) and OS (ring 2) */
@@ -786,14 +749,9 @@ static void spapr_xive_deactivate(SpaprInterruptController *intc)
 
     spapr_xive_mmio_set_enabled(xive, false);
 
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         kvmppc_xive_disconnect(intc);
     }
-}
-
-static bool spapr_xive_in_kernel_xptr(const XivePresenter *xptr)
-{
-    return spapr_xive_in_kernel(SPAPR_XIVE(xptr));
 }
 
 static void spapr_xive_class_init(ObjectClass *klass, void *data)
@@ -811,8 +769,6 @@ static void spapr_xive_class_init(ObjectClass *klass, void *data)
     dc->vmsd    = &vmstate_spapr_xive;
 
     xrc->get_eas = spapr_xive_get_eas;
-    xrc->get_pq  = spapr_xive_get_pq;
-    xrc->set_pq  = spapr_xive_set_pq;
     xrc->get_end = spapr_xive_get_end;
     xrc->write_end = spapr_xive_write_end;
     xrc->get_nvt = spapr_xive_get_nvt;
@@ -832,7 +788,6 @@ static void spapr_xive_class_init(ObjectClass *klass, void *data)
     sicc->post_load = spapr_xive_post_load;
 
     xpc->match_nvt  = spapr_xive_match_nvt;
-    xpc->in_kernel  = spapr_xive_in_kernel_xptr;
 }
 
 static const TypeInfo spapr_xive_info = {
@@ -872,12 +827,19 @@ type_init(spapr_xive_register_types)
  */
 
 /*
- * On POWER9, the KVM XIVE device uses priority 7 for the escalation
- * interrupts. So we only allow the guest to use priorities [0..6].
+ * Linux hosts under OPAL reserve priority 7 for their own escalation
+ * interrupts (DD2.X POWER9). So we only allow the guest to use
+ * priorities [0..6].
  */
-static bool spapr_xive_priority_is_reserved(SpaprXive *xive, uint8_t priority)
+static bool spapr_xive_priority_is_reserved(uint8_t priority)
 {
-    return priority >= xive->hv_prio;
+    switch (priority) {
+    case 0 ... 6:
+        return false;
+    case 7: /* OPAL escalation queue */
+    default:
+        return true;
+    }
 }
 
 /*
@@ -925,8 +887,6 @@ static target_ulong h_int_get_source_info(PowerPCCPU *cpu,
     XiveSource *xsrc = &xive->source;
     target_ulong flags  = args[0];
     target_ulong lisn   = args[1];
-
-    trace_spapr_xive_get_source_info(flags, lisn);
 
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
@@ -1043,8 +1003,6 @@ static target_ulong h_int_set_source_config(PowerPCCPU *cpu,
     uint8_t end_blk;
     uint32_t end_idx;
 
-    trace_spapr_xive_set_source_config(flags, lisn, target, priority, eisn);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1078,7 +1036,7 @@ static target_ulong h_int_set_source_config(PowerPCCPU *cpu,
         new_eas.w = eas.w & cpu_to_be64(~EAS_MASKED);
     }
 
-    if (spapr_xive_priority_is_reserved(xive, priority)) {
+    if (spapr_xive_priority_is_reserved(priority)) {
         qemu_log_mask(LOG_GUEST_ERROR, "XIVE: priority " TARGET_FMT_ld
                       " is reserved\n", priority);
         return H_P4;
@@ -1100,7 +1058,7 @@ static target_ulong h_int_set_source_config(PowerPCCPU *cpu,
         new_eas.w = xive_set_field64(EAS_END_DATA, new_eas.w, eisn);
     }
 
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         Error *local_err = NULL;
 
         kvmppc_xive_set_source_config(xive, lisn, &new_eas, &local_err);
@@ -1149,8 +1107,6 @@ static target_ulong h_int_get_source_config(PowerPCCPU *cpu,
     XiveEND *end;
     uint8_t nvt_blk;
     uint32_t end_idx, nvt_idx;
-
-    trace_spapr_xive_get_source_config(flags, lisn);
 
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
@@ -1226,8 +1182,6 @@ static target_ulong h_int_get_queue_info(PowerPCCPU *cpu,
     uint8_t end_blk;
     uint32_t end_idx;
 
-    trace_spapr_xive_get_queue_info(flags, target, priority);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1241,7 +1195,7 @@ static target_ulong h_int_get_queue_info(PowerPCCPU *cpu,
      * This is not needed when running the emulation under QEMU
      */
 
-    if (spapr_xive_priority_is_reserved(xive, priority)) {
+    if (spapr_xive_priority_is_reserved(priority)) {
         qemu_log_mask(LOG_GUEST_ERROR, "XIVE: priority " TARGET_FMT_ld
                       " is reserved\n", priority);
         return H_P3;
@@ -1315,8 +1269,6 @@ static target_ulong h_int_set_queue_config(PowerPCCPU *cpu,
     uint8_t end_blk, nvt_blk;
     uint32_t end_idx, nvt_idx;
 
-    trace_spapr_xive_set_queue_config(flags, target, priority, qpage, qsize);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1330,7 +1282,7 @@ static target_ulong h_int_set_queue_config(PowerPCCPU *cpu,
      * This is not needed when running the emulation under QEMU
      */
 
-    if (spapr_xive_priority_is_reserved(xive, priority)) {
+    if (spapr_xive_priority_is_reserved(priority)) {
         qemu_log_mask(LOG_GUEST_ERROR, "XIVE: priority " TARGET_FMT_ld
                       " is reserved\n", priority);
         return H_P3;
@@ -1427,7 +1379,7 @@ static target_ulong h_int_set_queue_config(PowerPCCPU *cpu,
      */
 
 out:
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         Error *local_err = NULL;
 
         kvmppc_xive_set_queue_config(xive, end_blk, end_idx, &end, &local_err);
@@ -1484,8 +1436,6 @@ static target_ulong h_int_get_queue_config(PowerPCCPU *cpu,
     uint8_t end_blk;
     uint32_t end_idx;
 
-    trace_spapr_xive_get_queue_config(flags, target, priority);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1499,7 +1449,7 @@ static target_ulong h_int_get_queue_config(PowerPCCPU *cpu,
      * This is not needed when running the emulation under QEMU
      */
 
-    if (spapr_xive_priority_is_reserved(xive, priority)) {
+    if (spapr_xive_priority_is_reserved(priority)) {
         qemu_log_mask(LOG_GUEST_ERROR, "XIVE: priority " TARGET_FMT_ld
                       " is reserved\n", priority);
         return H_P3;
@@ -1530,7 +1480,7 @@ static target_ulong h_int_get_queue_config(PowerPCCPU *cpu,
         args[2] = 0;
     }
 
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         Error *local_err = NULL;
 
         kvmppc_xive_get_queue_config(xive, end_blk, end_idx, end, &local_err);
@@ -1579,10 +1529,6 @@ static target_ulong h_int_set_os_reporting_line(PowerPCCPU *cpu,
                                                 target_ulong opcode,
                                                 target_ulong *args)
 {
-    target_ulong flags   = args[0];
-
-    trace_spapr_xive_set_os_reporting_line(flags);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1619,10 +1565,6 @@ static target_ulong h_int_get_os_reporting_line(PowerPCCPU *cpu,
                                                 target_ulong opcode,
                                                 target_ulong *args)
 {
-    target_ulong flags   = args[0];
-
-    trace_spapr_xive_get_os_reporting_line(flags);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1675,8 +1617,6 @@ static target_ulong h_int_esb(PowerPCCPU *cpu,
     hwaddr mmio_addr;
     XiveSource *xsrc = &xive->source;
 
-    trace_spapr_xive_esb(flags, lisn, offset, data);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1702,15 +1642,14 @@ static target_ulong h_int_esb(PowerPCCPU *cpu,
         return H_P3;
     }
 
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         args[0] = kvmppc_xive_esb_rw(xsrc, lisn, offset, data,
                                      flags & SPAPR_XIVE_ESB_STORE);
     } else {
         mmio_addr = xive->vc_base + xive_source_esb_mgmt(xsrc, lisn) + offset;
 
         if (dma_memory_rw(&address_space_memory, mmio_addr, &data, 8,
-                          (flags & SPAPR_XIVE_ESB_STORE),
-                          MEMTXATTRS_UNSPECIFIED)) {
+                          (flags & SPAPR_XIVE_ESB_STORE))) {
             qemu_log_mask(LOG_GUEST_ERROR, "XIVE: failed to access ESB @0x%"
                           HWADDR_PRIx "\n", mmio_addr);
             return H_HARDWARE;
@@ -1747,8 +1686,6 @@ static target_ulong h_int_sync(PowerPCCPU *cpu,
     target_ulong flags = args[0];
     target_ulong lisn = args[1];
 
-    trace_spapr_xive_sync(flags, lisn);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1780,7 +1717,7 @@ static target_ulong h_int_sync(PowerPCCPU *cpu,
      * under KVM
      */
 
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         Error *local_err = NULL;
 
         kvmppc_xive_sync_source(xive, lisn, &local_err);
@@ -1814,8 +1751,6 @@ static target_ulong h_int_reset(PowerPCCPU *cpu,
     SpaprXive *xive = spapr->xive;
     target_ulong flags   = args[0];
 
-    trace_spapr_xive_reset(flags);
-
     if (!spapr_ovec_test(spapr->ov5_cas, OV5_XIVE_EXPLOIT)) {
         return H_FUNCTION;
     }
@@ -1824,9 +1759,9 @@ static target_ulong h_int_reset(PowerPCCPU *cpu,
         return H_PARAMETER;
     }
 
-    device_cold_reset(DEVICE(xive));
+    device_legacy_reset(DEVICE(xive));
 
-    if (spapr_xive_in_kernel(xive)) {
+    if (kvm_irqchip_in_kernel()) {
         Error *local_err = NULL;
 
         kvmppc_xive_reset(xive, &local_err);

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw quick
 #
 # Test image locking
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=fam@euphon.net
+owner=famz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"

@@ -1,6 +1,5 @@
 #include "qemu/osdep.h"
 #include "qemu/error-report.h"
-#include "monitor/monitor.h"
 
 int error_vprintf(const char *fmt, va_list ap)
 {

@@ -51,15 +51,9 @@ int init_func_watchdog_reset(void);
 		#if defined(__ASSEMBLY__)
 			#define WATCHDOG_RESET bl watchdog_reset
 		#else
-			/* Don't require the watchdog to be enabled in SPL */
-			#if defined(CONFIG_SPL_BUILD) &&		\
-				!defined(CONFIG_SPL_WATCHDOG_SUPPORT)
-				#define WATCHDOG_RESET() {}
-			#else
-				extern void watchdog_reset(void);
+			extern void watchdog_reset(void);
 
-				#define WATCHDOG_RESET watchdog_reset
-			#endif
+			#define WATCHDOG_RESET watchdog_reset
 		#endif
 	#else
 		/*
@@ -77,7 +71,7 @@ int init_func_watchdog_reset(void);
  * Prototypes from $(CPU)/cpu.c.
  */
 
-#if (defined(CONFIG_HW_WATCHDOG) || defined(CONFIG_WATCHDOG)) && !defined(__ASSEMBLY__)
+#if defined(CONFIG_HW_WATCHDOG) && !defined(__ASSEMBLY__)
 	void hw_watchdog_init(void);
 #endif
 

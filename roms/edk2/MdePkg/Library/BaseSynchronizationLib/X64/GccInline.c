@@ -7,6 +7,8 @@
 
 **/
 
+
+
 /**
   Performs an atomic increment of an 32-bit unsigned integer.
 
@@ -22,7 +24,7 @@
 UINT32
 EFIAPI
 InternalSyncIncrement (
-  IN      volatile UINT32  *Value
+  IN      volatile UINT32    *Value
   )
 {
   UINT32  Result;
@@ -37,10 +39,11 @@ InternalSyncIncrement (
     :                         // no inputs that aren't also outputs
     : "memory",
       "cc"
-  );
+    );
 
   return Result;
 }
+
 
 /**
   Performs an atomic decrement of an 32-bit unsigned integer.
@@ -57,10 +60,10 @@ InternalSyncIncrement (
 UINT32
 EFIAPI
 InternalSyncDecrement (
-  IN      volatile UINT32  *Value
+  IN      volatile UINT32       *Value
   )
 {
-  UINT32  Result;
+   UINT32  Result;
 
   __asm__ __volatile__ (
     "movl    $-1, %%eax  \n\t"
@@ -72,10 +75,11 @@ InternalSyncDecrement (
     :                          // no inputs that aren't also outputs
     : "memory",
       "cc"
-  );
+    );
 
   return Result;
 }
+
 
 /**
   Performs an atomic compare exchange operation on a 16-bit unsigned integer.
@@ -98,9 +102,9 @@ InternalSyncDecrement (
 UINT16
 EFIAPI
 InternalSyncCompareExchange16 (
-  IN OUT volatile  UINT16  *Value,
-  IN      UINT16           CompareValue,
-  IN      UINT16           ExchangeValue
+  IN OUT volatile  UINT16           *Value,
+  IN      UINT16                    CompareValue,
+  IN      UINT16                    ExchangeValue
   )
 {
   __asm__ __volatile__ (
@@ -111,10 +115,11 @@ InternalSyncCompareExchange16 (
     : "r"  (ExchangeValue)      // %2
     : "memory",
       "cc"
-  );
+    );
 
   return CompareValue;
 }
+
 
 /**
   Performs an atomic compare exchange operation on a 32-bit unsigned integer.
@@ -137,9 +142,9 @@ InternalSyncCompareExchange16 (
 UINT32
 EFIAPI
 InternalSyncCompareExchange32 (
-  IN OUT volatile  UINT32  *Value,
-  IN      UINT32           CompareValue,
-  IN      UINT32           ExchangeValue
+  IN OUT volatile  UINT32           *Value,
+  IN      UINT32                    CompareValue,
+  IN      UINT32                    ExchangeValue
   )
 {
   __asm__ __volatile__ (
@@ -150,10 +155,11 @@ InternalSyncCompareExchange32 (
     : "r"  (ExchangeValue)      // %2
     : "memory",
       "cc"
-  );
+    );
 
   return CompareValue;
 }
+
 
 /**
   Performs an atomic compare exchange operation on a 64-bit unsigned integer.
@@ -175,9 +181,9 @@ InternalSyncCompareExchange32 (
 UINT64
 EFIAPI
 InternalSyncCompareExchange64 (
-  IN OUT  volatile UINT64  *Value,
-  IN      UINT64           CompareValue,
-  IN      UINT64           ExchangeValue
+  IN OUT  volatile UINT64           *Value,
+  IN      UINT64                    CompareValue,
+  IN      UINT64                    ExchangeValue
   )
 {
   __asm__ __volatile__ (
@@ -188,7 +194,7 @@ InternalSyncCompareExchange64 (
     : "r"  (ExchangeValue)      // %2
     : "memory",
       "cc"
-  );
+    );
 
   return CompareValue;
 }

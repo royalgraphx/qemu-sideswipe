@@ -11,7 +11,6 @@ This test verifies basic read/write operation on file system.
 import pytest
 import re
 from fstest_defs import *
-from fstest_helpers import assert_fs_integrity
 
 @pytest.mark.boardspec('sandbox')
 @pytest.mark.slow
@@ -238,7 +237,6 @@ class TestFsBasic(object):
                 'md5sum %x $filesize' % ADDR,
                 'setenv filesize'])
             assert(md5val[0] in ''.join(output))
-            assert_fs_integrity(fs_type, fs_img)
 
     def test_fs12(self, u_boot_console, fs_obj_basic):
         """
@@ -254,7 +252,6 @@ class TestFsBasic(object):
                 'host bind 0 %s' % fs_img,
                 '%swrite host 0:0 %x /. 0x10' % (fs_type, ADDR)])
             assert('Unable to write' in ''.join(output))
-            assert_fs_integrity(fs_type, fs_img)
 
     def test_fs13(self, u_boot_console, fs_obj_basic):
         """
@@ -289,4 +286,3 @@ class TestFsBasic(object):
                 'md5sum %x $filesize' % ADDR,
                 'setenv filesize'])
             assert(md5val[0] in ''.join(output))
-            assert_fs_integrity(fs_type, fs_img)

@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 .DEFAULT_GOAL := all
 
 override CFLAGS += -O2 -Wall -Werror -Wno-stringop-truncation -I.
@@ -45,7 +44,7 @@ $(EXE): $(OBJS)
 	$(CC) $(LDFLAGS) $(CFLAGS) $^ -o $@
 
 install: all
-	install -D $(EXE) $(DESTDIR)$(sbindir)/$(EXE)
-	install -D -m 0644 $(EXE).1 $(DESTDIR)$(mandir)/man1/$(EXE).1
+	install -D gard $(DESTDIR)$(sbindir)/opal-gard
+	install -D -m 0644 opal-gard.1 $(DESTDIR)$(mandir)/man1/opal-gard.1
 
 

@@ -29,9 +29,9 @@
 #include "hw/input/tsc2xxx.h"
 #include "hw/irq.h"
 #include "hw/loader.h"
+#include "exec/address-spaces.h"
 #include "cpu.h"
 #include "qemu/cutils.h"
-#include "qom/object.h"
 
 static uint64_t static_read(void *opaque, hwaddr offset, unsigned size)
 {
@@ -132,11 +132,12 @@ static void palmte_button_event(void *opaque, int keycode)
  */
 
 #define TYPE_PALM_MISC_GPIO "palm-misc-gpio"
-OBJECT_DECLARE_SIMPLE_TYPE(PalmMiscGPIOState, PALM_MISC_GPIO)
+#define PALM_MISC_GPIO(obj) \
+    OBJECT_CHECK(PalmMiscGPIOState, (obj), TYPE_PALM_MISC_GPIO)
 
-struct PalmMiscGPIOState {
+typedef struct PalmMiscGPIOState {
     SysBusDevice parent_obj;
-};
+} PalmMiscGPIOState;
 
 static void palmte_onoff_gpios(void *opaque, int line, int level)
 {

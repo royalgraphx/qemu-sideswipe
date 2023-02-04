@@ -11,7 +11,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 // EFI Component Name Functions
 //
-
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
 
@@ -58,6 +57,7 @@ Ps2KeyboardComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -130,12 +130,13 @@ Ps2KeyboardComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 Ps2KeyboardComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   );
+
 
 //
 // EFI Component Name Protocol
@@ -149,13 +150,14 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gPs2KeyboardComponent
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gPs2KeyboardComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)Ps2KeyboardComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)Ps2KeyboardComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gPs2KeyboardComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) Ps2KeyboardComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) Ps2KeyboardComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mPs2KeyboardDriverNameTable[] = {
+
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mPs2KeyboardDriverNameTable[] = {
   {
     "eng;en",
     L"PS/2 Keyboard Driver"
@@ -293,17 +295,16 @@ Ps2KeyboardComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 Ps2KeyboardComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   )
 {
-  EFI_STATUS                      Status;
-  EFI_SIMPLE_TEXT_INPUT_PROTOCOL  *ConIn;
-  KEYBOARD_CONSOLE_IN_DEV         *ConsoleIn;
-
+  EFI_STATUS                                  Status;
+  EFI_SIMPLE_TEXT_INPUT_PROTOCOL              *ConIn;
+  KEYBOARD_CONSOLE_IN_DEV                     *ConsoleIn;
   //
   // This is a device driver, so ChildHandle must be NULL.
   //
@@ -318,14 +319,13 @@ Ps2KeyboardComponentNameGetControllerName (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Get the device context
   //
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiSimpleTextInProtocolGuid,
-                  (VOID **)&ConIn,
+                  (VOID **) &ConIn,
                   gKeyboardControllerDriver.DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL

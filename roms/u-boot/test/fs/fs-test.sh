@@ -87,7 +87,7 @@ function check_clean() {
 # Generate sandbox U-Boot - gleaned from /test/dm/test-dm.sh
 function compile_sandbox() {
 	unset CROSS_COMPILE
-	NUM_CPUS=$(nproc)
+	NUM_CPUS=$(cat /proc/cpuinfo |grep -c processor)
 	make O=sandbox sandbox_config
 	make O=sandbox -s -j${NUM_CPUS}
 

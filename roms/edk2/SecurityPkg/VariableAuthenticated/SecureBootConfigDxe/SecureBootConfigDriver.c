@@ -16,24 +16,24 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @retval EFI_ALREADY_STARTED    The driver already exists in system.
   @retval EFI_OUT_OF_RESOURCES   Fail to execute entry point due to lack of resources.
-  @retval EFI_SUCCESS            All the related protocols are installed on the driver.
+  @retval EFI_SUCCES             All the related protocols are installed on the driver.
   @retval Others                 Fail to get the SecureBootEnable variable.
 
 **/
 EFI_STATUS
 EFIAPI
 SecureBootConfigDriverEntryPoint (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE          ImageHandle,
+  IN EFI_SYSTEM_TABLE    *SystemTable
   )
 {
-  EFI_STATUS                      Status;
-  SECUREBOOT_CONFIG_PRIVATE_DATA  *PrivateData;
+  EFI_STATUS                       Status;
+  SECUREBOOT_CONFIG_PRIVATE_DATA   *PrivateData;
 
   //
   // If already started, return.
   //
-  Status = gBS->OpenProtocol (
+    Status = gBS->OpenProtocol (
                   ImageHandle,
                   &gEfiCallerIdGuid,
                   NULL,
@@ -100,13 +100,13 @@ SecureBootConfigDriverUnload (
   IN EFI_HANDLE  ImageHandle
   )
 {
-  EFI_STATUS                      Status;
-  SECUREBOOT_CONFIG_PRIVATE_DATA  *PrivateData;
+  EFI_STATUS                  Status;
+  SECUREBOOT_CONFIG_PRIVATE_DATA   *PrivateData;
 
   Status = gBS->HandleProtocol (
                   ImageHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&PrivateData
+                  (VOID **) &PrivateData
                   );
   if (EFI_ERROR (Status)) {
     return Status;
@@ -115,7 +115,7 @@ SecureBootConfigDriverUnload (
   ASSERT (PrivateData->Signature == SECUREBOOT_CONFIG_PRIVATE_DATA_SIGNATURE);
 
   gBS->UninstallMultipleProtocolInterfaces (
-         ImageHandle,
+         &ImageHandle,
          &gEfiCallerIdGuid,
          PrivateData,
          NULL

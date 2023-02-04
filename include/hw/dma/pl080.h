@@ -10,12 +10,11 @@
  * (at your option) any later version.
  */
 
-/*
- * This is a model of the Arm PrimeCell PL080/PL081 DMA controller:
+/* This is a model of the Arm PrimeCell PL080/PL081 DMA controller:
  * The PL080 TRM is:
- * https://developer.arm.com/documentation/ddi0196/latest
+ * http://infocenter.arm.com/help/topic/com.arm.doc.ddi0196g/DDI0196.pdf
  * and the PL081 TRM is:
- * https://developer.arm.com/documentation/ddi0218/latest
+ * http://infocenter.arm.com/help/topic/com.arm.doc.ddi0218e/DDI0218.pdf
  *
  * QEMU interface:
  * + sysbus IRQ 0: DMACINTR combined interrupt line
@@ -30,7 +29,6 @@
 #define HW_DMA_PL080_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define PL080_MAX_CHANNELS 8
 
@@ -44,9 +42,9 @@ typedef struct {
 
 #define TYPE_PL080 "pl080"
 #define TYPE_PL081 "pl081"
-OBJECT_DECLARE_SIMPLE_TYPE(PL080State, PL080)
+#define PL080(obj) OBJECT_CHECK(PL080State, (obj), TYPE_PL080)
 
-struct PL080State {
+typedef struct PL080State {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -68,6 +66,6 @@ struct PL080State {
 
     MemoryRegion *downstream;
     AddressSpace downstream_as;
-};
+} PL080State;
 
 #endif

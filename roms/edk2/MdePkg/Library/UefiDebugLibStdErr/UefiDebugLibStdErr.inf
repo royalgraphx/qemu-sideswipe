@@ -22,7 +22,6 @@
   LIBRARY_CLASS                  = DebugLib|DXE_CORE DXE_DRIVER DXE_RUNTIME_DRIVER UEFI_APPLICATION UEFI_DRIVER
 
   CONSTRUCTOR                    = DxeDebugLibConstructor
-  DESTRUCTOR                     = DxeDebugLibDestructor
 
 #
 #  VALID_ARCHITECTURES           = IA32 X64 EBC
@@ -43,6 +42,9 @@
   PcdLib
   PrintLib
   DebugPrintErrorLevelLib
+
+[Guids]
+  gEfiEventExitBootServicesGuid                 ## CONSUMES
 
 [Pcd]
   gEfiMdePkgTokenSpaceGuid.PcdDebugClearMemoryValue   ## SOMETIMES_CONSUMES

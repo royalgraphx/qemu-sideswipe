@@ -129,7 +129,7 @@ set_ivb:
 	mfsr	$r1, $mr8
 	and	$r1, $r1, $r0
 	mtsr	$r1, $mr8
-#if !(CONFIG_IS_ENABLED(SYS_ICACHE_OFF) && CONFIG_IS_ENABLED(SYS_DCACHE_OFF))
+#if (!defined(CONFIG_SYS_ICACHE_OFF) || !defined(CONFIG_SYS_DCACHE_OFF))
 /*
  * MMU_CTL NTC0 Cacheable/Write-Back
  */
@@ -139,7 +139,7 @@ set_ivb:
 	mtsr	$r1, $mr0
 #endif
 
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+#ifndef CONFIG_SYS_DCACHE_OFF
 #ifdef CONFIG_ARCH_MAP_SYSMEM
 /*
  * MMU_CTL NTC1 Non-cacheable
@@ -158,14 +158,14 @@ set_ivb:
 #endif
 #endif
 
-#if !CONFIG_IS_ENABLED(SYS_ICACHE_OFF)
+#if !defined(CONFIG_SYS_ICACHE_OFF)
 	li	$r0, 0x1
 	mfsr	$r1, $mr8
 	or	$r1, $r1, $r0
 	mtsr	$r1, $mr8
 #endif
 
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+#if !defined(CONFIG_SYS_DCACHE_OFF)
 	li	$r0, 0x2
 	mfsr	$r1, $mr8
 	or	$r1, $r1, $r0
@@ -223,7 +223,7 @@ call_board_init_f:
 	j	board_init_f		! jump to board_init_f() in lib/board.c
 
 /*
- * void relocate_code(addr_sp, gd, addr_moni)
+ * void relocate_code (addr_sp, gd, addr_moni)
  *
  * This "function" does not return, instead it continues in RAM
  * after relocating the monitor code.
@@ -500,3 +500,25 @@ software_interrupt:
 	bal	do_interruption
 
 	.align	5
+
+/*
+ * void reset_cpu(ulong addr);
+ * $r0: input address to jump to
+ */
+.globl reset_cpu
+reset_cpu:
+/* No need to disable MMU because we never enable it */
+
+	bal	invalidate_icac
+	bal	invalidate_dcac
+	mfsr	$p0, $MMU_CFG
+	andi	$p0, $p0, 0x3			! MMPS
+	li	$p1, 0x2			! TLB MMU
+	bne	$p0, $p1, 1f
+	tlbop	flushall			! Flush TLB
+1:
+	mfsr	$p0, MR_CAC_CTL			! Get the $CACHE_CTL reg
+	li	$p1, DIS_DCAC
+	and	$p0, $p0, $p1			! Clear the DC_EN bit
+	mtsr	$p0, MR_CAC_CTL			! Write back the $CACHE_CTL reg
+	br	$r0				! Jump to the input address

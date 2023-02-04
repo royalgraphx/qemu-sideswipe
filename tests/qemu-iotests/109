@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw
 #
 # Test writing image headers of other formats into raw images
 #

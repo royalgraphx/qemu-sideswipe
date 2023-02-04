@@ -10,14 +10,9 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
 #include <asm/io.h>
 #include <asm/fsl_lbc.h>
 #include <nand.h>
-
-#ifdef CONFIG_MPC83xx
-#include "../../../arch/powerpc/cpu/mpc83xx/elbc/elbc.h"
-#endif
 
 #define WINDOW_SIZE 8192
 

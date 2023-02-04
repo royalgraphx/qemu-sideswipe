@@ -1,5 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2019 IBM Corp. */
+/* Copyright 2013-2014 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <skiboot.h>
 #include "spira.h"
@@ -20,7 +33,7 @@ static bool io_get_lx_info(const void *kwvpd, unsigned int kwvpd_sz,
 {
 	const void *lxr;
 	char recname[5];
-	beint32_t lxrbuf[2] = { 0, 0 };
+	uint32_t lxrbuf[2] = { 0, 0 };
 
 	/* Find LXRn, where n is the index passed in*/
 	strcpy(recname, "LXR0");
@@ -38,17 +51,17 @@ static bool io_get_lx_info(const void *kwvpd, unsigned int kwvpd_sz,
 		return false;
 	}
 
-	memcpy(lxrbuf, lxr, sizeof(beint32_t)*2);
+	memcpy(lxrbuf, lxr, sizeof(uint32_t)*2);
 
-	prlog(PR_DEBUG, "CEC:     LXRn=%d LXR=%08x%08x\n", lx_idx, be32_to_cpu(lxrbuf[0]), be32_to_cpu(lxrbuf[1]));
+	prlog(PR_DEBUG, "CEC:     LXRn=%d LXR=%08x%08x\n", lx_idx, lxrbuf[0], lxrbuf[1]);
 	prlog(PR_DEBUG, "CEC:     LX Info added to %llx\n", (long long)hn);
 
 	/* Add the LX info */
 	if (!dt_has_node_property(hn, "ibm,vpd-lx-info", NULL)) {
 		dt_add_property_cells(hn, "ibm,vpd-lx-info",
 				      lx_idx,
-				      be32_to_cpu(lxrbuf[0]),
-				      be32_to_cpu(lxrbuf[1]));
+				      lxrbuf[0],
+				      lxrbuf[1]);
 	}
 
 	return true;
@@ -95,6 +108,7 @@ static struct dt_node *io_add_phb3(const struct cechub_io_hub *hub,
 				   unsigned int spci_xscom)
 {
 	struct dt_node *pbcq;
+	uint32_t reg[6];
 	unsigned int hdif_vers;
 
 	/* Get HDIF version */
@@ -108,10 +122,13 @@ static struct dt_node *io_add_phb3(const struct cechub_io_hub *hub,
 	/* "reg" property contains in order the PE, PCI and SPCI XSCOM
 	 * addresses
 	 */
-	dt_add_property_cells(pbcq, "reg",
-				pe_xscom, 0x20,
-				pci_xscom, 0x05,
-				spci_xscom, 0x15);
+	reg[0] = pe_xscom;
+	reg[1] = 0x20;
+	reg[2] = pci_xscom;
+	reg[3] = 0x05;
+	reg[4] = spci_xscom;
+	reg[5] = 0x15;
+	dt_add_property(pbcq, "reg", reg, sizeof(reg));
 
 	/* A couple more things ... */
 	dt_add_property_strings(pbcq, "compatible", "ibm,power8-pbcq");
@@ -151,22 +168,16 @@ static struct dt_node *add_pec_stack(const struct cechub_io_hub *hub,
 				     int phb_index, u8 active_phbs)
 {
 	struct dt_node *stack;
-	const char *compat;
-	u64 eq[12];
-	u8 *ptr;
+	u64 eq[8];
+	u8 *gen4;
 	int i;
 
 	stack = dt_new_addr(pbcq, "stack", stack_index);
 	assert(stack);
 
-	if (proc_gen == proc_gen_p9)
-		compat = "ibm,power9-phb-stack";
-	else
-		compat = "ibm,power10-phb-stack";
-
 	dt_add_property_cells(stack, "reg", stack_index);
 	dt_add_property_cells(stack, "ibm,phb-index", phb_index);
-	dt_add_property_string(stack, "compatible", compat);
+	dt_add_property_string(stack, "compatible", "ibm,power9-phb-stack");
 
 	/* XXX: This should probably just return if the PHB is disabled
 	 *      rather than adding the extra properties.
@@ -181,31 +192,21 @@ static struct dt_node *add_pec_stack(const struct cechub_io_hub *hub,
 		eq[i] = be64_to_cpu(hub->phb_lane_eq[phb_index][i]);
 	for (i = 0; i < 4; i++) /* gen 4 eq settings */
 		eq[i+4] = be64_to_cpu(hub->phb4_lane_eq[phb_index][i]);
-	for (i = 0; i < 4; i++) /* gen 5 eq settings */
-		eq[i+8] = be64_to_cpu(hub->phb5_lane_eq[phb_index][i]);
 
 	/* Lane-eq settings are packed 2 bytes per lane for 16 lanes
-	 * On P9 DD2 and P10, 1 byte per lane is used in the hardware
+	 * On P9 DD2, 1 byte  per lane is  used in the hardware
 	 */
 
-	/* Repack 2 byte lane settings into 1 byte for gen 4 & 5 */
-	ptr = (u8 *)&eq[4];
-	for (i = 0; i < 32; i++)
-		ptr[i] = ptr[2*i];
+	/* Repack 2 byte lane settings into 1 byte */
+	gen4 = (u8 *)&eq[4];
+	for (i = 0; i < 16; i++)
+		gen4[i] = gen4[2*i];
 
-	if (proc_gen == proc_gen_p9)
-		dt_add_property_u64s(stack, "ibm,lane-eq",
-				     eq[0], eq[1], eq[2], eq[3],
-				     eq[4], eq[5]);
-	else
-		dt_add_property_u64s(stack, "ibm,lane-eq",
-				     eq[0], eq[1], eq[2], eq[3],
-				     eq[4], eq[5],
-				     eq[6], eq[7]);
+	dt_add_property_u64s(stack, "ibm,lane-eq", eq[0], eq[1],
+			     eq[2], eq[3], eq[4], eq[5]);
 	return stack;
 }
 
-/* Add PHB4 on p9, PHB5 on p10 */
 static struct dt_node *io_add_phb4(const struct cechub_io_hub *hub,
 				   const struct HDIF_common_hdr *sp_iohubs,
 				   struct dt_node *xcom,
@@ -214,21 +215,11 @@ static struct dt_node *io_add_phb4(const struct cechub_io_hub *hub,
 				   int phb_base)
 {
 	struct dt_node *pbcq;
+	uint32_t reg[4];
 	uint8_t active_phb_mask = hub->fab_br0_pdt;
-	uint32_t pe_xscom;
-	uint32_t pci_xscom;
-	const char *compat;
+	uint32_t pe_xscom  = 0x4010c00 + (pec_index * 0x0000400);
+	uint32_t pci_xscom = 0xd010800 + (pec_index * 0x1000000);
 	int i;
-
-	if (proc_gen == proc_gen_p9) {
-		pe_xscom  = 0x4010c00 + (pec_index * 0x0000400);
-		pci_xscom = 0xd010800 + (pec_index * 0x1000000);
-		compat = "ibm,power9-pbcq";
-	} else {
-		pe_xscom  = 0x3011800 - (pec_index * 0x1000000);
-		pci_xscom = 0x8010800 + (pec_index * 0x1000000);
-		compat = "ibm,power10-pbcq";
-	}
 
 	/* Create PBCQ node under xscom */
 	pbcq = dt_new_addr(xcom, "pbcq", pe_xscom);
@@ -236,12 +227,14 @@ static struct dt_node *io_add_phb4(const struct cechub_io_hub *hub,
 		return NULL;
 
 	/* "reg" property contains (in order) the PE and PCI XSCOM addresses */
-	dt_add_property_cells(pbcq, "reg",
-				pe_xscom, 0x100,
-				pci_xscom, 0x200);
+	reg[0] = pe_xscom;
+	reg[1] = 0x100;
+	reg[2] = pci_xscom;
+	reg[3] = 0x200;
+	dt_add_property(pbcq, "reg", reg, sizeof(reg));
 
 	/* The hubs themselves go under the stacks */
-	dt_add_property_strings(pbcq, "compatible", compat);
+	dt_add_property_strings(pbcq, "compatible", "ibm,power9-pbcq");
 	dt_add_property_cells(pbcq, "ibm,pec-index", pec_index);
 	dt_add_property_cells(pbcq, "#address-cells", 1);
 	dt_add_property_cells(pbcq, "#size-cells", 0);
@@ -256,7 +249,7 @@ static struct dt_node *io_add_phb4(const struct cechub_io_hub *hub,
 	 */
 	io_get_loc_code(sp_iohubs, pbcq, "ibm,loc-code");
 
-	prlog(PR_INFO, "CEC: Added PBCQ %d with %d stacks\n",
+	prlog(PR_INFO, "CEC: Added PHB4 PBCQ %d with %d stacks\n",
 		pec_index, stacks);
 
 	/* the actual PHB nodes created later on by skiboot */
@@ -294,7 +287,6 @@ static struct dt_node *io_add_p8(const struct cechub_io_hub *hub,
 	return xscom;
 }
 
-/* Add PBCQs for p9/p10 */
 static struct dt_node *io_add_p9(const struct cechub_io_hub *hub,
 				 const struct HDIF_common_hdr *sp_iohubs)
 {
@@ -308,22 +300,17 @@ static struct dt_node *io_add_p9(const struct cechub_io_hub *hub,
 
 	xscom = find_xscom_for_chip(chip_id);
 	if (!xscom) {
-		prerror("IOHUB: Can't find XSCOM for chip %d\n", chip_id);
+		prerror("P9: Can't find XSCOM for chip %d\n", chip_id);
 		return NULL;
 	}
 
-	prlog(PR_DEBUG, "IOHUB: PHB active bridge mask %x\n",
+	prlog(PR_DEBUG, "IOHUB: PHB4 active bridge mask %x\n",
 		(u32) hub->fab_br0_pdt);
 
 	/* Create PBCQs */
-	if (proc_gen == proc_gen_p9) {
-		io_add_phb4(hub, sp_iohubs, xscom, 0, 1, 0);
-		io_add_phb4(hub, sp_iohubs, xscom, 1, 2, 1);
-		io_add_phb4(hub, sp_iohubs, xscom, 2, 3, 3);
-	} else { /* p10 */
-		io_add_phb4(hub, sp_iohubs, xscom, 0, 3, 0);
-		io_add_phb4(hub, sp_iohubs, xscom, 1, 3, 3);
-	}
+	io_add_phb4(hub, sp_iohubs, xscom, 0, 1, 0);
+	io_add_phb4(hub, sp_iohubs, xscom, 1, 2, 1);
+	io_add_phb4(hub, sp_iohubs, xscom, 2, 3, 3);
 
 	return xscom;
 }
@@ -348,7 +335,7 @@ static void io_add_p8_cec_vpd(const struct HDIF_common_hdr *sp_iohubs)
 	}
 	if (be32_to_cpu(iokids->count) > 1) {
 		prlog(PR_WARNING, "CEC:     WARNING ! More than 1 IO KID !!! (%d)\n",
-		      be32_to_cpu(iokids->count));
+		      iokids->count);
 		/* Ignoring the additional ones */
 	}
 
@@ -733,7 +720,7 @@ static void io_parse_slots(const struct HDIF_common_hdr *sp_iohubs, int hub_id)
 	const struct slot_map_entry *entry;
 	unsigned int i, count;
 
-	if (be16_to_cpu(sp_iohubs->child_count) <= CECHUB_CHILD_IOSLOTS)
+	if (sp_iohubs->child_count <= CECHUB_CHILD_IOSLOTS)
 		return;
 
 	ioslot_arr = HDIF_child_arr(sp_iohubs, CECHUB_CHILD_IOSLOTS);
@@ -835,18 +822,6 @@ static void io_parse_fru(const void *sp_iohubs)
 			prlog(PR_INFO, "CEC:     Cumulus !\n");
 			io_add_p9(hub, sp_iohubs);
 			break;
-		case CECHUB_HUB_AXONE_HOPPER:
-			prlog(PR_INFO, "CEC:     Axone !\n");
-			io_add_p9(hub, sp_iohubs);
-			break;
-		case CECHUB_HUB_RAINIER:
-			prlog(PR_INFO, "CEC:     Rainier !\n");
-			io_add_p9(hub, sp_iohubs);
-			break;
-		case CECHUB_HUB_DENALI:
-			prlog(PR_INFO, "CEC:     Denali !\n");
-			io_add_p9(hub, sp_iohubs);
-			break;
 		default:
 			prlog(PR_ERR, "CEC:     Hub ID 0x%04x unsupported !\n",
 			      hub_id);
@@ -858,7 +833,7 @@ static void io_parse_fru(const void *sp_iohubs)
 		io_parse_slots(sp_iohubs, chip_id);
 	}
 
-	if (proc_gen == proc_gen_p8 || proc_gen == proc_gen_p9 || proc_gen == proc_gen_p10)
+	if (proc_gen == proc_gen_p8 || proc_gen == proc_gen_p9)
 		io_add_p8_cec_vpd(sp_iohubs);
 }
 

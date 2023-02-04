@@ -27,12 +27,11 @@
 #include "hw/registerfields.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
-#include "qom/object.h"
+
+#define VERSATILE_I2C(obj) \
+    OBJECT_CHECK(VersatileI2CState, (obj), TYPE_VERSATILE_I2C)
 
 typedef ArmSbconI2CState VersatileI2CState;
-DECLARE_INSTANCE_CHECKER(VersatileI2CState, VERSATILE_I2C,
-                         TYPE_VERSATILE_I2C)
-
 
 
 REG32(CONTROL_GET, 0)

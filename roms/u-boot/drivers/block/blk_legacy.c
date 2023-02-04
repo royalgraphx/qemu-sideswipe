@@ -5,8 +5,6 @@
  */
 
 #include <common.h>
-#include <blk.h>
-#include <part.h>
 #include <linux/err.h>
 
 struct blk_driver *blk_driver_lookup_type(int if_type)

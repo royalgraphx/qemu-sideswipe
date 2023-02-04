@@ -7,23 +7,24 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 #include "HiiDatabase.h"
 
 //
 // Global variables
 //
-EFI_EVENT  gHiiKeyboardLayoutChanged;
-BOOLEAN    gExportAfterReadyToBoot = FALSE;
+EFI_EVENT gHiiKeyboardLayoutChanged;
+BOOLEAN   gExportAfterReadyToBoot = FALSE;
 
-HII_DATABASE_PRIVATE_DATA  mPrivate = {
+HII_DATABASE_PRIVATE_DATA mPrivate = {
   HII_DATABASE_PRIVATE_DATA_SIGNATURE,
   {
-    (LIST_ENTRY *)NULL,
-    (LIST_ENTRY *)NULL
+    (LIST_ENTRY *) NULL,
+    (LIST_ENTRY *) NULL
   },
   {
-    (LIST_ENTRY *)NULL,
-    (LIST_ENTRY *)NULL
+    (LIST_ENTRY *) NULL,
+    (LIST_ENTRY *) NULL
   },
   {
     HiiStringToImage,
@@ -79,20 +80,20 @@ HII_DATABASE_PRIVATE_DATA  mPrivate = {
     EfiConfigKeywordHandlerGetData
   },
   {
-    (LIST_ENTRY *)NULL,
-    (LIST_ENTRY *)NULL
+    (LIST_ENTRY *) NULL,
+    (LIST_ENTRY *) NULL
   },
   0,
   {
-    (LIST_ENTRY *)NULL,
-    (LIST_ENTRY *)NULL
+    (LIST_ENTRY *) NULL,
+    (LIST_ENTRY *) NULL
   },
-  EFI_TEXT_ATTR (EFI_LIGHTGRAY,       EFI_BLACK),
+  EFI_TEXT_ATTR (EFI_LIGHTGRAY, EFI_BLACK),
   {
     0x00000000,
     0x0000,
     0x0000,
-    { 0x00,                           0x00, 0x00,0x00, 0x00, 0x00, 0x00, 0x00 }
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
   },
   NULL
 };
@@ -110,8 +111,8 @@ HII_DATABASE_PRIVATE_DATA  mPrivate = {
 VOID
 EFIAPI
 KeyboardLayoutChangeNullEvent (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT                Event,
+  IN VOID                     *Context
   )
 {
   return;
@@ -129,8 +130,8 @@ KeyboardLayoutChangeNullEvent (
 VOID
 EFIAPI
 OnReadyToBoot (
-  IN      EFI_EVENT  Event,
-  IN      VOID       *Context
+  IN      EFI_EVENT                         Event,
+  IN      VOID                              *Context
   )
 {
   //
@@ -163,13 +164,13 @@ OnReadyToBoot (
 EFI_STATUS
 EFIAPI
 InitializeHiiDatabase (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE           ImageHandle,
+  IN EFI_SYSTEM_TABLE     *SystemTable
   )
 {
-  EFI_STATUS  Status;
-  EFI_HANDLE  Handle;
-  EFI_EVENT   ReadyToBootEvent;
+  EFI_STATUS                             Status;
+  EFI_HANDLE                             Handle;
+  EFI_EVENT                              ReadyToBootEvent;
 
   //
   // There will be only one HII Database in the system
@@ -226,15 +227,14 @@ InitializeHiiDatabase (
   if (FeaturePcdGet (PcdSupportHiiImageProtocol)) {
     Status = gBS->InstallMultipleProtocolInterfaces (
                     &Handle,
-                    &gEfiHiiImageProtocolGuid,
-                    &mPrivate.HiiImage,
-                    &gEfiHiiImageExProtocolGuid,
-                    &mPrivate.HiiImageEx,
+                    &gEfiHiiImageProtocolGuid, &mPrivate.HiiImage,
+                    &gEfiHiiImageExProtocolGuid, &mPrivate.HiiImageEx,
                     NULL
                     );
+
   }
 
-  if (FeaturePcdGet (PcdHiiOsRuntimeSupport)) {
+  if (FeaturePcdGet(PcdHiiOsRuntimeSupport)) {
     Status = EfiCreateEventReadyToBootEx (
                TPL_CALLBACK,
                OnReadyToBoot,
@@ -248,3 +248,4 @@ InitializeHiiDatabase (
 
   return Status;
 }
+

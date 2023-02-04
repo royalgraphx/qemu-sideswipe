@@ -25,11 +25,9 @@
 
 !include ArmVirtPkg/ArmVirt.dsc.inc
 
-!include MdePkg/MdeLibs.dsc.inc
-
 [LibraryClasses]
   SerialPortLib|OvmfPkg/Library/XenConsoleSerialPortLib/XenConsoleSerialPortLib.inf
-  RealTimeClockLib|OvmfPkg/Library/XenRealTimeClockLib/XenRealTimeClockLib.inf
+  RealTimeClockLib|ArmVirtPkg/Library/XenRealTimeClockLib/XenRealTimeClockLib.inf
   XenHypercallLib|OvmfPkg/Library/XenHypercallLib/XenHypercallLib.inf
 
   ArmGenericTimerCounterLib|ArmVirtPkg/Library/XenArmGenericTimerVirtCounterLib/XenArmGenericTimerVirtCounterLib.inf
@@ -49,18 +47,18 @@
   BootLogoLib|MdeModulePkg/Library/BootLogoLib/BootLogoLib.inf
   PlatformBootManagerLib|ArmPkg/Library/PlatformBootManagerLib/PlatformBootManagerLib.inf
   CustomizedDisplayLib|MdeModulePkg/Library/CustomizedDisplayLib/CustomizedDisplayLib.inf
-  TpmMeasurementLib|MdeModulePkg/Library/TpmMeasurementLibNull/TpmMeasurementLibNull.inf
-  TpmPlatformHierarchyLib|SecurityPkg/Library/PeiDxeTpmPlatformHierarchyLibNull/PeiDxeTpmPlatformHierarchyLib.inf
 
 [LibraryClasses.common.UEFI_DRIVER]
   UefiScsiLib|MdePkg/Library/UefiScsiLib/UefiScsiLib.inf
 
-[BuildOptions]
+[BuildOptions.common.EDKII.SEC, BuildOptions.common.EDKII.BASE]
   #
-  # We need to avoid jump tables in SEC modules, so that the PE/COFF
-  # self-relocation code itself is guaranteed to be position independent.
+  # CLANG38 with LTO support enabled uses the GNU GOLD linker, which insists
+  # on emitting GOT based symbol references when running in shared mode, unless
+  # we override visibility to 'hidden' in all modules that make up the PrePi
+  # build.
   #
-  GCC:*_*_*_CC_FLAGS = -fno-jump-tables
+  GCC:*_CLANG38_*_CC_FLAGS = -include $(WORKSPACE)/ArmVirtPkg/Include/Platform/Hidden.h
 
 ################################################################################
 #
@@ -97,12 +95,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvModeEnable|TRUE
 
 [PcdsPatchableInModule.common]
-  # we need to provide a resolution for this PCD that supports PcdSet64()
-  # being called from ArmVirtPkg/Library/PlatformPeiLib/PlatformPeiLib.c,
-  # even though that call will be compiled out on this platform as it does
-  # not (and cannot) support the TPM2 driver stack
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpmBaseAddress|0x0
-
   #
   # This will be overridden in the code
   #
@@ -197,7 +189,7 @@
   # Platform Driver
   #
   ArmVirtPkg/XenioFdtDxe/XenioFdtDxe.inf
-  EmbeddedPkg/Drivers/FdtClientDxe/FdtClientDxe.inf
+  ArmVirtPkg/FdtClientDxe/FdtClientDxe.inf
 
   #
   # FAT filesystem + GPT/MBR partitioning + UDF filesystem

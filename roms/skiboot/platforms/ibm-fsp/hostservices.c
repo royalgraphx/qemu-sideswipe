@@ -1,5 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2019 IBM Corp. */
+/* Copyright 2013-2014 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -168,27 +181,6 @@ struct runtime_interfaces {
 	void (*reserved[32])(void);
 };
 
-/*
- * The host interfaces are called by hostboot, which considers r16 a regular
- * non-volatile register that it may have used at the time of the call.
- * Skiboot requires r16 to be set to the CPU pointer while it runs. So the
- * host interface handlers must save HBRT's r16, switch r16 to the CPU pointer,
- * do their thing, and then restore HBRT's r16 value before returning.
- */
-static uint64_t host_interface_pre_fixup(void)
-{
-	uint64_t r16 = (uint64_t)__this_cpu;
-
-	restore_cpu_ptr_r16();
-
-	return r16;
-}
-
-static void host_interface_post_fixup(uint64_t r16)
-{
-	set_cpu_ptr_r16(r16);
-}
-
 static struct runtime_interfaces *hservice_runtime;
 
 static char *hbrt_con_buf = (char *)HBRT_CON_START;
@@ -199,16 +191,15 @@ static bool hbrt_con_wrapped;
 #define HBRT_CON_OUT_LEN	(HBRT_CON_LEN - HBRT_CON_IN_LEN)
 
 static struct memcons hbrt_memcons __section(".data.memcons") = {
-	.magic		= CPU_TO_BE64(MEMCONS_MAGIC),
-	.obuf_phys	= CPU_TO_BE64(HBRT_CON_START),
-	.ibuf_phys	= CPU_TO_BE64(HBRT_CON_START + HBRT_CON_OUT_LEN),
-	.obuf_size	= CPU_TO_BE32(HBRT_CON_OUT_LEN),
-	.ibuf_size	= CPU_TO_BE32(HBRT_CON_IN_LEN),
+	.magic		= MEMCONS_MAGIC,
+	.obuf_phys	= HBRT_CON_START,
+	.ibuf_phys	= HBRT_CON_START + HBRT_CON_OUT_LEN,
+	.obuf_size	= HBRT_CON_OUT_LEN,
+	.ibuf_size	= HBRT_CON_IN_LEN,
 };
 
 static void hservice_putc(char c)
 {
-	uint64_t r16 = host_interface_pre_fixup();
 	uint32_t opos;
 
 	hbrt_con_buf[hbrt_con_pos++] = c;
@@ -228,21 +219,16 @@ static void hservice_putc(char c)
 	if (hbrt_con_wrapped)
 		opos |= MEMCONS_OUT_POS_WRAP;
 	lwsync();
-	hbrt_memcons.out_pos = cpu_to_be32(opos);
-
-	host_interface_post_fixup(r16);
+	hbrt_memcons.out_pos = opos;
 }
 
 static void hservice_puts(const char *str)
 {
-	uint64_t r16 = host_interface_pre_fixup();
 	char c;
 
 	while((c = *(str++)) != 0)
 		hservice_putc(c);
 	hservice_putc(10);
-
-	host_interface_post_fixup(r16);
 }
 
 static void hservice_mark(void)
@@ -253,48 +239,28 @@ static void hservice_mark(void)
 
 static void hservice_assert(void)
 {
-	uint64_t r16 = host_interface_pre_fixup();
-
 	/**
 	 * @fwts-label HBRTassert
 	 * @fwts-advice HBRT triggered assert: you need to debug HBRT
 	 */
 	prlog(PR_EMERG, "HBRT: Assertion from hostservices\n");
 	abort();
-	/* Should not be reached... */
-	host_interface_post_fixup(r16);
 }
 
 static void *hservice_malloc(size_t size)
 {
-	uint64_t r16 = host_interface_pre_fixup();
-	void *mem;
-
-	mem = malloc(size);
-
-	host_interface_post_fixup(r16);
-
-	return mem;
+	return malloc(size);
 }
 
 static void hservice_free(void *ptr)
 {
-	uint64_t r16 = host_interface_pre_fixup();
 	free(ptr);
-	host_interface_post_fixup(r16);
 }
 
 
 static void *hservice_realloc(void *ptr, size_t size)
 {
-	uint64_t r16 = host_interface_pre_fixup();
-	void *mem;
-
-	mem = realloc(ptr, size);
-
-	host_interface_post_fixup(r16);
-
-	return mem;
+	return realloc(ptr, size);
 }
 
 struct hbrt_elog_ent {
@@ -366,7 +332,6 @@ static void hservice_start_elog_send(void)
 
 int hservice_send_error_log(uint32_t plid, uint32_t dsize, void *data)
 {
-	uint64_t r16 = host_interface_pre_fixup();
 	struct hbrt_elog_ent *ent;
 	void *abuf;
 
@@ -375,9 +340,6 @@ int hservice_send_error_log(uint32_t plid, uint32_t dsize, void *data)
 	/* We only know how to send error logs to FSP */
 	if (!fsp_present()) {
 		prerror("HBRT: Warning, error log from HBRT discarded !\n");
-
-		host_interface_post_fixup(r16);
-
 		return OPAL_UNSUPPORTED;
 	}
 	if (dsize > PSI_DMA_HBRT_LOG_WRITE_BUF_SZ) {
@@ -392,9 +354,6 @@ int hservice_send_error_log(uint32_t plid, uint32_t dsize, void *data)
 	ent = zalloc(sizeof(struct hbrt_elog_ent));
 	if (!ent) {
 		unlock(&hbrt_elog_lock);
-
-		host_interface_post_fixup(r16);
-
 		return OPAL_NO_MEM;
 	}
 
@@ -403,9 +362,6 @@ int hservice_send_error_log(uint32_t plid, uint32_t dsize, void *data)
 	if (!abuf) {
 		free(ent);
 		unlock(&hbrt_elog_lock);
-
-		host_interface_post_fixup(r16);
-
 		return OPAL_NO_MEM;
 	}
 	memset(abuf, 0, PSI_DMA_HBRT_LOG_WRITE_BUF_SZ);
@@ -418,36 +374,21 @@ int hservice_send_error_log(uint32_t plid, uint32_t dsize, void *data)
 		hservice_start_elog_send();
 	unlock(&hbrt_elog_lock);
 
-	host_interface_post_fixup(r16);
-
 	return 0;
 }
 
 static int hservice_scom_read(uint64_t chip_id, uint64_t addr, void *buf)
 {
-	uint64_t r16 = host_interface_pre_fixup();
-	int ret;
-
-	ret = xscom_read(chip_id, addr, buf);
-
-	host_interface_post_fixup(r16);
-
-	return ret;
+	return xscom_read(chip_id, addr, buf);
 }
 
 static int hservice_scom_write(uint64_t chip_id, uint64_t addr,
 			       const void *buf)
 {
-	uint64_t r16 = host_interface_pre_fixup();
 	uint64_t val;
-	int ret;
 
 	memcpy(&val, buf, sizeof(val));
-	ret = xscom_write(chip_id, addr, val);
-
-	host_interface_post_fixup(r16);
-
-	return ret;
+	return xscom_write(chip_id, addr, val);
 }
 
 struct hbrt_lid {
@@ -547,7 +488,6 @@ void hservices_lid_preload(void)
 
 static int hservice_lid_load(uint32_t lid, void **buf, size_t *len)
 {
-	uint64_t r16 = host_interface_pre_fixup();
 	struct hbrt_lid *hlid;
 
 	prlog(PR_INFO, "HBRT: Lid load request for 0x%08x\n", lid);
@@ -567,24 +507,14 @@ static int hservice_lid_load(uint32_t lid, void **buf, size_t *len)
 			*len = hlid->len;
 			prlog(PR_DEBUG, "HBRT: LID Serviced from cache,"
 			      " %x, len=0x%lx\n", hlid->id, hlid->len);
-
-			host_interface_post_fixup(r16);
-
 			return 0;
 		}
 	}
-
-	host_interface_post_fixup(r16);
-
 	return -ENOENT;
 }
 
 static int hservice_lid_unload(void *buf __unused)
 {
-	uint64_t r16 = host_interface_pre_fixup();
-
-	host_interface_post_fixup(r16);
-
 	/* We do nothing as the LID is held in cache */
 	return 0;
 }
@@ -609,19 +539,15 @@ static uint64_t hservice_get_reserved_mem(const char *name)
 
 static void hservice_nanosleep(uint64_t i_seconds, uint64_t i_nano_seconds)
 {
-	uint64_t r16 = host_interface_pre_fixup();
 	struct timespec ts;
 
 	ts.tv_sec = i_seconds;
 	ts.tv_nsec = i_nano_seconds;
 	nanosleep_nopoll(&ts, NULL);
-
-	host_interface_post_fixup(r16);
 }
 
 int hservice_wakeup(uint32_t i_core, uint32_t i_mode)
 {
-	uint64_t r16 = host_interface_pre_fixup();
 	struct cpu_thread *cpu;
 	int rc = OPAL_SUCCESS;
 
@@ -638,13 +564,7 @@ int hservice_wakeup(uint32_t i_core, uint32_t i_mode)
 		i_core &= SPR_PIR_P9_MASK;
 		i_core <<= 2;
 		break;
-	case proc_gen_p10:
-		i_core &= SPR_PIR_P10_MASK;
-		i_core <<= 2;
-		break;
 	default:
-		host_interface_post_fixup(r16);
-
 		return OPAL_UNSUPPORTED;
 	}
 
@@ -652,49 +572,32 @@ int hservice_wakeup(uint32_t i_core, uint32_t i_mode)
 	switch(i_mode) {
 	case 0: /* Assert special wakeup */
 		cpu = find_cpu_by_pir(i_core);
-		if (!cpu) {
-			host_interface_post_fixup(r16);
-
+		if (!cpu)
 			return OPAL_PARAMETER;
-		}
-		prlog(PR_TRACE, "HBRT: Special wakeup assert for core 0x%x,"
+		prlog(PR_DEBUG, "HBRT: Special wakeup assert for core 0x%x,"
 		      " count=%d\n", i_core, cpu->hbrt_spec_wakeup);
 		if (cpu->hbrt_spec_wakeup == 0)
 			rc = dctl_set_special_wakeup(cpu);
 		if (rc == 0)
 			cpu->hbrt_spec_wakeup++;
-
-		host_interface_post_fixup(r16);
-
 		return rc;
-
 	case 1: /* Deassert special wakeup */
 		cpu = find_cpu_by_pir(i_core);
-		if (!cpu) {
-			host_interface_post_fixup(r16);
-
+		if (!cpu)
 			return OPAL_PARAMETER;
-		}
-		prlog(PR_TRACE, "HBRT: Special wakeup release for core"
+		prlog(PR_DEBUG, "HBRT: Special wakeup release for core"
 		      " 0x%x, count=%d\n", i_core, cpu->hbrt_spec_wakeup);
 		if (cpu->hbrt_spec_wakeup == 0) {
 			prerror("HBRT: Special wakeup clear"
 				" on core 0x%x with count=0\n",
 				i_core);
-
-			host_interface_post_fixup(r16);
-
 			return OPAL_WRONG_STATE;
 		}
 		/* What to do with count on errors ? */
 		cpu->hbrt_spec_wakeup--;
 		if (cpu->hbrt_spec_wakeup == 0)
 			rc = dctl_clear_special_wakeup(cpu);
-
-		host_interface_post_fixup(r16);
-
 		return rc;
-
 	case 2: /* Clear all special wakeups */
 		prlog(PR_DEBUG, "HBRT: Special wakeup release for all cores\n");
 		for_each_cpu(cpu) {
@@ -704,15 +607,8 @@ int hservice_wakeup(uint32_t i_core, uint32_t i_mode)
 				dctl_clear_special_wakeup(cpu);
 			}
 		}
-
-		host_interface_post_fixup(r16);
-
 		return OPAL_SUCCESS;
-
 	default:
-
-		host_interface_post_fixup(r16);
-
 		return OPAL_PARAMETER;
 	}
 }
@@ -990,8 +886,8 @@ static bool hservice_hbrt_msg_notify(uint32_t cmd_sub_mod, struct fsp_msg *msg)
 
 	prlog(PR_TRACE, "HBRT: FSP - HBRT message generated\n");
 
-	tce_token = fsp_msg_get_data_word(msg, 1);
-	len = fsp_msg_get_data_word(msg, 2);
+	tce_token = msg->data.words[1];
+	len = msg->data.words[2];
 	buf = fsp_inbound_buf_from_tce(tce_token);
 	if (!buf) {
 		prlog(PR_DEBUG, "HBRT: Invalid inbound data\n");
@@ -999,10 +895,8 @@ static bool hservice_hbrt_msg_notify(uint32_t cmd_sub_mod, struct fsp_msg *msg)
 		return true;
 	}
 
-	if (prd_hbrt_fsp_msg_notify(buf, len)) {
-		hservice_hbrt_msg_response(FSP_STATUS_GENERIC_ERROR);
-		prlog(PR_NOTICE, "Unable to send FSP - HBRT message\n");
-	}
+	if (prd_hbrt_fsp_msg_notify(buf, len))
+		hservice_hbrt_msg_response(FSP_STATUS_GENERIC_FAILURE);
 
 	return true;
 }

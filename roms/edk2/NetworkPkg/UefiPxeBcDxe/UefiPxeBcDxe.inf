@@ -47,6 +47,7 @@
 
 [Packages]
   MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
   NetworkPkg/NetworkPkg.dec
 
 
@@ -99,7 +100,7 @@
   gEfiAdapterInfoUndiIpv6SupportGuid                   ## SOMETIMES_CONSUMES ## GUID
 
 [Pcd]
-  gEfiNetworkPkgTokenSpaceGuid.PcdTftpBlockSize        ## SOMETIMES_CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdTftpBlockSize      ## SOMETIMES_CONSUMES
   gEfiNetworkPkgTokenSpaceGuid.PcdPxeTftpWindowSize    ## SOMETIMES_CONSUMES
   gEfiNetworkPkgTokenSpaceGuid.PcdIPv4PXESupport       ## CONSUMES
   gEfiNetworkPkgTokenSpaceGuid.PcdIPv6PXESupport       ## CONSUMES

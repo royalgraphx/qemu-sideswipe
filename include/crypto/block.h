@@ -29,24 +29,24 @@ typedef struct QCryptoBlock QCryptoBlock;
 /* See also QCryptoBlockFormat, QCryptoBlockCreateOptions
  * and QCryptoBlockOpenOptions in qapi/crypto.json */
 
-typedef int (*QCryptoBlockReadFunc)(QCryptoBlock *block,
-                                    size_t offset,
-                                    uint8_t *buf,
-                                    size_t buflen,
-                                    void *opaque,
-                                    Error **errp);
+typedef ssize_t (*QCryptoBlockReadFunc)(QCryptoBlock *block,
+                                        size_t offset,
+                                        uint8_t *buf,
+                                        size_t buflen,
+                                        void *opaque,
+                                        Error **errp);
 
-typedef int (*QCryptoBlockInitFunc)(QCryptoBlock *block,
-                                    size_t headerlen,
-                                    void *opaque,
-                                    Error **errp);
+typedef ssize_t (*QCryptoBlockInitFunc)(QCryptoBlock *block,
+                                        size_t headerlen,
+                                        void *opaque,
+                                        Error **errp);
 
-typedef int (*QCryptoBlockWriteFunc)(QCryptoBlock *block,
-                                     size_t offset,
-                                     const uint8_t *buf,
-                                     size_t buflen,
-                                     void *opaque,
-                                     Error **errp);
+typedef ssize_t (*QCryptoBlockWriteFunc)(QCryptoBlock *block,
+                                         size_t offset,
+                                         const uint8_t *buf,
+                                         size_t buflen,
+                                         void *opaque,
+                                         Error **errp);
 
 /**
  * qcrypto_block_has_format:
@@ -311,5 +311,7 @@ uint64_t qcrypto_block_get_sector_size(QCryptoBlock *block);
 void qcrypto_block_free(QCryptoBlock *block);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(QCryptoBlock, qcrypto_block_free)
+G_DEFINE_AUTOPTR_CLEANUP_FUNC(QCryptoBlockCreateOptions,
+                              qapi_free_QCryptoBlockCreateOptions)
 
 #endif /* QCRYPTO_BLOCK_H */

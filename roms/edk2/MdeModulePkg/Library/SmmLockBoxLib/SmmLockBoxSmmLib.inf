@@ -15,8 +15,8 @@
   MODULE_TYPE                    = DXE_SMM_DRIVER
   VERSION_STRING                 = 1.0
   LIBRARY_CLASS                  = LockBoxLib|DXE_SMM_DRIVER
-  CONSTRUCTOR                    = SmmLockBoxTraditionalConstructor
-  DESTRUCTOR                     = SmmLockBoxTraditionalDestructor
+  CONSTRUCTOR                    = SmmLockBoxSmmConstructor
+  DESTRUCTOR                     = SmmLockBoxSmmDestructor
 
 #
 # The following information is for reference only and not required by the build tools.
@@ -25,8 +25,7 @@
 #
 
 [Sources]
-  SmmLockBoxTraditionalMmLib.c
-  SmmLockBoxMmLib.c
+  SmmLockBoxSmmLib.c
   SmmLockBoxLibPrivate.h
 
 [Packages]
@@ -34,14 +33,14 @@
   MdeModulePkg/MdeModulePkg.dec
 
 [LibraryClasses]
-  MmServicesTableLib
+  SmmServicesTableLib
   BaseLib
   DebugLib
 
 [Protocols]
-  gEfiMmReadyToLockProtocolGuid    ## NOTIFY
-  gEfiMmEndOfDxeProtocolGuid       ## NOTIFY
-  gEfiMmSxDispatchProtocolGuid     ## NOTIFY
+  gEfiSmmReadyToLockProtocolGuid    ## NOTIFY
+  gEfiSmmEndOfDxeProtocolGuid       ## NOTIFY
+  gEfiSmmSxDispatch2ProtocolGuid    ## NOTIFY
 
 [Guids]
   ## SOMETIMES_CONSUMES   ## UNDEFINED # SmmSystemTable

@@ -9,9 +9,6 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <irq_func.h>
-#include <log.h>
 #include <mpc83xx.h>
 #include <watchdog.h>
 #include <asm/io.h>

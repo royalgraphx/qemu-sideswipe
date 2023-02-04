@@ -10,8 +10,8 @@
  * See the COPYING file in the top-level directory.
  */
 
-#ifndef QOS_FUZZ_H
-#define QOS_FUZZ_H
+#ifndef _QOS_FUZZ_H_
+#define _QOS_FUZZ_H_
 
 #include "tests/qtest/fuzz/fuzz.h"
 #include "tests/qtest/libqos/qgraph.h"

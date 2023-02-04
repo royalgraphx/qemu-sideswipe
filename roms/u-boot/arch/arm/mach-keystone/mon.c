@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * K2x: Secure commands file
+ * K2HK: secure kernel command file
  *
- * Copyright (C) 2012-2019 Texas Instruments Incorporated - http://www.ti.com/
+ * (C) Copyright 2012-2014
+ *     Texas Instruments Incorporated, <www.ti.com>
  */
 
-#include <hang.h>
-#include <image.h>
-#include <asm/unaligned.h>
 #include <common.h>
 #include <command.h>
 #include <mach/mon.h>
@@ -122,9 +120,9 @@ void board_fit_image_post_process(void **p_image, size_t *p_size)
 	/*
 	 * Overwrite the image headers after authentication
 	 * and decryption. Update size to reflect removal
-	 * of header and restore original file size.
+	 * of header.
 	 */
-	*p_size = get_unaligned_le32(image + (*p_size - 4));
+	*p_size -= KS2_HS_SEC_HEADER_LEN;
 	memcpy(image, image + KS2_HS_SEC_HEADER_LEN, *p_size);
 
 	/*

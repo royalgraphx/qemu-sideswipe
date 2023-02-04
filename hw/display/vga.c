@@ -31,7 +31,6 @@
 #include "vga_int.h"
 #include "vga_regs.h"
 #include "ui/pixel_ops.h"
-#include "ui/console.h"
 #include "qemu/timer.h"
 #include "hw/xen/xen.h"
 #include "migration/vmstate.h"
@@ -39,8 +38,6 @@
 
 //#define DEBUG_VGA_MEM
 //#define DEBUG_VGA_REG
-
-bool have_vga = true;
 
 /* 16 state changes per vertical frame @60 Hz */
 #define VGA_TEXT_CURSOR_PERIOD_MS       (1000 * 2 * 16 / 60)
@@ -95,19 +92,19 @@ const uint8_t gr_mask[16] = {
                 (((uint32_t)(__x) & (uint32_t)0x00ff0000UL) >>  8) | \
                 (((uint32_t)(__x) & (uint32_t)0xff000000UL) >> 24) ))
 
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
 #define PAT(x) cbswap_32(x)
 #else
 #define PAT(x) (x)
 #endif
 
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
 #define BIG 1
 #else
 #define BIG 0
 #endif
 
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
 #define GET_PLANE(data, p) (((data) >> (24 - (p) * 8)) & 0xff)
 #else
 #define GET_PLANE(data, p) (((data) >> ((p) * 8)) & 0xff)
@@ -134,7 +131,7 @@ static const uint32_t mask16[16] = {
 
 #undef PAT
 
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
 #define PAT(x) (x)
 #else
 #define PAT(x) cbswap_32(x)
@@ -753,8 +750,7 @@ void vbe_ioport_write_data(void *opaque, uint32_t addr, uint32_t val)
                 val == VBE_DISPI_ID1 ||
                 val == VBE_DISPI_ID2 ||
                 val == VBE_DISPI_ID3 ||
-                val == VBE_DISPI_ID4 ||
-                val == VBE_DISPI_ID5) {
+                val == VBE_DISPI_ID4) {
                 s->vbe_regs[s->vbe_index] = val;
             }
             break;
@@ -1297,7 +1293,7 @@ static void vga_draw_text(VGACommonState *s, int full_update)
                 if (cx > cx_max)
                     cx_max = cx;
                 *ch_attr_ptr = ch_attr;
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
                 ch = ch_attr >> 8;
                 cattr = ch_attr & 0xff;
 #else
@@ -1478,7 +1474,7 @@ static void vga_draw_graphic(VGACommonState *s, int full_update)
     vga_draw_line_func *vga_draw_line = NULL;
     bool share_surface, force_shadow = false;
     pixman_format_code_t format;
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
     bool byteswap = !s->big_endian_fb;
 #else
     bool byteswap = s->big_endian_fb;
@@ -1515,10 +1511,9 @@ static void vga_draw_graphic(VGACommonState *s, int full_update)
         force_shadow = true;
     }
 
-    /* bits 5-6: 0 = 16-color mode, 1 = 4-color mode, 2 = 256-color mode.  */
     shift_control = (s->gr[VGA_GFX_MODE] >> 5) & 3;
     double_scan = (s->cr[VGA_CRTC_MAX_SCAN] >> 7);
-    if (s->cr[VGA_CRTC_MODE] & 1) {
+    if (shift_control != 1) {
         multi_scan = (((s->cr[VGA_CRTC_MAX_SCAN] & 0x1f) + 1) << double_scan)
             - 1;
     } else {
@@ -1679,6 +1674,7 @@ static void vga_draw_graphic(VGACommonState *s, int full_update)
         if (!(s->cr[VGA_CRTC_MODE] & 2)) {
             addr = (addr & ~0x8000) | ((y1 & 2) << 14);
         }
+        update = full_update;
         page0 = addr & s->vbe_size_mask;
         page1 = (addr + bwidth - 1) & s->vbe_size_mask;
         if (full_update) {
@@ -2170,10 +2166,9 @@ static inline uint32_t uint_clamp(uint32_t val, uint32_t vmin, uint32_t vmax)
     return val;
 }
 
-bool vga_common_init(VGACommonState *s, Object *obj, Error **errp)
+void vga_common_init(VGACommonState *s, Object *obj)
 {
     int i, j, v, b;
-    Error *local_err = NULL;
 
     for(i = 0;i < 256; i++) {
         v = 0;
@@ -2208,18 +2203,8 @@ bool vga_common_init(VGACommonState *s, Object *obj, Error **errp)
     s->vbe_size_mask = s->vbe_size - 1;
 
     s->is_vbe_vmstate = 1;
-
-    if (s->global_vmstate && qemu_ram_block_by_name("vga.vram")) {
-        error_setg(errp, "Only one global VGA device can be used at a time");
-        return false;
-    }
-
     memory_region_init_ram_nomigrate(&s->vram, obj, "vga.vram", s->vram_size,
-                                     &local_err);
-    if (local_err) {
-        error_propagate(errp, local_err);
-        return false;
-    }
+                           &error_fatal);
     vmstate_register_ram(&s->vram, s->global_vmstate ? NULL : DEVICE(obj));
     xen_register_framebuffer(&s->vram);
     s->vram_ptr = memory_region_get_ram_ptr(&s->vram);
@@ -2244,14 +2229,12 @@ bool vga_common_init(VGACommonState *s, Object *obj, Error **errp)
      * into a device attribute set by the machine/platform to remove
      * all target endian dependencies from this file.
      */
-#if TARGET_BIG_ENDIAN
+#ifdef TARGET_WORDS_BIGENDIAN
     s->default_endian_fb = true;
 #else
     s->default_endian_fb = false;
 #endif
     vga_dirty_log_start(s);
-
-    return true;
 }
 
 static const MemoryRegionPortio vga_portio_list[] = {

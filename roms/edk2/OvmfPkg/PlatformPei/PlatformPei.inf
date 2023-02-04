@@ -2,7 +2,7 @@
 #  Platform PEI driver
 #
 #  This module provides platform specific function to detect boot mode.
-#  Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -30,12 +30,13 @@
   FeatureControl.c
   Fv.c
   MemDetect.c
-  MemTypeInfo.c
   Platform.c
   Platform.h
+  Xen.c
+  Xen.h
 
 [Packages]
-  EmbeddedPkg/EmbeddedPkg.dec
+  IntelFrameworkModulePkg/IntelFrameworkModulePkg.dec
   MdePkg/MdePkg.dec
   MdeModulePkg/MdeModulePkg.dec
   SecurityPkg/SecurityPkg.dec
@@ -44,7 +45,7 @@
 
 [Guids]
   gEfiMemoryTypeInformationGuid
-  gFdtHobGuid
+  gEfiXenInfoGuid
 
 [LibraryClasses]
   BaseLib
@@ -59,11 +60,9 @@
   PeimEntryPoint
   QemuFwCfgLib
   QemuFwCfgS3Lib
-  QemuFwCfgSimpleParserLib
   MtrrLib
   MemEncryptSevLib
   PcdLib
-  VmgExitLib
 
 [Pcd]
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfPeiMemFvBase
@@ -74,10 +73,6 @@
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecPeiTempRamSize
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecPageTablesBase
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecPageTablesSize
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecGhcbPageTableBase
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecGhcbPageTableSize
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecGhcbBase
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecGhcbSize
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfLockBoxStorageBase
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfLockBoxStorageSize
   gUefiOvmfPkgTokenSpaceGuid.PcdGuidedExtractHandlerTableSize
@@ -90,51 +85,32 @@
   gUefiOvmfPkgTokenSpaceGuid.PcdPciMmio64Size
   gUefiOvmfPkgTokenSpaceGuid.PcdOvmfDecompressionScratchEnd
   gUefiOvmfPkgTokenSpaceGuid.PcdQ35TsegMbytes
-  gUefiOvmfPkgTokenSpaceGuid.PcdQ35SmramAtDefaultSmbase
   gEfiMdePkgTokenSpaceGuid.PcdGuidedExtractHandlerTableAddress
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageFtwSpareSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdFlashNvStorageVariableSize
   gEfiMdeModulePkgTokenSpaceGuid.PcdEmuVariableNvStoreReserved
+  gEfiMdeModulePkgTokenSpaceGuid.PcdPciDisableBusEnumeration
   gEfiMdeModulePkgTokenSpaceGuid.PcdDxeIplSwitchToLongMode
   gEfiMdeModulePkgTokenSpaceGuid.PcdUse1GPageTable
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetNxForStack
+  gEfiMdeModulePkgTokenSpaceGuid.PcdPropertiesTableEnable
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiS3Enable
   gEfiMdeModulePkgTokenSpaceGuid.PcdPteMemoryEncryptionAddressOrMask
-  gEfiMdeModulePkgTokenSpaceGuid.PcdGhcbBase
-  gEfiMdeModulePkgTokenSpaceGuid.PcdGhcbSize
   gEfiSecurityPkgTokenSpaceGuid.PcdOptionRomImageVerificationPolicy
   gUefiCpuPkgTokenSpaceGuid.PcdCpuLocalApicBaseAddress
   gUefiCpuPkgTokenSpaceGuid.PcdCpuMaxLogicalProcessorNumber
-  gUefiCpuPkgTokenSpaceGuid.PcdCpuBootLogicalProcessorNumber
+  gUefiCpuPkgTokenSpaceGuid.PcdCpuApInitTimeOutInMicroSeconds
   gUefiCpuPkgTokenSpaceGuid.PcdCpuApStackSize
-  gUefiCpuPkgTokenSpaceGuid.PcdSevEsIsEnabled
-  gEfiMdePkgTokenSpaceGuid.PcdConfidentialComputingGuestAttr
-  gUefiCpuPkgTokenSpaceGuid.PcdGhcbHypervisorFeatures
 
 [FixedPcd]
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfCpuidBase
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfCpuidSize
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIMemoryNVS
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiACPIReclaimMemory
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiReservedMemoryType
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesCode
-  gEmbeddedTokenSpaceGuid.PcdMemoryTypeEfiRuntimeServicesData
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecGhcbBackupBase
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSecGhcbBackupSize
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfWorkAreaBase
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfWorkAreaSize
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSnpSecretsBase
-  gUefiOvmfPkgTokenSpaceGuid.PcdOvmfSnpSecretsSize
 
 [FeaturePcd]
-  gUefiOvmfPkgTokenSpaceGuid.PcdCsmEnable
   gUefiOvmfPkgTokenSpaceGuid.PcdSmmSmramRequire
 
 [Ppis]
   gEfiPeiMasterBootModePpiGuid
   gEfiPeiMpServicesPpiGuid
-  gEfiPeiReadOnlyVariable2PpiGuid
 
 [Depex]
   TRUE

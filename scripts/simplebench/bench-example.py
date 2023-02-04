@@ -19,13 +19,12 @@
 #
 
 import simplebench
-from results_to_text import results_to_text
 from bench_block_job import bench_block_copy, drv_file, drv_nbd
 
 
 def bench_func(env, case):
     """ Handle one "cell" of benchmarking table. """
-    return bench_block_copy(env['qemu_binary'], env['cmd'], {},
+    return bench_block_copy(env['qemu_binary'], env['cmd'],
                             case['source'], case['target'])
 
 
@@ -78,4 +77,4 @@ test_envs = [
 ]
 
 result = simplebench.bench(bench_func, test_envs, test_cases, count=3)
-print(results_to_text(result))
+print(simplebench.ascii(result))

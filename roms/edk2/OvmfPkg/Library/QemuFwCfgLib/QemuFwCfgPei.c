@@ -17,8 +17,9 @@
 
 #include "QemuFwCfgLibInternal.h"
 
-STATIC BOOLEAN  mQemuFwCfgSupported = FALSE;
-STATIC BOOLEAN  mQemuFwCfgDmaSupported;
+STATIC BOOLEAN mQemuFwCfgSupported = FALSE;
+STATIC BOOLEAN mQemuFwCfgDmaSupported;
+
 
 /**
   Returns a boolean indicating if the firmware configuration interface
@@ -39,33 +40,33 @@ QemuFwCfgIsAvailable (
   return InternalQemuFwCfgIsAvailable ();
 }
 
+
 RETURN_STATUS
 EFIAPI
 QemuFwCfgInitialize (
   VOID
   )
 {
-  UINT32  Signature;
-  UINT32  Revision;
+  UINT32 Signature;
+  UINT32 Revision;
 
   //
   // Enable the access routines while probing to see if it is supported.
   // For probing we always use the IO Port (IoReadFifo8()) access method.
   //
-  mQemuFwCfgSupported    = TRUE;
+  mQemuFwCfgSupported = TRUE;
   mQemuFwCfgDmaSupported = FALSE;
 
   QemuFwCfgSelectItem (QemuFwCfgItemSignature);
   Signature = QemuFwCfgRead32 ();
-  DEBUG ((DEBUG_INFO, "FW CFG Signature: 0x%x\n", Signature));
+  DEBUG ((EFI_D_INFO, "FW CFG Signature: 0x%x\n", Signature));
   QemuFwCfgSelectItem (QemuFwCfgItemInterfaceVersion);
   Revision = QemuFwCfgRead32 ();
-  DEBUG ((DEBUG_INFO, "FW CFG Revision: 0x%x\n", Revision));
+  DEBUG ((EFI_D_INFO, "FW CFG Revision: 0x%x\n", Revision));
   if ((Signature != SIGNATURE_32 ('Q', 'E', 'M', 'U')) ||
       (Revision < 1)
-      )
-  {
-    DEBUG ((DEBUG_INFO, "QemuFwCfg interface not supported.\n"));
+     ) {
+    DEBUG ((EFI_D_INFO, "QemuFwCfg interface not supported.\n"));
     mQemuFwCfgSupported = FALSE;
     return RETURN_SUCCESS;
   }
@@ -86,9 +87,9 @@ QemuFwCfgInitialize (
       DEBUG ((DEBUG_INFO, "QemuFwCfg interface (DMA) is supported.\n"));
     }
   }
-
   return RETURN_SUCCESS;
 }
+
 
 /**
   Returns a boolean indicating if the firmware configuration interface is
@@ -139,19 +140,17 @@ InternalQemuFwCfgDmaIsAvailable (
 **/
 VOID
 InternalQemuFwCfgDmaBytes (
-  IN     UINT32  Size,
-  IN OUT VOID    *Buffer OPTIONAL,
-  IN     UINT32  Control
+  IN     UINT32   Size,
+  IN OUT VOID     *Buffer OPTIONAL,
+  IN     UINT32   Control
   )
 {
-  volatile FW_CFG_DMA_ACCESS  Access;
-  UINT32                      AccessHigh, AccessLow;
-  UINT32                      Status;
+  volatile FW_CFG_DMA_ACCESS Access;
+  UINT32                     AccessHigh, AccessLow;
+  UINT32                     Status;
 
-  ASSERT (
-    Control == FW_CFG_DMA_CTL_WRITE || Control == FW_CFG_DMA_CTL_READ ||
-    Control == FW_CFG_DMA_CTL_SKIP
-    );
+  ASSERT (Control == FW_CFG_DMA_CTL_WRITE || Control == FW_CFG_DMA_CTL_READ ||
+    Control == FW_CFG_DMA_CTL_SKIP);
 
   if (Size == 0) {
     return;
@@ -178,7 +177,7 @@ InternalQemuFwCfgDmaBytes (
   //
   AccessHigh = (UINT32)RShiftU64 ((UINTN)&Access, 32);
   AccessLow  = (UINT32)(UINTN)&Access;
-  IoWrite32 (FW_CFG_IO_DMA_ADDRESS, SwapBytes32 (AccessHigh));
+  IoWrite32 (FW_CFG_IO_DMA_ADDRESS,     SwapBytes32 (AccessHigh));
   IoWrite32 (FW_CFG_IO_DMA_ADDRESS + 4, SwapBytes32 (AccessLow));
 
   //
@@ -199,3 +198,4 @@ InternalQemuFwCfgDmaBytes (
   //
   MemoryFence ();
 }
+

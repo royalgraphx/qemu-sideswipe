@@ -51,7 +51,6 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/memalign.h"
 #include "trace.h"
 #include "qed.h"
 

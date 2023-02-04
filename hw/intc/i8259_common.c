@@ -116,8 +116,8 @@ void pic_stat_update_irq(int irq, int level)
     }
 }
 
-static bool pic_get_statistics(InterruptStatsProvider *obj,
-                               uint64_t **irq_counts, unsigned int *nb_irqs)
+bool pic_get_statistics(InterruptStatsProvider *obj,
+                        uint64_t **irq_counts, unsigned int *nb_irqs)
 {
     PICCommonState *s = PIC_COMMON(obj);
 
@@ -132,7 +132,7 @@ static bool pic_get_statistics(InterruptStatsProvider *obj,
     return true;
 }
 
-static void pic_print_info(InterruptStatsProvider *obj, Monitor *mon)
+void pic_print_info(InterruptStatsProvider *obj, Monitor *mon)
 {
     PICCommonState *s = PIC_COMMON(obj);
 

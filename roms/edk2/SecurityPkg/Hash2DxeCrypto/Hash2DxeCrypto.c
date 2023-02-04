@@ -29,7 +29,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 typedef
 UINTN
-(EFIAPI *EFI_HASH_GET_CONTEXT_SIZE)(
+(EFIAPI *EFI_HASH_GET_CONTEXT_SIZE) (
   VOID
   );
 
@@ -49,7 +49,7 @@ UINTN
 **/
 typedef
 BOOLEAN
-(EFIAPI *EFI_HASH_INIT)(
+(EFIAPI *EFI_HASH_INIT) (
   OUT  VOID  *HashContext
   );
 
@@ -75,7 +75,7 @@ BOOLEAN
 **/
 typedef
 BOOLEAN
-(EFIAPI *EFI_HASH_UPDATE)(
+(EFIAPI *EFI_HASH_UPDATE) (
   IN OUT  VOID        *HashContext,
   IN      CONST VOID  *Data,
   IN      UINTN       DataSize
@@ -87,7 +87,7 @@ BOOLEAN
   This function completes hash computation and retrieves the digest value into
   the specified memory. After this function has been called, the Hash context cannot
   be used again.
-  Hash context should be already correctly initialized by HashInit(), and should not be
+  Hash context should be already correctly intialized by HashInit(), and should not be
   finalized by HashFinal(). Behavior with invalid Hash context is undefined.
 
   If HashContext is NULL, then return FALSE.
@@ -105,24 +105,26 @@ BOOLEAN
 **/
 typedef
 BOOLEAN
-(EFIAPI *EFI_HASH_FINAL)(
+(EFIAPI *EFI_HASH_FINAL) (
   IN OUT  VOID   *HashContext,
   OUT     UINT8  *HashValue
   );
 
 typedef struct {
-  EFI_GUID                     *Guid;
-  UINT32                       HashSize;
-  EFI_HASH_GET_CONTEXT_SIZE    GetContextSize;
-  EFI_HASH_INIT                Init;
-  EFI_HASH_UPDATE              Update;
-  EFI_HASH_FINAL               Final;
+  EFI_GUID                   *Guid;
+  UINT32                     HashSize;
+  EFI_HASH_GET_CONTEXT_SIZE  GetContextSize;
+  EFI_HASH_INIT              Init;
+  EFI_HASH_UPDATE            Update;
+  EFI_HASH_FINAL             Final;
 } EFI_HASH_INFO;
 
 EFI_HASH_INFO  mHashInfo[] = {
-  { &gEfiHashAlgorithmSha256Guid, sizeof (EFI_SHA256_HASH2), Sha256GetContextSize, Sha256Init, Sha256Update, Sha256Final },
-  { &gEfiHashAlgorithmSha384Guid, sizeof (EFI_SHA384_HASH2), Sha384GetContextSize, Sha384Init, Sha384Update, Sha384Final },
-  { &gEfiHashAlgorithmSha512Guid, sizeof (EFI_SHA512_HASH2), Sha512GetContextSize, Sha512Init, Sha512Update, Sha512Final },
+  {&gEfiHashAlgorithmMD5Guid,     sizeof(EFI_MD5_HASH2),    Md5GetContextSize,    Md5Init,    Md5Update,    Md5Final  },
+  {&gEfiHashAlgorithmSha1Guid,    sizeof(EFI_SHA1_HASH2),   Sha1GetContextSize,   Sha1Init,   Sha1Update,   Sha1Final   },
+  {&gEfiHashAlgorithmSha256Guid,  sizeof(EFI_SHA256_HASH2), Sha256GetContextSize, Sha256Init, Sha256Update, Sha256Final },
+  {&gEfiHashAlgorithmSha384Guid,  sizeof(EFI_SHA384_HASH2), Sha384GetContextSize, Sha384Init, Sha384Update, Sha384Final },
+  {&gEfiHashAlgorithmSha512Guid,  sizeof(EFI_SHA512_HASH2), Sha512GetContextSize, Sha512Init, Sha512Update, Sha512Final },
 };
 
 /**
@@ -141,9 +143,9 @@ EFI_HASH_INFO  mHashInfo[] = {
 EFI_STATUS
 EFIAPI
 BaseCrypto2GetHashSize (
-  IN  CONST EFI_HASH2_PROTOCOL  *This,
-  IN  CONST EFI_GUID            *HashAlgorithm,
-  OUT UINTN                     *HashSize
+  IN  CONST EFI_HASH2_PROTOCOL     *This,
+  IN  CONST EFI_GUID               *HashAlgorithm,
+  OUT UINTN                        *HashSize
   );
 
 /**
@@ -169,11 +171,11 @@ BaseCrypto2GetHashSize (
 EFI_STATUS
 EFIAPI
 BaseCrypto2Hash (
-  IN CONST EFI_HASH2_PROTOCOL  *This,
-  IN CONST EFI_GUID            *HashAlgorithm,
-  IN CONST UINT8               *Message,
-  IN UINTN                     MessageSize,
-  IN OUT EFI_HASH2_OUTPUT      *Hash
+  IN CONST EFI_HASH2_PROTOCOL      *This,
+  IN CONST EFI_GUID                *HashAlgorithm,
+  IN CONST UINT8                   *Message,
+  IN UINTN                         MessageSize,
+  IN OUT EFI_HASH2_OUTPUT          *Hash
   );
 
 /**
@@ -195,8 +197,8 @@ BaseCrypto2Hash (
 EFI_STATUS
 EFIAPI
 BaseCrypto2HashInit (
-  IN CONST EFI_HASH2_PROTOCOL  *This,
-  IN CONST EFI_GUID            *HashAlgorithm
+  IN CONST EFI_HASH2_PROTOCOL      *This,
+  IN CONST EFI_GUID                *HashAlgorithm
   );
 
 /**
@@ -217,9 +219,9 @@ BaseCrypto2HashInit (
 EFI_STATUS
 EFIAPI
 BaseCrypto2HashUpdate (
-  IN CONST EFI_HASH2_PROTOCOL  *This,
-  IN CONST UINT8               *Message,
-  IN UINTN                     MessageSize
+  IN CONST EFI_HASH2_PROTOCOL      *This,
+  IN CONST UINT8                   *Message,
+  IN UINTN                         MessageSize
   );
 
 /**
@@ -241,11 +243,11 @@ BaseCrypto2HashUpdate (
 EFI_STATUS
 EFIAPI
 BaseCrypto2HashFinal (
-  IN CONST EFI_HASH2_PROTOCOL  *This,
-  IN OUT EFI_HASH2_OUTPUT      *Hash
+  IN CONST EFI_HASH2_PROTOCOL      *This,
+  IN OUT EFI_HASH2_OUTPUT          *Hash
   );
 
-EFI_HASH2_PROTOCOL  mHash2Protocol = {
+EFI_HASH2_PROTOCOL mHash2Protocol = {
   BaseCrypto2GetHashSize,
   BaseCrypto2Hash,
   BaseCrypto2HashInit,
@@ -262,17 +264,16 @@ EFI_HASH2_PROTOCOL  mHash2Protocol = {
 **/
 EFI_HASH_INFO *
 GetHashInfo (
-  IN CONST EFI_GUID  *HashAlgorithm
+  IN CONST EFI_GUID              *HashAlgorithm
   )
 {
-  UINTN  Index;
+  UINTN      Index;
 
-  for (Index = 0; Index < sizeof (mHashInfo)/sizeof (mHashInfo[0]); Index++) {
+  for (Index = 0; Index < sizeof(mHashInfo)/sizeof(mHashInfo[0]); Index++) {
     if (CompareGuid (HashAlgorithm, mHashInfo[Index].Guid)) {
       return &mHashInfo[Index];
     }
   }
-
   return NULL;
 }
 
@@ -292,12 +293,12 @@ GetHashInfo (
 EFI_STATUS
 EFIAPI
 BaseCrypto2GetHashSize (
-  IN  CONST EFI_HASH2_PROTOCOL  *This,
-  IN  CONST EFI_GUID            *HashAlgorithm,
-  OUT UINTN                     *HashSize
+  IN  CONST EFI_HASH2_PROTOCOL     *This,
+  IN  CONST EFI_GUID              *HashAlgorithm,
+  OUT UINTN                       *HashSize
   )
 {
-  EFI_HASH_INFO  *HashInfo;
+  EFI_HASH_INFO *HashInfo;
 
   if ((This == NULL) || (HashSize == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -339,19 +340,19 @@ BaseCrypto2GetHashSize (
 EFI_STATUS
 EFIAPI
 BaseCrypto2Hash (
-  IN CONST EFI_HASH2_PROTOCOL  *This,
-  IN CONST EFI_GUID            *HashAlgorithm,
-  IN CONST UINT8               *Message,
-  IN UINTN                     MessageSize,
-  IN OUT EFI_HASH2_OUTPUT      *Hash
+  IN CONST EFI_HASH2_PROTOCOL      *This,
+  IN CONST EFI_GUID                *HashAlgorithm,
+  IN CONST UINT8                   *Message,
+  IN UINTN                         MessageSize,
+  IN OUT EFI_HASH2_OUTPUT          *Hash
   )
 {
-  EFI_HASH_INFO        *HashInfo;
-  VOID                 *HashCtx;
-  UINTN                CtxSize;
-  BOOLEAN              Ret;
-  EFI_STATUS           Status;
-  HASH2_INSTANCE_DATA  *Instance;
+  EFI_HASH_INFO            *HashInfo;
+  VOID                     *HashCtx;
+  UINTN                    CtxSize;
+  BOOLEAN                  Ret;
+  EFI_STATUS               Status;
+  HASH2_INSTANCE_DATA      *Instance;
 
   Status = EFI_SUCCESS;
 
@@ -368,13 +369,12 @@ BaseCrypto2Hash (
     return EFI_UNSUPPORTED;
   }
 
-  Instance = HASH2_INSTANCE_DATA_FROM_THIS (This);
+  Instance = HASH2_INSTANCE_DATA_FROM_THIS(This);
   if (Instance->HashContext != NULL) {
     FreePool (Instance->HashContext);
   }
-
   Instance->HashInfoContext = NULL;
-  Instance->HashContext     = NULL;
+  Instance->HashContext = NULL;
 
   //
   // Start hash sequence
@@ -383,7 +383,6 @@ BaseCrypto2Hash (
   if (CtxSize == 0) {
     return EFI_UNSUPPORTED;
   }
-
   HashCtx = AllocatePool (CtxSize);
   if (HashCtx == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -398,7 +397,7 @@ BaseCrypto2Hash (
   //
   // Setup the context
   //
-  Instance->HashContext     = HashCtx;
+  Instance->HashContext = HashCtx;
   Instance->HashInfoContext = HashInfo;
 
   Ret = HashInfo->Update (HashCtx, Message, MessageSize);
@@ -412,14 +411,13 @@ BaseCrypto2Hash (
     Status = EFI_OUT_OF_RESOURCES;
     goto Done;
   }
-
 Done:
   //
   // Cleanup the context
   //
   FreePool (HashCtx);
   Instance->HashInfoContext = NULL;
-  Instance->HashContext     = NULL;
+  Instance->HashContext = NULL;
   return Status;
 }
 
@@ -442,15 +440,15 @@ Done:
 EFI_STATUS
 EFIAPI
 BaseCrypto2HashInit (
-  IN CONST EFI_HASH2_PROTOCOL  *This,
-  IN CONST EFI_GUID            *HashAlgorithm
+  IN CONST EFI_HASH2_PROTOCOL      *This,
+  IN CONST EFI_GUID                *HashAlgorithm
   )
 {
-  EFI_HASH_INFO        *HashInfo;
-  VOID                 *HashCtx;
-  UINTN                CtxSize;
-  BOOLEAN              Ret;
-  HASH2_INSTANCE_DATA  *Instance;
+  EFI_HASH_INFO            *HashInfo;
+  VOID                     *HashCtx;
+  UINTN                    CtxSize;
+  BOOLEAN                  Ret;
+  HASH2_INSTANCE_DATA      *Instance;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -468,7 +466,7 @@ BaseCrypto2HashInit (
   //
   // Consistency Check
   //
-  Instance = HASH2_INSTANCE_DATA_FROM_THIS (This);
+  Instance = HASH2_INSTANCE_DATA_FROM_THIS(This);
   if ((Instance->HashContext != NULL) || (Instance->HashInfoContext != NULL)) {
     return EFI_ALREADY_STARTED;
   }
@@ -480,7 +478,6 @@ BaseCrypto2HashInit (
   if (CtxSize == 0) {
     return EFI_UNSUPPORTED;
   }
-
   HashCtx = AllocatePool (CtxSize);
   if (HashCtx == NULL) {
     return EFI_OUT_OF_RESOURCES;
@@ -495,9 +492,9 @@ BaseCrypto2HashInit (
   //
   // Setup the context
   //
-  Instance->HashContext     = HashCtx;
+  Instance->HashContext = HashCtx;
   Instance->HashInfoContext = HashInfo;
-  Instance->Updated         = FALSE;
+  Instance->Updated = FALSE;
 
   return EFI_SUCCESS;
 }
@@ -520,15 +517,15 @@ BaseCrypto2HashInit (
 EFI_STATUS
 EFIAPI
 BaseCrypto2HashUpdate (
-  IN CONST EFI_HASH2_PROTOCOL  *This,
-  IN CONST UINT8               *Message,
-  IN UINTN                     MessageSize
+  IN CONST EFI_HASH2_PROTOCOL      *This,
+  IN CONST UINT8                   *Message,
+  IN UINTN                         MessageSize
   )
 {
-  EFI_HASH_INFO        *HashInfo;
-  VOID                 *HashCtx;
-  BOOLEAN              Ret;
-  HASH2_INSTANCE_DATA  *Instance;
+  EFI_HASH_INFO            *HashInfo;
+  VOID                     *HashCtx;
+  BOOLEAN                  Ret;
+  HASH2_INSTANCE_DATA      *Instance;
 
   if (This == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -537,11 +534,10 @@ BaseCrypto2HashUpdate (
   //
   // Consistency Check
   //
-  Instance = HASH2_INSTANCE_DATA_FROM_THIS (This);
+  Instance = HASH2_INSTANCE_DATA_FROM_THIS(This);
   if ((Instance->HashContext == NULL) || (Instance->HashInfoContext == NULL)) {
     return EFI_NOT_READY;
   }
-
   HashInfo = Instance->HashInfoContext;
   HashCtx  = Instance->HashContext;
 
@@ -574,14 +570,14 @@ BaseCrypto2HashUpdate (
 EFI_STATUS
 EFIAPI
 BaseCrypto2HashFinal (
-  IN CONST EFI_HASH2_PROTOCOL  *This,
-  IN OUT EFI_HASH2_OUTPUT      *Hash
+  IN CONST EFI_HASH2_PROTOCOL      *This,
+  IN OUT EFI_HASH2_OUTPUT          *Hash
   )
 {
-  EFI_HASH_INFO        *HashInfo;
-  VOID                 *HashCtx;
-  BOOLEAN              Ret;
-  HASH2_INSTANCE_DATA  *Instance;
+  EFI_HASH_INFO            *HashInfo;
+  VOID                     *HashCtx;
+  BOOLEAN                  Ret;
+  HASH2_INSTANCE_DATA      *Instance;
 
   if ((This == NULL) || (Hash == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -590,13 +586,11 @@ BaseCrypto2HashFinal (
   //
   // Consistency Check
   //
-  Instance = HASH2_INSTANCE_DATA_FROM_THIS (This);
+  Instance = HASH2_INSTANCE_DATA_FROM_THIS(This);
   if ((Instance->HashContext == NULL) || (Instance->HashInfoContext == NULL) ||
-      (!Instance->Updated))
-  {
+      (!Instance->Updated)) {
     return EFI_NOT_READY;
   }
-
   HashInfo = Instance->HashInfoContext;
   HashCtx  = Instance->HashContext;
 
@@ -607,8 +601,8 @@ BaseCrypto2HashFinal (
   //
   FreePool (HashCtx);
   Instance->HashInfoContext = NULL;
-  Instance->HashContext     = NULL;
-  Instance->Updated         = FALSE;
+  Instance->HashContext = NULL;
+  Instance->Updated = FALSE;
 
   if (!Ret) {
     return EFI_OUT_OF_RESOURCES;

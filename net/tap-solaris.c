@@ -27,6 +27,7 @@
 #include "tap_int.h"
 #include "qemu/ctype.h"
 #include "qemu/cutils.h"
+#include "qemu-common.h"
 
 #include <sys/ethernet.h>
 #include <sys/sockio.h>
@@ -198,7 +199,7 @@ int tap_open(char *ifname, int ifname_size, int *vnet_hdr,
             return -1;
         }
     }
-    g_unix_set_fd_nonblocking(fd, true, NULL);
+    fcntl(fd, F_SETFL, O_NONBLOCK);
     return fd;
 }
 
@@ -251,11 +252,6 @@ int tap_fd_disable(int fd)
 }
 
 int tap_fd_get_ifname(int fd, char *ifname)
-{
-    return -1;
-}
-
-int tap_fd_set_steering_ebpf(int fd, int prog_fd)
 {
     return -1;
 }

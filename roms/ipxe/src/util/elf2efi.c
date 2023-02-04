@@ -458,7 +458,6 @@ static struct pe_section * process_section ( struct elf_file *elf,
 					     struct pe_header *pe_header ) {
 	struct pe_section *new;
 	const char *name;
-	size_t name_len;
 	size_t section_memsz;
 	size_t section_filesz;
 	unsigned long code_start;
@@ -495,10 +494,7 @@ static struct pe_section * process_section ( struct elf_file *elf,
 	memset ( new, 0, sizeof ( *new ) + section_filesz );
 
 	/* Fill in section header details */
-	name_len = strlen ( name );
-	if ( name_len > sizeof ( new->hdr.Name ) )
-		name_len = sizeof ( new->hdr.Name );
-	memcpy ( new->hdr.Name, name, name_len );
+	strncpy ( ( char * ) new->hdr.Name, name, sizeof ( new->hdr.Name ) );
 	new->hdr.Misc.VirtualSize = section_memsz;
 	new->hdr.VirtualAddress = shdr->sh_addr;
 	new->hdr.SizeOfRawData = section_filesz;
@@ -996,7 +992,7 @@ static int parse_options ( const int argc, char **argv,
 		switch ( c ) {
 		case 's':
 			opts->subsystem = strtoul ( optarg, &end, 0 );
-			if ( *end || ( ! *optarg ) ) {
+			if ( *end ) {
 				eprintf ( "Invalid subsytem \"%s\"\n",
 					  optarg );
 				exit ( 2 );

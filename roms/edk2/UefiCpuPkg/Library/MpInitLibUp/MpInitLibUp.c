@@ -63,8 +63,8 @@ MpInitLibInitialize (
 EFI_STATUS
 EFIAPI
 MpInitLibGetNumberOfProcessors (
-  OUT UINTN  *NumberOfProcessors        OPTIONAL,
-  OUT UINTN  *NumberOfEnabledProcessors OPTIONAL
+  OUT UINTN                     *NumberOfProcessors,       OPTIONAL
+  OUT UINTN                     *NumberOfEnabledProcessors OPTIONAL
   )
 {
   *NumberOfProcessors        = 1;
@@ -103,15 +103,13 @@ MpInitLibGetProcessorInfo (
   if (ProcessorInfoBuffer == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-
   if (ProcessorNumber != 0) {
     return EFI_NOT_FOUND;
   }
-
-  ProcessorInfoBuffer->ProcessorId = 0;
-  ProcessorInfoBuffer->StatusFlag  = PROCESSOR_AS_BSP_BIT  |
-                                     PROCESSOR_ENABLED_BIT |
-                                     PROCESSOR_HEALTH_STATUS_BIT;
+  ProcessorInfoBuffer->ProcessorId      = 0;
+  ProcessorInfoBuffer->StatusFlag       = PROCESSOR_AS_BSP_BIT  |
+                                          PROCESSOR_ENABLED_BIT |
+                                          PROCESSOR_HEALTH_STATUS_BIT;
   ProcessorInfoBuffer->Location.Package = 0;
   ProcessorInfoBuffer->Location.Core    = 0;
   ProcessorInfoBuffer->Location.Thread  = 0;
@@ -119,13 +117,12 @@ MpInitLibGetProcessorInfo (
     GuidHob = GetFirstGuidHob (&gEfiSecPlatformInformationPpiGuid);
     if (GuidHob != NULL) {
       SecPlatformInformation = GET_GUID_HOB_DATA (GuidHob);
-      HealthData->Uint32     = SecPlatformInformation->IA32HealthFlags.Uint32;
+      HealthData->Uint32 = SecPlatformInformation->IA32HealthFlags.Uint32;
     } else {
       DEBUG ((DEBUG_INFO, "Does not find any HOB stored CPU BIST information!\n"));
       HealthData->Uint32 = 0;
     }
   }
-
   return EFI_SUCCESS;
 }
 
@@ -207,12 +204,12 @@ MpInitLibGetProcessorInfo (
 EFI_STATUS
 EFIAPI
 MpInitLibStartupAllAPs (
-  IN  EFI_AP_PROCEDURE  Procedure,
-  IN  BOOLEAN           SingleThread,
-  IN  EFI_EVENT         WaitEvent               OPTIONAL,
-  IN  UINTN             TimeoutInMicroseconds,
-  IN  VOID              *ProcedureArgument      OPTIONAL,
-  OUT UINTN             **FailedCpuList         OPTIONAL
+  IN  EFI_AP_PROCEDURE          Procedure,
+  IN  BOOLEAN                   SingleThread,
+  IN  EFI_EVENT                 WaitEvent               OPTIONAL,
+  IN  UINTN                     TimeoutInMicroseconds,
+  IN  VOID                      *ProcedureArgument      OPTIONAL,
+  OUT UINTN                     **FailedCpuList         OPTIONAL
   )
 {
   return EFI_NOT_STARTED;
@@ -292,12 +289,12 @@ MpInitLibStartupAllAPs (
 EFI_STATUS
 EFIAPI
 MpInitLibStartupThisAP (
-  IN  EFI_AP_PROCEDURE  Procedure,
-  IN  UINTN             ProcessorNumber,
-  IN  EFI_EVENT         WaitEvent               OPTIONAL,
-  IN  UINTN             TimeoutInMicroseconds,
-  IN  VOID              *ProcedureArgument      OPTIONAL,
-  OUT BOOLEAN           *Finished               OPTIONAL
+  IN  EFI_AP_PROCEDURE          Procedure,
+  IN  UINTN                     ProcessorNumber,
+  IN  EFI_EVENT                 WaitEvent               OPTIONAL,
+  IN  UINTN                     TimeoutInMicroseconds,
+  IN  VOID                      *ProcedureArgument      OPTIONAL,
+  OUT BOOLEAN                   *Finished               OPTIONAL
   )
 {
   return EFI_INVALID_PARAMETER;
@@ -332,8 +329,8 @@ MpInitLibStartupThisAP (
 EFI_STATUS
 EFIAPI
 MpInitLibSwitchBSP (
-  IN UINTN    ProcessorNumber,
-  IN BOOLEAN  EnableOldBSP
+  IN UINTN                     ProcessorNumber,
+  IN BOOLEAN                   EnableOldBSP
   )
 {
   return EFI_UNSUPPORTED;
@@ -372,9 +369,9 @@ MpInitLibSwitchBSP (
 EFI_STATUS
 EFIAPI
 MpInitLibEnableDisableAP (
-  IN  UINTN    ProcessorNumber,
-  IN  BOOLEAN  EnableAP,
-  IN  UINT32   *HealthFlag OPTIONAL
+  IN  UINTN                     ProcessorNumber,
+  IN  BOOLEAN                   EnableAP,
+  IN  UINT32                    *HealthFlag OPTIONAL
   )
 {
   return EFI_UNSUPPORTED;
@@ -399,48 +396,12 @@ MpInitLibEnableDisableAP (
 EFI_STATUS
 EFIAPI
 MpInitLibWhoAmI (
-  OUT UINTN  *ProcessorNumber
+  OUT UINTN                    *ProcessorNumber
   )
 {
   if (ProcessorNumber == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-
   *ProcessorNumber = 0;
-  return EFI_SUCCESS;
-}
-
-/**
-  This service executes a caller provided function on all enabled CPUs.
-
-  @param[in]  Procedure               A pointer to the function to be run on
-                                      enabled APs of the system. See type
-                                      EFI_AP_PROCEDURE.
-  @param[in]  TimeoutInMicroseconds   Indicates the time limit in microseconds for
-                                      APs to return from Procedure, either for
-                                      blocking or non-blocking mode. Zero means
-                                      infinity. TimeoutInMicroseconds is ignored
-                                      for BSP.
-  @param[in]  ProcedureArgument       The parameter passed into Procedure for
-                                      all APs.
-
-  @retval EFI_SUCCESS             CPU have finished the procedure.
-  @retval EFI_INVALID_PARAMETER   Procedure is NULL.
-
-**/
-EFI_STATUS
-EFIAPI
-MpInitLibStartupAllCPUs (
-  IN  EFI_AP_PROCEDURE  Procedure,
-  IN  UINTN             TimeoutInMicroseconds,
-  IN  VOID              *ProcedureArgument      OPTIONAL
-  )
-{
-  if (Procedure == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-
-  Procedure (ProcedureArgument);
-
   return EFI_SUCCESS;
 }

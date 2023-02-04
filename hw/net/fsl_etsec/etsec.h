@@ -28,7 +28,6 @@
 #include "hw/sysbus.h"
 #include "net/net.h"
 #include "hw/ptimer.h"
-#include "qom/object.h"
 
 /* Buffer Descriptors */
 
@@ -105,7 +104,7 @@ typedef struct eTSEC_Register {
     uint32_t    value;
 } eTSEC_Register;
 
-struct eTSEC {
+typedef struct eTSEC {
     SysBusDevice  busdev;
 
     MemoryRegion  io_area;
@@ -146,14 +145,21 @@ struct eTSEC {
 
     /* Whether we should flush the rx queue when buffer becomes available. */
     bool need_flush;
-};
-typedef struct eTSEC eTSEC;
+} eTSEC;
 
 #define TYPE_ETSEC_COMMON "eTSEC"
-OBJECT_DECLARE_SIMPLE_TYPE(eTSEC, ETSEC_COMMON)
+#define ETSEC_COMMON(obj) \
+     OBJECT_CHECK(eTSEC, (obj), TYPE_ETSEC_COMMON)
 
 #define eTSEC_TRANSMIT 1
 #define eTSEC_RECEIVE  2
+
+DeviceState *etsec_create(hwaddr        base,
+                          MemoryRegion *mr,
+                          NICInfo      *nd,
+                          qemu_irq      tx_irq,
+                          qemu_irq      rx_irq,
+                          qemu_irq      err_irq);
 
 void etsec_update_irq(eTSEC *etsec);
 

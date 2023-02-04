@@ -1,6 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2018 IBM Corp. */
-
+/* Copyright 2013-2014 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -77,11 +89,8 @@ static int ast_copy_to_ahb(uint32_t reg, const void *src, uint32_t len)
 		while(len) {
 			/* Chose access size */
 			if (len > 3 && !(off & 3)) {
-				/* endian swap: see ast_copy_from_ahb */
-				uint32_t dat = be32_to_cpu(*(__be32 *)src);
-
 				rc = lpc_write(OPAL_LPC_FW, off,
-					       dat, 4);
+					       *(uint32_t *)src, 4);
 				chunk = 4;
 			} else {
 				rc = lpc_write(OPAL_LPC_FW, off,
@@ -122,13 +131,8 @@ static int ast_copy_from_ahb(void *dst, uint32_t reg, uint32_t len)
 			/* Chose access size */
 			if (len > 3 && !(off & 3)) {
 				rc = lpc_read(OPAL_LPC_FW, off, &dat, 4);
-				if (!rc) {
-					/*
-					 * lpc_read swaps to CPU endian but it's not
-					 * really a 32-bit value, so convert back.
-					 */
-					*(__be32 *)dst = cpu_to_be32(dat);
-				}
+				if (!rc)
+					*(uint32_t *)dst = dat;
 				chunk = 4;
 			} else {
 				rc = lpc_read(OPAL_LPC_FW, off, &dat, 1);
@@ -177,13 +181,12 @@ static void ast_sf_end_cmd(struct ast_sf_ctrl *ct)
 static int ast_sf_send_addr(struct ast_sf_ctrl *ct, uint32_t addr)
 {
 	const void *ap;
-	beint32_t tmp;
 
 	/* Layout address MSB first in memory */
-	tmp = cpu_to_be32(addr);
+	addr = cpu_to_be32(addr);
 
 	/* Send the right amount of bytes */
-	ap = (char *)&tmp;
+	ap = (char *)&addr;
 
 	if (ct->mode_4b)
 		return ast_copy_to_ahb(ct->flash, ap, 4);

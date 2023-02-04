@@ -49,10 +49,6 @@ void surface_gl_create_texture(QemuGLShader *gls,
     assert(gls);
     assert(QEMU_IS_ALIGNED(surface_stride(surface), surface_bytes_per_pixel(surface)));
 
-    if (surface->texture) {
-        return;
-    }
-
     switch (surface->format) {
     case PIXMAN_BE_b8g8r8x8:
     case PIXMAN_BE_b8g8r8a8:
@@ -77,20 +73,11 @@ void surface_gl_create_texture(QemuGLShader *gls,
     glBindTexture(GL_TEXTURE_2D, surface->texture);
     glPixelStorei(GL_UNPACK_ROW_LENGTH_EXT,
                   surface_stride(surface) / surface_bytes_per_pixel(surface));
-    if (epoxy_is_desktop_gl()) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
-                     surface_width(surface),
-                     surface_height(surface),
-                     0, surface->glformat, surface->gltype,
-                     surface_data(surface));
-    } else {
-        glTexImage2D(GL_TEXTURE_2D, 0, surface->glformat,
-                     surface_width(surface),
-                     surface_height(surface),
-                     0, surface->glformat, surface->gltype,
-                     surface_data(surface));
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, GL_ONE);
-    }
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
+                 surface_width(surface),
+                 surface_height(surface),
+                 0, surface->glformat, surface->gltype,
+                 surface_data(surface));
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

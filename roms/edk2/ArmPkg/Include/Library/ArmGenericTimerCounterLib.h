@@ -7,8 +7,8 @@
 
 **/
 
-#ifndef ARM_GENERIC_TIMER_COUNTER_LIB_H_
-#define ARM_GENERIC_TIMER_COUNTER_LIB_H_
+#ifndef __ARM_GENERIC_TIMER_COUNTER_LIB_H__
+#define __ARM_GENERIC_TIMER_COUNTER_LIB_H__
 
 VOID
 EFIAPI
@@ -43,7 +43,7 @@ ArmGenericTimerGetTimerFreq (
 VOID
 EFIAPI
 ArmGenericTimerSetTimerVal (
-  IN   UINTN  Value
+  IN   UINTN   Value
   );
 
 UINTN
@@ -67,7 +67,7 @@ ArmGenericTimerGetTimerCtrlReg (
 VOID
 EFIAPI
 ArmGenericTimerSetTimerCtrlReg (
-  UINTN  Value
+  UINTN Value
   );
 
 UINT64
@@ -79,7 +79,7 @@ ArmGenericTimerGetCompareVal (
 VOID
 EFIAPI
 ArmGenericTimerSetCompareVal (
-  IN   UINT64  Value
+  IN   UINT64   Value
   );
 
-#endif // ARM_GENERIC_TIMER_COUNTER_LIB_H_
+#endif

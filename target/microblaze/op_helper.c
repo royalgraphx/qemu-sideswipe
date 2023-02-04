@@ -7,7 +7,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,13 +19,14 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/log.h"
 #include "cpu.h"
 #include "exec/helper-proto.h"
 #include "qemu/host-utils.h"
 #include "exec/exec-all.h"
 #include "exec/cpu_ldst.h"
 #include "fpu/softfloat.h"
+
+#define D(x)
 
 void helper_put(uint32_t id, uint32_t ctrl, uint32_t data)
 {
@@ -70,27 +71,85 @@ void helper_raise_exception(CPUMBState *env, uint32_t index)
     cpu_loop_exit(cs);
 }
 
-static bool check_divz(CPUMBState *env, uint32_t a, uint32_t b, uintptr_t ra)
+void helper_debug(CPUMBState *env)
 {
-    if (unlikely(b == 0)) {
-        env->msr |= MSR_DZ;
+    int i;
 
-        if ((env->msr & MSR_EE) &&
-            env_archcpu(env)->cfg.div_zero_exception) {
-            CPUState *cs = env_cpu(env);
-
-            env->esr = ESR_EC_DIVZERO;
-            cs->exception_index = EXCP_HW_EXCP;
-            cpu_loop_exit_restore(cs, ra);
-        }
-        return false;
+    qemu_log("PC=%" PRIx64 "\n", env->sregs[SR_PC]);
+    qemu_log("rmsr=%" PRIx64 " resr=%" PRIx64 " rear=%" PRIx64 " "
+             "debug[%x] imm=%x iflags=%x\n",
+             env->sregs[SR_MSR], env->sregs[SR_ESR], env->sregs[SR_EAR],
+             env->debug, env->imm, env->iflags);
+    qemu_log("btaken=%d btarget=%" PRIx64 " mode=%s(saved=%s) eip=%d ie=%d\n",
+             env->btaken, env->btarget,
+             (env->sregs[SR_MSR] & MSR_UM) ? "user" : "kernel",
+             (env->sregs[SR_MSR] & MSR_UMS) ? "user" : "kernel",
+             (bool)(env->sregs[SR_MSR] & MSR_EIP),
+             (bool)(env->sregs[SR_MSR] & MSR_IE));
+    for (i = 0; i < 32; i++) {
+        qemu_log("r%2.2d=%8.8x ", i, env->regs[i]);
+        if ((i + 1) % 4 == 0)
+            qemu_log("\n");
     }
-    return true;
+    qemu_log("\n\n");
+}
+
+static inline uint32_t compute_carry(uint32_t a, uint32_t b, uint32_t cin)
+{
+    uint32_t cout = 0;
+
+    if ((b == ~0) && cin)
+        cout = 1;
+    else if ((~0 - a) < (b + cin))
+        cout = 1;
+    return cout;
+}
+
+uint32_t helper_cmp(uint32_t a, uint32_t b)
+{
+    uint32_t t;
+
+    t = b + ~a + 1;
+    if ((b & 0x80000000) ^ (a & 0x80000000))
+        t = (t & 0x7fffffff) | (b & 0x80000000);
+    return t;
+}
+
+uint32_t helper_cmpu(uint32_t a, uint32_t b)
+{
+    uint32_t t;
+
+    t = b + ~a + 1;
+    if ((b & 0x80000000) ^ (a & 0x80000000))
+        t = (t & 0x7fffffff) | (a & 0x80000000);
+    return t;
+}
+
+uint32_t helper_carry(uint32_t a, uint32_t b, uint32_t cf)
+{
+    return compute_carry(a, b, cf);
+}
+
+static inline int div_prepare(CPUMBState *env, uint32_t a, uint32_t b)
+{
+    MicroBlazeCPU *cpu = env_archcpu(env);
+
+    if (b == 0) {
+        env->sregs[SR_MSR] |= MSR_DZ;
+
+        if ((env->sregs[SR_MSR] & MSR_EE) && cpu->cfg.div_zero_exception) {
+            env->sregs[SR_ESR] = ESR_EC_DIVZERO;
+            helper_raise_exception(env, EXCP_HW_EXCP);
+        }
+        return 0;
+    }
+    env->sregs[SR_MSR] &= ~MSR_DZ;
+    return 1;
 }
 
 uint32_t helper_divs(CPUMBState *env, uint32_t a, uint32_t b)
 {
-    if (!check_divz(env, a, b, GETPC())) {
+    if (!div_prepare(env, a, b)) {
         return 0;
     }
     return (int32_t)a / (int32_t)b;
@@ -98,46 +157,43 @@ uint32_t helper_divs(CPUMBState *env, uint32_t a, uint32_t b)
 
 uint32_t helper_divu(CPUMBState *env, uint32_t a, uint32_t b)
 {
-    if (!check_divz(env, a, b, GETPC())) {
+    if (!div_prepare(env, a, b)) {
         return 0;
     }
     return a / b;
 }
 
 /* raise FPU exception.  */
-static void raise_fpu_exception(CPUMBState *env, uintptr_t ra)
+static void raise_fpu_exception(CPUMBState *env)
 {
-    CPUState *cs = env_cpu(env);
-
-    env->esr = ESR_EC_FPU;
-    cs->exception_index = EXCP_HW_EXCP;
-    cpu_loop_exit_restore(cs, ra);
+    env->sregs[SR_ESR] = ESR_EC_FPU;
+    helper_raise_exception(env, EXCP_HW_EXCP);
 }
 
-static void update_fpu_flags(CPUMBState *env, int flags, uintptr_t ra)
+static void update_fpu_flags(CPUMBState *env, int flags)
 {
     int raise = 0;
 
     if (flags & float_flag_invalid) {
-        env->fsr |= FSR_IO;
+        env->sregs[SR_FSR] |= FSR_IO;
         raise = 1;
     }
     if (flags & float_flag_divbyzero) {
-        env->fsr |= FSR_DZ;
+        env->sregs[SR_FSR] |= FSR_DZ;
         raise = 1;
     }
     if (flags & float_flag_overflow) {
-        env->fsr |= FSR_OF;
+        env->sregs[SR_FSR] |= FSR_OF;
         raise = 1;
     }
     if (flags & float_flag_underflow) {
-        env->fsr |= FSR_UF;
+        env->sregs[SR_FSR] |= FSR_UF;
         raise = 1;
     }
     if (raise
-        && (env_archcpu(env)->cfg.pvr_regs[2] & PVR2_FPU_EXC_MASK)
-        && (env->msr & MSR_EE)) {
-        raise_fpu_exception(env, ra);
+        && (env->pvr.regs[2] & PVR2_FPU_EXC_MASK)
+        && (env->sregs[SR_MSR] & MSR_EE)) {
+        raise_fpu_exception(env);
     }
 }
 
@@ -152,7 +208,7 @@ uint32_t helper_fadd(CPUMBState *env, uint32_t a, uint32_t b)
     fd.f = float32_add(fa.f, fb.f, &env->fp_status);
 
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags, GETPC());
+    update_fpu_flags(env, flags);
     return fd.l;
 }
 
@@ -166,7 +222,7 @@ uint32_t helper_frsub(CPUMBState *env, uint32_t a, uint32_t b)
     fb.l = b;
     fd.f = float32_sub(fb.f, fa.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags, GETPC());
+    update_fpu_flags(env, flags);
     return fd.l;
 }
 
@@ -180,7 +236,7 @@ uint32_t helper_fmul(CPUMBState *env, uint32_t a, uint32_t b)
     fb.l = b;
     fd.f = float32_mul(fa.f, fb.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags, GETPC());
+    update_fpu_flags(env, flags);
 
     return fd.l;
 }
@@ -195,7 +251,7 @@ uint32_t helper_fdiv(CPUMBState *env, uint32_t a, uint32_t b)
     fb.l = b;
     fd.f = float32_div(fb.f, fa.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags, GETPC());
+    update_fpu_flags(env, flags);
 
     return fd.l;
 }
@@ -210,7 +266,7 @@ uint32_t helper_fcmp_un(CPUMBState *env, uint32_t a, uint32_t b)
 
     if (float32_is_signaling_nan(fa.f, &env->fp_status) ||
         float32_is_signaling_nan(fb.f, &env->fp_status)) {
-        update_fpu_flags(env, float_flag_invalid, GETPC());
+        update_fpu_flags(env, float_flag_invalid);
         r = 1;
     }
 
@@ -233,7 +289,7 @@ uint32_t helper_fcmp_lt(CPUMBState *env, uint32_t a, uint32_t b)
     fb.l = b;
     r = float32_lt(fb.f, fa.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags & float_flag_invalid, GETPC());
+    update_fpu_flags(env, flags & float_flag_invalid);
 
     return r;
 }
@@ -249,7 +305,7 @@ uint32_t helper_fcmp_eq(CPUMBState *env, uint32_t a, uint32_t b)
     fb.l = b;
     r = float32_eq_quiet(fa.f, fb.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags & float_flag_invalid, GETPC());
+    update_fpu_flags(env, flags & float_flag_invalid);
 
     return r;
 }
@@ -265,7 +321,7 @@ uint32_t helper_fcmp_le(CPUMBState *env, uint32_t a, uint32_t b)
     set_float_exception_flags(0, &env->fp_status);
     r = float32_le(fa.f, fb.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags & float_flag_invalid, GETPC());
+    update_fpu_flags(env, flags & float_flag_invalid);
 
 
     return r;
@@ -281,7 +337,7 @@ uint32_t helper_fcmp_gt(CPUMBState *env, uint32_t a, uint32_t b)
     set_float_exception_flags(0, &env->fp_status);
     r = float32_lt(fa.f, fb.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags & float_flag_invalid, GETPC());
+    update_fpu_flags(env, flags & float_flag_invalid);
     return r;
 }
 
@@ -295,7 +351,7 @@ uint32_t helper_fcmp_ne(CPUMBState *env, uint32_t a, uint32_t b)
     set_float_exception_flags(0, &env->fp_status);
     r = !float32_eq_quiet(fa.f, fb.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags & float_flag_invalid, GETPC());
+    update_fpu_flags(env, flags & float_flag_invalid);
 
     return r;
 }
@@ -310,7 +366,7 @@ uint32_t helper_fcmp_ge(CPUMBState *env, uint32_t a, uint32_t b)
     set_float_exception_flags(0, &env->fp_status);
     r = !float32_lt(fa.f, fb.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags & float_flag_invalid, GETPC());
+    update_fpu_flags(env, flags & float_flag_invalid);
 
     return r;
 }
@@ -334,7 +390,7 @@ uint32_t helper_fint(CPUMBState *env, uint32_t a)
     fa.l = a;
     r = float32_to_int32(fa.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags, GETPC());
+    update_fpu_flags(env, flags);
 
     return r;
 }
@@ -348,7 +404,7 @@ uint32_t helper_fsqrt(CPUMBState *env, uint32_t a)
     fa.l = a;
     fd.l = float32_sqrt(fa.f, &env->fp_status);
     flags = get_float_exception_flags(&env->fp_status);
-    update_fpu_flags(env, flags, GETPC());
+    update_fpu_flags(env, flags);
 
     return fd.l;
 }
@@ -366,19 +422,37 @@ uint32_t helper_pcmpbf(uint32_t a, uint32_t b)
     return 0;
 }
 
+void helper_memalign(CPUMBState *env, target_ulong addr,
+                     uint32_t dr, uint32_t wr,
+                     uint32_t mask)
+{
+    if (addr & mask) {
+            qemu_log_mask(CPU_LOG_INT,
+                          "unaligned access addr=" TARGET_FMT_lx
+                          " mask=%x, wr=%d dr=r%d\n",
+                          addr, mask, wr, dr);
+            env->sregs[SR_EAR] = addr;
+            env->sregs[SR_ESR] = ESR_EC_UNALIGNED_DATA | (wr << 10) \
+                                 | (dr & 31) << 5;
+            if (mask == 3) {
+                env->sregs[SR_ESR] |= 1 << 11;
+            }
+            if (!(env->sregs[SR_MSR] & MSR_EE)) {
+                return;
+            }
+            helper_raise_exception(env, EXCP_HW_EXCP);
+    }
+}
+
 void helper_stackprot(CPUMBState *env, target_ulong addr)
 {
     if (addr < env->slr || addr > env->shr) {
-        CPUState *cs = env_cpu(env);
-
         qemu_log_mask(CPU_LOG_INT, "Stack protector violation at "
                       TARGET_FMT_lx " %x %x\n",
                       addr, env->slr, env->shr);
-
-        env->ear = addr;
-        env->esr = ESR_EC_STACKPROT;
-        cs->exception_index = EXCP_HW_EXCP;
-        cpu_loop_exit_restore(cs, GETPC());
+        env->sregs[SR_EAR] = addr;
+        env->sregs[SR_ESR] = ESR_EC_STACKPROT;
+        helper_raise_exception(env, EXCP_HW_EXCP);
     }
 }
 
@@ -399,33 +473,32 @@ void mb_cpu_transaction_failed(CPUState *cs, hwaddr physaddr, vaddr addr,
                                int mmu_idx, MemTxAttrs attrs,
                                MemTxResult response, uintptr_t retaddr)
 {
-    MicroBlazeCPU *cpu = MICROBLAZE_CPU(cs);
-    CPUMBState *env = &cpu->env;
-
+    MicroBlazeCPU *cpu;
+    CPUMBState *env;
     qemu_log_mask(CPU_LOG_INT, "Transaction failed: vaddr 0x%" VADDR_PRIx
                   " physaddr 0x" TARGET_FMT_plx " size %d access type %s\n",
                   addr, physaddr, size,
                   access_type == MMU_INST_FETCH ? "INST_FETCH" :
                   (access_type == MMU_DATA_LOAD ? "DATA_LOAD" : "DATA_STORE"));
+    cpu = MICROBLAZE_CPU(cs);
+    env = &cpu->env;
 
-    if (!(env->msr & MSR_EE)) {
+    cpu_restore_state(cs, retaddr, true);
+    if (!(env->sregs[SR_MSR] & MSR_EE)) {
         return;
     }
 
+    env->sregs[SR_EAR] = addr;
     if (access_type == MMU_INST_FETCH) {
-        if (!cpu->cfg.iopb_bus_exception) {
-            return;
+        if ((env->pvr.regs[2] & PVR2_IOPB_BUS_EXC_MASK)) {
+            env->sregs[SR_ESR] = ESR_EC_INSN_BUS;
+            helper_raise_exception(env, EXCP_HW_EXCP);
         }
-        env->esr = ESR_EC_INSN_BUS;
     } else {
-        if (!cpu->cfg.dopb_bus_exception) {
-            return;
+        if ((env->pvr.regs[2] & PVR2_DOPB_BUS_EXC_MASK)) {
+            env->sregs[SR_ESR] = ESR_EC_DATA_BUS;
+            helper_raise_exception(env, EXCP_HW_EXCP);
         }
-        env->esr = ESR_EC_DATA_BUS;
     }
-
-    env->ear = addr;
-    cs->exception_index = EXCP_HW_EXCP;
-    cpu_loop_exit_restore(cs, retaddr);
 }
 #endif

@@ -28,13 +28,13 @@
 EFI_STATUS
 EFIAPI
 EmmcPeimHcRwMmio (
-  IN     UINTN    Address,
-  IN     BOOLEAN  Read,
-  IN     UINT8    Count,
-  IN OUT VOID     *Data
+  IN     UINTN                 Address,
+  IN     BOOLEAN               Read,
+  IN     UINT8                 Count,
+  IN OUT VOID                  *Data
   )
 {
-  if ((Address == 0) || (Data == NULL)) {
+  if ((Address == 0) || (Data == NULL))  {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -45,35 +45,31 @@ EmmcPeimHcRwMmio (
   switch (Count) {
     case 1:
       if (Read) {
-        *(UINT8 *)Data = MmioRead8 (Address);
+        *(UINT8*)Data = MmioRead8 (Address);
       } else {
-        MmioWrite8 (Address, *(UINT8 *)Data);
+        MmioWrite8 (Address, *(UINT8*)Data);
       }
-
       break;
     case 2:
       if (Read) {
-        *(UINT16 *)Data = MmioRead16 (Address);
+        *(UINT16*)Data = MmioRead16 (Address);
       } else {
-        MmioWrite16 (Address, *(UINT16 *)Data);
+        MmioWrite16 (Address, *(UINT16*)Data);
       }
-
       break;
     case 4:
       if (Read) {
-        *(UINT32 *)Data = MmioRead32 (Address);
+        *(UINT32*)Data = MmioRead32 (Address);
       } else {
-        MmioWrite32 (Address, *(UINT32 *)Data);
+        MmioWrite32 (Address, *(UINT32*)Data);
       }
-
       break;
     case 8:
       if (Read) {
-        *(UINT64 *)Data = MmioRead64 (Address);
+        *(UINT64*)Data = MmioRead64 (Address);
       } else {
-        MmioWrite64 (Address, *(UINT64 *)Data);
+        MmioWrite64 (Address, *(UINT64*)Data);
       }
-
       break;
     default:
       ASSERT (FALSE);
@@ -102,14 +98,14 @@ EmmcPeimHcRwMmio (
 EFI_STATUS
 EFIAPI
 EmmcPeimHcOrMmio (
-  IN  UINTN  Address,
-  IN  UINT8  Count,
-  IN  VOID   *OrData
+  IN  UINTN                    Address,
+  IN  UINT8                    Count,
+  IN  VOID                     *OrData
   )
 {
-  EFI_STATUS  Status;
-  UINT64      Data;
-  UINT64      Or;
+  EFI_STATUS                   Status;
+  UINT64                       Data;
+  UINT64                       Or;
 
   Status = EmmcPeimHcRwMmio (Address, TRUE, Count, &Data);
   if (EFI_ERROR (Status)) {
@@ -117,13 +113,13 @@ EmmcPeimHcOrMmio (
   }
 
   if (Count == 1) {
-    Or = *(UINT8 *)OrData;
+    Or = *(UINT8*) OrData;
   } else if (Count == 2) {
-    Or = *(UINT16 *)OrData;
+    Or = *(UINT16*) OrData;
   } else if (Count == 4) {
-    Or = *(UINT32 *)OrData;
+    Or = *(UINT32*) OrData;
   } else if (Count == 8) {
-    Or = *(UINT64 *)OrData;
+    Or = *(UINT64*) OrData;
   } else {
     return EFI_INVALID_PARAMETER;
   }
@@ -153,14 +149,14 @@ EmmcPeimHcOrMmio (
 EFI_STATUS
 EFIAPI
 EmmcPeimHcAndMmio (
-  IN  UINTN  Address,
-  IN  UINT8  Count,
-  IN  VOID   *AndData
+  IN  UINTN                    Address,
+  IN  UINT8                    Count,
+  IN  VOID                     *AndData
   )
 {
-  EFI_STATUS  Status;
-  UINT64      Data;
-  UINT64      And;
+  EFI_STATUS                   Status;
+  UINT64                       Data;
+  UINT64                       And;
 
   Status = EmmcPeimHcRwMmio (Address, TRUE, Count, &Data);
   if (EFI_ERROR (Status)) {
@@ -168,13 +164,13 @@ EmmcPeimHcAndMmio (
   }
 
   if (Count == 1) {
-    And = *(UINT8 *)AndData;
+    And = *(UINT8*) AndData;
   } else if (Count == 2) {
-    And = *(UINT16 *)AndData;
+    And = *(UINT16*) AndData;
   } else if (Count == 4) {
-    And = *(UINT32 *)AndData;
+    And = *(UINT32*) AndData;
   } else if (Count == 8) {
-    And = *(UINT64 *)AndData;
+    And = *(UINT64*) AndData;
   } else {
     return EFI_INVALID_PARAMETER;
   }
@@ -202,14 +198,14 @@ EmmcPeimHcAndMmio (
 EFI_STATUS
 EFIAPI
 EmmcPeimHcCheckMmioSet (
-  IN  UINTN   Address,
-  IN  UINT8   Count,
-  IN  UINT64  MaskValue,
-  IN  UINT64  TestValue
+  IN  UINTN                     Address,
+  IN  UINT8                     Count,
+  IN  UINT64                    MaskValue,
+  IN  UINT64                    TestValue
   )
 {
-  EFI_STATUS  Status;
-  UINT64      Value;
+  EFI_STATUS            Status;
+  UINT64                Value;
 
   //
   // Access PCI MMIO space to see if the value is the tested one.
@@ -249,15 +245,15 @@ EmmcPeimHcCheckMmioSet (
 EFI_STATUS
 EFIAPI
 EmmcPeimHcWaitMmioSet (
-  IN  UINTN   Address,
-  IN  UINT8   Count,
-  IN  UINT64  MaskValue,
-  IN  UINT64  TestValue,
-  IN  UINT64  Timeout
+  IN  UINTN                     Address,
+  IN  UINT8                     Count,
+  IN  UINT64                    MaskValue,
+  IN  UINT64                    TestValue,
+  IN  UINT64                    Timeout
   )
 {
-  EFI_STATUS  Status;
-  BOOLEAN     InfiniteWait;
+  EFI_STATUS            Status;
+  BOOLEAN               InfiniteWait;
 
   if (Timeout == 0) {
     InfiniteWait = TRUE;
@@ -298,17 +294,17 @@ EmmcPeimHcWaitMmioSet (
 **/
 EFI_STATUS
 EmmcPeimHcReset (
-  IN UINTN  Bar
+  IN UINTN                  Bar
   )
 {
-  EFI_STATUS  Status;
-  UINT8       SwReset;
+  EFI_STATUS                Status;
+  UINT8                     SwReset;
 
   SwReset = 0xFF;
   Status  = EmmcPeimHcRwMmio (Bar + EMMC_HC_SW_RST, FALSE, sizeof (SwReset), &SwReset);
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "EmmcPeimHcReset: write full 1 fails: %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "EmmcPeimHcReset: write full 1 fails: %r\n", Status));
     return Status;
   }
 
@@ -320,10 +316,9 @@ EmmcPeimHcReset (
              EMMC_TIMEOUT
              );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_INFO, "EmmcPeimHcReset: reset done with %r\n", Status));
+    DEBUG ((EFI_D_INFO, "EmmcPeimHcReset: reset done with %r\n", Status));
     return Status;
   }
-
   //
   // Enable all interrupt after reset all.
   //
@@ -344,26 +339,25 @@ EmmcPeimHcReset (
 **/
 EFI_STATUS
 EmmcPeimHcEnableInterrupt (
-  IN UINTN  Bar
+  IN UINTN                  Bar
   )
 {
-  EFI_STATUS  Status;
-  UINT16      IntStatus;
+  EFI_STATUS                Status;
+  UINT16                    IntStatus;
 
   //
   // Enable all bits in Error Interrupt Status Enable Register
   //
   IntStatus = 0xFFFF;
-  Status    = EmmcPeimHcRwMmio (Bar + EMMC_HC_ERR_INT_STS_EN, FALSE, sizeof (IntStatus), &IntStatus);
+  Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_ERR_INT_STS_EN, FALSE, sizeof (IntStatus), &IntStatus);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Enable all bits in Normal Interrupt Status Enable Register
   //
   IntStatus = 0xFFFF;
-  Status    = EmmcPeimHcRwMmio (Bar + EMMC_HC_NOR_INT_STS_EN, FALSE, sizeof (IntStatus), &IntStatus);
+  Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_NOR_INT_STS_EN, FALSE, sizeof (IntStatus), &IntStatus);
 
   return Status;
 }
@@ -380,12 +374,12 @@ EmmcPeimHcEnableInterrupt (
 **/
 EFI_STATUS
 EmmcPeimHcGetCapability (
-  IN     UINTN          Bar,
-  OUT EMMC_HC_SLOT_CAP  *Capability
+  IN     UINTN              Bar,
+     OUT EMMC_HC_SLOT_CAP   *Capability
   )
 {
-  EFI_STATUS  Status;
-  UINT64      Cap;
+  EFI_STATUS                Status;
+  UINT64                    Cap;
 
   Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_CAP, TRUE, sizeof (Cap), &Cap);
   if (EFI_ERROR (Status)) {
@@ -412,12 +406,12 @@ EmmcPeimHcGetCapability (
 **/
 EFI_STATUS
 EmmcPeimHcCardDetect (
-  IN UINTN  Bar
+  IN UINTN                  Bar
   )
 {
-  EFI_STATUS  Status;
-  UINT16      Data;
-  UINT32      PresentState;
+  EFI_STATUS                Status;
+  UINT16                    Data;
+  UINT32                    PresentState;
 
   //
   // Check Normal Interrupt Status Register
@@ -466,12 +460,12 @@ EmmcPeimHcCardDetect (
 **/
 EFI_STATUS
 EmmcPeimHcStopClock (
-  IN UINTN  Bar
+  IN UINTN                  Bar
   )
 {
-  EFI_STATUS  Status;
-  UINT32      PresentState;
-  UINT16      ClockCtrl;
+  EFI_STATUS                Status;
+  UINT32                    PresentState;
+  UINT16                    ClockCtrl;
 
   //
   // Ensure no SD transactions are occurring on the SD Bus by
@@ -492,8 +486,8 @@ EmmcPeimHcStopClock (
   //
   // Set SD Clock Enable in the Clock Control register to 0
   //
-  ClockCtrl = (UINT16) ~BIT2;
-  Status    = EmmcPeimHcAndMmio (Bar + EMMC_HC_CLOCK_CTRL, sizeof (ClockCtrl), &ClockCtrl);
+  ClockCtrl = (UINT16)~BIT2;
+  Status = EmmcPeimHcAndMmio (Bar + EMMC_HC_CLOCK_CTRL, sizeof (ClockCtrl), &ClockCtrl);
 
   return Status;
 }
@@ -512,18 +506,18 @@ EmmcPeimHcStopClock (
 **/
 EFI_STATUS
 EmmcPeimHcClockSupply (
-  IN UINTN   Bar,
-  IN UINT64  ClockFreq
+  IN UINTN                  Bar,
+  IN UINT64                 ClockFreq
   )
 {
-  EFI_STATUS        Status;
-  EMMC_HC_SLOT_CAP  Capability;
-  UINT32            BaseClkFreq;
-  UINT32            SettingFreq;
-  UINT32            Divisor;
-  UINT32            Remainder;
-  UINT16            ControllerVer;
-  UINT16            ClockCtrl;
+  EFI_STATUS                Status;
+  EMMC_HC_SLOT_CAP          Capability;
+  UINT32                    BaseClkFreq;
+  UINT32                    SettingFreq;
+  UINT32                    Divisor;
+  UINT32                    Remainder;
+  UINT16                    ControllerVer;
+  UINT16                    ClockCtrl;
 
   //
   // Calculate a divisor for SD clock frequency
@@ -532,7 +526,6 @@ EmmcPeimHcClockSupply (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   ASSERT (Capability.BaseClkFreq != 0);
 
   BaseClkFreq = Capability.BaseClkFreq;
@@ -558,19 +551,17 @@ EmmcPeimHcClockSupply (
     if ((ClockFreq == SettingFreq) && (Remainder == 0)) {
       break;
     }
-
     if ((ClockFreq == SettingFreq) && (Remainder != 0)) {
-      SettingFreq++;
+      SettingFreq ++;
     }
   }
 
-  DEBUG ((DEBUG_INFO, "BaseClkFreq %dMHz Divisor %d ClockFreq %dKhz\n", BaseClkFreq, Divisor, ClockFreq));
+  DEBUG ((EFI_D_INFO, "BaseClkFreq %dMHz Divisor %d ClockFreq %dKhz\n", BaseClkFreq, Divisor, ClockFreq));
 
   Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_CTRL_VER, TRUE, sizeof (ControllerVer), &ControllerVer);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Set SDCLK Frequency Select and Internal Clock Enable fields in Clock Control register.
   //
@@ -584,11 +575,10 @@ EmmcPeimHcClockSupply (
     if (((Divisor - 1) & Divisor) != 0) {
       Divisor = 1 << (HighBitSet32 (Divisor) + 1);
     }
-
     ASSERT (Divisor <= 0x80);
     ClockCtrl = (Divisor & 0xFF) << 8;
   } else {
-    DEBUG ((DEBUG_ERROR, "Unknown SD Host Controller Spec version [0x%x]!!!\n", ControllerVer));
+    DEBUG ((EFI_D_ERROR, "Unknown SD Host Controller Spec version [0x%x]!!!\n", ControllerVer));
     return EFI_UNSUPPORTED;
   }
 
@@ -604,9 +594,9 @@ EmmcPeimHcClockSupply (
   // Supply clock frequency with specified divisor
   //
   ClockCtrl |= BIT0;
-  Status     = EmmcPeimHcRwMmio (Bar + EMMC_HC_CLOCK_CTRL, FALSE, sizeof (ClockCtrl), &ClockCtrl);
+  Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_CLOCK_CTRL, FALSE, sizeof (ClockCtrl), &ClockCtrl);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "Set SDCLK Frequency Select and Internal Clock Enable fields fails\n"));
+    DEBUG ((EFI_D_ERROR, "Set SDCLK Frequency Select and Internal Clock Enable fields fails\n"));
     return Status;
   }
 
@@ -628,7 +618,7 @@ EmmcPeimHcClockSupply (
   // Set SD Clock Enable in the Clock Control register to 1
   //
   ClockCtrl = BIT2;
-  Status    = EmmcPeimHcOrMmio (Bar + EMMC_HC_CLOCK_CTRL, sizeof (ClockCtrl), &ClockCtrl);
+  Status = EmmcPeimHcOrMmio (Bar + EMMC_HC_CLOCK_CTRL, sizeof (ClockCtrl), &ClockCtrl);
 
   return Status;
 }
@@ -647,17 +637,17 @@ EmmcPeimHcClockSupply (
 **/
 EFI_STATUS
 EmmcPeimHcPowerControl (
-  IN UINTN  Bar,
-  IN UINT8  PowerCtrl
+  IN UINTN                  Bar,
+  IN UINT8                  PowerCtrl
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                Status;
 
   //
   // Clr SD Bus Power
   //
-  PowerCtrl &= (UINT8) ~BIT0;
-  Status     = EmmcPeimHcRwMmio (Bar + EMMC_HC_POWER_CTRL, FALSE, sizeof (PowerCtrl), &PowerCtrl);
+  PowerCtrl &= (UINT8)~BIT0;
+  Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_POWER_CTRL, FALSE, sizeof (PowerCtrl), &PowerCtrl);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -666,7 +656,7 @@ EmmcPeimHcPowerControl (
   // Set SD Bus Voltage Select and SD Bus Power fields in Power Control Register
   //
   PowerCtrl |= BIT0;
-  Status     = EmmcPeimHcRwMmio (Bar + EMMC_HC_POWER_CTRL, FALSE, sizeof (PowerCtrl), &PowerCtrl);
+  Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_POWER_CTRL, FALSE, sizeof (PowerCtrl), &PowerCtrl);
 
   return Status;
 }
@@ -685,34 +675,32 @@ EmmcPeimHcPowerControl (
 **/
 EFI_STATUS
 EmmcPeimHcSetBusWidth (
-  IN UINTN   Bar,
-  IN UINT16  BusWidth
+  IN UINTN                  Bar,
+  IN UINT16                 BusWidth
   )
 {
-  EFI_STATUS  Status;
-  UINT8       HostCtrl1;
+  EFI_STATUS                Status;
+  UINT8                     HostCtrl1;
 
   if (BusWidth == 1) {
-    HostCtrl1 = (UINT8) ~(BIT5 | BIT1);
-    Status    = EmmcPeimHcAndMmio (Bar + EMMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
+    HostCtrl1 = (UINT8)~(BIT5 | BIT1);
+    Status = EmmcPeimHcAndMmio (Bar + EMMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
   } else if (BusWidth == 4) {
     Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_HOST_CTRL1, TRUE, sizeof (HostCtrl1), &HostCtrl1);
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
     HostCtrl1 |= BIT1;
-    HostCtrl1 &= (UINT8) ~BIT5;
-    Status     = EmmcPeimHcRwMmio (Bar + EMMC_HC_HOST_CTRL1, FALSE, sizeof (HostCtrl1), &HostCtrl1);
+    HostCtrl1 &= (UINT8)~BIT5;
+    Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_HOST_CTRL1, FALSE, sizeof (HostCtrl1), &HostCtrl1);
   } else if (BusWidth == 8) {
     Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_HOST_CTRL1, TRUE, sizeof (HostCtrl1), &HostCtrl1);
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
-    HostCtrl1 &= (UINT8) ~BIT1;
+    HostCtrl1 &= (UINT8)~BIT1;
     HostCtrl1 |= BIT5;
-    Status     = EmmcPeimHcRwMmio (Bar + EMMC_HC_HOST_CTRL1, FALSE, sizeof (HostCtrl1), &HostCtrl1);
+    Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_HOST_CTRL1, FALSE, sizeof (HostCtrl1), &HostCtrl1);
   } else {
     ASSERT (FALSE);
     return EFI_INVALID_PARAMETER;
@@ -732,12 +720,12 @@ EmmcPeimHcSetBusWidth (
 **/
 EFI_STATUS
 EmmcPeimHcInitClockFreq (
-  IN UINTN  Bar
+  IN UINTN                  Bar
   )
 {
-  EFI_STATUS        Status;
-  EMMC_HC_SLOT_CAP  Capability;
-  UINT32            InitFreq;
+  EFI_STATUS                Status;
+  EMMC_HC_SLOT_CAP          Capability;
+  UINT32                    InitFreq;
 
   //
   // Calculate a divisor for SD clock frequency
@@ -753,12 +741,11 @@ EmmcPeimHcInitClockFreq (
     //
     return EFI_UNSUPPORTED;
   }
-
   //
   // Supply 400KHz clock frequency at initialization phase.
   //
   InitFreq = 400;
-  Status   = EmmcPeimHcClockSupply (Bar, InitFreq);
+  Status = EmmcPeimHcClockSupply (Bar, InitFreq);
   return Status;
 }
 
@@ -775,13 +762,13 @@ EmmcPeimHcInitClockFreq (
 **/
 EFI_STATUS
 EmmcPeimHcInitPowerVoltage (
-  IN UINTN  Bar
+  IN UINTN                  Bar
   )
 {
-  EFI_STATUS        Status;
-  EMMC_HC_SLOT_CAP  Capability;
-  UINT8             MaxVoltage;
-  UINT8             HostCtrl2;
+  EFI_STATUS                Status;
+  EMMC_HC_SLOT_CAP        Capability;
+  UINT8                     MaxVoltage;
+  UINT8                     HostCtrl2;
 
   //
   // Get the support voltage of the Host Controller
@@ -790,7 +777,6 @@ EmmcPeimHcInitPowerVoltage (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Calculate supported maximum voltage according to SD Bus Voltage Select
   //
@@ -810,11 +796,10 @@ EmmcPeimHcInitPowerVoltage (
     //
     MaxVoltage = 0x0A;
     HostCtrl2  = BIT3;
-    Status     = EmmcPeimHcOrMmio (Bar + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+    Status = EmmcPeimHcOrMmio (Bar + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
     MicroSecondDelay (5000);
   } else {
     ASSERT (FALSE);
@@ -842,11 +827,11 @@ EmmcPeimHcInitPowerVoltage (
 **/
 EFI_STATUS
 EmmcPeimHcInitTimeoutCtrl (
-  IN UINTN  Bar
+  IN UINTN                  Bar
   )
 {
-  EFI_STATUS  Status;
-  UINT8       Timeout;
+  EFI_STATUS                Status;
+  UINT8                     Timeout;
 
   Timeout = 0x0E;
   Status  = EmmcPeimHcRwMmio (Bar + EMMC_HC_TIMEOUT_CTRL, FALSE, sizeof (Timeout), &Timeout);
@@ -866,10 +851,10 @@ EmmcPeimHcInitTimeoutCtrl (
 **/
 EFI_STATUS
 EmmcPeimHcInitHost (
-  IN UINTN  Bar
+  IN UINTN                  Bar
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS       Status;
 
   Status = EmmcPeimHcInitClockFreq (Bar);
   if (EFI_ERROR (Status)) {
@@ -897,18 +882,18 @@ EmmcPeimHcInitHost (
 **/
 EFI_STATUS
 EmmcPeimHcLedOnOff (
-  IN UINTN    Bar,
-  IN BOOLEAN  On
+  IN UINTN                  Bar,
+  IN BOOLEAN                On
   )
 {
-  EFI_STATUS  Status;
-  UINT8       HostCtrl1;
+  EFI_STATUS                Status;
+  UINT8                     HostCtrl1;
 
   if (On) {
     HostCtrl1 = BIT0;
     Status    = EmmcPeimHcOrMmio (Bar + EMMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
   } else {
-    HostCtrl1 = (UINT8) ~BIT0;
+    HostCtrl1 = (UINT8)~BIT0;
     Status    = EmmcPeimHcAndMmio (Bar + EMMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
   }
 
@@ -928,15 +913,15 @@ EmmcPeimHcLedOnOff (
 **/
 EFI_STATUS
 BuildAdmaDescTable (
-  IN EMMC_TRB  *Trb
+  IN EMMC_TRB               *Trb
   )
 {
-  EFI_PHYSICAL_ADDRESS  Data;
-  UINT64                DataLen;
-  UINT64                Entries;
-  UINT32                Index;
-  UINT64                Remaining;
-  UINT32                Address;
+  EFI_PHYSICAL_ADDRESS      Data;
+  UINT64                    DataLen;
+  UINT64                    Entries;
+  UINT32                    Index;
+  UINT64                    Remaining;
+  UINT32                    Address;
 
   Data    = Trb->DataPhy;
   DataLen = Trb->DataLen;
@@ -946,13 +931,12 @@ BuildAdmaDescTable (
   if ((Data >= 0x100000000ul) || ((Data + DataLen) > 0x100000000ul)) {
     return EFI_INVALID_PARAMETER;
   }
-
   //
   // Address field shall be set on 32-bit boundary (Lower 2-bit is always set to 0)
   // for 32-bit address descriptor table.
   //
   if ((Data & (BIT0 | BIT1)) != 0) {
-    DEBUG ((DEBUG_INFO, "The buffer [0x%x] to construct ADMA desc is not aligned to 4 bytes boundary!\n", Data));
+    DEBUG ((EFI_D_INFO, "The buffer [0x%x] to construct ADMA desc is not aligned to 4 bytes boundary!\n", Data));
   }
 
   Entries = DivU64x32 ((DataLen + ADMA_MAX_DATA_PER_LINE - 1), ADMA_MAX_DATA_PER_LINE);
@@ -967,14 +951,14 @@ BuildAdmaDescTable (
   Address   = (UINT32)Data;
   for (Index = 0; Index < Entries; Index++) {
     if (Remaining <= ADMA_MAX_DATA_PER_LINE) {
-      Trb->AdmaDesc[Index].Valid   = 1;
-      Trb->AdmaDesc[Index].Act     = 2;
+      Trb->AdmaDesc[Index].Valid = 1;
+      Trb->AdmaDesc[Index].Act   = 2;
       Trb->AdmaDesc[Index].Length  = (UINT16)Remaining;
       Trb->AdmaDesc[Index].Address = Address;
       break;
     } else {
-      Trb->AdmaDesc[Index].Valid   = 1;
-      Trb->AdmaDesc[Index].Act     = 2;
+      Trb->AdmaDesc[Index].Valid = 1;
+      Trb->AdmaDesc[Index].Act   = 2;
       Trb->AdmaDesc[Index].Length  = 0;
       Trb->AdmaDesc[Index].Address = Address;
     }
@@ -1001,15 +985,15 @@ BuildAdmaDescTable (
 **/
 EMMC_TRB *
 EmmcPeimCreateTrb (
-  IN EMMC_PEIM_HC_SLOT    *Slot,
-  IN EMMC_COMMAND_PACKET  *Packet
+  IN EMMC_PEIM_HC_SLOT          *Slot,
+  IN EMMC_COMMAND_PACKET        *Packet
   )
 {
-  EMMC_TRB               *Trb;
-  EFI_STATUS             Status;
-  EMMC_HC_SLOT_CAP       Capability;
-  EDKII_IOMMU_OPERATION  MapOp;
-  UINTN                  MapLength;
+  EMMC_TRB                      *Trb;
+  EFI_STATUS                    Status;
+  EMMC_HC_SLOT_CAP              Capability;
+  EDKII_IOMMU_OPERATION         MapOp;
+  UINTN                         MapLength;
 
   //
   // Calculate a divisor for SD clock frequency
@@ -1059,7 +1043,7 @@ EmmcPeimCreateTrb (
 
     if (Trb->DataLen != 0) {
       MapLength = Trb->DataLen;
-      Status    = IoMmuMap (MapOp, Trb->Data, &MapLength, &Trb->DataPhy, &Trb->DataMap);
+      Status = IoMmuMap (MapOp, Trb->Data, &MapLength, &Trb->DataPhy, &Trb->DataMap);
 
       if (EFI_ERROR (Status) || (MapLength != Trb->DataLen)) {
         DEBUG ((DEBUG_ERROR, "EmmcPeimCreateTrb: Fail to map data buffer.\n"));
@@ -1071,7 +1055,7 @@ EmmcPeimCreateTrb (
       Trb->Mode = EmmcNoData;
     } else if (Capability.Adma2 != 0) {
       Trb->Mode = EmmcAdmaMode;
-      Status    = BuildAdmaDescTable (Trb);
+      Status = BuildAdmaDescTable (Trb);
       if (EFI_ERROR (Status)) {
         goto Error;
       }
@@ -1081,7 +1065,6 @@ EmmcPeimCreateTrb (
       Trb->Mode = EmmcPioMode;
     }
   }
-
   return Trb;
 
 Error:
@@ -1097,7 +1080,7 @@ Error:
 **/
 VOID
 EmmcPeimFreeTrb (
-  IN EMMC_TRB  *Trb
+  IN EMMC_TRB           *Trb
   )
 {
   if ((Trb != NULL) && (Trb->DataMap != NULL)) {
@@ -1111,7 +1094,6 @@ EmmcPeimFreeTrb (
   if (Trb != NULL) {
     FreePool (Trb);
   }
-
   return;
 }
 
@@ -1128,20 +1110,19 @@ EmmcPeimFreeTrb (
 **/
 EFI_STATUS
 EmmcPeimCheckTrbEnv (
-  IN UINTN     Bar,
-  IN EMMC_TRB  *Trb
+  IN UINTN                  Bar,
+  IN EMMC_TRB               *Trb
   )
 {
-  EFI_STATUS           Status;
-  EMMC_COMMAND_PACKET  *Packet;
-  UINT32               PresentState;
+  EFI_STATUS                          Status;
+  EMMC_COMMAND_PACKET                 *Packet;
+  UINT32                              PresentState;
 
   Packet = Trb->Packet;
 
   if ((Packet->EmmcCmdBlk->CommandType == EmmcCommandTypeAdtc) ||
       (Packet->EmmcCmdBlk->ResponseType == EmmcResponceTypeR1b) ||
-      (Packet->EmmcCmdBlk->ResponseType == EmmcResponceTypeR5b))
-  {
+      (Packet->EmmcCmdBlk->ResponseType == EmmcResponceTypeR5b)) {
     //
     // Wait Command Inhibit (CMD) and Command Inhibit (DAT) in
     // the Present State register to be 0
@@ -1178,14 +1159,14 @@ EmmcPeimCheckTrbEnv (
 **/
 EFI_STATUS
 EmmcPeimWaitTrbEnv (
-  IN UINTN     Bar,
-  IN EMMC_TRB  *Trb
+  IN UINTN                  Bar,
+  IN EMMC_TRB               *Trb
   )
 {
-  EFI_STATUS           Status;
-  EMMC_COMMAND_PACKET  *Packet;
-  UINT64               Timeout;
-  BOOLEAN              InfiniteWait;
+  EFI_STATUS                          Status;
+  EMMC_COMMAND_PACKET                 *Packet;
+  UINT64                              Timeout;
+  BOOLEAN                             InfiniteWait;
 
   //
   // Wait Command Complete Interrupt Status bit in Normal Interrupt Status Register
@@ -1206,7 +1187,6 @@ EmmcPeimWaitTrbEnv (
     if (Status != EFI_NOT_READY) {
       return Status;
     }
-
     //
     // Stall for 1 microsecond.
     //
@@ -1230,21 +1210,21 @@ EmmcPeimWaitTrbEnv (
 **/
 EFI_STATUS
 EmmcPeimExecTrb (
-  IN UINTN     Bar,
-  IN EMMC_TRB  *Trb
+  IN UINTN                  Bar,
+  IN EMMC_TRB               *Trb
   )
 {
-  EFI_STATUS           Status;
-  EMMC_COMMAND_PACKET  *Packet;
-  UINT16               Cmd;
-  UINT16               IntStatus;
-  UINT32               Argument;
-  UINT16               BlkCount;
-  UINT16               BlkSize;
-  UINT16               TransMode;
-  UINT8                HostCtrl1;
-  UINT32               SdmaAddr;
-  UINT64               AdmaAddr;
+  EFI_STATUS                          Status;
+  EMMC_COMMAND_PACKET                 *Packet;
+  UINT16                              Cmd;
+  UINT16                              IntStatus;
+  UINT32                              Argument;
+  UINT16                              BlkCount;
+  UINT16                              BlkSize;
+  UINT16                              TransMode;
+  UINT8                               HostCtrl1;
+  UINT32                              SdmaAddr;
+  UINT64                              AdmaAddr;
 
   Packet = Trb->Packet;
   //
@@ -1255,7 +1235,6 @@ EmmcPeimExecTrb (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Clear all bits in Normal Interrupt Status Register
   //
@@ -1264,13 +1243,12 @@ EmmcPeimExecTrb (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Set Host Control 1 register DMA Select field
   //
   if (Trb->Mode == EmmcAdmaMode) {
     HostCtrl1 = BIT4;
-    Status    = EmmcPeimHcOrMmio (Bar + EMMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
+    Status = EmmcPeimHcOrMmio (Bar + EMMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
     if (EFI_ERROR (Status)) {
       return Status;
     }
@@ -1312,12 +1290,12 @@ EmmcPeimExecTrb (
   BlkCount = 0;
   if (Trb->Mode != EmmcNoData) {
     //
-    // Calculate Block Count.
+    // Calcuate Block Count.
     //
     BlkCount = (UINT16)(Trb->DataLen / Trb->BlockSize);
   }
 
-  Status = EmmcPeimHcRwMmio (Bar + EMMC_HC_BLK_COUNT, FALSE, sizeof (BlkCount), &BlkCount);
+  Status   = EmmcPeimHcRwMmio (Bar + EMMC_HC_BLK_COUNT, FALSE, sizeof (BlkCount), &BlkCount);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -1333,11 +1311,9 @@ EmmcPeimExecTrb (
     if (Trb->Mode != EmmcPioMode) {
       TransMode |= BIT0;
     }
-
     if (Trb->Read) {
       TransMode |= BIT4;
     }
-
     if (BlkCount > 1) {
       TransMode |= BIT5 | BIT1;
     }
@@ -1348,11 +1324,10 @@ EmmcPeimExecTrb (
     return Status;
   }
 
-  Cmd = (UINT16)LShiftU64 (Packet->EmmcCmdBlk->CommandIndex, 8);
+  Cmd = (UINT16)LShiftU64(Packet->EmmcCmdBlk->CommandIndex, 8);
   if (Packet->EmmcCmdBlk->CommandType == EmmcCommandTypeAdtc) {
     Cmd |= BIT5;
   }
-
   //
   // Convert ResponseType to value
   //
@@ -1366,7 +1341,7 @@ EmmcPeimExecTrb (
         break;
       case EmmcResponceTypeR2:
         Cmd |= (BIT0 | BIT3);
-        break;
+       break;
       case EmmcResponceTypeR3:
       case EmmcResponceTypeR4:
         Cmd |= BIT1;
@@ -1380,7 +1355,6 @@ EmmcPeimExecTrb (
         break;
     }
   }
-
   //
   // Execute cmd
   //
@@ -1401,18 +1375,18 @@ EmmcPeimExecTrb (
 **/
 EFI_STATUS
 EmmcPeimCheckTrbResult (
-  IN UINTN     Bar,
-  IN EMMC_TRB  *Trb
+  IN UINTN                  Bar,
+  IN EMMC_TRB               *Trb
   )
 {
-  EFI_STATUS           Status;
-  EMMC_COMMAND_PACKET  *Packet;
-  UINT16               IntStatus;
-  UINT32               Response[4];
-  UINT32               SdmaAddr;
-  UINT8                Index;
-  UINT8                SwReset;
-  UINT32               PioLength;
+  EFI_STATUS                          Status;
+  EMMC_COMMAND_PACKET                 *Packet;
+  UINT16                              IntStatus;
+  UINT32                              Response[4];
+  UINT32                              SdmaAddr;
+  UINT8                               Index;
+  UINT8                               SwReset;
+  UINT32                              PioLength;
 
   SwReset = 0;
   Packet  = Trb->Packet;
@@ -1428,7 +1402,6 @@ EmmcPeimCheckTrbResult (
   if (EFI_ERROR (Status)) {
     goto Done;
   }
-
   //
   // Check Transfer Complete bit is set or not.
   //
@@ -1457,7 +1430,6 @@ EmmcPeimCheckTrbResult (
 
     goto Done;
   }
-
   //
   // Check if there is a error happened during cmd execution.
   // If yes, then do error recovery procedure to follow SD Host Controller
@@ -1477,7 +1449,6 @@ EmmcPeimCheckTrbResult (
     if ((IntStatus & 0x0F) != 0) {
       SwReset |= BIT1;
     }
-
     if ((IntStatus & 0xF0) != 0) {
       SwReset |= BIT2;
     }
@@ -1491,7 +1462,6 @@ EmmcPeimCheckTrbResult (
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-
     Status = EmmcPeimHcWaitMmioSet (
                Bar + EMMC_HC_SW_RST,
                sizeof (SwReset),
@@ -1506,7 +1476,6 @@ EmmcPeimCheckTrbResult (
     Status = EFI_DEVICE_ERROR;
     goto Done;
   }
-
   //
   // Check if DMA interrupt is signalled for the SDMA transfer.
   //
@@ -1524,7 +1493,6 @@ EmmcPeimCheckTrbResult (
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-
     //
     // Update SDMA Address register.
     //
@@ -1538,14 +1506,12 @@ EmmcPeimCheckTrbResult (
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-
     Trb->DataPhy = (UINT32)(UINTN)SdmaAddr;
   }
 
   if ((Packet->EmmcCmdBlk->CommandType != EmmcCommandTypeAdtc) &&
       (Packet->EmmcCmdBlk->ResponseType != EmmcResponceTypeR1b) &&
-      (Packet->EmmcCmdBlk->ResponseType != EmmcResponceTypeR5b))
-  {
+      (Packet->EmmcCmdBlk->ResponseType != EmmcResponceTypeR5b)) {
     if ((IntStatus & BIT0) == BIT0) {
       Status = EFI_SUCCESS;
       goto Done;
@@ -1568,9 +1534,8 @@ EmmcPeimCheckTrbResult (
       // Read data out from Buffer Port register
       //
       for (PioLength = 0; PioLength < Trb->DataLen; PioLength += 4) {
-        EmmcPeimHcRwMmio (Bar + EMMC_HC_BUF_DAT_PORT, TRUE, 4, (UINT8 *)Trb->Data + PioLength);
+        EmmcPeimHcRwMmio (Bar + EMMC_HC_BUF_DAT_PORT, TRUE, 4, (UINT8*)Trb->Data + PioLength);
       }
-
       Status = EFI_SUCCESS;
       goto Done;
     }
@@ -1595,7 +1560,6 @@ Done:
           return Status;
         }
       }
-
       CopyMem (Packet->EmmcStatusBlk, Response, sizeof (Response));
     }
   }
@@ -1619,14 +1583,14 @@ Done:
 **/
 EFI_STATUS
 EmmcPeimWaitTrbResult (
-  IN UINTN     Bar,
-  IN EMMC_TRB  *Trb
+  IN UINTN                  Bar,
+  IN EMMC_TRB               *Trb
   )
 {
-  EFI_STATUS           Status;
-  EMMC_COMMAND_PACKET  *Packet;
-  UINT64               Timeout;
-  BOOLEAN              InfiniteWait;
+  EFI_STATUS                        Status;
+  EMMC_COMMAND_PACKET               *Packet;
+  UINT64                            Timeout;
+  BOOLEAN                           InfiniteWait;
 
   Packet = Trb->Packet;
   //
@@ -1647,7 +1611,6 @@ EmmcPeimWaitTrbResult (
     if (Status != EFI_NOT_READY) {
       return Status;
     }
-
     //
     // Stall for 1 microsecond.
     //
@@ -1692,12 +1655,12 @@ EmmcPeimWaitTrbResult (
 EFI_STATUS
 EFIAPI
 EmmcPeimExecCmd (
-  IN     EMMC_PEIM_HC_SLOT    *Slot,
-  IN OUT EMMC_COMMAND_PACKET  *Packet
+  IN     EMMC_PEIM_HC_SLOT       *Slot,
+  IN OUT EMMC_COMMAND_PACKET     *Packet
   )
 {
-  EFI_STATUS  Status;
-  EMMC_TRB    *Trb;
+  EFI_STATUS                      Status;
+  EMMC_TRB                        *Trb;
 
   if (Packet == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -1755,13 +1718,13 @@ Done:
 **/
 EFI_STATUS
 EmmcPeimReset (
-  IN EMMC_PEIM_HC_SLOT  *Slot
+  IN EMMC_PEIM_HC_SLOT      *Slot
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -1769,11 +1732,11 @@ EmmcPeimReset (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_GO_IDLE_STATE;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeBc;
-  EmmcCmdBlk.ResponseType    = 0;
+  EmmcCmdBlk.CommandIndex = EMMC_GO_IDLE_STATE;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeBc;
+  EmmcCmdBlk.ResponseType = 0;
   EmmcCmdBlk.CommandArgument = 0;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -1796,14 +1759,14 @@ EmmcPeimReset (
 **/
 EFI_STATUS
 EmmcPeimGetOcr (
-  IN     EMMC_PEIM_HC_SLOT  *Slot,
-  IN OUT UINT32             *Argument
+  IN     EMMC_PEIM_HC_SLOT      *Slot,
+  IN OUT UINT32                 *Argument
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -1811,11 +1774,11 @@ EmmcPeimGetOcr (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SEND_OP_COND;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeBcr;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR3;
+  EmmcCmdBlk.CommandIndex = EMMC_SEND_OP_COND;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeBcr;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR3;
   EmmcCmdBlk.CommandArgument = *Argument;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -1843,13 +1806,13 @@ EmmcPeimGetOcr (
 **/
 EFI_STATUS
 EmmcPeimGetAllCid (
-  IN EMMC_PEIM_HC_SLOT  *Slot
+  IN EMMC_PEIM_HC_SLOT      *Slot
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -1857,11 +1820,11 @@ EmmcPeimGetAllCid (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_ALL_SEND_CID;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeBcr;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR2;
+  EmmcCmdBlk.CommandIndex = EMMC_ALL_SEND_CID;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeBcr;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR2;
   EmmcCmdBlk.CommandArgument = 0;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -1884,14 +1847,14 @@ EmmcPeimGetAllCid (
 **/
 EFI_STATUS
 EmmcPeimSetRca (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT32             Rca
+  IN EMMC_PEIM_HC_SLOT      *Slot,
+  IN UINT32                 Rca
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -1899,11 +1862,11 @@ EmmcPeimSetRca (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SET_RELATIVE_ADDR;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeAc;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR1;
+  EmmcCmdBlk.CommandIndex = EMMC_SET_RELATIVE_ADDR;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeAc;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR1;
   EmmcCmdBlk.CommandArgument = Rca << 16;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -1929,15 +1892,15 @@ EmmcPeimSetRca (
 **/
 EFI_STATUS
 EmmcPeimGetCsd (
-  IN     EMMC_PEIM_HC_SLOT  *Slot,
-  IN     UINT32             Rca,
-  OUT EMMC_CSD              *Csd
+  IN     EMMC_PEIM_HC_SLOT              *Slot,
+  IN     UINT32                         Rca,
+     OUT EMMC_CSD                       *Csd
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -1945,11 +1908,11 @@ EmmcPeimGetCsd (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SEND_CSD;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeAc;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR2;
+  EmmcCmdBlk.CommandIndex = EMMC_SEND_CSD;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeAc;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR2;
   EmmcCmdBlk.CommandArgument = Rca << 16;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -1957,7 +1920,7 @@ EmmcPeimGetCsd (
     //
     // For details, refer to SD Host Controller Simplified Spec 3.0 Table 2-12.
     //
-    CopyMem (((UINT8 *)Csd) + 1, &EmmcStatusBlk.Resp0, sizeof (EMMC_CSD) - 1);
+    CopyMem (((UINT8*)Csd) + 1, &EmmcStatusBlk.Resp0, sizeof (EMMC_CSD) - 1);
   }
 
   return Status;
@@ -1977,14 +1940,14 @@ EmmcPeimGetCsd (
 **/
 EFI_STATUS
 EmmcPeimSelect (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT32             Rca
+  IN EMMC_PEIM_HC_SLOT      *Slot,
+  IN UINT32                 Rca
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -1992,11 +1955,11 @@ EmmcPeimSelect (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SELECT_DESELECT_CARD;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeAc;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR1;
+  EmmcCmdBlk.CommandIndex = EMMC_SELECT_DESELECT_CARD;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeAc;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR1;
   EmmcCmdBlk.CommandArgument = Rca << 16;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -2018,14 +1981,14 @@ EmmcPeimSelect (
 **/
 EFI_STATUS
 EmmcPeimGetExtCsd (
-  IN     EMMC_PEIM_HC_SLOT  *Slot,
-  OUT EMMC_EXT_CSD          *ExtCsd
+  IN     EMMC_PEIM_HC_SLOT              *Slot,
+     OUT EMMC_EXT_CSD                   *ExtCsd
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -2033,11 +1996,11 @@ EmmcPeimGetExtCsd (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SEND_EXT_CSD;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeAdtc;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR1;
+  EmmcCmdBlk.CommandIndex = EMMC_SEND_EXT_CSD;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeAdtc;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR1;
   EmmcCmdBlk.CommandArgument = 0x00000000;
 
   Packet.InDataBuffer     = ExtCsd;
@@ -2054,7 +2017,7 @@ EmmcPeimGetExtCsd (
   Refer to EMMC Electrical Standard Spec 5.1 Section 6.10.4 for details.
 
   @param[in] Slot           The slot number of the Emmc card to send the command to.
-  @param[in] Access         The access mode of SWITCH command.
+  @param[in] Access         The access mode of SWTICH command.
   @param[in] Index          The offset of the field to be access.
   @param[in] Value          The value to be set to the specified field of EXT_CSD register.
   @param[in] CmdSet         The value of CmdSet field of EXT_CSD register.
@@ -2065,17 +2028,17 @@ EmmcPeimGetExtCsd (
 **/
 EFI_STATUS
 EmmcPeimSwitch (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT8              Access,
-  IN UINT8              Index,
-  IN UINT8              Value,
-  IN UINT8              CmdSet
+  IN EMMC_PEIM_HC_SLOT                  *Slot,
+  IN UINT8                              Access,
+  IN UINT8                              Index,
+  IN UINT8                              Value,
+  IN UINT8                              CmdSet
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -2083,11 +2046,11 @@ EmmcPeimSwitch (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SWITCH;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeAc;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR1b;
+  EmmcCmdBlk.CommandIndex = EMMC_SWITCH;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeAc;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR1b;
   EmmcCmdBlk.CommandArgument = (Access << 24) | (Index << 16) | (Value << 8) | CmdSet;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -2110,15 +2073,15 @@ EmmcPeimSwitch (
 **/
 EFI_STATUS
 EmmcPeimSendStatus (
-  IN     EMMC_PEIM_HC_SLOT  *Slot,
-  IN     UINT32             Rca,
-  OUT UINT32                *DevStatus
+  IN     EMMC_PEIM_HC_SLOT              *Slot,
+  IN     UINT32                         Rca,
+     OUT UINT32                         *DevStatus
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -2126,11 +2089,11 @@ EmmcPeimSendStatus (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SEND_STATUS;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeAc;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR1;
+  EmmcCmdBlk.CommandIndex = EMMC_SEND_STATUS;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeAc;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR1;
   EmmcCmdBlk.CommandArgument = Rca << 16;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -2156,14 +2119,14 @@ EmmcPeimSendStatus (
 **/
 EFI_STATUS
 EmmcPeimSetBlkCount (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT16             BlockCount
+  IN EMMC_PEIM_HC_SLOT              *Slot,
+  IN UINT16                         BlockCount
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -2173,9 +2136,9 @@ EmmcPeimSetBlkCount (
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
   Packet.Timeout       = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SET_BLOCK_COUNT;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeAc;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR1;
+  EmmcCmdBlk.CommandIndex = EMMC_SET_BLOCK_COUNT;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeAc;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR1;
   EmmcCmdBlk.CommandArgument = BlockCount;
 
   Status = EmmcPeimExecCmd (Slot, &Packet);
@@ -2202,18 +2165,18 @@ EmmcPeimSetBlkCount (
 **/
 EFI_STATUS
 EmmcPeimRwMultiBlocks (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN EFI_LBA            Lba,
-  IN UINT32             BlockSize,
-  IN VOID               *Buffer,
-  IN UINTN              BufferSize,
-  IN BOOLEAN            IsRead
+  IN EMMC_PEIM_HC_SLOT              *Slot,
+  IN EFI_LBA                        Lba,
+  IN UINT32                         BlockSize,
+  IN VOID                           *Buffer,
+  IN UINTN                          BufferSize,
+  IN BOOLEAN                        IsRead
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -2228,7 +2191,7 @@ EmmcPeimRwMultiBlocks (
   // transfer speed (2.4MB/s).
   // Refer to eMMC 5.0 spec section 6.9.1 for details.
   //
-  Packet.Timeout = (BufferSize / (2 * 1024 * 1024) + 1) * 1000 * 1000;
+  Packet.Timeout       = (BufferSize / (2 * 1024 * 1024) + 1) * 1000 * 1000;;
 
   if (IsRead) {
     Packet.InDataBuffer     = Buffer;
@@ -2274,15 +2237,15 @@ EmmcPeimRwMultiBlocks (
 **/
 EFI_STATUS
 EmmcPeimSendTuningBlk (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT8              BusWidth
+  IN EMMC_PEIM_HC_SLOT      *Slot,
+  IN UINT8                  BusWidth
   )
 {
-  EMMC_COMMAND_BLOCK   EmmcCmdBlk;
-  EMMC_STATUS_BLOCK    EmmcStatusBlk;
-  EMMC_COMMAND_PACKET  Packet;
-  EFI_STATUS           Status;
-  UINT8                TuningBlock[128];
+  EMMC_COMMAND_BLOCK                    EmmcCmdBlk;
+  EMMC_STATUS_BLOCK                     EmmcStatusBlk;
+  EMMC_COMMAND_PACKET                   Packet;
+  EFI_STATUS                            Status;
+  UINT8                                 TuningBlock[128];
 
   ZeroMem (&EmmcCmdBlk, sizeof (EmmcCmdBlk));
   ZeroMem (&EmmcStatusBlk, sizeof (EmmcStatusBlk));
@@ -2290,11 +2253,11 @@ EmmcPeimSendTuningBlk (
 
   Packet.EmmcCmdBlk    = &EmmcCmdBlk;
   Packet.EmmcStatusBlk = &EmmcStatusBlk;
-  Packet.Timeout       = EMMC_TIMEOUT;
+  Packet.Timeout        = EMMC_TIMEOUT;
 
-  EmmcCmdBlk.CommandIndex    = EMMC_SEND_TUNING_BLOCK;
-  EmmcCmdBlk.CommandType     = EmmcCommandTypeAdtc;
-  EmmcCmdBlk.ResponseType    = EmmcResponceTypeR1;
+  EmmcCmdBlk.CommandIndex = EMMC_SEND_TUNING_BLOCK;
+  EmmcCmdBlk.CommandType  = EmmcCommandTypeAdtc;
+  EmmcCmdBlk.ResponseType = EmmcResponceTypeR1;
   EmmcCmdBlk.CommandArgument = 0;
 
   Packet.InDataBuffer = TuningBlock;
@@ -2310,7 +2273,7 @@ EmmcPeimSendTuningBlk (
 }
 
 /**
-  Tuning the clock to get HS200 optimal sampling point.
+  Tunning the clock to get HS200 optimal sampling point.
 
   Command SEND_TUNING_BLOCK may be sent up to 40 times until the host finishes the
   tuning procedure.
@@ -2327,23 +2290,22 @@ EmmcPeimSendTuningBlk (
 **/
 EFI_STATUS
 EmmcPeimTuningClkForHs200 (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT8              BusWidth
+  IN EMMC_PEIM_HC_SLOT      *Slot,
+  IN UINT8                  BusWidth
   )
 {
-  EFI_STATUS  Status;
-  UINT8       HostCtrl2;
-  UINT8       Retry;
+  EFI_STATUS          Status;
+  UINT8               HostCtrl2;
+  UINT8               Retry;
 
   //
   // Notify the host that the sampling clock tuning procedure starts.
   //
   HostCtrl2 = BIT6;
-  Status    = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  Status = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Ask the device to send a sequence of tuning blocks till the tuning procedure is done.
   //
@@ -2368,16 +2330,15 @@ EmmcPeimTuningClkForHs200 (
     }
   } while (++Retry < 40);
 
-  DEBUG ((DEBUG_ERROR, "EmmcPeimTuningClkForHs200: Send tuning block fails at %d times with HostCtrl2 %02x\n", Retry, HostCtrl2));
+  DEBUG ((EFI_D_ERROR, "EmmcPeimTuningClkForHs200: Send tuning block fails at %d times with HostCtrl2 %02x\n", Retry, HostCtrl2));
   //
   // Abort the tuning procedure and reset the tuning circuit.
   //
-  HostCtrl2 = (UINT8) ~(BIT6 | BIT7);
-  Status    = EmmcPeimHcAndMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  HostCtrl2 = (UINT8)~(BIT6 | BIT7);
+  Status = EmmcPeimHcAndMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   return EFI_DEVICE_ERROR;
 }
 
@@ -2399,18 +2360,18 @@ EmmcPeimTuningClkForHs200 (
 **/
 EFI_STATUS
 EmmcPeimSwitchBusWidth (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT32             Rca,
-  IN BOOLEAN            IsDdr,
-  IN UINT8              BusWidth
+  IN EMMC_PEIM_HC_SLOT                  *Slot,
+  IN UINT32                             Rca,
+  IN BOOLEAN                            IsDdr,
+  IN UINT8                              BusWidth
   )
 {
-  EFI_STATUS  Status;
-  UINT8       Access;
-  UINT8       Index;
-  UINT8       Value;
-  UINT8       CmdSet;
-  UINT32      DevStatus;
+  EFI_STATUS          Status;
+  UINT8               Access;
+  UINT8               Index;
+  UINT8               Value;
+  UINT8               CmdSet;
+  UINT32              DevStatus;
 
   //
   // Write Byte, the Value field is written into the byte pointed by Index.
@@ -2439,7 +2400,6 @@ EmmcPeimSwitchBusWidth (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Check the switch operation is really successful or not.
   //
@@ -2469,18 +2429,18 @@ EmmcPeimSwitchBusWidth (
 **/
 EFI_STATUS
 EmmcPeimSwitchClockFreq (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT32             Rca,
-  IN UINT8              HsTiming,
-  IN UINT32             ClockFreq
+  IN EMMC_PEIM_HC_SLOT                  *Slot,
+  IN UINT32                             Rca,
+  IN UINT8                              HsTiming,
+  IN UINT32                             ClockFreq
   )
 {
-  EFI_STATUS  Status;
-  UINT8       Access;
-  UINT8       Index;
-  UINT8       Value;
-  UINT8       CmdSet;
-  UINT32      DevStatus;
+  EFI_STATUS          Status;
+  UINT8               Access;
+  UINT8               Index;
+  UINT8               Value;
+  UINT8               CmdSet;
+  UINT32              DevStatus;
 
   //
   // Write Byte, the Value field is written into the byte pointed by Index.
@@ -2499,14 +2459,12 @@ EmmcPeimSwitchClockFreq (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Check the switch operation is really successful or not.
   //
   if ((DevStatus & BIT7) != 0) {
     return EFI_DEVICE_ERROR;
   }
-
   //
   // Convert the clock freq unit from MHz to KHz.
   //
@@ -2534,38 +2492,36 @@ EmmcPeimSwitchClockFreq (
 **/
 EFI_STATUS
 EmmcPeimSwitchToHighSpeed (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT32             Rca,
-  IN UINT32             ClockFreq,
-  IN BOOLEAN            IsDdr,
-  IN UINT8              BusWidth
+  IN EMMC_PEIM_HC_SLOT                  *Slot,
+  IN UINT32                             Rca,
+  IN UINT32                             ClockFreq,
+  IN BOOLEAN                            IsDdr,
+  IN UINT8                              BusWidth
   )
 {
-  EFI_STATUS  Status;
-  UINT8       HsTiming;
-  UINT8       HostCtrl1;
-  UINT8       HostCtrl2;
+  EFI_STATUS          Status;
+  UINT8               HsTiming;
+  UINT8               HostCtrl1;
+  UINT8               HostCtrl2;
 
   Status = EmmcPeimSwitchBusWidth (Slot, Rca, IsDdr, BusWidth);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
-  // Set to High Speed timing
+  // Set to Hight Speed timing
   //
   HostCtrl1 = BIT2;
-  Status    = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
+  Status = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  HostCtrl2 = (UINT8) ~0x7;
-  Status    = EmmcPeimHcAndMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  HostCtrl2 = (UINT8)~0x7;
+  Status = EmmcPeimHcAndMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   if (IsDdr) {
     HostCtrl2 = BIT2;
   } else if (ClockFreq == 52) {
@@ -2573,14 +2529,13 @@ EmmcPeimSwitchToHighSpeed (
   } else {
     HostCtrl2 = 0;
   }
-
   Status = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   HsTiming = 1;
-  Status   = EmmcPeimSwitchClockFreq (Slot, Rca, HsTiming, ClockFreq);
+  Status = EmmcPeimSwitchClockFreq (Slot, Rca, HsTiming, ClockFreq);
 
   return Status;
 }
@@ -2602,16 +2557,16 @@ EmmcPeimSwitchToHighSpeed (
 **/
 EFI_STATUS
 EmmcPeimSwitchToHS200 (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT32             Rca,
-  IN UINT32             ClockFreq,
-  IN UINT8              BusWidth
+  IN EMMC_PEIM_HC_SLOT                  *Slot,
+  IN UINT32                             Rca,
+  IN UINT32                             ClockFreq,
+  IN UINT8                              BusWidth
   )
 {
-  EFI_STATUS  Status;
-  UINT8       HsTiming;
-  UINT8       HostCtrl2;
-  UINT16      ClockCtrl;
+  EFI_STATUS          Status;
+  UINT8               HsTiming;
+  UINT8               HostCtrl2;
+  UINT16              ClockCtrl;
 
   if ((BusWidth != 4) && (BusWidth != 8)) {
     return EFI_INVALID_PARAMETER;
@@ -2621,7 +2576,6 @@ EmmcPeimSwitchToHS200 (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Set to HS200/SDR104 timing
   //
@@ -2633,14 +2587,13 @@ EmmcPeimSwitchToHS200 (
     return Status;
   }
 
-  HostCtrl2 = (UINT8) ~0x7;
-  Status    = EmmcPeimHcAndMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  HostCtrl2 = (UINT8)~0x7;
+  Status = EmmcPeimHcAndMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   HostCtrl2 = BIT0 | BIT1;
-  Status    = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  Status = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -2658,15 +2611,14 @@ EmmcPeimSwitchToHS200 (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Set SD Clock Enable in the Clock Control register to 1
   //
   ClockCtrl = BIT2;
-  Status    = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_CLOCK_CTRL, sizeof (ClockCtrl), &ClockCtrl);
+  Status = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_CLOCK_CTRL, sizeof (ClockCtrl), &ClockCtrl);
 
   HsTiming = 2;
-  Status   = EmmcPeimSwitchClockFreq (Slot, Rca, HsTiming, ClockFreq);
+  Status = EmmcPeimSwitchClockFreq (Slot, Rca, HsTiming, ClockFreq);
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -2692,29 +2644,27 @@ EmmcPeimSwitchToHS200 (
 **/
 EFI_STATUS
 EmmcPeimSwitchToHS400 (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT32             Rca,
-  IN UINT32             ClockFreq
+  IN EMMC_PEIM_HC_SLOT                  *Slot,
+  IN UINT32                             Rca,
+  IN UINT32                             ClockFreq
   )
 {
-  EFI_STATUS  Status;
-  UINT8       HsTiming;
-  UINT8       HostCtrl2;
+  EFI_STATUS          Status;
+  UINT8               HsTiming;
+  UINT8               HostCtrl2;
 
   Status = EmmcPeimSwitchToHS200 (Slot, Rca, ClockFreq, 8);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
-  // Set to High Speed timing and set the clock frequency to a value less than 52MHz.
+  // Set to Hight Speed timing and set the clock frequency to a value less than 52MHz.
   //
   HsTiming = 1;
-  Status   = EmmcPeimSwitchClockFreq (Slot, Rca, HsTiming, 52);
+  Status = EmmcPeimSwitchClockFreq (Slot, Rca, HsTiming, 52);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // HS400 mode must use 8 data lines.
   //
@@ -2722,24 +2672,22 @@ EmmcPeimSwitchToHS400 (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Set to HS400 timing
   //
-  HostCtrl2 = (UINT8) ~0x7;
-  Status    = EmmcPeimHcAndMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  HostCtrl2 = (UINT8)~0x7;
+  Status = EmmcPeimHcAndMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   HostCtrl2 = BIT0 | BIT2;
-  Status    = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  Status = EmmcPeimHcOrMmio (Slot->EmmcHcBase + EMMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   HsTiming = 3;
-  Status   = EmmcPeimSwitchClockFreq (Slot, Rca, HsTiming, ClockFreq);
+  Status = EmmcPeimSwitchClockFreq (Slot, Rca, HsTiming, ClockFreq);
 
   return Status;
 }
@@ -2759,20 +2707,20 @@ EmmcPeimSwitchToHS400 (
 **/
 EFI_STATUS
 EmmcPeimSetBusMode (
-  IN EMMC_PEIM_HC_SLOT  *Slot,
-  IN UINT32             Rca
+  IN EMMC_PEIM_HC_SLOT                  *Slot,
+  IN UINT32                             Rca
   )
 {
-  EFI_STATUS        Status;
-  EMMC_HC_SLOT_CAP  Capability;
-  UINT8             HsTiming;
-  BOOLEAN           IsDdr;
-  UINT32            ClockFreq;
-  UINT8             BusWidth;
+  EFI_STATUS          Status;
+  EMMC_HC_SLOT_CAP    Capability;
+  UINT8               HsTiming;
+  BOOLEAN             IsDdr;
+  UINT32              ClockFreq;
+  UINT8               BusWidth;
 
   Status = EmmcPeimGetCsd (Slot, Rca, &Slot->Csd);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "EmmcPeimSetBusMode: EmmcPeimGetCsd fails with %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "EmmcPeimSetBusMode: EmmcPeimGetCsd fails with %r\n", Status));
     return Status;
   }
 
@@ -2784,13 +2732,13 @@ EmmcPeimSetBusMode (
 
   Status = EmmcPeimSelect (Slot, Rca);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "EmmcPeimSetBusMode: EmmcPeimSelect fails with %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "EmmcPeimSetBusMode: EmmcPeimSelect fails with %r\n", Status));
     return Status;
   }
 
   Status = EmmcPeimHcGetCapability (Slot->EmmcHcBase, &Capability);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "EmmcPeimSetBusMode: EmmcPeimHcGetCapability fails with %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "EmmcPeimSetBusMode: EmmcPeimHcGetCapability fails with %r\n", Status));
     return Status;
   }
 
@@ -2803,16 +2751,14 @@ EmmcPeimSetBusMode (
   } else {
     BusWidth = 4;
   }
-
   //
-  // Get Device_Type from EXT_CSD register.
+  // Get Deivce_Type from EXT_CSD register.
   //
   Status = EmmcPeimGetExtCsd (Slot, &Slot->ExtCsd);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "EmmcPeimSetBusMode: EmmcPeimGetExtCsd fails with %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "EmmcPeimSetBusMode: EmmcPeimGetExtCsd fails with %r\n", Status));
     return Status;
   }
-
   //
   // Calculate supported bus speed/bus width/clock frequency.
   //
@@ -2836,7 +2782,6 @@ EmmcPeimSetBusMode (
     IsDdr     = FALSE;
     ClockFreq = 26;
   }
-
   //
   // Check if both of the device and the host controller support HS400 DDR mode.
   //
@@ -2857,7 +2802,7 @@ EmmcPeimSetBusMode (
     return EFI_SUCCESS;
   }
 
-  DEBUG ((DEBUG_INFO, "HsTiming %d ClockFreq %d BusWidth %d Ddr %a\n", HsTiming, ClockFreq, BusWidth, IsDdr ? "TRUE" : "FALSE"));
+  DEBUG ((EFI_D_INFO, "HsTiming %d ClockFreq %d BusWidth %d Ddr %a\n", HsTiming, ClockFreq, BusWidth, IsDdr ? "TRUE":"FALSE"));
 
   if (HsTiming == 3) {
     //
@@ -2892,17 +2837,17 @@ EmmcPeimSetBusMode (
 **/
 EFI_STATUS
 EmmcPeimIdentification (
-  IN EMMC_PEIM_HC_SLOT  *Slot
+  IN EMMC_PEIM_HC_SLOT           *Slot
   )
 {
-  EFI_STATUS  Status;
-  UINT32      Ocr;
-  UINT32      Rca;
-  UINTN       Retry;
+  EFI_STATUS                     Status;
+  UINT32                         Ocr;
+  UINT32                         Rca;
+  UINTN                          Retry;
 
   Status = EmmcPeimReset (Slot);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "EmmcPeimIdentification: EmmcPeimReset fails with %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "EmmcPeimIdentification: EmmcPeimReset fails with %r\n", Status));
     return Status;
   }
 
@@ -2911,24 +2856,22 @@ EmmcPeimIdentification (
   do {
     Status = EmmcPeimGetOcr (Slot, &Ocr);
     if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_ERROR, "EmmcPeimIdentification: EmmcPeimGetOcr fails with %r\n", Status));
+      DEBUG ((EFI_D_ERROR, "EmmcPeimIdentification: EmmcPeimGetOcr fails with %r\n", Status));
       return Status;
     }
 
     if (Retry++ == 100) {
-      DEBUG ((DEBUG_ERROR, "EmmcPeimIdentification: EmmcPeimGetOcr fails too many times\n"));
+      DEBUG ((EFI_D_ERROR, "EmmcPeimIdentification: EmmcPeimGetOcr fails too many times\n"));
       return EFI_DEVICE_ERROR;
     }
-
     MicroSecondDelay (10 * 1000);
   } while ((Ocr & BIT31) == 0);
 
   Status = EmmcPeimGetAllCid (Slot);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "EmmcPeimIdentification: EmmcPeimGetAllCid fails with %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "EmmcPeimIdentification: EmmcPeimGetAllCid fails with %r\n", Status));
     return Status;
   }
-
   //
   // Don't support multiple devices on the slot, that is
   // shared bus slot feature.
@@ -2936,16 +2879,16 @@ EmmcPeimIdentification (
   Rca    = 1;
   Status = EmmcPeimSetRca (Slot, Rca);
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "EmmcPeimIdentification: EmmcPeimSetRca fails with %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "EmmcPeimIdentification: EmmcPeimSetRca fails with %r\n", Status));
     return Status;
   }
-
   //
   // Enter Data Tranfer Mode.
   //
-  DEBUG ((DEBUG_INFO, "Found a EMMC device at slot [%d], RCA [%d]\n", Slot, Rca));
+  DEBUG ((EFI_D_INFO, "Found a EMMC device at slot [%d], RCA [%d]\n", Slot, Rca));
 
   Status = EmmcPeimSetBusMode (Slot, Rca);
 
   return Status;
 }
+

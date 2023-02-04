@@ -9,8 +9,6 @@
  */
 #include <common.h>
 #include <config.h>
-#include <image.h>
-#include <log.h>
 #include <spl.h>
 #include <asm/io.h>
 #include <onenand_uboot.h>

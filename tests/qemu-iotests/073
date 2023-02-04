@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # Test count_contiguous_clusters in qcow2
 #

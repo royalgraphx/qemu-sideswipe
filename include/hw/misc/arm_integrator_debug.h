@@ -3,7 +3,7 @@
  *
  * Browse the data sheet:
  *
- *  https://developer.arm.com/documentation/dui0159/b/peripherals-and-interfaces/debug-leds-and-dip-switch-interface
+ *    http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0159b/Babbfijf.html
  *
  * Copyright (c) 2013 Alex Bennée <alex@bennee.com>
  *

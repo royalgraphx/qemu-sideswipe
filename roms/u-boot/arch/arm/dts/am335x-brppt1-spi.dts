@@ -169,7 +169,7 @@
 	spi_flash: spiflash@0 {
 		u-boot,dm-spl;
 		u-boot,dm-pre-reloc;
-		compatible = "spidev", "jedec,spi-nor";
+		compatible = "spidev", "spi-flash";
 		spi-max-frequency = <24000000>;
 		reg = <0>;
 	};
@@ -257,19 +257,8 @@
 	status = "okay";
 };
 
-&l4_per {
-
-	segment@300000 {
-
-		target-module@e000 {
-			u-boot,dm-pre-reloc;
-
-			lcdc: lcdc@0 {
-				u-boot,dm-pre-reloc;
-				status = "disabled";
-			};
-		};
-	};
+&lcdc {
+	status = "disabled";
 };
 
 &elm {

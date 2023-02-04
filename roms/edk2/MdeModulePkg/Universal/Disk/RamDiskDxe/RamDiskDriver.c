@@ -2,7 +2,6 @@
   The driver entry point for RamDiskDxe driver.
 
   Copyright (c) 2016, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) Microsoft Corporation.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -34,6 +33,7 @@ LIST_ENTRY  RegisteredRamDisks;
 EFI_ACPI_TABLE_PROTOCOL  *mAcpiTableProtocol = NULL;
 EFI_ACPI_SDT_PROTOCOL    *mAcpiSdtProtocol   = NULL;
 
+
 /**
   Check whether EFI_ACPI_TABLE_PROTOCOL and EFI_ACPI_SDT_PROTOCOL are produced.
   If both protocols are produced, publish all the reserved memory type RAM
@@ -47,13 +47,13 @@ EFI_ACPI_SDT_PROTOCOL    *mAcpiSdtProtocol   = NULL;
 VOID
 EFIAPI
 RamDiskAcpiCheck (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT    Event,
+  IN VOID         *Context
   )
 {
-  EFI_STATUS             Status;
-  LIST_ENTRY             *Entry;
-  RAM_DISK_PRIVATE_DATA  *PrivateData;
+  EFI_STATUS                 Status;
+  LIST_ENTRY                 *Entry;
+  RAM_DISK_PRIVATE_DATA      *PrivateData;
 
   gBS->CloseEvent (Event);
 
@@ -67,7 +67,7 @@ RamDiskAcpiCheck (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_INFO,
+      EFI_D_INFO,
       "RamDiskAcpiCheck: Cannot locate the EFI ACPI Table Protocol, "
       "unable to publish RAM disks to NFIT.\n"
       ));
@@ -84,7 +84,7 @@ RamDiskAcpiCheck (
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
-      DEBUG_INFO,
+      EFI_D_INFO,
       "RamDiskAcpiCheck: Cannot locate the EFI ACPI Sdt Protocol, "
       "unable to publish RAM disks to NFIT.\n"
       ));
@@ -92,11 +92,12 @@ RamDiskAcpiCheck (
     return;
   }
 
-  BASE_LIST_FOR_EACH (Entry, &RegisteredRamDisks) {
+  EFI_LIST_FOR_EACH (Entry, &RegisteredRamDisks) {
     PrivateData = RAM_DISK_PRIVATE_FROM_THIS (Entry);
     RamDiskPublishNfit (PrivateData);
   }
 }
+
 
 /**
   The entry point for RamDiskDxe driver.
@@ -114,14 +115,14 @@ RamDiskAcpiCheck (
 EFI_STATUS
 EFIAPI
 RamDiskDxeEntryPoint (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE                   ImageHandle,
+  IN EFI_SYSTEM_TABLE             *SystemTable
   )
 {
-  EFI_STATUS                    Status;
-  RAM_DISK_CONFIG_PRIVATE_DATA  *ConfigPrivate;
-  VOID                          *DummyInterface;
-  EFI_EVENT                     Event;
+  EFI_STATUS                      Status;
+  RAM_DISK_CONFIG_PRIVATE_DATA    *ConfigPrivate;
+  VOID                            *DummyInterface;
+  EFI_EVENT                       Event;
 
   //
   // If already started, return.
@@ -132,7 +133,7 @@ RamDiskDxeEntryPoint (
                   &DummyInterface
                   );
   if (!EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_INFO, "Driver already started!\n"));
+    DEBUG ((EFI_D_INFO, "Driver already started!\n"));
     return EFI_ALREADY_STARTED;
   }
 
@@ -153,12 +154,6 @@ RamDiskDxeEntryPoint (
   }
 
   //
-  // Initialize the list of registered RAM disks maintained by the driver
-  // before installing the protocol
-  //
-  InitializeListHead (&RegisteredRamDisks);
-
-  //
   // Install the EFI_RAM_DISK_PROTOCOL and RAM disk private data onto a
   // new handle
   //
@@ -173,6 +168,11 @@ RamDiskDxeEntryPoint (
   if (EFI_ERROR (Status)) {
     goto ErrorExit;
   }
+
+  //
+  // Initialize the list of registered RAM disks maintained by the driver
+  //
+  InitializeListHead (&RegisteredRamDisks);
 
   Status = EfiCreateEventReadyToBootEx (
              TPL_CALLBACK,
@@ -192,6 +192,7 @@ ErrorExit:
   return Status;
 }
 
+
 /**
   Unload the RamDiskDxe driver and its configuration form.
 
@@ -205,16 +206,16 @@ ErrorExit:
 EFI_STATUS
 EFIAPI
 RamDiskDxeUnload (
-  IN EFI_HANDLE  ImageHandle
+  IN EFI_HANDLE                   ImageHandle
   )
 {
-  EFI_STATUS                    Status;
-  RAM_DISK_CONFIG_PRIVATE_DATA  *ConfigPrivate;
+  EFI_STATUS                      Status;
+  RAM_DISK_CONFIG_PRIVATE_DATA    *ConfigPrivate;
 
   Status = gBS->HandleProtocol (
                   mRamDiskHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&ConfigPrivate
+                  (VOID **) &ConfigPrivate
                   );
   if (EFI_ERROR (Status)) {
     return Status;

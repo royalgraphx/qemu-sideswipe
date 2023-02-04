@@ -1,11 +1,12 @@
 /** @file
-
-  Copyright (c) 2011-2013, ARM Limited. All rights reserved.
-  Copyright (c) 2018, Linaro Limited. All rights reserved.
-
-  SPDX-License-Identifier: BSD-2-Clause-Patent
-
+*
+*  Copyright (c) 2011-2013, ARM Limited. All rights reserved.
+*  Copyright (c) 2018, Linaro Limited. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
 **/
+
 
 #include <PiDxe.h>
 
@@ -67,8 +68,8 @@ STATIC
 VOID
 EFIAPI
 SP805InterruptHandler (
-  IN  HARDWARE_INTERRUPT_SOURCE  Source,
-  IN  EFI_SYSTEM_CONTEXT         SystemContext
+  IN  HARDWARE_INTERRUPT_SOURCE   Source,
+  IN  EFI_SYSTEM_CONTEXT          SystemContext
   )
 {
   SP805Unlock ();
@@ -170,15 +171,15 @@ STATIC
 EFI_STATUS
 EFIAPI
 SP805RegisterHandler (
-  IN EFI_WATCHDOG_TIMER_ARCH_PROTOCOL  *This,
-  IN EFI_WATCHDOG_TIMER_NOTIFY         NotifyFunction
+  IN EFI_WATCHDOG_TIMER_ARCH_PROTOCOL         *This,
+  IN EFI_WATCHDOG_TIMER_NOTIFY                NotifyFunction
   )
 {
-  if ((mWatchdogNotify == NULL) && (NotifyFunction == NULL)) {
+  if (mWatchdogNotify == NULL && NotifyFunction == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  if ((mWatchdogNotify != NULL) && (NotifyFunction != NULL)) {
+  if (mWatchdogNotify != NULL && NotifyFunction != NULL) {
     return EFI_ALREADY_STARTED;
   }
 
@@ -218,8 +219,8 @@ STATIC
 EFI_STATUS
 EFIAPI
 SP805SetTimerPeriod (
-  IN EFI_WATCHDOG_TIMER_ARCH_PROTOCOL  *This,
-  IN UINT64                            TimerPeriod          // In 100ns units
+  IN EFI_WATCHDOG_TIMER_ARCH_PROTOCOL         *This,
+  IN UINT64                                   TimerPeriod   // In 100ns units
   )
 {
   EFI_STATUS  Status;
@@ -290,8 +291,8 @@ STATIC
 EFI_STATUS
 EFIAPI
 SP805GetTimerPeriod (
-  IN EFI_WATCHDOG_TIMER_ARCH_PROTOCOL  *This,
-  OUT UINT64                           *TimerPeriod
+  IN EFI_WATCHDOG_TIMER_ARCH_PROTOCOL         *This,
+  OUT UINT64                                  *TimerPeriod
   )
 {
   if (TimerPeriod == NULL) {
@@ -334,7 +335,7 @@ SP805GetTimerPeriod (
   Retrieves the period of the timer interrupt in 100 nS units.
 
 **/
-STATIC EFI_WATCHDOG_TIMER_ARCH_PROTOCOL  mWatchdogTimer = {
+STATIC EFI_WATCHDOG_TIMER_ARCH_PROTOCOL mWatchdogTimer = {
   SP805RegisterHandler,
   SP805SetTimerPeriod,
   SP805GetTimerPeriod
@@ -354,19 +355,16 @@ STATIC EFI_WATCHDOG_TIMER_ARCH_PROTOCOL  mWatchdogTimer = {
 EFI_STATUS
 EFIAPI
 SP805Initialize (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE         ImageHandle,
+  IN EFI_SYSTEM_TABLE   *SystemTable
   )
 {
   EFI_STATUS  Status;
   EFI_HANDLE  Handle;
 
   // Find the interrupt controller protocol.  ASSERT if not found.
-  Status = gBS->LocateProtocol (
-                  &gHardwareInterruptProtocolGuid,
-                  NULL,
-                  (VOID **)&mInterrupt
-                  );
+  Status = gBS->LocateProtocol (&gHardwareInterruptProtocolGuid, NULL,
+                  (VOID **)&mInterrupt);
   ASSERT_EFI_ERROR (Status);
 
   // Unlock access to the SP805 registers
@@ -388,26 +386,17 @@ SP805Initialize (
   SP805Lock ();
 
   if (PcdGet32 (PcdSP805WatchdogInterrupt) > 0) {
-    Status = mInterrupt->RegisterInterruptSource (
-                           mInterrupt,
+    Status = mInterrupt->RegisterInterruptSource (mInterrupt,
                            PcdGet32 (PcdSP805WatchdogInterrupt),
-                           SP805InterruptHandler
-                           );
+                           SP805InterruptHandler);
     if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: failed to register watchdog interrupt - %r\n",
-        __FUNCTION__,
-        Status
-        ));
+      DEBUG ((DEBUG_ERROR, "%a: failed to register watchdog interrupt - %r\n",
+        __FUNCTION__, Status));
       return Status;
     }
   } else {
-    DEBUG ((
-      DEBUG_WARN,
-      "%a: no interrupt specified, running in RESET mode only\n",
-      __FUNCTION__
-      ));
+    DEBUG ((DEBUG_WARN, "%a: no interrupt specified, running in RESET mode only\n",
+      __FUNCTION__));
   }
 
   //
@@ -417,13 +406,8 @@ SP805Initialize (
   ASSERT_PROTOCOL_ALREADY_INSTALLED (NULL, &gEfiWatchdogTimerArchProtocolGuid);
 
   // Register for an ExitBootServicesEvent
-  Status = gBS->CreateEvent (
-                  EVT_SIGNAL_EXIT_BOOT_SERVICES,
-                  TPL_NOTIFY,
-                  ExitBootServicesEvent,
-                  NULL,
-                  &mEfiExitBootServicesEvent
-                  );
+  Status = gBS->CreateEvent (EVT_SIGNAL_EXIT_BOOT_SERVICES, TPL_NOTIFY,
+                  ExitBootServicesEvent, NULL, &mEfiExitBootServicesEvent);
   if (EFI_ERROR (Status)) {
     Status = EFI_OUT_OF_RESOURCES;
     goto EXIT;
@@ -433,8 +417,7 @@ SP805Initialize (
   Handle = NULL;
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &Handle,
-                  &gEfiWatchdogTimerArchProtocolGuid,
-                  &mWatchdogTimer,
+                  &gEfiWatchdogTimerArchProtocolGuid, &mWatchdogTimer,
                   NULL
                   );
   if (EFI_ERROR (Status)) {

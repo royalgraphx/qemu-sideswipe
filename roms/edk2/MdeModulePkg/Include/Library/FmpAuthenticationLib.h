@@ -6,6 +6,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 #ifndef __FMP_AUTHENTICATION_LIB_H__
 #define __FMP_AUTHENTICATION_LIB_H__
 
@@ -56,3 +57,4 @@ AuthenticateFmpImage (
   );
 
 #endif
+

@@ -1,10 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-#
-# scripts to run skiboot (and a payload) with Mambo (otherwise known as the
-# POWER[89] Functional Simulator)
-#
-# Copyright 2014-2019 IBM Corp.
-
 # need to get images path defined early
 source $env(LIB_DIR)/ppc/util.tcl
 if { [file exists qtrace_utils.tcl] } then {
@@ -89,21 +82,6 @@ mconfig net_tapdev MAMBO_NET_TAPDEV "tap0"
 # set to 0 to disable. When enabled it causes Linux's RFI flush to be enabled.
 mconfig speculation_policy_favor_security MAMBO_SPECULATION_POLICY_FAVOR_SECURITY 1
 
-# These values ~= P9N DD2.3, except for fw_count_cache_flush_assist=0 because it
-# exercises more kernel code.
-# See https://github.com/open-power/hostboot/blob/7ce2a9daac0ccf759376929b2ec40bbbc7ca3398/src/usr/hdat/hdatiplparms.H#L520
-mconfig needs_l1d_flush_msr_hv		MAMBO_NEEDS_L1D_FLUSH_MSR_HV	1
-mconfig needs_l1d_flush_msr_pr		MAMBO_NEEDS_L1D_FLUSH_MSR_PR	1
-mconfig fw_l1d_thread_split		MAMBO_FW_L1D_THREAD_SPLIT	1
-mconfig needs_spec_barrier		MAMBO_NEEDS_SPEC_BARRIER	1
-mconfig fw_bcctrl_serialized		MAMBO_FW_BCCTRL_SERIALIZED	0
-mconfig fw_count_cache_disabled		MAMBO_FW_COUNT_CACHE_DISABLED	0
-mconfig needs_count_cache_flush		MAMBO_NEEDS_COUNT_CACHE_FLUSH	1
-mconfig fw_count_cache_flush_assist	MAMBO_COUNT_CACHE_FLUSH_ASSIST	0
-mconfig inst_spec_barrier_ori31		MAMBO_INST_SPEC_BARRIER_ORI31	1
-mconfig inst_l1d_flush_trig2		MAMBO_INST_L1D_FLUSH_TRIG2	1
-mconfig inst_l1d_flush_ori30		MAMBO_INST_L1D_FLUSH_ORI30	0
-
 #
 # Create machine config
 #
@@ -122,7 +100,6 @@ myconf config processor/timebase_frequency 1/1
 myconf config enable_pseries_nvram false
 myconf config machine_option/NO_RAM TRUE
 myconf config machine_option/NO_ROM TRUE
-myconf config machine_option/MEMORY_OVERFLOW FALSE
 
 if { $default_config == "PEGASUS" } {
     # We need to be DD2 or greater on p8 for the HILE HID bit.
@@ -135,46 +112,13 @@ if { $default_config == "PEGASUS" } {
 
 if { $default_config == "P9" } {
     # PVR configured for POWER9 DD2.3 Scale out 24 Core (ie SMT4)
-    # This still is not configured with LPAR-per-thread, which will make
-    # multi-thread KVM not work properly. And possibly even small-core is
-    # not set correctly either.
     myconf config processor/initial/PVR 0x4e1203
-    myconf config processor/initial/SIM_CTRL1 0x42283c1710000000
+    myconf config processor/initial/SIM_CTRL1 0xc228100400000000
 
     if { $mconf(numa) } {
         myconf config memory_region_id_shift 45
     }
 }
-
-if { $default_config == "P10" } {
-    # PVR configured for POWER10 DD2.0, LPAR-per-thread
-    myconf config processor/initial/SIM_CTRL  0x0c1dd60000000000
-    if { $mconf(threads) == 8 } {
-        # Big-core mode.
-        myconf config processor/initial/PVR 0x00800200
-        myconf config processor/initial/SIM_CTRL1 0xc0400c0400040a40
-	puts "Set P10 big-core mode"
-    } else {
-        # Small-core mode.
-        myconf config processor/initial/PVR 0x00801200
-        myconf config processor/initial/SIM_CTRL1 0xc0400c0401040a40
-        if { $mconf(threads) != 1 && $mconf(threads) != 2 && $mconf(threads) != 4 } {
-            puts "ERROR: Bad threads configuration"
-            exit
-        }
-        if { $mconf(threads) != 4 && $mconf(cpus) != 1 } {
-            puts "ERROR: Bad threads, cpus configuration"
-            exit
-        }
-
-	puts "Set P10 small-core mode"
-    }
-
-    if { $mconf(numa) } {
-        myconf config memory_region_id_shift 44
-    }
-}
-
 
 if { $mconf(numa) } {
     myconf config memory_regions $mconf(cpus)
@@ -185,16 +129,6 @@ if { [info exists env(SKIBOOT_SIMCONF)] } {
 }
 
 define machine myconf mysim
-
-# Some mambo does not expose SIM_CTRL as a config option. Also set the SPRs
-# after machine is defined.
-if { $default_config == "P10" } {
-    for { set c 0 } { $c < $mconf(cpus) } { incr c } {
-        for { set t 0 } { $t < $mconf(threads) } { incr t } {
-	    mysim mcm 0 cpu $c thread $t set spr ctrl 0x0c1dd60000000000
-        }
-    }
-}
 
 #
 # Include various utilities
@@ -317,13 +251,12 @@ if { [info exists env(SKIBOOT_INITRD)] } {
 	    set cpio_size [file size $cpio_file]
 	    mysim mcm 0 memory fread $cpio_end $cpio_size $cpio_file
 	    set cpio_end [expr $cpio_end + $cpio_size]
-	    # Linux requires cpios are 4 byte aligned
-	    set cpio_end [expr $cpio_end + 3 & 0xfffffffffffffffc]
     }
 
     mysim of addprop $chosen_node int "linux,initrd-start" $cpio_start
     mysim of addprop $chosen_node int "linux,initrd-end"   $cpio_end
 }
+
 
 # Map persistent memory disks
 proc pmem_node_add { root start size } {
@@ -333,7 +266,6 @@ proc pmem_node_add { root start size } {
     mysim of addprop $node array "reg" reg
     mysim of addprop $node string "compatible" "pmem-region"
     mysim of addprop $node empty "volatile" "1"
-    mysim of addprop $node int "ibm,chip-id" 0
     return [expr $start + $size]
 }
 
@@ -345,31 +277,20 @@ set pmem_sizes ""
 if { [info exists env(PMEM_VOLATILE)] } {
     set pmem_sizes [split $env(PMEM_VOLATILE) ","]
 }
-set pmem_modes ""
-if { [info exists env(PMEM_MODE)] } {
-    set pmem_modes [split $env(PMEM_MODE) ","]
-}
 set pmem_root [mysim of addchild $root_node "pmem" ""]
 mysim of addprop $pmem_root int "#address-cells" 2
 mysim of addprop $pmem_root int "#size-cells" 2
 mysim of addprop $pmem_root empty "ranges" ""
 # Start above where XICS normally is at 0x1A0000000000
 set pmem_start [expr 0x20000000000]
-set pmem_file_ix 0
 foreach pmem_file $pmem_files { # PMEM_DISK
     set pmem_file [string trim $pmem_file]
     set pmem_size [file size $pmem_file]
-    if { [expr [llength $pmem_modes] > $pmem_file_ix] } {
-	set pmem_mode [lindex $pmem_modes $pmem_file_ix]
-    } else {
-	set pmem_mode "rw"
-    }
-    if {[catch {mysim memory mmap $pmem_start $pmem_size $pmem_file $pmem_mode}]} {
+    if {[catch {mysim memory mmap $pmem_start $pmem_size $pmem_file rw}]} {
 	puts "ERROR: pmem: 'mysim mmap' command needs newer mambo"
 	exit
     }
     set pmem_start [pmem_node_add $pmem_root $pmem_start $pmem_size]
-    set pmem_file_ix [expr $pmem_file_ix + 1]
 }
 foreach pmem_size $pmem_sizes { # PMEM_VOLATILE
     set pmem_start [pmem_node_add $pmem_root $pmem_start $pmem_size]
@@ -393,34 +314,6 @@ mysim of addprop $reserved_memory int "#size-cells" 2
 mysim of addprop $reserved_memory int "#address-cells" 2
 mysim of addprop $reserved_memory empty "ranges" ""
 
-set cvc_code_start [expr $fake_nvram_start + $fake_nvram_size]
-set cvc_code_end $cvc_code_start
-set cvc_code_size 0
-
-if { [info exists env(SKIBOOT_CVC_CODE)] } {
-    set cvc_file $env(SKIBOOT_CVC_CODE)
-
-    set cvc_code_size [file size $cvc_file]
-    mysim mcm 0 memory fread $cvc_code_start $cvc_code_size $cvc_file
-    set cvc_code_end [expr $cvc_code_start + $cvc_code_size]
-
-    # Set up Device Tree for Container Verification Code
-    set hb [mysim of addchild $root_node "ibm,hostboot" ""]
-    set hb_reserved_memory [mysim of addchild $hb "reserved-memory" ""]
-    mysim of addprop $hb_reserved_memory int "#address-cells" 2
-    mysim of addprop $hb_reserved_memory int "#size-cells" 2
-
-    set hb_cvc_code_node [mysim of addchild $hb_reserved_memory "ibm,secure-crypt-algo-code" [format %x $cvc_code_start]]
-    set reg [list $cvc_code_start $cvc_code_size]
-    mysim of addprop $hb_cvc_code_node array64 "reg" reg
-    mysim of addprop $hb_cvc_code_node empty "name" "ibm,secure-crypt-algo-code"
-
-    set cvc_code_node [mysim of addchild $reserved_memory "ibm,secure-crypt-algo-code" [format %x $cvc_code_start]]
-    set reg [list $cvc_code_start $cvc_code_size]
-    mysim of addprop $cvc_code_node array64 "reg" reg
-    mysim of addprop $cvc_code_node empty "name" "ibm,secure-crypt-algo-code"
-}
-
 set initramfs_res [mysim of addchild $reserved_memory "initramfs" ""]
 set reg [list $cpio_start $cpio_size ]
 mysim of addprop $initramfs_res array64 "reg" reg
@@ -433,8 +326,8 @@ mysim of addprop $fake_nvram_node empty "name" "ibm,fake-nvram"
 
 set opal_node [mysim of addchild $root_node "ibm,opal" ""]
 
-# Allow P9/P10 to use all idle states
-if { $default_config == "P9" || $default_config == "P10" } {
+# Allow P9 to use all idle states
+if { $default_config == "P9" } {
     set power_mgt_node [mysim of addchild $opal_node "power-mgt" ""]
     mysim of addprop $power_mgt_node int "ibm,enabled-stop-levels" 0xffffffff
 }
@@ -451,17 +344,9 @@ proc add_feature_node { parent name { value 1 } } {
 
 set np [mysim of addchild $opal_node "fw-features" ""]
 add_feature_node $np "speculation-policy-favor-security" $mconf(speculation_policy_favor_security)
-add_feature_node $np "needs-l1d-flush-msr-hv-1-to-0" $mconf(needs_l1d_flush_msr_hv)
-add_feature_node $np "needs-l1d-flush-msr-pr-0-to-1" $mconf(needs_l1d_flush_msr_pr)
-add_feature_node $np "fw-l1d-thread-split" $mconf(fw_l1d_thread_split)
-add_feature_node $np "needs-spec-barrier-for-bound-checks" $mconf(needs_spec_barrier)
-add_feature_node $np "fw-bcctrl-serialized" $mconf(fw_bcctrl_serialized)
-add_feature_node $np "fw-count-cache-disabled" $mconf(fw_count_cache_disabled)
-add_feature_node $np "needs-count-cache-flush-on-context-switch" $mconf(needs_count_cache_flush)
-add_feature_node $np "fw-count-cache-flush-bcctr2,0,0" $mconf(fw_count_cache_flush_assist)
-add_feature_node $np "inst-spec-barrier-ori31,31,0" $mconf(inst_spec_barrier_ori31)
-add_feature_node $np "inst-l1d-flush-trig2" $mconf(inst_l1d_flush_trig2)
-add_feature_node $np "inst-l1d-flush-ori30,30,0" $mconf(inst_l1d_flush_ori30)
+add_feature_node $np "needs-l1d-flush-msr-hv-1-to-0"
+add_feature_node $np "needs-l1d-flush-msr-pr-0-to-1"
+add_feature_node $np "needs-spec-barrier-for-bound-checks"
 
 
 # Init CPUs
@@ -504,7 +389,7 @@ for { set c 0 } { $c < $mconf(cpus) } { incr c } {
     lappend reg 0x22 0x120 1 0x22 0x0003 ;# 16G seg 16G pages
     mysim of addprop $cpu_node array "ibm,segment-page-sizes" reg
 
-    if { $default_config == "P9" || $default_config == "P10" } {
+    if { $default_config == "P9" } {
         # Set actual page size encodings
         set reg {}
         # 4K pages
@@ -519,19 +404,14 @@ for { set c 0 } { $c < $mconf(cpus) } { incr c } {
 
         set reg {}
 	# POWER9 PAPR defines upto bytes 62-63
-	# POWER10 PAPR defines upto byte 64-65
 	# header + bytes 0-5
-	if { $default_config == "P9" } {
-		lappend reg 0x4000f63fc70080c0
-	} else {
-		lappend reg 0x4200f63fc70080c0
-	}
+	lappend reg 0x4000f63fc70080c0
 	# bytes 6-13
 	lappend reg 0x8000000000000000
 	# bytes 14-21
 	lappend reg 0x0000800080008000
 	# bytes 22-29 22/23=TM
-	lappend reg 0x0000800080008000
+	lappend reg 0x8000800080008000
 	# bytes 30-37
 	lappend reg 0x80008000C0008000
 	# bytes 38-45 40/41=radix
@@ -540,12 +420,8 @@ for { set c 0 } { $c < $mconf(cpus) } { incr c } {
 	lappend reg 0x8000800080008000
 	# bytes 54-61 58/59=seg tbl
 	lappend reg 0x8000800080008000
-	# bytes 62-69 64/65=DAWR1(P10 only)
-	if { $default_config == "P9" } {
-		lappend reg 0x8000000000000000
-	} else {
-		lappend reg 0x8000800000000000
-	}
+	# bytes 62-69
+	lappend reg 0x8000000000000000
 	mysim of addprop $cpu_node array64 "ibm,pa-features" reg
     } else {
         set reg {}
@@ -566,7 +442,7 @@ for { set c 0 } { $c < $mconf(cpus) } { incr c } {
 }
 
 #Add In-Memory Collection Counter nodes
-if { $default_config == "P9" || $default_config == "P10" } {
+if { $default_config == "P9" } {
    #Add the base node "imc-counters"
    set imc_c [mysim of addchild $root_node "imc-counters" ""]
    mysim of addprop $imc_c string "compatible" "ibm,opal-in-memory-counters"
@@ -672,18 +548,10 @@ mconfig enable_stb SKIBOOT_ENABLE_MAMBO_STB 0
 
 if { [info exists env(SKIBOOT_ENABLE_MAMBO_STB)] } {
     set stb_node [ mysim of addchild $root_node "ibm,secureboot" "" ]
-
-    # For P8 we still use the softrom emulation
-    if { $default_config == "PEGASUS" || ! [info exists env(SKIBOOT_CVC_CODE)] } {
-	mysim of addprop $stb_node string "compatible" "ibm,secureboot-v1-softrom"
-    } else {
-	# on P9 we can use the real CVC
-	mysim of addprop $stb_node string "compatible" "ibm,secureboot-v2"
-    }
+    mysim of addprop $stb_node string "compatible" "ibm,secureboot-v1-softrom"
 #    mysim of addprop $stb_node string "secure-enabled" ""
     mysim of addprop $stb_node string "trusted-enabled" ""
     mysim of addprop $stb_node string "hash-algo" "sha512"
-    mysim of addprop $stb_node int "hw-key-hash-size" 64
     set hw_key_hash {}
     lappend hw_key_hash 0x40d487ff
     lappend hw_key_hash 0x7380ed6a
@@ -702,25 +570,6 @@ if { [info exists env(SKIBOOT_ENABLE_MAMBO_STB)] } {
     lappend hw_key_hash 0xfb708535
     lappend hw_key_hash 0x1d01d6d1
     mysim of addprop $stb_node array "hw-key-hash" hw_key_hash
-
-    if { $default_config != "PEGASUS" && [info exists env(SKIBOOT_CVC_CODE)] } {
-	set cvc_node [ mysim of addchild $stb_node "ibm,cvc" "" ]
-	mysim of addprop $cvc_node string "compatible" "ibm,container-verification-code"
-	mysim of addprop $cvc_node int "memory-region" $hb_cvc_code_node
-
-	# I'm sure hardcoding these addresses will *never* cause us a problem...
-	set sha_node [ mysim of addchild $cvc_node "ibm,cvc-service" [format %x 0x40]]
-	mysim of addprop $sha_node string "name" "ibm,cvc-service"
-	mysim of addprop $sha_node string "compatible" "ibm,cvc-sha512"
-	mysim of addprop $sha_node int "reg" 0x40
-	mysim of addprop $sha_node int "version" 1
-
-	set verify_node [ mysim of addchild $cvc_node "ibm,cvc-service" [format %x 0x50]]
-	mysim of addprop $verify_node string "name" "ibm,cvc-service"
-	mysim of addprop $verify_node string "compatible" "ibm,cvc-verify"
-	mysim of addprop $verify_node int "reg" 0x50
-	mysim of addprop $verify_node int "version" 1
-    }
 }
 
 # Kernel command line args, appended to any from the device tree
@@ -737,10 +586,8 @@ mysim memory fread $mconf(boot_load) $boot_size $mconf(boot_image)
 set payload_size [file size $mconf(payload)]
 mysim memory fread $mconf(payload_addr) $payload_size $mconf(payload)
 
-set available_space [expr $mconf(boot_load) - $mconf(payload_addr)]
-if { $payload_size > $available_space } {
-    set overflow [expr $payload_size - $available_space]
-    error "vmlinux is too large by $overflow bytes ($payload_size > $available_space), consider adjusting PAYLOAD_ADDR"
+if { $payload_size > [expr $mconf(boot_load) - $mconf(payload_addr)] } {
+	error "vmlinux is too large, consider adjusting PAYLOAD_ADDR"
 }
 
 # Flatten it

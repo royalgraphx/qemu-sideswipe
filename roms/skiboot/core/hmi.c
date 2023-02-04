@@ -1,8 +1,17 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * Deal with Hypervisor Maintenance Interrupts
+/* Copyright 2013-2018 IBM Corp.
  *
- * Copyright 2013-2019 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #define pr_fmt(fmt)	"HMI: " fmt
@@ -15,14 +24,11 @@
 #include <xscom.h>
 #include <xscom-p8-regs.h>
 #include <xscom-p9-regs.h>
-#include <xscom-p10-regs.h>
 #include <pci.h>
 #include <cpu.h>
 #include <chip.h>
-#include <pau-regs.h>
 #include <npu-regs.h>
 #include <npu2-regs.h>
-#include <pau.h>
 #include <npu2.h>
 #include <npu.h>
 #include <capp.h>
@@ -30,7 +36,7 @@
 #include <cpu.h>
 
 /*
- * P9 HMER register layout:
+ * HMER register layout:
  * +===+==========+============================+========+===================+
  * |Bit|Name      |Description                 |PowerKVM|Action             |
  * |   |          |                            |HMI     |                   |
@@ -150,78 +156,6 @@
  * NOTE: Per Dave Larson, never enable 8,9,21-23
  */
 
-/*
- * P10 HMER register layout:
- * Bit   Name                Description
- * 0     malfunction_alert   A processor core in the system has checkstopped
- *                           (failed recovery). This is broadcasted to every
- *                           processor in the system
- *
- * 1     reserved            reserved
- *
- * 2     proc_rcvy_done      Processor recovery occurred error-bit in fir not
- *                           masked (see bit 11)
- *
- * 3     reserved            reserved
- *
- * 4     tfac_error          Timer facility experienced an error. TB, DEC,
- *                           HDEC, PURR or SPURR may be corrupted (details in
- *                           TFMR)
- *
- * 5     tfx_error           Error occurred on transfer from tfac shadow to
- *                           core
- *
- * 6     spurr_scale_limit   Nominal frequency exceeded 399 percent
- *
- * 7     reserved            reserved
- *
- * 8     xscom_fail          An XSCOM operation caused by a cache inhibited
- *                           load/store from this thread failed. A trap
- *                           register is available.
- *
- * 9     xscom_done          An XSCOM operation caused by a cache inhibited
- *                           load/store from this thread completed. If
- *                           hypervisor intends to use this bit, it is
- *                           responsible for clearing it before performing the
- *                           xscom operation. NOTE: this bit should always be
- *                           masked in HMEER
- *
- * 10    reserved            reserved
- *
- * 11    proc_rcvy_again     Processor recovery occurred again before bit 2
- *                           was cleared
- *
- * 12-15 reserved            reserved
- *
- * 16    scom_fir_hmi        An error inject to PC FIR has occurred to set HMI.
- *                           This error inject can also set FIR(61) to cause
- *                           recovery.
- *
- * 17    reserved            reserved
- *
- * 18    trig_fir_hmi        Debug trigger has occurred to set HMI. This
- *                           trigger can also set FIR(60) to cause recovery
- *
- * 19-20 reserved            reserved
- *
- * 21-23 xscom_status        If bit 8 is active, the reason will be detailed in
- *                           these bits. These bits are information only and
- *                           always masked (mask = ‘0’) If hypervisor intends
- *                           to use this field, it is responsible for clearing
- *                           it before performing the xscom operation.
- *
- * 24:63 Not implemented     Not implemented.
- *
- * P10 HMEER enabled bits:
- * Name                      Action
- * malfunction_alert         Decode and log FIR bits.
- * proc_rcvy_done            Log and continue.
- * tfac_error                Log and attempt to recover time facilities.
- * tfx_error                 Log and attempt to recover time facilities.
- * spurr_scale_limit         Log and continue. XXX?
- * proc_rcvy_again           Log and continue.
- */
-
 /* Used for tracking cpu threads inside hmi handling. */
 #define HMI_STATE_CLEANUP_DONE	0x100
 #define CORE_THREAD_MASK	0x0ff
@@ -249,17 +183,13 @@
 	(SPR_TFMR_TBST_CORRUPT | SPR_TFMR_TB_MISSING_SYNC |	\
 	 SPR_TFMR_TB_MISSING_STEP | SPR_TFMR_FW_CONTROL_ERR |	\
 	 SPR_TFMR_TFMR_CORRUPT | SPR_TFMR_TB_RESIDUE_ERR |	\
-	 SPR_TFMR_HDEC_PARITY_ERROR | SPR_TFMR_TFAC_XFER_ERROR)
+	 SPR_TFMR_HDEC_PARITY_ERROR)
 
 /* TFMR "thread" errors  */
 #define SPR_TFMR_THREAD_ERRORS \
 	(SPR_TFMR_PURR_PARITY_ERR | SPR_TFMR_SPURR_PARITY_ERR |	\
 	 SPR_TFMR_DEC_PARITY_ERR)
 
-/*
- * Starting from p9, core inits are setup to escalate all core
- * local checkstop to system checkstop. Review this list when that changes.
- */
 static const struct core_xstop_bit_info {
 	uint8_t bit;		/* CORE FIR bit number */
 	enum OpalHMI_CoreXstopReason reason;
@@ -282,12 +212,10 @@ static const struct core_xstop_bit_info {
 	{ 63, CORE_CHECKSTOP_PC_SPRD_HYP_ERR_INJ },
 };
 
-struct core_fir_bit_info {
+static const struct core_recoverable_bit_info {
 	uint8_t bit;		/* CORE FIR bit number */
 	const char *reason;
-};
-
-static const struct core_fir_bit_info p9_recoverable_bits[] = {
+} recoverable_bits[] = {
 	{ 0, "IFU - SRAM (ICACHE parity, etc)" },
 	{ 2, "IFU - RegFile" },
 	{ 4, "IFU - Logic" },
@@ -305,58 +233,6 @@ static const struct core_fir_bit_info p9_recoverable_bits[] = {
 	{ 37, "LSU - Logic" },
 	{ 39, "LSU - Recoverable due to not in MT window" },
 	{ 43, "PC - Thread hang recovery" },
-};
-
-static const struct core_fir_bit_info p10_core_fir_bits[] = {
-	{ 0,  "IFU - SRAM recoverable error (ICACHE parity error, etc.)" },
-	{ 1,  "PC - TC checkstop" },
-	{ 2,  "IFU - RegFile recoverable error" },
-	{ 3,  "IFU - RegFile core checkstop" },
-	{ 4,  "IFU - Logic recoverable error" },
-	{ 5,  "IFU - Logic core checkstop" },
-	{ 7,  "VSU - Inference accumulator recoverable error" },
-	{ 8,  "PC - Recovery core checkstop" },
-	{ 9,  "VSU - Slice Target File (STF) recoverable error" },
-	{ 11, "ISU - Logic recoverable error" },
-	{ 12, "ISU - Logic core checkstop" },
-	{ 14, "ISU - Machine check received while ME=0 checkstop" },
-	{ 15, "ISU - UE from L2" },
-	{ 16, "ISU - Number of UEs from L2 above threshold" },
-	{ 17, "ISU - UE on CI load" },
-	{ 18, "MMU - TLB recoverable error" },
-	{ 19, "MMU - SLB error" },
-	{ 21, "MMU - CXT recoverable error" },
-	{ 22, "MMU - Logic core checkstop" },
-	{ 23, "MMU - MMU system checkstop" },
-	{ 24, "VSU - Logic recoverable error" },
-	{ 25, "VSU - Logic core checkstop" },
-	{ 26, "PC - In maint mode and recovery in progress" },
-	{ 28, "PC - PC system checkstop" },
-	{ 29, "LSU - SRAM recoverable error (DCACHE parity error, etc.)" },
-	{ 30, "LSU - Set deleted" },
-	{ 31, "LSU - RegFile recoverable error" },
-	{ 32, "LSU - RegFile core checkstop" },
-	{ 33, "MMU - TLB multi hit error occurred" },
-	{ 34, "MMU - SLB multi hit error occurred" },
-	{ 35, "LSU - ERAT multi hit error occurred" },
-	{ 36, "PC - Forward progress error" },
-	{ 37, "LSU - Logic recoverable error" },
-	{ 38, "LSU - Logic core checkstop" },
-	{ 41, "LSU - System checkstop" },
-	{ 43, "PC - Thread hang recoverable error" },
-	{ 45, "PC - Logic core checkstop" },
-	{ 47, "PC - TimeBase facility checkstop" },
-	{ 52, "PC - Hang recovery failed core checkstop" },
-	{ 53, "PC - Core internal hang detected" },
-	{ 55, "PC - Nest hang detected" },
-	{ 56, "PC - Other core chiplet recoverable error" },
-	{ 57, "PC - Other core chiplet core checkstop" },
-	{ 58, "PC - Other core chiplet system checkstop" },
-	{ 59, "PC - SCOM satellite error detected" },
-	{ 60, "PC - Debug trigger error inject" },
-	{ 61, "PC - SCOM or firmware recoverable error inject" },
-	{ 62, "PC - Firmware checkstop error inject" },
-	{ 63, "PC - Firmware SPRC / SPRD checkstop" },
 };
 
 static const struct nx_xstop_bit_info {
@@ -402,12 +278,6 @@ static int setup_scom_addresses(void)
 		nx_status_reg = P9_NX_STATUS_REG;
 		nx_dma_engine_fir = P9_NX_DMA_ENGINE_FIR;
 		nx_pbi_fir = P9_NX_PBI_FIR;
-		return 1;
-	case proc_gen_p10:
-		malf_alert_scom = P10_MALFUNC_ALERT;
-		nx_status_reg = P10_NX_STATUS_REG;
-		nx_dma_engine_fir = P10_NX_DMA_ENGINE_FIR;
-		nx_pbi_fir = P10_NX_PBI_FIR;
 		return 1;
 	default:
 		prerror("%s: Unknown CPU type\n", __func__);
@@ -459,10 +329,6 @@ static int read_core_fir(uint32_t chip_id, uint32_t core_id, uint64_t *core_fir)
 		rc = xscom_read(chip_id,
 			XSCOM_ADDR_P9_EC(core_id, P9_CORE_FIR), core_fir);
 		break;
-	case proc_gen_p10:
-		rc = xscom_read(chip_id,
-			XSCOM_ADDR_P10_EC(core_id, P10_CORE_FIR), core_fir);
-		break;
 	default:
 		rc = OPAL_HARDWARE;
 	}
@@ -477,10 +343,6 @@ static int read_core_wof(uint32_t chip_id, uint32_t core_id, uint64_t *core_wof)
 	case proc_gen_p9:
 		rc = xscom_read(chip_id,
 			XSCOM_ADDR_P9_EC(core_id, P9_CORE_WOF), core_wof);
-		break;
-	case proc_gen_p10:
-		rc = xscom_read(chip_id,
-			XSCOM_ADDR_P10_EC(core_id, P10_CORE_WOF), core_wof);
 		break;
 	default:
 		rc = OPAL_HARDWARE;
@@ -541,19 +403,12 @@ static bool decode_core_fir(struct cpu_thread *cpu,
 			loc ? loc : "Not Available",
 			cpu->chip_id, core_id, core_fir);
 
-	if (proc_gen == proc_gen_p10) {
-		for (i = 0; i < ARRAY_SIZE(p10_core_fir_bits); i++) {
-			if (core_fir & PPC_BIT(p10_core_fir_bits[i].bit))
-				prlog(PR_INFO, "    %s\n", p10_core_fir_bits[i].reason);
-		}
-	}
-
 	/* Check CORE FIR bits and populate HMI event with error info. */
 	for (i = 0; i < ARRAY_SIZE(xstop_bits); i++) {
 		if (core_fir & PPC_BIT(xstop_bits[i].bit)) {
 			found = true;
 			hmi_evt->u.xstop_error.xstop_reason
-					|= cpu_to_be32(xstop_bits[i].reason);
+						|= xstop_bits[i].reason;
 		}
 	}
 	return found;
@@ -584,7 +439,7 @@ static void find_core_checkstop_reason(struct OpalHMIEvent *hmi_evt,
 
 		/* Initialize xstop_error fields. */
 		hmi_evt->u.xstop_error.xstop_reason = 0;
-		hmi_evt->u.xstop_error.u.pir = cpu_to_be32(cpu->pir);
+		hmi_evt->u.xstop_error.u.pir = cpu->pir;
 
 		if (decode_core_fir(cpu, hmi_evt))
 			queue_hmi_event(hmi_evt, 0, out_flags);
@@ -603,10 +458,6 @@ static void find_capp_checkstop_reason(int flat_chip_id,
 	uint64_t capp_fir_action1;
 	uint64_t reg;
 	int64_t rc;
-
-	/* CAPP exists on P8 and P9 only */
-	if (proc_gen != proc_gen_p8 && proc_gen != proc_gen_p9)
-		return;
 
 	/* Find the CAPP on the chip associated with the HMI. */
 	for_each_phb(phb) {
@@ -679,7 +530,7 @@ static void find_nx_checkstop_reason(int flat_chip_id,
 	hmi_evt->severity = OpalHMI_SEV_FATAL;
 	hmi_evt->type = OpalHMI_ERROR_MALFUNC_ALERT;
 	hmi_evt->u.xstop_error.xstop_type = CHECKSTOP_TYPE_NX;
-	hmi_evt->u.xstop_error.u.chip_id = cpu_to_be32(flat_chip_id);
+	hmi_evt->u.xstop_error.u.chip_id = flat_chip_id;
 
 	/* Get DMA & Engine FIR data register value. */
 	if (xscom_read(flat_chip_id, nx_dma_engine_fir, &nx_dma_fir) != 0) {
@@ -697,12 +548,12 @@ static void find_nx_checkstop_reason(int flat_chip_id,
 	for (i = 0; i < ARRAY_SIZE(nx_dma_xstop_bits); i++)
 		if (nx_dma_fir & PPC_BIT(nx_dma_xstop_bits[i].bit))
 			hmi_evt->u.xstop_error.xstop_reason
-				|= cpu_to_be32(nx_dma_xstop_bits[i].reason);
+						|= nx_dma_xstop_bits[i].reason;
 
 	for (i = 0; i < ARRAY_SIZE(nx_pbi_xstop_bits); i++)
 		if (nx_pbi_fir_val & PPC_BIT(nx_pbi_xstop_bits[i].bit))
 			hmi_evt->u.xstop_error.xstop_reason
-				|= cpu_to_be32(nx_pbi_xstop_bits[i].reason);
+						|= nx_pbi_xstop_bits[i].reason;
 
 	/*
 	 * Set NXDMAENGFIR[38] to signal PRD that service action is required.
@@ -719,7 +570,13 @@ static void find_nx_checkstop_reason(int flat_chip_id,
 	queue_hmi_event(hmi_evt, 0, out_flags);
 }
 
-static void add_npu_xstop_reason(uint32_t *xstop_reason, uint8_t reason)
+static bool phb_is_npu2(struct dt_node *dn)
+{
+	return (dt_node_is_compatible(dn, "ibm,power9-npu-pciex") ||
+		dt_node_is_compatible(dn, "ibm,power9-npu-opencapi-pciex"));
+}
+
+static void add_npu2_xstop_reason(uint32_t *xstop_reason, uint8_t reason)
 {
 	int i, reason_count;
 	uint8_t *ptr;
@@ -735,8 +592,8 @@ static void add_npu_xstop_reason(uint32_t *xstop_reason, uint8_t reason)
 	}
 }
 
-static void encode_npu_xstop_reason(uint32_t *xstop_reason,
-				    uint64_t fir, int fir_number)
+static void encode_npu2_xstop_reason(uint32_t *xstop_reason,
+				uint64_t fir, int fir_number)
 {
 	int bit;
 	uint8_t reason;
@@ -754,125 +611,110 @@ static void encode_npu_xstop_reason(uint32_t *xstop_reason,
 		bit = ilog2(fir);
 		reason = fir_number << 6;
 		reason |= (63 - bit); // IBM numbering
-		add_npu_xstop_reason(xstop_reason, reason);
+		add_npu2_xstop_reason(xstop_reason, reason);
 		fir ^= 1ULL << bit;
 	}
 }
 
-static bool npu_fir_errors(struct phb *phb, int flat_chip_id,
-			   uint32_t *xstop_reason)
+static void find_npu2_checkstop_reason(int flat_chip_id,
+				      struct OpalHMIEvent *hmi_evt,
+				      uint64_t *out_flags)
 {
-	uint64_t fir, fir_mask;
-	uint64_t fir_action0, fir_action1;
-	uint64_t fir_reg, fir_mask_reg;
-	uint64_t fir_action0_reg, fir_action1_reg;
+	struct phb *phb;
+	int i;
+	bool npu2_hmi_verbose = false, found = false;
+	uint64_t npu2_fir;
+	uint64_t npu2_fir_mask;
+	uint64_t npu2_fir_action0;
+	uint64_t npu2_fir_action1;
+	uint64_t npu2_fir_addr;
+	uint64_t npu2_fir_mask_addr;
+	uint64_t npu2_fir_action0_addr;
+	uint64_t npu2_fir_action1_addr;
 	uint64_t fatal_errors;
-	uint64_t xscom_base;
-	bool fir_errors = false;
-	int fir_regs;
+	uint32_t xstop_reason = 0;
+	int total_errors = 0;
 	const char *loc;
-	struct npu *npu;
-	struct npu2 *npu2 = NULL;
-	struct npu2_dev *dev;
-	struct pau *pau;
 
-	fir_regs = (phb->phb_type == phb_type_pcie_v3) ? 1 : 3;
+	/* Find the NPU on the chip associated with the HMI. */
+	for_each_phb(phb) {
+		/* NOTE: if a chip ever has >1 NPU this will need adjusting */
+		if (phb_is_npu2(phb->dt_node) &&
+		    (dt_get_chip_id(phb->dt_node) == flat_chip_id)) {
+			found = true;
+			break;
+		}
+	}
 
-	for (uint32_t i = 0; i < fir_regs; i++) {
-		switch (phb->phb_type) {
-		case phb_type_pcie_v3:
-			fir_reg = NX_FIR;
-			fir_mask_reg = NX_FIR_MASK;
-			fir_action0_reg = NX_FIR_ACTION0;
-			fir_action1_reg = NX_FIR_ACTION1;
+	/* If we didn't find a NPU on the chip, it's not our checkstop. */
+	if (!found)
+		return;
 
-			npu = phb_to_npu(phb);
-			if (npu != NULL)
-				xscom_base = npu->at_xscom;
-			else
-				continue;
-		break;
-		case phb_type_npu_v2:
-			fir_reg = NPU2_FIR(i);
-			fir_mask_reg = NPU2_FIR_MASK(i);
-			fir_action0_reg = NPU2_FIR_ACTION0(i);
-			fir_action1_reg = NPU2_FIR_ACTION1(i);
-			npu2 = phb_to_npu2_nvlink(phb);
-			xscom_base = npu2->xscom_base;
-		break;
-		case phb_type_npu_v2_opencapi:
-			fir_reg = NPU2_FIR(i);
-			fir_mask_reg = NPU2_FIR_MASK(i);
-			fir_action0_reg = NPU2_FIR_ACTION0(i);
-			fir_action1_reg = NPU2_FIR_ACTION1(i);
-			dev = phb_to_npu2_dev_ocapi(phb);
-			npu2 = dev->npu;
-			xscom_base = npu2->xscom_base;
-		break;
-		case phb_type_pau_opencapi:
-			fir_reg = PAU_FIR(i);
-			fir_mask_reg = PAU_FIR_MASK(i);
-			fir_action0_reg = PAU_FIR_ACTION0(i);
-			fir_action1_reg = PAU_FIR_ACTION1(i);
-			pau = ((struct pau_dev *)(pau_phb_to_opencapi_dev(phb)))->pau;
-			xscom_base = pau->xscom_base;
-		break;
-		default:
+	npu2_fir_addr = NPU2_FIR_REGISTER_0;
+	npu2_fir_mask_addr = NPU2_FIR_REGISTER_0 + NPU2_FIR_MASK_OFFSET;
+	npu2_fir_action0_addr = NPU2_FIR_REGISTER_0 + NPU2_FIR_ACTION0_OFFSET;
+	npu2_fir_action1_addr = NPU2_FIR_REGISTER_0 + NPU2_FIR_ACTION1_OFFSET;
+
+	for (i = 0; i < NPU2_TOTAL_FIR_REGISTERS; i++) {
+		/* Read all the registers necessary to find a checkstop condition. */
+		if (xscom_read(flat_chip_id, npu2_fir_addr, &npu2_fir) ||
+			xscom_read(flat_chip_id, npu2_fir_mask_addr, &npu2_fir_mask) ||
+			xscom_read(flat_chip_id, npu2_fir_action0_addr, &npu2_fir_action0) ||
+			xscom_read(flat_chip_id, npu2_fir_action1_addr, &npu2_fir_action1)) {
+			prerror("HMI: Couldn't read NPU FIR register%d with XSCOM\n", i);
 			continue;
 		}
 
-		if (xscom_read(flat_chip_id, xscom_base + fir_reg, &fir) ||
-		    xscom_read(flat_chip_id, xscom_base + fir_mask_reg, &fir_mask) ||
-		    xscom_read(flat_chip_id, xscom_base + fir_action0_reg, &fir_action0) ||
-		    xscom_read(flat_chip_id, xscom_base + fir_action1_reg, &fir_action1)) {
-			prerror("HMI: Couldn't read NPU/PAU FIR register%d with XSCOM\n", i);
-			continue;
-		}
-
-		fatal_errors = fir & ~fir_mask & fir_action0 & fir_action1;
+		fatal_errors = npu2_fir & ~npu2_fir_mask & npu2_fir_action0 & npu2_fir_action1;
 
 		if (fatal_errors) {
 			loc = chip_loc_code(flat_chip_id);
 			if (!loc)
 				loc = "Not Available";
-			prlog(PR_ERR, "NPU/PAU: [Loc: %s] P:%d FIR#%d "
-				      "FIR 0x%016llx mask 0x%016llx\n",
-				      loc, flat_chip_id, i, fir, fir_mask);
-			prlog(PR_ERR, "NPU/PAU: [Loc: %s] P:%d ACTION0 "
-				      "0x%016llx, ACTION1 0x%016llx\n",
-				      loc, flat_chip_id, fir_action0, fir_action1);
-			if (phb->phb_type != phb_type_pcie_v3)
-				encode_npu_xstop_reason(xstop_reason,
-							fatal_errors,
-							i);
-			fir_errors = true;
+			prlog(PR_ERR, "NPU: [Loc: %s] P:%d FIR#%d FIR 0x%016llx mask 0x%016llx\n",
+					loc, flat_chip_id, i, npu2_fir, npu2_fir_mask);
+			prlog(PR_ERR, "NPU: [Loc: %s] P:%d ACTION0 0x%016llx, ACTION1 0x%016llx\n",
+					loc, flat_chip_id, npu2_fir_action0, npu2_fir_action1);
+			total_errors++;
+
+			encode_npu2_xstop_reason(&xstop_reason, fatal_errors, i);
 		}
+
+		/* Can't do a fence yet, we are just logging fir information for now */
+		npu2_fir_addr += NPU2_FIR_OFFSET;
+		npu2_fir_mask_addr += NPU2_FIR_OFFSET;
+		npu2_fir_action0_addr += NPU2_FIR_OFFSET;
+		npu2_fir_action1_addr += NPU2_FIR_OFFSET;
+
 	}
 
-	/* dump registers */
-	if (fir_errors) {
-		switch (phb->phb_type) {
-		case phb_type_npu_v2:
-		case phb_type_npu_v2_opencapi:
-			npu2_dump_scoms(npu2, flat_chip_id);
-		break;
-		case phb_type_pau_opencapi:
-			pau_opencapi_dump_scoms(pau);
-		break;
-		default:
-		break;
-		}
+	if (!total_errors)
+		return;
 
+	npu2_hmi_verbose = nvram_query_eq_safe("npu2-hmi-verbose", "true");
+	/* Force this for now until we sort out something better */
+	npu2_hmi_verbose = true;
+
+	if (npu2_hmi_verbose) {
+		npu2_dump_scoms(flat_chip_id);
 		prlog(PR_ERR, " _________________________ \n");
-		prlog(PR_ERR, "< It's Debug time!        >\n");
+		prlog(PR_ERR, "<    It's Debug time!     >\n");
 		prlog(PR_ERR, " ------------------------- \n");
-		prlog(PR_ERR, "       \\   ,__,           \n");
-		prlog(PR_ERR, "        \\  (oo)____       \n");
-		prlog(PR_ERR, "           (__)    )\\     \n");
+		prlog(PR_ERR, "       \\   ,__,            \n");
+		prlog(PR_ERR, "        \\  (oo)____        \n");
+		prlog(PR_ERR, "           (__)    )\\      \n");
 		prlog(PR_ERR, "              ||--|| *     \n");
 	}
 
-	return fir_errors;
+	/* Set up the HMI event */
+	hmi_evt->severity = OpalHMI_SEV_WARNING;
+	hmi_evt->type = OpalHMI_ERROR_MALFUNC_ALERT;
+	hmi_evt->u.xstop_error.xstop_type = CHECKSTOP_TYPE_NPU;
+	hmi_evt->u.xstop_error.xstop_reason = xstop_reason;
+	hmi_evt->u.xstop_error.u.chip_id = flat_chip_id;
+
+	/* Marking the event as recoverable so that we don't crash */
+	queue_hmi_event(hmi_evt, 1, out_flags);
 }
 
 static void find_npu_checkstop_reason(int flat_chip_id,
@@ -880,47 +722,67 @@ static void find_npu_checkstop_reason(int flat_chip_id,
 				      uint64_t *out_flags)
 {
 	struct phb *phb;
-	struct dt_node *dn;
-	uint32_t xstop_reason = 0;
+	struct npu *p = NULL;
 
-	/* Only check for NPU errors if the chip has a NPU/PAU */
-	if ((PVR_TYPE(mfspr(SPR_PVR)) != PVR_TYPE_P8NVL) &&
-	    (PVR_TYPE(mfspr(SPR_PVR)) != PVR_TYPE_P9) &&
-	    (PVR_TYPE(mfspr(SPR_PVR)) != PVR_TYPE_P10))
+	uint64_t npu_fir;
+	uint64_t npu_fir_mask;
+	uint64_t npu_fir_action0;
+	uint64_t npu_fir_action1;
+	uint64_t fatal_errors;
+
+	/* Only check for NPU errors if the chip has a NPU */
+	if (PVR_TYPE(mfspr(SPR_PVR)) != PVR_TYPE_P8NVL)
+		return find_npu2_checkstop_reason(flat_chip_id, hmi_evt, out_flags);
+
+	/* Find the NPU on the chip associated with the HMI. */
+	for_each_phb(phb) {
+		/* NOTE: if a chip ever has >1 NPU this will need adjusting */
+		if (dt_node_is_compatible(phb->dt_node, "ibm,power8-npu-pciex") &&
+		    (dt_get_chip_id(phb->dt_node) == flat_chip_id)) {
+			p = phb_to_npu(phb);
+			break;
+		}
+	}
+
+	/* If we didn't find a NPU on the chip, it's not our checkstop. */
+	if (p == NULL)
 		return;
 
-	/* Find the NPU/PAU on the chip associated with the HMI. */
-	for_each_phb(phb) {
-		dn = phb->dt_node;
-
-		if (!(dt_node_is_compatible(dn, "ibm,power8-npu-pciex") ||
-		      dt_node_is_compatible(dn, "ibm,power9-npu-pciex") ||
-		      dt_node_is_compatible(dn, "ibm,power9-npu-opencapi-pciex") ||
-		      dt_node_is_compatible(dn, "ibm,power10-pau-opencapi-pciex")))
-			continue;
-
-		if (dt_get_chip_id(dn) != flat_chip_id)
-			continue;
-
-		/* Read all the registers necessary to find a checkstop condition. */
-		if (!npu_fir_errors(phb, flat_chip_id, &xstop_reason))
-			continue;
-
-		if (phb->phb_type == phb_type_pcie_v3) {
-			/* Set the NPU to fenced since it can't recover. */
-			npu_set_fence_state(phb_to_npu(phb), true);
-		}
-
-		/* Set up the HMI event */
-		hmi_evt->severity = OpalHMI_SEV_WARNING;
-		hmi_evt->type = OpalHMI_ERROR_MALFUNC_ALERT;
-		hmi_evt->u.xstop_error.xstop_type = CHECKSTOP_TYPE_NPU;
-		hmi_evt->u.xstop_error.xstop_reason = xstop_reason;
-		hmi_evt->u.xstop_error.u.chip_id = cpu_to_be32(flat_chip_id);
-
-		/* Marking the event as recoverable so that we don't crash */
-		queue_hmi_event(hmi_evt, 1, out_flags);
+	/* Read all the registers necessary to find a checkstop condition. */
+	if (xscom_read(flat_chip_id,
+		       p->at_xscom + NX_FIR, &npu_fir) ||
+	    xscom_read(flat_chip_id,
+		       p->at_xscom + NX_FIR_MASK, &npu_fir_mask) ||
+	    xscom_read(flat_chip_id,
+		       p->at_xscom + NX_FIR_ACTION0, &npu_fir_action0) ||
+	    xscom_read(flat_chip_id,
+		       p->at_xscom + NX_FIR_ACTION1, &npu_fir_action1)) {
+		prerror("Couldn't read NPU registers with XSCOM\n");
+		return;
 	}
+
+	fatal_errors = npu_fir & ~npu_fir_mask & npu_fir_action0 & npu_fir_action1;
+
+	/* If there's no errors, we don't need to do anything. */
+	if (!fatal_errors)
+		return;
+
+	prlog(PR_DEBUG, "NPU: FIR 0x%016llx mask 0x%016llx\n",
+	      npu_fir, npu_fir_mask);
+	prlog(PR_DEBUG, "NPU: ACTION0 0x%016llx, ACTION1 0x%016llx\n",
+	      npu_fir_action0, npu_fir_action1);
+
+	/* Set the NPU to fenced since it can't recover. */
+	npu_set_fence_state(p, true);
+
+	/* Set up the HMI event */
+	hmi_evt->severity = OpalHMI_SEV_WARNING;
+	hmi_evt->type = OpalHMI_ERROR_MALFUNC_ALERT;
+	hmi_evt->u.xstop_error.xstop_type = CHECKSTOP_TYPE_NPU;
+	hmi_evt->u.xstop_error.u.chip_id = flat_chip_id;
+
+	/* The HMI is "recoverable" because it shouldn't crash the system */
+	queue_hmi_event(hmi_evt, 1, out_flags);
 }
 
 static void decode_malfunction(struct OpalHMIEvent *hmi_evt, uint64_t *out_flags)
@@ -949,8 +811,7 @@ static void decode_malfunction(struct OpalHMIEvent *hmi_evt, uint64_t *out_flags
 			xscom_write(this_cpu()->chip_id, malf_alert_scom,
 								~PPC_BIT(i));
 			find_capp_checkstop_reason(i, hmi_evt, &flags);
-			if (proc_gen != proc_gen_p10)
-				find_nx_checkstop_reason(i, hmi_evt, &flags);
+			find_nx_checkstop_reason(i, hmi_evt, &flags);
 			find_npu_checkstop_reason(i, hmi_evt, &flags);
 		}
 	}
@@ -1054,7 +915,6 @@ static void hmi_print_debug(const uint8_t *msg, uint64_t hmer)
 	if (!loc)
 		loc = "Not Available";
 
-	/* Also covers P10 SPR_HMER_TFAC_SHADOW_XFER_ERROR */
 	if (hmer & (SPR_HMER_TFAC_ERROR | SPR_HMER_TFMR_PARITY_ERROR)) {
 		prlog(PR_DEBUG, "[Loc: %s]: P:%d C:%d T:%d: TFMR(%016lx) %s\n",
 			loc, this_cpu()->chip_id, core_id, thread_index,
@@ -1261,7 +1121,7 @@ static int handle_tfac_errors(struct OpalHMIEvent *hmi_evt, uint64_t *out_flags)
 	uint64_t tfmr = mfspr(SPR_TFMR);
 
 	/* Initialize the hmi event with old value of TFMR */
-	hmi_evt->tfmr = cpu_to_be64(tfmr);
+	hmi_evt->tfmr = tfmr;
 
 	/* A TFMR parity/corrupt error makes us ignore all the local stuff.*/
 	if (tfmr & SPR_TFMR_TFMR_CORRUPT) {
@@ -1349,7 +1209,7 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 	prlog(PR_DEBUG, "Received HMI interrupt: HMER = 0x%016llx\n", hmer);
 	/* Initialize the hmi event with old value of HMER */
 	if (hmi_evt)
-		hmi_evt->hmer = cpu_to_be64(hmer);
+		hmi_evt->hmer = hmer;
 
 	/* Handle Timer/TOD errors separately */
 	if (hmer & (SPR_HMER_TFAC_ERROR | SPR_HMER_TFMR_PARITY_ERROR)) {
@@ -1376,16 +1236,10 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 			int i;
 
 			prlog(PR_DEBUG, "Core WOF = 0x%016llx recovered error:\n", core_wof);
-			if (proc_gen <= proc_gen_p9) {
-				for (i = 0; i < ARRAY_SIZE(p9_recoverable_bits); i++) {
-					if (core_wof & PPC_BIT(p9_recoverable_bits[i].bit))
-						prlog(PR_DEBUG, "    %s\n", p9_recoverable_bits[i].reason);
-				}
-			} else if (proc_gen == proc_gen_p10) {
-				for (i = 0; i < ARRAY_SIZE(p10_core_fir_bits); i++) {
-					if (core_wof & PPC_BIT(p10_core_fir_bits[i].bit))
-						prlog(PR_DEBUG, "    %s\n", p10_core_fir_bits[i].reason);
-				}
+			for (i = 0; i < ARRAY_SIZE(recoverable_bits); i++) {
+				if (core_wof & PPC_BIT(recoverable_bits[i].bit))
+					prlog(PR_DEBUG, "%s\n",
+						recoverable_bits[i].reason);
 			}
 		}
 
@@ -1396,8 +1250,7 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 			queue_hmi_event(hmi_evt, recover, out_flags);
 		}
 	}
-
-	if ((proc_gen <= proc_gen_p9) && (hmer & SPR_HMER_PROC_RECV_ERROR_MASKED)) {
+	if (hmer & SPR_HMER_PROC_RECV_ERROR_MASKED) {
 		handled |= SPR_HMER_PROC_RECV_ERROR_MASKED;
 		if (cpu_is_thread0(cpu) && hmi_evt) {
 			hmi_evt->severity = OpalHMI_SEV_NO_ERROR;
@@ -1406,7 +1259,6 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 		}
 		hmi_print_debug("Processor recovery Done (masked).", hmer);
 	}
-
 	if (hmer & SPR_HMER_PROC_RECV_AGAIN) {
 		handled |= SPR_HMER_PROC_RECV_AGAIN;
 		if (cpu_is_thread0(cpu) && hmi_evt) {
@@ -1417,30 +1269,17 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 		hmi_print_debug("Processor recovery occurred again before"
 				"bit2 was cleared\n", hmer);
 	}
-
-	/* XXX: what to do with this? */
-	if (hmer & SPR_HMER_SPURR_SCALE_LIMIT) {
-		handled |= SPR_HMER_SPURR_SCALE_LIMIT;
-		if (cpu_is_thread0(cpu) && hmi_evt) {
-			hmi_evt->severity = OpalHMI_SEV_NO_ERROR;
-			hmi_evt->type = OpalHMI_ERROR_PROC_RECOV_DONE;
-			queue_hmi_event(hmi_evt, recover, out_flags);
-		}
-		hmi_print_debug("Turbo versus nominal frequency exceeded limit.", hmer);
-	}
-
 	/* Assert if we see malfunction alert, we can not continue. */
 	if (hmer & SPR_HMER_MALFUNCTION_ALERT) {
 		handled |= SPR_HMER_MALFUNCTION_ALERT;
 
 		hmi_print_debug("Malfunction Alert", hmer);
-		recover = 0;
 		if (hmi_evt)
 			decode_malfunction(hmi_evt, out_flags);
 	}
 
 	/* Assert if we see Hypervisor resource error, we can not continue. */
-	if ((proc_gen <= proc_gen_p9) && (hmer & SPR_HMER_HYP_RESOURCE_ERR)) {
+	if (hmer & SPR_HMER_HYP_RESOURCE_ERR) {
 		handled |= SPR_HMER_HYP_RESOURCE_ERR;
 
 		hmi_print_debug("Hypervisor resource error", hmer);
@@ -1451,34 +1290,9 @@ static int handle_hmi_exception(uint64_t hmer, struct OpalHMIEvent *hmi_evt,
 			queue_hmi_event(hmi_evt, recover, out_flags);
 		}
 	}
-
-	/* XXX: what to do with this? */
-	if ((proc_gen <= proc_gen_p9) && (hmer & SPR_HMER_THD_WAKE_BLOCKED_TM_SUSPEND)) {
-		handled |= SPR_HMER_THD_WAKE_BLOCKED_TM_SUSPEND;
-		hmer &= ~SPR_HMER_THD_WAKE_BLOCKED_TM_SUSPEND;
-
-		hmi_print_debug("Attempted to wake thread when threads in TM suspend mode.", hmer);
-		if (hmi_evt) {
-			hmi_evt->severity = OpalHMI_SEV_NO_ERROR;
-			hmi_evt->type = OpalHMI_ERROR_PROC_RECOV_DONE,
-				queue_hmi_event(hmi_evt, recover, out_flags);
-		}
-	}
-
-	if ((proc_gen <= proc_gen_p9) && (hmer & SPR_HMER_TRIG_FIR_HMI)) {
+	if (hmer & SPR_HMER_TRIG_FIR_HMI) {
 		handled |= SPR_HMER_TRIG_FIR_HMI;
 		hmer &= ~SPR_HMER_TRIG_FIR_HMI;
-
-		hmi_print_debug("Clearing unknown debug trigger", hmer);
-		if (hmi_evt) {
-			hmi_evt->severity = OpalHMI_SEV_NO_ERROR;
-			hmi_evt->type = OpalHMI_ERROR_DEBUG_TRIG_FIR,
-				queue_hmi_event(hmi_evt, recover, out_flags);
-		}
-	}
-	if ((proc_gen == proc_gen_p10) && (hmer & SPR_HMER_P10_TRIG_FIR_HMI)) {
-		handled |= SPR_HMER_P10_TRIG_FIR_HMI;
-		hmer &= ~SPR_HMER_P10_TRIG_FIR_HMI;
 
 		hmi_print_debug("Clearing unknown debug trigger", hmer);
 		if (hmi_evt) {

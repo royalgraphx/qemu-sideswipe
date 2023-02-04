@@ -36,3 +36,4 @@ Pkcs7GetAttachedContent (
   ASSERT (FALSE);
   return FALSE;
 }
+

@@ -20,22 +20,14 @@
 #
 ################################################################################
 
-[Defines]
-!if $(FD_SIZE_IN_MB) == 2
-  DEFINE FVMAIN_COMPACT_SIZE  = 0x1fe000
-!endif
-!if $(FD_SIZE_IN_MB) == 3
-  DEFINE FVMAIN_COMPACT_SIZE  = 0x2fe000
-!endif
-
 [FD.XEN_EFI]
 BaseAddress   = 0x00000000|gArmTokenSpaceGuid.PcdFdBaseAddress
-Size          = $(FD_SIZE)|gArmTokenSpaceGuid.PcdFdSize
+Size          = 0x00200000|gArmTokenSpaceGuid.PcdFdSize
 ErasePolarity = 1
 
 # This one is tricky, it must be: BlockSize * NumBlocks = Size
 BlockSize     = 0x00001000
-NumBlocks     = $(FD_NUM_BLOCKS)
+NumBlocks     = 0x200
 
 ################################################################################
 #
@@ -64,12 +56,7 @@ DATA = {
   0x01, 0x00, 0x00, 0x10,                         # code0: adr x1, .
   0xff, 0x07, 0x00, 0x14,                         # code1: b 0x2000
   0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, # text_offset: 512 KB
-!if $(FD_SIZE_IN_MB) == 2
   0x00, 0x00, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, # image_size: 2 MB
-!endif
-!if $(FD_SIZE_IN_MB) == 3
-  0x00, 0x00, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, # image_size: 3 MB
-!endif
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # flags
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # res2
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, # res3
@@ -89,17 +76,12 @@ DATA = {
   0xf6, 0x07, 0x00, 0xea, # b 0x2000
   0x18, 0x28, 0x6f, 0x01, # magic
   0x00, 0x00, 0x00, 0x00, # start
-!if $(FD_SIZE_IN_MB) == 2
   0x00, 0x00, 0x20, 0x00, # image size: 2 MB
-!endif
-!if $(FD_SIZE_IN_MB) == 3
-  0x00, 0x00, 0x30, 0x00, # image size: 3 MB
-!endif
   0x01, 0x02, 0x03, 0x04  # endiannness flag
 !endif
 }
 
-0x00002000|$(FVMAIN_COMPACT_SIZE)
+0x00002000|0x001fe000
 gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
 FV = FVMAIN_COMPACT
 
@@ -139,7 +121,7 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Core/Dxe/DxeMain.inf
   INF MdeModulePkg/Universal/PCD/Dxe/Pcd.inf
   INF ArmVirtPkg/XenioFdtDxe/XenioFdtDxe.inf
-  INF EmbeddedPkg/Drivers/FdtClientDxe/FdtClientDxe.inf
+  INF ArmVirtPkg/FdtClientDxe/FdtClientDxe.inf
 
   #
   # PI DXE Drivers producing Architectural Protocols (EFI Services)
@@ -177,10 +159,11 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
   INF MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
 
+  #
+  # UEFI application (Shell Embedded Boot Loader)
+  #
   INF ShellPkg/Application/Shell/Shell.inf
   INF ShellPkg/DynamicCommand/TftpDynamicCommand/TftpDynamicCommand.inf
-  INF ShellPkg/DynamicCommand/HttpDynamicCommand/HttpDynamicCommand.inf
-  INF OvmfPkg/LinuxInitrdDynamicShellCommand/LinuxInitrdDynamicShellCommand.inf
 
   #
   # Bds
@@ -231,7 +214,7 @@ READ_STATUS        = TRUE
 READ_LOCK_CAP      = TRUE
 READ_LOCK_STATUS   = TRUE
 
-  INF RuleOverride = SELF_RELOC ArmVirtPkg/PrePi/ArmVirtPrePiUniCoreRelocatable.inf
+  INF ArmVirtPkg/PrePi/ArmVirtPrePiUniCoreRelocatable.inf
 
   FILE FV_IMAGE = 9E21FD93-9C72-4c15-8C4B-E77F1DB2D792 {
     SECTION GUIDED EE4E5898-3914-4259-9D6E-DC7BD79403CF PROCESSING_REQUIRED = TRUE {

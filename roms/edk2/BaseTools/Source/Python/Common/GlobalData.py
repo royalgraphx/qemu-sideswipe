@@ -29,7 +29,6 @@ gProcessingFile = ''
 gBuildingModule = ''
 gSkuids = []
 gDefaultStores = []
-gGuidDict = {}
 
 # definition for a MACRO name.  used to create regular expressions below.
 _MacroNamePattern = "[A-Z][A-Z0-9_]*"
@@ -71,7 +70,7 @@ gAutoGenPhase = False
 # The Conf dir outside the workspace dir
 #
 gConfDirectory = ''
-gCmdConfDir = ''
+
 gBuildDirectory = ''
 #
 # The relative default database file path
@@ -105,20 +104,17 @@ gUseHashCache = None
 gBinCacheDest = None
 gBinCacheSource = None
 gPlatformHash = None
-gPlatformHashFile = None
-gPackageHash = None
-gPackageHashFile = None
-gModuleHashFile = None
-gCMakeHashFile = None
-gHashChainStatus = None
-gModulePreMakeCacheStatus = None
-gModuleMakeCacheStatus = None
-gFileHashDict = None
-gModuleAllCacheStatus = None
-gModuleCacheHit = None
-
-gEnableGenfdsMultiThread = True
+gPackageHash = {}
+gModuleHash = {}
+gEnableGenfdsMultiThread = False
 gSikpAutoGenCache = set()
-# Common lock for the file access in multiple process AutoGens
-file_lock = None
 
+# Dictionary for tracking Module build status as success or failure
+# False -> Fail : True -> Success
+gModuleBuildTracking = dict()
+
+# Dictionary of booleans that dictate whether a module or
+# library can be skiped
+# Top Dict:     Key: Arch Type              Value: Dictionary
+# Second Dict:  Key: Module\Library Name    Value: True\False
+gBuildHashSkipTracking = dict()

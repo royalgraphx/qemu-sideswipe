@@ -4,7 +4,7 @@
 # This SMM driver performs SMM initialization, deploy SMM Entry Vector,
 # provides CPU specific services in SMM.
 #
-# Copyright (c) 2009 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2009 - 2019, Intel Corporation. All rights reserved.<BR>
 # Copyright (c) 2017, AMD Incorporated. All rights reserved.<BR>
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -40,8 +40,6 @@
   SmmProfileInternal.h
   SmramSaveState.c
   SmmCpuMemoryManagement.c
-  SmmMp.h
-  SmmMp.c
 
 [Sources.Ia32]
   Ia32/Semaphore.c
@@ -107,7 +105,6 @@
   gEfiSmmReadyToLockProtocolGuid           ## NOTIFY
   gEfiSmmCpuServiceProtocolGuid            ## PRODUCES
   gEdkiiSmmMemoryAttributeProtocolGuid     ## PRODUCES
-  gEfiMmMpProtocolGuid                    ## PRODUCES
 
 [Guids]
   gEfiAcpiVariableGuid                     ## SOMETIMES_CONSUMES ## HOB # it is used for S3 boot.
@@ -133,19 +130,13 @@
   gUefiCpuPkgTokenSpaceGuid.PcdCpuHotPlugDataAddress               ## SOMETIMES_PRODUCES
   gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmCodeAccessCheckEnable         ## CONSUMES
   gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmSyncMode                      ## CONSUMES
+  gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmStaticPageTable               ## CONSUMES
   gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmShadowStackSize               ## SOMETIMES_CONSUMES
-  gUefiCpuPkgTokenSpaceGuid.PcdCpuFeaturesInitOnS3Resume           ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiS3Enable                   ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdPteMemoryEncryptionAddressOrMask    ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdNullPointerDetectionPropertyMask    ## CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdHeapGuardPropertyMask               ## CONSUMES
   gEfiMdePkgTokenSpaceGuid.PcdControlFlowEnforcementPropertyMask        ## CONSUMES
-
-[FixedPcd]
-  gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmMpTokenCountPerChunk               ## CONSUMES
-
-[Pcd.X64]
-  gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmRestrictedMemoryAccess        ## CONSUMES
 
 [Depex]
   gEfiMpServiceProtocolGuid

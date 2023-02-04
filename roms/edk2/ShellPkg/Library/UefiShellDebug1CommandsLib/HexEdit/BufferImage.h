@@ -16,7 +16,7 @@
   Initialization function for HBufferImage
 
   @retval EFI_SUCCESS       The operation was successful.
-  @retval EFI_LOAD_ERROR    A load error occurred.
+  @retval EFI_LOAD_ERROR    A load error occured.
 **/
 EFI_STATUS
 HBufferImageInit (
@@ -37,7 +37,7 @@ HBufferImageCleanup (
   Refresh function for HBufferImage.
 
   @retval EFI_SUCCESS     The operation was successful.
-  @retval EFI_LOAD_ERROR  A Load error occurred.
+  @retval EFI_LOAD_ERROR  A Load error occured.
 
 **/
 EFI_STATUS
@@ -57,12 +57,12 @@ HBufferImageRefresh (
                         INS
 
   @retval EFI_SUCCESS           The operation was successful.
-  @retval EFI_LOAD_ERROR        A load error occurred.
+  @retval EFI_LOAD_ERROR        A load error occured.
   @retval EFI_OUT_OF_RESOURCES  A Memory allocation failed.
 **/
 EFI_STATUS
 HBufferImageHandleInput (
-  IN  EFI_INPUT_KEY  *Key
+  IN  EFI_INPUT_KEY *Key
   );
 
 /**
@@ -92,14 +92,14 @@ HBufferImageBackup (
 **/
 EFI_STATUS
 HBufferImageRead (
-  IN CONST CHAR16    *FileName,
-  IN CONST CHAR16    *DiskName,
-  IN UINTN           DiskOffset,
-  IN UINTN           DiskSize,
-  IN UINTN           MemOffset,
-  IN UINTN           MemSize,
-  IN EDIT_FILE_TYPE  BufferType,
-  IN BOOLEAN         Recover
+  IN CONST CHAR16                   *FileName,
+  IN CONST CHAR16                   *DiskName,
+  IN UINTN                          DiskOffset,
+  IN UINTN                          DiskSize,
+  IN UINTN                          MemOffset,
+  IN UINTN                          MemSize,
+  IN EDIT_FILE_TYPE                 BufferType,
+  IN BOOLEAN                        Recover
   );
 
 /**
@@ -117,13 +117,13 @@ HBufferImageRead (
 **/
 EFI_STATUS
 HBufferImageSave (
-  IN CHAR16          *FileName,
-  IN CHAR16          *DiskName,
-  IN UINTN           DiskOffset,
-  IN UINTN           DiskSize,
-  IN UINTN           MemOffset,
-  IN UINTN           MemSize,
-  IN EDIT_FILE_TYPE  BufferType
+  IN CHAR16                         *FileName,
+  IN CHAR16                         *DiskName,
+  IN UINTN                          DiskOffset,
+  IN UINTN                          DiskSize,
+  IN UINTN                          MemOffset,
+  IN UINTN                          MemSize,
+  IN EDIT_FILE_TYPE                 BufferType
   );
 
 /**
@@ -139,6 +139,7 @@ HBufferImageMovePosition (
   IN UINTN    NewFilePosCol,
   IN BOOLEAN  HighBits
   );
+
 
 /**
   Create a new line and append it to the line list.
@@ -176,9 +177,9 @@ HBufferImageFree (
 **/
 EFI_STATUS
 HBufferImageDeleteCharacterFromBuffer (
-  IN  UINTN  Pos,
-  IN  UINTN  Count,
-  OUT UINT8  *DeleteBuffer
+  IN  UINTN         Pos,
+  IN  UINTN         Count,
+  OUT UINT8         *DeleteBuffer
   );
 
 /**
@@ -192,9 +193,9 @@ HBufferImageDeleteCharacterFromBuffer (
 **/
 EFI_STATUS
 HBufferImageAddCharacterToBuffer (
-  IN  UINTN  Pos,
-  IN  UINTN  Count,
-  IN  UINT8  *AddBuffer
+  IN  UINTN          Pos,
+  IN  UINTN          Count,
+  IN  UINT8          *AddBuffer
   );
 
 /**
@@ -234,8 +235,8 @@ HBufferImageListToBuffer (
 **/
 VOID
 HBufferImageAdjustMousePosition (
-  IN INT32  TextX,
-  IN INT32  TextY
+  IN INT32 TextX,
+  IN INT32 TextY
   );
 
 /**
@@ -249,8 +250,8 @@ HBufferImageAdjustMousePosition (
 **/
 BOOLEAN
 HBufferImageIsAtHighBits (
-  IN  UINTN  Column,
-  OUT UINTN  *FCol
+  IN  UINTN Column,
+  OUT UINTN *FCol
   );
 
 /**

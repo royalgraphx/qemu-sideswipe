@@ -30,7 +30,6 @@
 #include "hw/qdev-properties.h"
 #include "migration/vmstate.h"
 #include "cpu.h"
-#include "qom/object.h"
 
 /* debug only vmmouse */
 //#define DEBUG_VMMOUSE
@@ -51,9 +50,10 @@
 #endif
 
 #define TYPE_VMMOUSE "vmmouse"
-OBJECT_DECLARE_SIMPLE_TYPE(VMMouseState, VMMOUSE)
+#define VMMOUSE(obj) OBJECT_CHECK(VMMouseState, (obj), TYPE_VMMOUSE)
 
-struct VMMouseState {
+typedef struct VMMouseState
+{
     ISADevice parent_obj;
 
     uint32_t queue[VMMOUSE_QUEUE_SIZE];
@@ -63,7 +63,7 @@ struct VMMouseState {
     uint8_t absolute;
     QEMUPutMouseEntry *entry;
     ISAKBDState *i8042;
-};
+} VMMouseState;
 
 static void vmmouse_get_data(uint32_t *data)
 {
@@ -158,7 +158,6 @@ static void vmmouse_read_id(VMMouseState *s)
 
     s->queue[s->nb_queue++] = VMMOUSE_VERSION;
     s->status = 0;
-    vmmouse_update_handler(s, s->absolute);
 }
 
 static void vmmouse_request_relative(VMMouseState *s)
@@ -286,10 +285,6 @@ static void vmmouse_realizefn(DeviceState *dev, Error **errp)
 
     DPRINTF("vmmouse_init\n");
 
-    if (!s->i8042) {
-        error_setg(errp, "'i8042' link is not set");
-        return;
-    }
     if (!object_resolve_path_type("", TYPE_VMPORT, NULL)) {
         error_setg(errp, "vmmouse needs a machine with vmport");
         return;
@@ -313,7 +308,6 @@ static void vmmouse_class_initfn(ObjectClass *klass, void *data)
     dc->reset = vmmouse_reset;
     dc->vmsd = &vmstate_vmmouse;
     device_class_set_props(dc, vmmouse_properties);
-    set_bit(DEVICE_CATEGORY_INPUT, dc->categories);
 }
 
 static const TypeInfo vmmouse_info = {

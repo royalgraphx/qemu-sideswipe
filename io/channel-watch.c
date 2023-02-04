@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -115,24 +115,28 @@ static gboolean
 qio_channel_socket_source_check(GSource *source)
 {
     static struct timeval tv0;
+
     QIOChannelSocketSource *ssource = (QIOChannelSocketSource *)source;
+    WSANETWORKEVENTS ev;
     fd_set rfds, wfds, xfds;
 
     if (!ssource->condition) {
         return 0;
     }
 
+    WSAEnumNetworkEvents(ssource->socket, ssource->ioc->event, &ev);
+
     FD_ZERO(&rfds);
     FD_ZERO(&wfds);
     FD_ZERO(&xfds);
     if (ssource->condition & G_IO_IN) {
-        FD_SET(ssource->socket, &rfds);
+        FD_SET((SOCKET)ssource->socket, &rfds);
     }
     if (ssource->condition & G_IO_OUT) {
-        FD_SET(ssource->socket, &wfds);
+        FD_SET((SOCKET)ssource->socket, &wfds);
     }
     if (ssource->condition & G_IO_PRI) {
-        FD_SET(ssource->socket, &xfds);
+        FD_SET((SOCKET)ssource->socket, &xfds);
     }
     ssource->revents = 0;
     if (select(0, &rfds, &wfds, &xfds, &tv0) == 0) {
@@ -281,9 +285,11 @@ GSource *qio_channel_create_socket_watch(QIOChannel *ioc,
     GSource *source;
     QIOChannelSocketSource *ssource;
 
+#ifdef WIN32
     WSAEventSelect(socket, ioc->event,
                    FD_READ | FD_ACCEPT | FD_CLOSE |
                    FD_CONNECT | FD_WRITE | FD_OOB);
+#endif
 
     source = g_source_new(&qio_channel_socket_source_funcs,
                           sizeof(QIOChannelSocketSource));

@@ -24,7 +24,6 @@
 #include "chardev/char.h"
 #include "qemu/cutils.h"
 #include "qemu/bswap.h"
-#include "qemu/hw-version.h"
 #include "sysemu/reset.h"
 #include "sysemu/runstate.h"
 #include "sysemu/sysemu.h"
@@ -35,16 +34,16 @@
 #include "hw/boards.h"
 #include "hw/i2c/i2c.h"
 #include "hw/display/blizzard.h"
-#include "hw/input/lm832x.h"
 #include "hw/input/tsc2xxx.h"
 #include "hw/misc/cbus.h"
-#include "hw/sensor/tmp105.h"
+#include "hw/misc/tmp105.h"
 #include "hw/qdev-properties.h"
 #include "hw/block/flash.h"
 #include "hw/hw.h"
 #include "hw/loader.h"
 #include "hw/sysbus.h"
 #include "qemu/log.h"
+#include "exec/address-spaces.h"
 
 /* Nokia N8x0 support */
 struct n800_s {
@@ -418,7 +417,7 @@ static void n810_kbd_setup(struct n800_s *s)
     /* Attach the LM8322 keyboard to the I2C bus,
      * should happen in n8x0_i2c_setup and s->kbd be initialised here.  */
     s->kbd = DEVICE(i2c_slave_create_simple(omap_i2c_bus(s->mpu->i2c[0]),
-                                            TYPE_LM8323, N810_LM8323_ADDR));
+                                            "lm8323", N810_LM8323_ADDR));
     qdev_connect_gpio_out(s->kbd, 0, kbd_irq);
 }
 
@@ -693,7 +692,7 @@ static uint32_t mipid_txrx(void *opaque, uint32_t cmd, int len)
     default:
     bad_cmd:
         qemu_log_mask(LOG_GUEST_ERROR,
-                      "%s: unknown command 0x%02x\n", __func__, s->cmd);
+                      "%s: unknown command %02x\n", __func__, s->cmd);
         break;
     }
 
@@ -702,7 +701,7 @@ static uint32_t mipid_txrx(void *opaque, uint32_t cmd, int len)
 
 static void *mipid_init(void)
 {
-    struct mipid_s *s = g_malloc0(sizeof(*s));
+    struct mipid_s *s = (struct mipid_s *) g_malloc0(sizeof(*s));
 
     s->id = 0x838f03;
     mipid_reset(s);
@@ -788,6 +787,16 @@ static void n8x0_cbus_setup(struct n800_s *s)
 
     cbus_attach(cbus, s->retu = retu_init(retu_irq, 1));
     cbus_attach(cbus, s->tahvo = tahvo_init(tahvo_irq, 1));
+}
+
+static void n8x0_uart_setup(struct n800_s *s)
+{
+    Chardev *radio = qemu_chr_new("bt-dummy-uart", "null", NULL);
+    /*
+     * Note: We used to connect N8X0_BT_RESET_GPIO and N8X0_BT_WKUP_GPIO
+     * here, but this code has been removed with the bluetooth backend.
+     */
+    omap_uart_attach(s->mpu->uart[BT_UART], radio);
 }
 
 static void n8x0_usb_setup(struct n800_s *s)
@@ -1300,7 +1309,7 @@ static int n810_atag_setup(const struct arm_boot_info *info, void *p)
 static void n8x0_init(MachineState *machine,
                       struct arm_boot_info *binfo, int model)
 {
-    struct n800_s *s = g_malloc0(sizeof(*s));
+    struct n800_s *s = (struct n800_s *) g_malloc0(sizeof(*s));
     MachineClass *mc = MACHINE_GET_CLASS(machine);
 
     if (machine->ram_size != mc->default_ram_size) {
@@ -1309,7 +1318,6 @@ static void n8x0_init(MachineState *machine,
         g_free(sz);
         exit(EXIT_FAILURE);
     }
-    binfo->ram_size = machine->ram_size;
 
     memory_region_add_subregion(get_system_memory(), OMAP2_Q2_BASE,
                                 machine->ram);
@@ -1353,6 +1361,7 @@ static void n8x0_init(MachineState *machine,
     n8x0_spi_setup(s);
     n8x0_dss_setup(s);
     n8x0_cbus_setup(s);
+    n8x0_uart_setup(s);
     if (machine_usb(machine)) {
         n8x0_usb_setup(s);
     }
@@ -1365,13 +1374,12 @@ static void n8x0_init(MachineState *machine,
     }
 
     if (option_rom[0].name &&
-        (machine->boot_config.order[0] == 'n' || !machine->kernel_filename)) {
+        (machine->boot_order[0] == 'n' || !machine->kernel_filename)) {
         uint8_t *nolo_tags = g_new(uint8_t, 0x10000);
         /* No, wait, better start at the ROM.  */
         s->mpu->cpu->env.regs[15] = OMAP2_Q2_BASE + 0x400000;
 
-        /*
-         * This is intended for loading the `secondary.bin' program from
+        /* This is intended for loading the `secondary.bin' program from
          * Nokia images (the NOLO bootloader).  The entry point seems
          * to be at OMAP2_Q2_BASE + 0x400000.
          *
@@ -1379,15 +1387,9 @@ static void n8x0_init(MachineState *machine,
          * for them the entry point needs to be set to OMAP2_SRAM_BASE.
          *
          * The code above is for loading the `zImage' file from Nokia
-         * images.
-         */
-        if (load_image_targphys(option_rom[0].name,
-                                OMAP2_Q2_BASE + 0x400000,
-                                machine->ram_size - 0x400000) < 0) {
-            error_report("Failed to load secondary bootloader %s",
-                         option_rom[0].name);
-            exit(EXIT_FAILURE);
-        }
+         * images.  */
+        load_image_targphys(option_rom[0].name, OMAP2_Q2_BASE + 0x400000,
+                            machine->ram_size - 0x400000);
 
         n800_setup_nolo_tags(nolo_tags);
         cpu_physical_memory_write(OMAP2_SRAM_BASE, nolo_tags, 0x10000);

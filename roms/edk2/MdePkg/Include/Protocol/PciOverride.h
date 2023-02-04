@@ -34,6 +34,7 @@
 ///
 typedef EFI_PCI_PLATFORM_PROTOCOL EFI_PCI_OVERRIDE_PROTOCOL;
 
-extern EFI_GUID  gEfiPciOverrideProtocolGuid;
+
+extern EFI_GUID   gEfiPciOverrideProtocolGuid;
 
 #endif

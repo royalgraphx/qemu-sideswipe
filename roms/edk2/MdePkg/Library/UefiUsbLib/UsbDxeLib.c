@@ -10,6 +10,7 @@
 
 #include "UefiUsbLibInternal.h"
 
+
 /**
   Get the descriptor of the specified USB device.
 
@@ -39,12 +40,12 @@
 EFI_STATUS
 EFIAPI
 UsbGetDescriptor (
-  IN  EFI_USB_IO_PROTOCOL  *UsbIo,
-  IN  UINT16               Value,
-  IN  UINT16               Index,
-  IN  UINT16               DescriptorLength,
-  OUT VOID                 *Descriptor,
-  OUT UINT32               *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  UINT16                  Value,
+  IN  UINT16                  Index,
+  IN  UINT16                  DescriptorLength,
+  OUT VOID                    *Descriptor,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -55,11 +56,11 @@ UsbGetDescriptor (
 
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
-  DevReq.RequestType = USB_DEV_GET_DESCRIPTOR_REQ_TYPE;
-  DevReq.Request     = USB_REQ_GET_DESCRIPTOR;
-  DevReq.Value       = Value;
-  DevReq.Index       = Index;
-  DevReq.Length      = DescriptorLength;
+  DevReq.RequestType  = USB_DEV_GET_DESCRIPTOR_REQ_TYPE;
+  DevReq.Request      = USB_REQ_GET_DESCRIPTOR;
+  DevReq.Value        = Value;
+  DevReq.Index        = Index;
+  DevReq.Length       = DescriptorLength;
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -71,6 +72,7 @@ UsbGetDescriptor (
                   Status
                   );
 }
+
 
 /**
   Set the descriptor of the specified USB device.
@@ -98,12 +100,12 @@ UsbGetDescriptor (
 EFI_STATUS
 EFIAPI
 UsbSetDescriptor (
-  IN  EFI_USB_IO_PROTOCOL  *UsbIo,
-  IN  UINT16               Value,
-  IN  UINT16               Index,
-  IN  UINT16               DescriptorLength,
-  IN  VOID                 *Descriptor,
-  OUT UINT32               *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  UINT16                  Value,
+  IN  UINT16                  Index,
+  IN  UINT16                  DescriptorLength,
+  IN  VOID                    *Descriptor,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -114,11 +116,11 @@ UsbSetDescriptor (
 
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
-  DevReq.RequestType = USB_DEV_SET_DESCRIPTOR_REQ_TYPE;
-  DevReq.Request     = USB_REQ_SET_DESCRIPTOR;
-  DevReq.Value       = Value;
-  DevReq.Index       = Index;
-  DevReq.Length      = DescriptorLength;
+  DevReq.RequestType  = USB_DEV_SET_DESCRIPTOR_REQ_TYPE;
+  DevReq.Request      = USB_REQ_SET_DESCRIPTOR;
+  DevReq.Value        = Value;
+  DevReq.Index        = Index;
+  DevReq.Length       = DescriptorLength;
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -130,6 +132,7 @@ UsbSetDescriptor (
                   Status
                   );
 }
+
 
 /**
   Get the interface setting of the specified USB device.
@@ -155,10 +158,10 @@ UsbSetDescriptor (
 EFI_STATUS
 EFIAPI
 UsbGetInterface (
-  IN  EFI_USB_IO_PROTOCOL  *UsbIo,
-  IN  UINT16               Interface,
-  OUT UINT16               *AlternateSetting,
-  OUT UINT32               *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  UINT16                  Interface,
+  OUT UINT16                  *AlternateSetting,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -171,10 +174,10 @@ UsbGetInterface (
 
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
-  DevReq.RequestType = USB_DEV_GET_INTERFACE_REQ_TYPE;
-  DevReq.Request     = USB_REQ_GET_INTERFACE;
-  DevReq.Index       = Interface;
-  DevReq.Length      = 1;
+  DevReq.RequestType  = USB_DEV_GET_INTERFACE_REQ_TYPE;
+  DevReq.Request      = USB_REQ_GET_INTERFACE;
+  DevReq.Index        = Interface;
+  DevReq.Length       = 1;
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -186,6 +189,7 @@ UsbGetInterface (
                   Status
                   );
 }
+
 
 /**
   Set the interface setting of the specified USB device.
@@ -210,10 +214,10 @@ UsbGetInterface (
 EFI_STATUS
 EFIAPI
 UsbSetInterface (
-  IN  EFI_USB_IO_PROTOCOL  *UsbIo,
-  IN  UINT16               Interface,
-  IN  UINT16               AlternateSetting,
-  OUT UINT32               *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  UINT16                  Interface,
+  IN  UINT16                  AlternateSetting,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -223,10 +227,10 @@ UsbSetInterface (
 
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
-  DevReq.RequestType = USB_DEV_SET_INTERFACE_REQ_TYPE;
-  DevReq.Request     = USB_REQ_SET_INTERFACE;
-  DevReq.Value       = AlternateSetting;
-  DevReq.Index       = Interface;
+  DevReq.RequestType  = USB_DEV_SET_INTERFACE_REQ_TYPE;
+  DevReq.Request      = USB_REQ_SET_INTERFACE;
+  DevReq.Value        = AlternateSetting;
+  DevReq.Index        = Interface;
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -238,6 +242,7 @@ UsbSetInterface (
                   Status
                   );
 }
+
 
 /**
   Get the device configuration.
@@ -262,9 +267,9 @@ UsbSetInterface (
 EFI_STATUS
 EFIAPI
 UsbGetConfiguration (
-  IN  EFI_USB_IO_PROTOCOL  *UsbIo,
-  OUT UINT16               *ConfigurationValue,
-  OUT UINT32               *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  OUT UINT16                  *ConfigurationValue,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -277,9 +282,9 @@ UsbGetConfiguration (
 
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
-  DevReq.RequestType = USB_DEV_GET_CONFIGURATION_REQ_TYPE;
-  DevReq.Request     = USB_REQ_GET_CONFIG;
-  DevReq.Length      = 1;
+  DevReq.RequestType  = USB_DEV_GET_CONFIGURATION_REQ_TYPE;
+  DevReq.Request      = USB_REQ_GET_CONFIG;
+  DevReq.Length       = 1;
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -291,6 +296,7 @@ UsbGetConfiguration (
                   Status
                   );
 }
+
 
 /**
   Set the device configuration.
@@ -314,9 +320,9 @@ UsbGetConfiguration (
 EFI_STATUS
 EFIAPI
 UsbSetConfiguration (
-  IN  EFI_USB_IO_PROTOCOL  *UsbIo,
-  IN  UINT16               ConfigurationValue,
-  OUT UINT32               *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  UINT16                  ConfigurationValue,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -326,9 +332,9 @@ UsbSetConfiguration (
 
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
-  DevReq.RequestType = USB_DEV_SET_CONFIGURATION_REQ_TYPE;
-  DevReq.Request     = USB_REQ_SET_CONFIG;
-  DevReq.Value       = ConfigurationValue;
+  DevReq.RequestType  = USB_DEV_SET_CONFIGURATION_REQ_TYPE;
+  DevReq.Request      = USB_REQ_SET_CONFIG;
+  DevReq.Value        = ConfigurationValue;
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -340,6 +346,7 @@ UsbSetConfiguration (
                   Status
                   );
 }
+
 
 /**
   Set the specified feature of the specified device.
@@ -367,11 +374,11 @@ UsbSetConfiguration (
 EFI_STATUS
 EFIAPI
 UsbSetFeature (
-  IN  EFI_USB_IO_PROTOCOL   *UsbIo,
-  IN  USB_TYPES_DEFINITION  Recipient,
-  IN  UINT16                Value,
-  IN  UINT16                Target,
-  OUT UINT32                *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  USB_TYPES_DEFINITION    Recipient,
+  IN  UINT16                  Value,
+  IN  UINT16                  Target,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -382,28 +389,29 @@ UsbSetFeature (
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
   switch (Recipient) {
-    case USB_TARGET_DEVICE:
-      DevReq.RequestType = USB_DEV_SET_FEATURE_REQ_TYPE_D;
-      break;
 
-    case USB_TARGET_INTERFACE:
-      DevReq.RequestType = USB_DEV_SET_FEATURE_REQ_TYPE_I;
-      break;
+  case USB_TARGET_DEVICE:
+    DevReq.RequestType = USB_DEV_SET_FEATURE_REQ_TYPE_D;
+    break;
 
-    case USB_TARGET_ENDPOINT:
-      DevReq.RequestType = USB_DEV_SET_FEATURE_REQ_TYPE_E;
-      break;
+  case USB_TARGET_INTERFACE:
+    DevReq.RequestType = USB_DEV_SET_FEATURE_REQ_TYPE_I;
+    break;
 
-    default:
-      break;
+  case USB_TARGET_ENDPOINT:
+    DevReq.RequestType = USB_DEV_SET_FEATURE_REQ_TYPE_E;
+    break;
+
+  default:
+    break;
   }
-
   //
   // Fill device request, see USB1.1 spec
   //
-  DevReq.Request = USB_REQ_SET_FEATURE;
-  DevReq.Value   = Value;
-  DevReq.Index   = Target;
+  DevReq.Request  = USB_REQ_SET_FEATURE;
+  DevReq.Value    = Value;
+  DevReq.Index    = Target;
+
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -415,6 +423,7 @@ UsbSetFeature (
                   Status
                   );
 }
+
 
 /**
   Clear the specified feature of the specified device.
@@ -442,11 +451,11 @@ UsbSetFeature (
 EFI_STATUS
 EFIAPI
 UsbClearFeature (
-  IN  EFI_USB_IO_PROTOCOL   *UsbIo,
-  IN  USB_TYPES_DEFINITION  Recipient,
-  IN  UINT16                Value,
-  IN  UINT16                Target,
-  OUT UINT32                *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  USB_TYPES_DEFINITION    Recipient,
+  IN  UINT16                  Value,
+  IN  UINT16                  Target,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -454,31 +463,33 @@ UsbClearFeature (
   ASSERT (UsbIo != NULL);
   ASSERT (Status != NULL);
 
+
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
   switch (Recipient) {
-    case USB_TARGET_DEVICE:
-      DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_D;
-      break;
 
-    case USB_TARGET_INTERFACE:
-      DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_I;
-      break;
+  case USB_TARGET_DEVICE:
+    DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_D;
+    break;
 
-    case USB_TARGET_ENDPOINT:
-      DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_E;
-      break;
+  case USB_TARGET_INTERFACE:
+    DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_I;
+    break;
 
-    default:
-      break;
+  case USB_TARGET_ENDPOINT:
+    DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_E;
+    break;
+
+  default:
+    break;
   }
-
   //
   // Fill device request, see USB1.1 spec
   //
-  DevReq.Request = USB_REQ_CLEAR_FEATURE;
-  DevReq.Value   = Value;
-  DevReq.Index   = Target;
+  DevReq.Request  = USB_REQ_CLEAR_FEATURE;
+  DevReq.Value    = Value;
+  DevReq.Index    = Target;
+
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -490,6 +501,7 @@ UsbClearFeature (
                   Status
                   );
 }
+
 
 /**
   Get the status of the specified device.
@@ -518,11 +530,11 @@ UsbClearFeature (
 EFI_STATUS
 EFIAPI
 UsbGetStatus (
-  IN  EFI_USB_IO_PROTOCOL   *UsbIo,
-  IN  USB_TYPES_DEFINITION  Recipient,
-  IN  UINT16                Target,
-  OUT UINT16                *DeviceStatus,
-  OUT UINT32                *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  USB_TYPES_DEFINITION    Recipient,
+  IN  UINT16                  Target,
+  OUT UINT16                  *DeviceStatus,
+  OUT UINT32                  *Status
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -534,29 +546,29 @@ UsbGetStatus (
   ZeroMem (&DevReq, sizeof (EFI_USB_DEVICE_REQUEST));
 
   switch (Recipient) {
-    case USB_TARGET_DEVICE:
-      DevReq.RequestType = USB_DEV_GET_STATUS_REQ_TYPE_D;
-      break;
 
-    case USB_TARGET_INTERFACE:
-      DevReq.RequestType = USB_DEV_GET_STATUS_REQ_TYPE_I;
-      break;
+  case USB_TARGET_DEVICE:
+    DevReq.RequestType = USB_DEV_GET_STATUS_REQ_TYPE_D;
+    break;
 
-    case USB_TARGET_ENDPOINT:
-      DevReq.RequestType = USB_DEV_GET_STATUS_REQ_TYPE_E;
-      break;
+  case USB_TARGET_INTERFACE:
+    DevReq.RequestType = USB_DEV_GET_STATUS_REQ_TYPE_I;
+    break;
 
-    default:
-      break;
+  case USB_TARGET_ENDPOINT:
+    DevReq.RequestType = USB_DEV_GET_STATUS_REQ_TYPE_E;
+    break;
+
+  default:
+    break;
   }
-
   //
   // Fill device request, see USB1.1 spec
   //
-  DevReq.Request = USB_REQ_GET_STATUS;
-  DevReq.Value   = 0;
-  DevReq.Index   = Target;
-  DevReq.Length  = 2;
+  DevReq.Request  = USB_REQ_GET_STATUS;
+  DevReq.Value    = 0;
+  DevReq.Index    = Target;
+  DevReq.Length   = 2;
 
   return UsbIo->UsbControlTransfer (
                   UsbIo,
@@ -568,6 +580,7 @@ UsbGetStatus (
                   Status
                   );
 }
+
 
 /**
   Clear halt feature of the specified usb endpoint.
@@ -593,9 +606,9 @@ UsbGetStatus (
 EFI_STATUS
 EFIAPI
 UsbClearEndpointHalt (
-  IN  EFI_USB_IO_PROTOCOL  *UsbIo,
-  IN  UINT8                Endpoint,
-  OUT UINT32               *Status
+  IN  EFI_USB_IO_PROTOCOL     *UsbIo,
+  IN  UINT8                   Endpoint,
+  OUT UINT32                  *Status
   )
 {
   EFI_STATUS                    Result;
@@ -641,12 +654,12 @@ UsbClearEndpointHalt (
   }
 
   Result = UsbClearFeature (
-             UsbIo,
-             USB_TARGET_ENDPOINT,
-             USB_FEATURE_ENDPOINT_HALT,
-             EndpointDescriptor.EndpointAddress,
-             Status
-             );
+            UsbIo,
+            USB_TARGET_ENDPOINT,
+            USB_FEATURE_ENDPOINT_HALT,
+            EndpointDescriptor.EndpointAddress,
+            Status
+            );
 
   return Result;
 }

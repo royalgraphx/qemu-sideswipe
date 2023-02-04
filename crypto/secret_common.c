@@ -138,44 +138,36 @@ static void qcrypto_secret_decode(const uint8_t *input,
 
 
 static void
-qcrypto_secret_complete(UserCreatable *uc, Error **errp)
+qcrypto_secret_prop_set_loaded(Object *obj,
+                               bool value,
+                               Error **errp)
 {
-    QCryptoSecretCommon *secret = QCRYPTO_SECRET_COMMON(uc);
+    QCryptoSecretCommon *secret = QCRYPTO_SECRET_COMMON(obj);
     QCryptoSecretCommonClass *sec_class
-                                = QCRYPTO_SECRET_COMMON_GET_CLASS(uc);
+                                = QCRYPTO_SECRET_COMMON_GET_CLASS(obj);
 
-    Error *local_err = NULL;
-    uint8_t *input = NULL;
-    size_t inputlen = 0;
-    uint8_t *output = NULL;
-    size_t outputlen = 0;
+    if (value) {
+        Error *local_err = NULL;
+        uint8_t *input = NULL;
+        size_t inputlen = 0;
+        uint8_t *output = NULL;
+        size_t outputlen = 0;
 
-    if (sec_class->load_data) {
-        sec_class->load_data(secret, &input, &inputlen, &local_err);
-        if (local_err) {
-            error_propagate(errp, local_err);
+        if (sec_class->load_data) {
+            sec_class->load_data(secret, &input, &inputlen, &local_err);
+            if (local_err) {
+                error_propagate(errp, local_err);
+                return;
+            }
+        } else {
+            error_setg(errp, "%s provides no 'load_data' method'",
+                             object_get_typename(obj));
             return;
         }
-    } else {
-        error_setg(errp, "%s provides no 'load_data' method'",
-                         object_get_typename(OBJECT(uc)));
-        return;
-    }
 
-    if (secret->keyid) {
-        qcrypto_secret_decrypt(secret, input, inputlen,
-                               &output, &outputlen, &local_err);
-        g_free(input);
-        if (local_err) {
-            error_propagate(errp, local_err);
-            return;
-        }
-        input = output;
-        inputlen = outputlen;
-    } else {
-        if (secret->format == QCRYPTO_SECRET_FORMAT_BASE64) {
-            qcrypto_secret_decode(input, inputlen,
-                                  &output, &outputlen, &local_err);
+        if (secret->keyid) {
+            qcrypto_secret_decrypt(secret, input, inputlen,
+                                   &output, &outputlen, &local_err);
             g_free(input);
             if (local_err) {
                 error_propagate(errp, local_err);
@@ -183,11 +175,26 @@ qcrypto_secret_complete(UserCreatable *uc, Error **errp)
             }
             input = output;
             inputlen = outputlen;
+        } else {
+            if (secret->format == QCRYPTO_SECRET_FORMAT_BASE64) {
+                qcrypto_secret_decode(input, inputlen,
+                                      &output, &outputlen, &local_err);
+                g_free(input);
+                if (local_err) {
+                    error_propagate(errp, local_err);
+                    return;
+                }
+                input = output;
+                inputlen = outputlen;
+            }
         }
-    }
 
-    secret->rawdata = input;
-    secret->rawlen = inputlen;
+        secret->rawdata = input;
+        secret->rawlen = inputlen;
+    } else {
+        g_free(secret->rawdata);
+        secret->rawlen = 0;
+    }
 }
 
 
@@ -274,13 +281,9 @@ qcrypto_secret_finalize(Object *obj)
 static void
 qcrypto_secret_class_init(ObjectClass *oc, void *data)
 {
-    UserCreatableClass *ucc = USER_CREATABLE_CLASS(oc);
-
-    ucc->complete = qcrypto_secret_complete;
-
     object_class_property_add_bool(oc, "loaded",
                                    qcrypto_secret_prop_get_loaded,
-                                   NULL);
+                                   qcrypto_secret_prop_set_loaded);
     object_class_property_add_enum(oc, "format",
                                    "QCryptoSecretFormat",
                                    &QCryptoSecretFormat_lookup,
@@ -387,10 +390,6 @@ static const TypeInfo qcrypto_secret_info = {
     .class_size = sizeof(QCryptoSecretCommonClass),
     .class_init = qcrypto_secret_class_init,
     .abstract = true,
-    .interfaces = (InterfaceInfo[]) {
-        { TYPE_USER_CREATABLE },
-        { }
-    }
 };
 
 

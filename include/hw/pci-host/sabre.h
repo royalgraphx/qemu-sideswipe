@@ -4,7 +4,6 @@
 #include "hw/pci/pci.h"
 #include "hw/pci/pci_host.h"
 #include "hw/sparc/sun4u_iommu.h"
-#include "qom/object.h"
 
 #define MAX_IVEC 0x40
 
@@ -17,14 +16,15 @@
 #define OBIO_MSE_IRQ         0x2a
 #define OBIO_SER_IRQ         0x2b
 
-struct SabrePCIState {
+typedef struct SabrePCIState {
     PCIDevice parent_obj;
-};
+} SabrePCIState;
 
 #define TYPE_SABRE_PCI_DEVICE "sabre-pci"
-OBJECT_DECLARE_SIMPLE_TYPE(SabrePCIState, SABRE_PCI_DEVICE)
+#define SABRE_PCI_DEVICE(obj) \
+    OBJECT_CHECK(SabrePCIState, (obj), TYPE_SABRE_PCI_DEVICE)
 
-struct SabreState {
+typedef struct SabreState {
     PCIHostState parent_obj;
 
     hwaddr special_base;
@@ -45,9 +45,10 @@ struct SabreState {
     unsigned int irq_request;
     uint32_t reset_control;
     unsigned int nr_resets;
-};
+} SabreState;
 
 #define TYPE_SABRE "sabre"
-OBJECT_DECLARE_SIMPLE_TYPE(SabreState, SABRE)
+#define SABRE_DEVICE(obj) \
+    OBJECT_CHECK(SabreState, (obj), TYPE_SABRE)
 
 #endif

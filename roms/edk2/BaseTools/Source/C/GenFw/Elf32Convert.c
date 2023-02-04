@@ -1,9 +1,8 @@
 /** @file
 Elf32 Convert solution
 
-Copyright (c) 2010 - 2021, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
 Portions copyright (c) 2013, ARM Ltd. All rights reserved.<BR>
-Portions Copyright (c) 2020, Hewlett Packard Enterprise Development LP. All rights reserved.<BR>
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -142,8 +141,9 @@ InitializeElf32 (
     Error (NULL, 0, 3000, "Unsupported", "ELF e_type not ET_EXEC or ET_DYN");
     return FALSE;
   }
-  if (!((mEhdr->e_machine == EM_386) || (mEhdr->e_machine == EM_ARM) || (mEhdr->e_machine == EM_RISCV))) {
-    Warning (NULL, 0, 3000, "Unsupported", "ELF e_machine is not Elf32 machine.");
+  if (!((mEhdr->e_machine == EM_386) || (mEhdr->e_machine == EM_ARM))) {
+    Error (NULL, 0, 3000, "Unsupported", "ELF e_machine not EM_386 or EM_ARM");
+    return FALSE;
   }
   if (mEhdr->e_version != EV_CURRENT) {
     Error (NULL, 0, 3000, "Unsupported", "ELF e_version (%u) not EV_CURRENT (%d)", (unsigned) mEhdr->e_version, EV_CURRENT);
@@ -238,8 +238,7 @@ IsTextShdr (
   Elf_Shdr *Shdr
   )
 {
-  return (BOOLEAN) (((Shdr->sh_flags & (SHF_EXECINSTR | SHF_ALLOC)) == (SHF_EXECINSTR | SHF_ALLOC)) ||
-                   ((Shdr->sh_flags & (SHF_WRITE | SHF_ALLOC)) == SHF_ALLOC));
+  return (BOOLEAN) ((Shdr->sh_flags & (SHF_WRITE | SHF_ALLOC)) == SHF_ALLOC);
 }
 
 STATIC
@@ -262,7 +261,7 @@ IsDataShdr (
   if (IsHiiRsrcShdr(Shdr)) {
     return FALSE;
   }
-  return (BOOLEAN) (Shdr->sh_flags & (SHF_EXECINSTR | SHF_WRITE | SHF_ALLOC)) == (SHF_ALLOC | SHF_WRITE);
+  return (BOOLEAN) (Shdr->sh_flags & (SHF_WRITE | SHF_ALLOC)) == (SHF_ALLOC | SHF_WRITE);
 }
 
 STATIC
@@ -436,7 +435,7 @@ ScanSections32 (
     }
   }
 
-  if (!FoundSection && mOutImageType != FW_ACPI_IMAGE) {
+  if (!FoundSection) {
     Error (NULL, 0, 3000, "Invalid", "Did not find any '.text' section.");
     assert (FALSE);
   }
@@ -750,7 +749,13 @@ WriteSections32 (
           if (SymName == NULL) {
             SymName = (const UINT8 *)"<unknown>";
           }
-          continue;
+
+          Error (NULL, 0, 3000, "Invalid",
+                 "%s: Bad definition for symbol '%s'@%#x or unsupported symbol type.  "
+                 "For example, absolute and undefined symbols are not supported.",
+                 mInImageName, SymName, Sym->st_value);
+
+          exit(EXIT_FAILURE);
         }
         SymShdr = GetShdrByIndex(Sym->st_shndx);
 

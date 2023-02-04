@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Enables CPU interrupts for the smallest window required to capture any
   pending interrupts.
@@ -24,3 +27,4 @@ EnableDisableInterrupts (
     cli
   }
 }
+

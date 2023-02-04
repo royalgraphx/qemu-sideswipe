@@ -84,7 +84,6 @@ static void walk_pte(Monitor *mon, hwaddr base, target_ulong start,
 {
     hwaddr pte_addr;
     hwaddr paddr;
-    target_ulong last_start = -1;
     target_ulong pgsize;
     target_ulong pte;
     int ptshift;
@@ -112,13 +111,12 @@ static void walk_pte(Monitor *mon, hwaddr base, target_ulong start,
                  * A leaf PTE has been found
                  *
                  * If current PTE's permission bits differ from the last one,
-                 * or the current PTE breaks up a contiguous virtual or
-                 * physical mapping, address block together with the last one,
-                 * print out the last contiguous mapped block details.
+                 * or current PTE's ppn does not make a contiguous physical
+                 * address block together with the last one, print out the last
+                 * contiguous mapped block details.
                  */
                 if ((*last_attr != attr) ||
-                    (*last_paddr + *last_size != paddr) ||
-                    (last_start + *last_size != start)) {
+                    (*last_paddr + *last_size != paddr)) {
                     print_pte(mon, va_bits, *vbase, *pbase,
                               *last_paddr + *last_size - *pbase, *last_attr);
 
@@ -127,7 +125,6 @@ static void walk_pte(Monitor *mon, hwaddr base, target_ulong start,
                     *last_attr = attr;
                 }
 
-                last_start = start;
                 *last_paddr = paddr;
                 *last_size = pgsize;
             } else {
@@ -153,14 +150,9 @@ static void mem_info_svxx(Monitor *mon, CPUArchState *env)
     target_ulong last_size;
     int last_attr;
 
-    if (riscv_cpu_mxl(env) == MXL_RV32) {
-        base = (hwaddr)get_field(env->satp, SATP32_PPN) << PGSHIFT;
-        vm = get_field(env->satp, SATP32_MODE);
-    } else {
-        base = (hwaddr)get_field(env->satp, SATP64_PPN) << PGSHIFT;
-        vm = get_field(env->satp, SATP64_MODE);
-    }
+    base = (hwaddr)get_field(env->satp, SATP_PPN) << PGSHIFT;
 
+    vm = get_field(env->satp, SATP_MODE);
     switch (vm) {
     case VM_1_10_SV32:
         levels = 2;
@@ -212,7 +204,7 @@ void hmp_info_mem(Monitor *mon, const QDict *qdict)
 {
     CPUArchState *env;
 
-    env = mon_get_cpu_env(mon);
+    env = mon_get_cpu_env();
     if (!env) {
         monitor_printf(mon, "No CPU available\n");
         return;
@@ -223,16 +215,9 @@ void hmp_info_mem(Monitor *mon, const QDict *qdict)
         return;
     }
 
-    if (riscv_cpu_mxl(env) == MXL_RV32) {
-        if (!(env->satp & SATP32_MODE)) {
-            monitor_printf(mon, "No translation or protection\n");
-            return;
-        }
-    } else {
-        if (!(env->satp & SATP64_MODE)) {
-            monitor_printf(mon, "No translation or protection\n");
-            return;
-        }
+    if (!(env->satp & SATP_MODE)) {
+        monitor_printf(mon, "No translation or protection\n");
+        return;
     }
 
     mem_info_svxx(mon, env);

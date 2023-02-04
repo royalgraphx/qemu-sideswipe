@@ -64,11 +64,7 @@
   isb
   bx      LR
 
- RVCT_ASM_EXPORT ArmReadIdMmfr4
-  mrc    p15,0,r0,c0,c2,6     ; Read ID_MMFR4 Register
-  bx     LR
-
-// UINTN
+// UINT32
 // ReadCCSIDR (
 //   IN UINT32 CSSELR
 //   )
@@ -76,16 +72,6 @@
   mcr p15,2,r0,c0,c0,0   ; Write Cache Size Selection Register (CSSELR)
   isb
   mrc p15,1,r0,c0,c0,0 ; Read current CP15 Cache Size ID Register (CCSIDR)
-  bx  lr
-
-// UINT32
-// ReadCCSIDR2 (
-//   IN UINT32 CSSELR
-//   )
- RVCT_ASM_EXPORT ReadCCSIDR2
-  mcr p15,2,r0,c0,c0,0 ; Write Cache Size Selection Register (CSSELR)
-  isb
-  mrc p15,1,r0,c0,c0,2 ; Read current CP15 Cache Size ID Register (CCSIDR2)
   bx  lr
 
 // UINT32

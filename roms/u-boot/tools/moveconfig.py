@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 # SPDX-License-Identifier: GPL-2.0+
 #
 # Author: Masahiro Yamada <yamada.masahiro@socionext.com>
@@ -12,10 +12,6 @@ config options from headers to Kconfig (defconfig).
 
 This tool intends to help this tremendous work.
 
-Installing
-----------
-
-You may need to install 'python3-asteval' for the 'asteval' module.
 
 Usage
 -----
@@ -299,7 +295,6 @@ To see the complete list of supported options, run
 
 """
 
-import asteval
 import collections
 import copy
 import difflib
@@ -309,7 +304,7 @@ import glob
 import multiprocessing
 import optparse
 import os
-import queue
+import Queue
 import re
 import shutil
 import subprocess
@@ -318,9 +313,11 @@ import tempfile
 import threading
 import time
 
-from buildman import bsettings
-from buildman import kconfiglib
-from buildman import toolchain
+sys.path.append(os.path.join(os.path.dirname(__file__), 'buildman'))
+sys.path.append(os.path.join(os.path.dirname(__file__), 'patman'))
+import bsettings
+import kconfiglib
+import toolchain
 
 SHOW_GNU_MAKE = 'scripts/show-gnu-make'
 SLEEP_TIME=0.03
@@ -356,26 +353,6 @@ AUTO_CONF_PATH = 'include/config/auto.conf'
 CONFIG_DATABASE = 'moveconfig.db'
 
 CONFIG_LEN = len('CONFIG_')
-
-SIZES = {
-    "SZ_1":    0x00000001, "SZ_2":    0x00000002,
-    "SZ_4":    0x00000004, "SZ_8":    0x00000008,
-    "SZ_16":   0x00000010, "SZ_32":   0x00000020,
-    "SZ_64":   0x00000040, "SZ_128":  0x00000080,
-    "SZ_256":  0x00000100, "SZ_512":  0x00000200,
-    "SZ_1K":   0x00000400, "SZ_2K":   0x00000800,
-    "SZ_4K":   0x00001000, "SZ_8K":   0x00002000,
-    "SZ_16K":  0x00004000, "SZ_32K":  0x00008000,
-    "SZ_64K":  0x00010000, "SZ_128K": 0x00020000,
-    "SZ_256K": 0x00040000, "SZ_512K": 0x00080000,
-    "SZ_1M":   0x00100000, "SZ_2M":   0x00200000,
-    "SZ_4M":   0x00400000, "SZ_8M":   0x00800000,
-    "SZ_16M":  0x01000000, "SZ_32M":  0x02000000,
-    "SZ_64M":  0x04000000, "SZ_128M": 0x08000000,
-    "SZ_256M": 0x10000000, "SZ_512M": 0x20000000,
-    "SZ_1G":   0x40000000, "SZ_2G":   0x80000000,
-    "SZ_4G":  0x100000000
-}
 
 ### helper functions ###
 def get_devnull():
@@ -453,8 +430,8 @@ def get_matched_defconfigs(defconfigs_file):
             line = line.split(' ')[0]  # handle 'git log' input
         matched = get_matched_defconfig(line)
         if not matched:
-            print("warning: %s:%d: no defconfig matched '%s'" % \
-                                                 (defconfigs_file, i + 1, line), file=sys.stderr)
+            print >> sys.stderr, "warning: %s:%d: no defconfig matched '%s'" % \
+                                                 (defconfigs_file, i + 1, line)
 
         defconfigs += matched
 
@@ -497,11 +474,11 @@ def show_diff(a, b, file_path, color_enabled):
 
     for line in diff:
         if line[0] == '-' and line[1] != '-':
-            print(color_text(color_enabled, COLOR_RED, line), end=' ')
+            print color_text(color_enabled, COLOR_RED, line),
         elif line[0] == '+' and line[1] != '+':
-            print(color_text(color_enabled, COLOR_GREEN, line), end=' ')
+            print color_text(color_enabled, COLOR_GREEN, line),
         else:
-            print(line, end=' ')
+            print line,
 
 def extend_matched_lines(lines, matched, pre_patterns, post_patterns, extend_pre,
                          extend_post):
@@ -557,9 +534,9 @@ def extend_matched_lines(lines, matched, pre_patterns, post_patterns, extend_pre
 def confirm(options, prompt):
     if not options.yes:
         while True:
-            choice = input('{} [y/n]: '.format(prompt))
+            choice = raw_input('{} [y/n]: '.format(prompt))
             choice = choice.lower()
-            print(choice)
+            print choice
             if choice == 'y' or choice == 'n':
                 break
 
@@ -567,32 +544,6 @@ def confirm(options, prompt):
             return False
 
     return True
-
-def cleanup_empty_blocks(header_path, options):
-    """Clean up empty conditional blocks
-
-    Arguments:
-      header_path: path to the cleaned file.
-      options: option flags.
-    """
-    pattern = re.compile(r'^\s*#\s*if.*$\n^\s*#\s*endif.*$\n*', flags=re.M)
-    with open(header_path) as f:
-        try:
-            data = f.read()
-        except UnicodeDecodeError as e:
-            print("Failed on file %s': %s" % (header_path, e))
-            return
-
-    new_data = pattern.sub('\n', data)
-
-    show_diff(data.splitlines(True), new_data.splitlines(True), header_path,
-              options.color)
-
-    if options.dry_run:
-        return
-
-    with open(header_path, 'w') as f:
-        f.write(new_data)
 
 def cleanup_one_header(header_path, patterns, options):
     """Clean regex-matched lines away from a file.
@@ -604,11 +555,7 @@ def cleanup_one_header(header_path, patterns, options):
       options: option flags.
     """
     with open(header_path) as f:
-        try:
-            lines = f.readlines()
-        except UnicodeDecodeError as e:
-            print("Failed on file %s': %s" % (header_path, e))
-            return
+        lines = f.readlines()
 
     matched = []
     for i, line in enumerate(lines):
@@ -678,14 +625,9 @@ def cleanup_headers(configs, options):
             if dirpath == os.path.join('include', 'generated'):
                 continue
             for filename in filenames:
-                if not filename.endswith(('~', '.dts', '.dtsi', '.bin',
-                                          '.elf','.aml','.dat')):
-                    header_path = os.path.join(dirpath, filename)
-                    # This file contains UTF-16 data and no CONFIG symbols
-                    if header_path == 'include/video_font_data.h':
-                        continue
-                    cleanup_one_header(header_path, patterns, options)
-                    cleanup_empty_blocks(header_path, options)
+                if not fnmatch.fnmatch(filename, '*~'):
+                    cleanup_one_header(os.path.join(dirpath, filename),
+                                       patterns, options)
 
 def cleanup_one_extra_option(defconfig_path, configs, options):
     """Delete config defines in CONFIG_SYS_EXTRA_OPTIONS in one defconfig file.
@@ -812,26 +754,6 @@ def cleanup_readme(configs, options):
     with open('README', 'w') as f:
         f.write(''.join(newlines))
 
-def try_expand(line):
-    """If value looks like an expression, try expanding it
-    Otherwise just return the existing value
-    """
-    if line.find('=') == -1:
-        return line
-
-    try:
-        aeval = asteval.Interpreter( usersyms=SIZES, minimal=True )
-        cfg, val = re.split("=", line)
-        val= val.strip('\"')
-        if re.search("[*+-/]|<<|SZ_+|\(([^\)]+)\)", val):
-            newval = hex(aeval(val))
-            print("\tExpanded expression %s to %s" % (val, newval))
-            return cfg+'='+newval
-    except:
-        print("\tFailed to expand expression in %s" % line)
-
-    return line
-
 
 ### classes ###
 class Progress:
@@ -854,7 +776,7 @@ class Progress:
 
     def show(self):
         """Display the progress."""
-        print(' %d defconfigs out of %d\r' % (self.current, self.total), end=' ')
+        print ' %d defconfigs out of %d\r' % (self.current, self.total),
         sys.stdout.flush()
 
 
@@ -867,7 +789,7 @@ class KconfigScanner:
         os.environ['srctree'] = os.getcwd()
         os.environ['UBOOTVERSION'] = 'dummy'
         os.environ['KCONFIG_OBJDIR'] = ''
-        self.conf = kconfiglib.Kconfig()
+        self.conf = kconfiglib.Config()
 
 
 class KconfigParser:
@@ -945,8 +867,6 @@ class KconfigParser:
                 break
         else:
             new_val = not_set
-
-        new_val = try_expand(new_val)
 
         for line in dotconfig_lines:
             line = line.rstrip()
@@ -1228,7 +1148,7 @@ class Slot:
                                "Failed to process.\n")
         if self.options.verbose:
             self.log += color_text(self.options.color, COLOR_LIGHT_CYAN,
-                                   self.ps.stderr.read().decode())
+                                   self.ps.stderr.read())
         self.finish(False)
 
     def do_defconfig(self):
@@ -1252,7 +1172,7 @@ class Slot:
                     "Tool chain for '%s' is missing.  Do nothing.\n" % arch)
             self.finish(False)
             return
-        env = toolchain.MakeEnvironment(False)
+	env = toolchain.MakeEnvironment(False)
 
         cmd = list(self.make_cmd)
         cmd.append('KCONFIG_IGNORE_DUPLICATES=1')
@@ -1328,7 +1248,7 @@ class Slot:
         log += '\n'.join([ '    ' + s for s in self.log.split('\n') ])
         # Some threads are running in parallel.
         # Print log atomically to not mix up logs from different threads.
-        print(log, file=(sys.stdout if success else sys.stderr))
+        print >> (sys.stdout if success else sys.stderr), log
 
         if not success:
             if self.options.exit_on_error:
@@ -1427,8 +1347,8 @@ class Slots:
             msg = "The following boards were not processed due to error:\n"
             msg += boards
             msg += "(the list has been saved in %s)\n" % output_file
-            print(color_text(self.options.color, COLOR_LIGHT_RED,
-                                            msg), file=sys.stderr)
+            print >> sys.stderr, color_text(self.options.color, COLOR_LIGHT_RED,
+                                            msg)
 
             with open(output_file, 'w') as f:
                 f.write(boards)
@@ -1447,8 +1367,8 @@ class Slots:
             msg += "It is highly recommended to check them manually:\n"
             msg += boards
             msg += "(the list has been saved in %s)\n" % output_file
-            print(color_text(self.options.color, COLOR_YELLOW,
-                                            msg), file=sys.stderr)
+            print >> sys.stderr, color_text(self.options.color, COLOR_YELLOW,
+                                            msg)
 
             with open(output_file, 'w') as f:
                 f.write(boards)
@@ -1464,11 +1384,11 @@ class ReferenceSource:
           commit: commit to git-clone
         """
         self.src_dir = tempfile.mkdtemp()
-        print("Cloning git repo to a separate work directory...")
+        print "Cloning git repo to a separate work directory..."
         subprocess.check_output(['git', 'clone', os.getcwd(), '.'],
                                 cwd=self.src_dir)
-        print("Checkout '%s' to build the original autoconf.mk." % \
-            subprocess.check_output(['git', 'rev-parse', '--short', commit]).strip())
+        print "Checkout '%s' to build the original autoconf.mk." % \
+            subprocess.check_output(['git', 'rev-parse', '--short', commit]).strip()
         subprocess.check_output(['git', 'checkout', commit],
                                 stderr=subprocess.STDOUT, cwd=self.src_dir)
 
@@ -1496,14 +1416,14 @@ def move_config(toolchains, configs, options, db_queue):
     """
     if len(configs) == 0:
         if options.force_sync:
-            print('No CONFIG is specified. You are probably syncing defconfigs.', end=' ')
+            print 'No CONFIG is specified. You are probably syncing defconfigs.',
         elif options.build_db:
-            print('Building %s database' % CONFIG_DATABASE)
+            print 'Building %s database' % CONFIG_DATABASE
         else:
-            print('Neither CONFIG nor --force-sync is specified. Nothing will happen.', end=' ')
+            print 'Neither CONFIG nor --force-sync is specified. Nothing will happen.',
     else:
-        print('Move ' + ', '.join(configs), end=' ')
-    print('(jobs: %d)\n' % options.jobs)
+        print 'Move ' + ', '.join(configs),
+    print '(jobs: %d)\n' % options.jobs
 
     if options.git_ref:
         reference_src = ReferenceSource(options.git_ref)
@@ -1533,7 +1453,7 @@ def move_config(toolchains, configs, options, db_queue):
     while not slots.empty():
         time.sleep(SLEEP_TIME)
 
-    print('')
+    print ''
     slots.show_failed_boards()
     slots.show_suspicious_boards()
 
@@ -1541,7 +1461,7 @@ def find_kconfig_rules(kconf, config, imply_config):
     """Check whether a config has a 'select' or 'imply' keyword
 
     Args:
-        kconf: Kconfiglib.Kconfig object
+        kconf: Kconfig.Config object
         config: Name of config to check (without CONFIG_ prefix)
         imply_config: Implying config (without CONFIG_ prefix) which may or
             may not have an 'imply' for 'config')
@@ -1549,7 +1469,7 @@ def find_kconfig_rules(kconf, config, imply_config):
     Returns:
         Symbol object for 'config' if found, else None
     """
-    sym = kconf.syms.get(imply_config)
+    sym = kconf.get_symbol(imply_config)
     if sym:
         for sel in sym.get_selected_symbols() | sym.get_implied_symbols():
             if sel.get_name() == config:
@@ -1563,7 +1483,7 @@ def check_imply_rule(kconf, config, imply_config):
     to add an 'imply' for 'config' to that part of the Kconfig.
 
     Args:
-        kconf: Kconfiglib.Kconfig object
+        kconf: Kconfig.Config object
         config: Name of config to check (without CONFIG_ prefix)
         imply_config: Implying config (without CONFIG_ prefix) which may or
             may not have an 'imply' for 'config')
@@ -1574,7 +1494,7 @@ def check_imply_rule(kconf, config, imply_config):
             line number within the Kconfig file, or 0 if none
             message indicating the result
     """
-    sym = kconf.syms.get(imply_config)
+    sym = kconf.get_symbol(imply_config)
     if not sym:
         return 'cannot find sym'
     locs = sym.get_def_locations()
@@ -1707,15 +1627,15 @@ def do_imply_config(config_list, add_imply, imply_flags, skip_added,
     for config in config_list:
         defconfigs = defconfig_db.get(config)
         if not defconfigs:
-            print('%s not found in any defconfig' % config)
+            print '%s not found in any defconfig' % config
             continue
 
         # Get the set of defconfigs without this one (since a config cannot
         # imply itself)
         non_defconfigs = all_defconfigs - defconfigs
         num_defconfigs = len(defconfigs)
-        print('%s found in %d/%d defconfigs' % (config, num_defconfigs,
-                                                len(all_configs)))
+        print '%s found in %d/%d defconfigs' % (config, num_defconfigs,
+                                                len(all_configs))
 
         # This will hold the results: key=config, value=defconfigs containing it
         imply_configs = {}
@@ -1752,7 +1672,7 @@ def do_imply_config(config_list, add_imply, imply_flags, skip_added,
             if common_defconfigs:
                 skip = False
                 if find_superset:
-                    for prev in list(imply_configs.keys()):
+                    for prev in imply_configs.keys():
                         prev_count = len(imply_configs[prev])
                         count = len(common_defconfigs)
                         if (prev_count > count and
@@ -1800,7 +1720,7 @@ def do_imply_config(config_list, add_imply, imply_flags, skip_added,
                         if skip_added:
                             show = False
                 else:
-                    sym = kconf.syms.get(iconfig[CONFIG_LEN:])
+                    sym = kconf.get_symbol(iconfig[CONFIG_LEN:])
                     fname = ''
                     if sym:
                         locs = sym.get_def_locations()
@@ -1822,15 +1742,15 @@ def do_imply_config(config_list, add_imply, imply_flags, skip_added,
                             add_list[fname].append(linenum)
 
             if show and kconfig_info != 'skip':
-                print('%5d : %-30s%-25s %s' % (num_common, iconfig.ljust(30),
-                                              kconfig_info, missing_str))
+                print '%5d : %-30s%-25s %s' % (num_common, iconfig.ljust(30),
+                                              kconfig_info, missing_str)
 
         # Having collected a list of things to add, now we add them. We process
         # each file from the largest line number to the smallest so that
         # earlier additions do not affect our line numbers. E.g. if we added an
         # imply at line 20 it would change the position of each line after
         # that.
-        for fname, linenums in add_list.items():
+        for fname, linenums in add_list.iteritems():
             for linenum in sorted(linenums, reverse=True):
                 add_imply_rule(config[CONFIG_LEN:], fname, linenum)
 
@@ -1907,11 +1827,11 @@ def main():
             for flag in options.imply_flags.split(','):
                 bad = flag not in IMPLY_FLAGS
                 if bad:
-                    print("Invalid flag '%s'" % flag)
+                    print "Invalid flag '%s'" % flag
                 if flag == 'help' or bad:
-                    print("Imply flags: (separate with ',')")
-                    for name, info in IMPLY_FLAGS.items():
-                        print(' %-15s: %s' % (name, info[1]))
+                    print "Imply flags: (separate with ',')"
+                    for name, info in IMPLY_FLAGS.iteritems():
+                        print ' %-15s: %s' % (name, info[1])
                     parser.print_usage()
                     sys.exit(1)
                 imply_flags |= IMPLY_FLAGS[flag][0]
@@ -1921,14 +1841,14 @@ def main():
         return
 
     config_db = {}
-    db_queue = queue.Queue()
+    db_queue = Queue.Queue()
     t = DatabaseThread(config_db, db_queue)
     t.setDaemon(True)
     t.start()
 
     if not options.cleanup_headers_only:
         check_clean_directory()
-        bsettings.Setup('')
+	bsettings.Setup('')
         toolchains = toolchain.Toolchains()
         toolchains.GetSettings()
         toolchains.Scan(verbose=False)
@@ -1955,7 +1875,7 @@ def main():
 
     if options.build_db:
         with open(CONFIG_DATABASE, 'w') as fd:
-            for defconfig, configs in config_db.items():
+            for defconfig, configs in config_db.iteritems():
                 fd.write('%s\n' % defconfig)
                 for config in sorted(configs.keys()):
                     fd.write('   %s=%s\n' % (config, configs[config]))

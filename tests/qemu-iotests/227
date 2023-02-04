@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: quick
 #
 # Test query-blockstats with different ways to create a BB
 #

@@ -27,9 +27,9 @@
 #
 
 [Sources.common]
-  PrePi.h
   FwVol.c
   PrePiLib.c
+  ReportStatusCode.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -51,9 +51,12 @@
   HobLib
 
 [Guids]
+  gEfiStatusCodeSpecificDataGuid
   gEfiMemoryTypeInformationGuid
+  gEfiStatusCodeDataTypeDebugGuid
 
 [Protocols]
+  gEfiStatusCodeRuntimeProtocolGuid
   gPeCoffLoaderProtocolGuid
 
 

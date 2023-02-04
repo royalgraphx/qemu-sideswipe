@@ -17,10 +17,10 @@
  */
 
 #include "qemu/osdep.h"
-#include "../libqtest.h"
+#include "libqtest.h"
 #include "qemu/module.h"
-#include "qgraph.h"
-#include "virtio-rng.h"
+#include "libqos/qgraph.h"
+#include "libqos/virtio-rng.h"
 
 /* virtio-rng-device */
 static void *qvirtio_rng_get_driver(QVirtioRng *v_rng,

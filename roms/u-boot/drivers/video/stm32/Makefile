@@ -6,4 +6,3 @@
 #          Yannick Fertre <yannick.fertre@st.com>
 
 obj-${CONFIG_VIDEO_STM32} = stm32_ltdc.o
-obj-${CONFIG_VIDEO_STM32_DSI} += stm32_dsi.o

@@ -29,10 +29,9 @@
 #include "hw/qdev-properties.h"
 #include "migration/vmstate.h"
 #include "hw/dma/i8257.h"
-#include "qom/object.h"
 
 #define TYPE_I82374 "i82374"
-OBJECT_DECLARE_SIMPLE_TYPE(I82374State, I82374)
+#define I82374(obj) OBJECT_CHECK(I82374State, (obj), TYPE_I82374)
 
 //#define DEBUG_I82374
 
@@ -46,13 +45,13 @@ do {} while (0)
 #define BADF(fmt, ...) \
 do { fprintf(stderr, "i82374 ERROR: " fmt , ## __VA_ARGS__); } while (0)
 
-struct I82374State {
+typedef struct I82374State {
     ISADevice parent_obj;
 
     uint32_t iobase;
     uint8_t commands[8];
     PortioList port_list;
-};
+} I82374State;
 
 static const VMStateDescription vmstate_i82374 = {
     .name = "i82374",

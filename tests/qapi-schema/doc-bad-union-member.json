@@ -11,9 +11,9 @@
   'data': { 'nothing': 'Empty' } }
 
 { 'struct': 'Base',
-  'data': { 'type': 'FrobType' } }
+  'data': { 'type': 'T' } }
 
 { 'struct': 'Empty',
   'data': { } }
 
-{ 'enum': 'FrobType', 'data': ['nothing'] }
+{ 'enum': 'T', 'data': ['nothing'] }

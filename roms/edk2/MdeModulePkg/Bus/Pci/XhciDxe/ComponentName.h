@@ -57,6 +57,7 @@ XhciComponentNameGetDriverName (
   OUT CHAR16                       **DriverName
   );
 
+
 /**
   Retrieves a Unicode string that is the user readable name of the controller
   that is being managed by a driver.
@@ -136,3 +137,4 @@ XhciComponentNameGetControllerName (
   );
 
 #endif
+

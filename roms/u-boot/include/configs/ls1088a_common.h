@@ -21,6 +21,7 @@
 #endif
 
 #define CONFIG_REMAKE_ELF
+#define CONFIG_FSL_LAYERSCAPE
 
 #include <asm/arch/stream_id_lsch3.h>
 #include <asm/arch/config.h>
@@ -28,16 +29,22 @@
 
 #define LS1088ARDB_PB_BOARD            0x4A
 /* Link Definitions */
-#ifdef CONFIG_TFABOOT
-#define CONFIG_SYS_INIT_SP_ADDR		CONFIG_SYS_TEXT_BASE
-#else
 #define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_FSL_OCRAM_BASE + 0xfff0)
-#endif
 
 /* Link Definitions */
+
+#ifdef CONFIG_QSPI_BOOT
 #define CONFIG_SYS_FSL_QSPI_BASE	0x20000000
+#define CONFIG_ENV_OFFSET		0x300000        /* 3MB */
+#define CONFIG_ENV_ADDR			(CONFIG_SYS_FSL_QSPI_BASE + \
+						CONFIG_ENV_OFFSET)
+#endif
 
 #define CONFIG_SKIP_LOWLEVEL_INIT
+
+#if !defined(CONFIG_SD_BOOT)
+#define CONFIG_FSL_DDR_INTERACTIVE	/* Interactive debugging */
+#endif
 
 #define CONFIG_VERY_BIG_RAM
 #define CONFIG_SYS_DDR_SDRAM_BASE	0x80000000UL
@@ -48,29 +55,24 @@
 /*
  * SMP Definitinos
  */
-#define CPU_RELEASE_ADDR		secondary_boot_addr
+#define CPU_RELEASE_ADDR		secondary_boot_func
+
+#ifdef CONFIG_PCI
+#define CONFIG_CMD_PCI
+#endif
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + 2048 * 1024)
 
-/* GPIO */
-#ifdef CONFIG_DM_GPIO
-#ifndef CONFIG_MPC8XXX_GPIO
-#define CONFIG_MPC8XXX_GPIO
-#endif
-#endif
-
 /* I2C */
-#if !CONFIG_IS_ENABLED(DM_I2C)
 #define CONFIG_SYS_I2C
-#endif
-
 
 /* Serial Port */
 #define CONFIG_SYS_NS16550_SERIAL
 #define CONFIG_SYS_NS16550_REG_SIZE     1
 #define CONFIG_SYS_NS16550_CLK          (get_bus_freq(0) / 2)
 
+#define CONFIG_BAUDRATE			115200
 #define CONFIG_SYS_BAUDRATE_TABLE	{ 9600, 19200, 38400, 57600, 115200 }
 
 #if !defined(SPL_NO_IFC) || defined(CONFIG_TARGET_LS1088AQDS)
@@ -143,8 +145,10 @@ unsigned long long get_qixis_addr(void);
  */
 
 #if defined(CONFIG_FSL_MC_ENET)
-#define CONFIG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE		(128UL * 1024 * 1024)
+#define CONFIG_SYS_LS_MC_DRAM_BLOCK_MIN_SIZE		(512UL * 1024 * 1024)
 #endif
+/* Command line configuration */
+#define CONFIG_CMD_CACHE
 
 /* Miscellaneous configurable options */
 #define CONFIG_SYS_LOAD_ADDR	(CONFIG_SYS_DDR_SDRAM_BASE + 0x10000000)
@@ -169,6 +173,9 @@ unsigned long long get_qixis_addr(void);
 /* #define CONFIG_DISPLAY_CPUINFO */
 
 #ifndef SPL_NO_ENV
+/* Allow to overwrite serial and ethaddr */
+#define CONFIG_ENV_OVERWRITE
+
 /* Initial environment variables */
 #define CONFIG_EXTRA_ENV_SETTINGS		\
 	"hwconfig=fsl_ddr:bank_intlv=auto\0"	\
@@ -185,7 +192,6 @@ unsigned long long get_qixis_addr(void);
 	"mcinitcmd=fsl_mc start mc 0x580a00000"	\
 	" 0x580e00000 \0"
 
-#ifndef CONFIG_TFABOOT
 #if defined(CONFIG_QSPI_BOOT)
 #define CONFIG_BOOTCOMMAND	"sf probe 0:0;" \
 				"sf read 0x80001000 0xd00000 0x100000;"\
@@ -202,7 +208,6 @@ unsigned long long get_qixis_addr(void);
 				" cp.b $kernel_start $kernel_load" \
 				" $kernel_size && bootm $kernel_load"
 #endif
-#endif /* CONFIG_TFABOOT  */
 #endif
 
 /* Monitor Command Prompt */
@@ -219,11 +224,12 @@ unsigned long long get_qixis_addr(void);
 #define CONFIG_SPL_MAX_SIZE            0x16000
 #define CONFIG_SPL_STACK               (CONFIG_SYS_FSL_OCRAM_BASE + 0x9ff0)
 #define CONFIG_SPL_TARGET              "u-boot-with-spl.bin"
+#define CONFIG_SPL_TEXT_BASE           0x1800a000
 
 #define CONFIG_SYS_SPL_MALLOC_SIZE     0x00100000
 #define CONFIG_SYS_SPL_MALLOC_START    0x80200000
 
-#ifdef CONFIG_NXP_ESBC
+#ifdef CONFIG_SECURE_BOOT
 #define CONFIG_U_BOOT_HDR_SIZE		(16 << 10)
 /*
  * HDR would be appended at end of image and copied to DDR along
@@ -234,7 +240,7 @@ unsigned long long get_qixis_addr(void);
 #define CONFIG_SYS_MONITOR_LEN         (0x100000 + CONFIG_U_BOOT_HDR_SIZE)
 #else
 #define CONFIG_SYS_MONITOR_LEN         0x100000
-#endif /* ifdef CONFIG_NXP_ESBC */
+#endif /* ifdef CONFIG_SECURE_BOOT */
 
 #endif
 #define CONFIG_SYS_BOOTM_LEN   (64 << 20)      /* Increase max gunzip size */

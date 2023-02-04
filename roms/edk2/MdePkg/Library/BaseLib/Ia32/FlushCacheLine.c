@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Flushes a cache line from all the instruction and data caches within the
   coherency domain of the CPU.
@@ -24,7 +27,7 @@
 VOID *
 EFIAPI
 AsmFlushCacheLine (
-  IN      VOID  *LinearAddress
+  IN      VOID                      *LinearAddress
   )
 {
   //
@@ -46,3 +49,4 @@ Done:
 
   return LinearAddress;
 }
+

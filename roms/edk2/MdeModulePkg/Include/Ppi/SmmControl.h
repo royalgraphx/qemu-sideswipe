@@ -15,13 +15,14 @@
 
 **/
 
+
 #ifndef _SMM_CONTROL_PPI_H_
 #define _SMM_CONTROL_PPI_H_
 
 #define PEI_SMM_CONTROL_PPI_GUID \
   { 0x61c68702, 0x4d7e, 0x4f43, 0x8d, 0xef, 0xa7, 0x43, 0x5, 0xce, 0x74, 0xc5 }
 
-typedef struct _PEI_SMM_CONTROL_PPI PEI_SMM_CONTROL_PPI;
+typedef struct _PEI_SMM_CONTROL_PPI  PEI_SMM_CONTROL_PPI;
 
 /**
   Invokes SMI activation from either the preboot or runtime environment.
@@ -42,9 +43,9 @@ typedef struct _PEI_SMM_CONTROL_PPI PEI_SMM_CONTROL_PPI;
 **/
 typedef
 EFI_STATUS
-(EFIAPI *PEI_SMM_ACTIVATE)(
+(EFIAPI *PEI_SMM_ACTIVATE) (
   IN EFI_PEI_SERVICES                                **PeiServices,
-  IN PEI_SMM_CONTROL_PPI                             *This,
+  IN PEI_SMM_CONTROL_PPI                             * This,
   IN OUT INT8                                        *ArgumentBuffer OPTIONAL,
   IN OUT UINTN                                       *ArgumentBufferSize OPTIONAL,
   IN BOOLEAN                                         Periodic OPTIONAL,
@@ -66,9 +67,9 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *PEI_SMM_DEACTIVATE)(
+(EFIAPI *PEI_SMM_DEACTIVATE) (
   IN EFI_PEI_SERVICES                      **PeiServices,
-  IN PEI_SMM_CONTROL_PPI                   *This,
+  IN PEI_SMM_CONTROL_PPI                   * This,
   IN BOOLEAN                               Periodic OPTIONAL
   );
 
@@ -79,10 +80,10 @@ EFI_STATUS
 ///  Intel chipset
 ///
 struct _PEI_SMM_CONTROL_PPI {
-  PEI_SMM_ACTIVATE      Trigger;
-  PEI_SMM_DEACTIVATE    Clear;
+  PEI_SMM_ACTIVATE    Trigger;
+  PEI_SMM_DEACTIVATE  Clear;
 };
 
-extern EFI_GUID  gPeiSmmControlPpiGuid;
+extern EFI_GUID gPeiSmmControlPpiGuid;
 
 #endif

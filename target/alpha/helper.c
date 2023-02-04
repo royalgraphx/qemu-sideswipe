@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -18,7 +18,7 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/log.h"
+
 #include "cpu.h"
 #include "exec/exec-all.h"
 #include "fpu/softfloat-types.h"
@@ -120,44 +120,15 @@ void cpu_alpha_store_gr(CPUAlphaState *env, unsigned reg, uint64_t val)
 }
 
 #if defined(CONFIG_USER_ONLY)
-void alpha_cpu_record_sigsegv(CPUState *cs, vaddr address,
-                              MMUAccessType access_type,
-                              bool maperr, uintptr_t retaddr)
+bool alpha_cpu_tlb_fill(CPUState *cs, vaddr address, int size,
+                        MMUAccessType access_type, int mmu_idx,
+                        bool probe, uintptr_t retaddr)
 {
     AlphaCPU *cpu = ALPHA_CPU(cs);
-    target_ulong mmcsr, cause;
 
-    /* Assuming !maperr, infer the missing protection. */
-    switch (access_type) {
-    case MMU_DATA_LOAD:
-        mmcsr = MM_K_FOR;
-        cause = 0;
-        break;
-    case MMU_DATA_STORE:
-        mmcsr = MM_K_FOW;
-        cause = 1;
-        break;
-    case MMU_INST_FETCH:
-        mmcsr = MM_K_FOE;
-        cause = -1;
-        break;
-    default:
-        g_assert_not_reached();
-    }
-    if (maperr) {
-        if (address < BIT_ULL(TARGET_VIRT_ADDR_SPACE_BITS - 1)) {
-            /* Userspace address, therefore page not mapped. */
-            mmcsr = MM_K_TNV;
-        } else {
-            /* Kernel or invalid address. */
-            mmcsr = MM_K_ACV;
-        }
-    }
-
-    /* Record the arguments that PALcode would give to the kernel. */
+    cs->exception_index = EXCP_MMFAULT;
     cpu->env.trap_arg0 = address;
-    cpu->env.trap_arg1 = mmcsr;
-    cpu->env.trap_arg2 = cause;
+    cpu_loop_exit_restore(cs, retaddr);
 }
 #else
 /* Returns the OSF/1 entMM failure indication, or -1 on success.  */
@@ -322,6 +293,7 @@ bool alpha_cpu_tlb_fill(CPUState *cs, vaddr addr, int size,
                  prot, mmu_idx, TARGET_PAGE_SIZE);
     return true;
 }
+#endif /* USER_ONLY */
 
 void alpha_cpu_do_interrupt(CPUState *cs)
 {
@@ -376,6 +348,7 @@ void alpha_cpu_do_interrupt(CPUState *cs)
 
     cs->exception_index = -1;
 
+#if !defined(CONFIG_USER_ONLY)
     switch (i) {
     case EXCP_RESET:
         i = 0x0000;
@@ -431,6 +404,7 @@ void alpha_cpu_do_interrupt(CPUState *cs)
 
     /* Switch to PALmode.  */
     env->flags |= ENV_FLAG_PAL_MODE;
+#endif /* !USER_ONLY */
 }
 
 bool alpha_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
@@ -477,8 +451,6 @@ bool alpha_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
     return false;
 }
 
-#endif /* !CONFIG_USER_ONLY */
-
 void alpha_cpu_dump_state(CPUState *cs, FILE *f, int flags)
 {
     static const char linux_reg_names[31][4] = {
@@ -514,7 +486,7 @@ void alpha_cpu_dump_state(CPUState *cs, FILE *f, int flags)
 
 /* This should only be called from translate, via gen_excp.
    We expect that ENV->PC has already been updated.  */
-G_NORETURN void helper_excp(CPUAlphaState *env, int excp, int error)
+void QEMU_NORETURN helper_excp(CPUAlphaState *env, int excp, int error)
 {
     CPUState *cs = env_cpu(env);
 
@@ -524,23 +496,23 @@ G_NORETURN void helper_excp(CPUAlphaState *env, int excp, int error)
 }
 
 /* This may be called from any of the helpers to set up EXCEPTION_INDEX.  */
-G_NORETURN void dynamic_excp(CPUAlphaState *env, uintptr_t retaddr,
-                             int excp, int error)
+void QEMU_NORETURN dynamic_excp(CPUAlphaState *env, uintptr_t retaddr,
+                                int excp, int error)
 {
     CPUState *cs = env_cpu(env);
 
     cs->exception_index = excp;
     env->error_code = error;
     if (retaddr) {
-        cpu_restore_state(cs, retaddr);
+        cpu_restore_state(cs, retaddr, true);
         /* Floating-point exceptions (our only users) point to the next PC.  */
         env->pc += 4;
     }
     cpu_loop_exit(cs);
 }
 
-G_NORETURN void arith_excp(CPUAlphaState *env, uintptr_t retaddr,
-                           int exc, uint64_t mask)
+void QEMU_NORETURN arith_excp(CPUAlphaState *env, uintptr_t retaddr,
+                              int exc, uint64_t mask)
 {
     env->trap_arg0 = exc;
     env->trap_arg1 = mask;

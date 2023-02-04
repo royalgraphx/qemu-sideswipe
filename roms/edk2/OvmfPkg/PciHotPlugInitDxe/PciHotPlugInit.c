@@ -27,7 +27,8 @@
 //
 // TRUE if the PCI platform supports extended config space, FALSE otherwise.
 //
-STATIC BOOLEAN  mPciExtConfSpaceSupported;
+STATIC BOOLEAN mPciExtConfSpaceSupported;
+
 
 //
 // The protocol interface this driver produces.
@@ -35,7 +36,8 @@ STATIC BOOLEAN  mPciExtConfSpaceSupported;
 // Refer to 12.6 "PCI Hot Plug PCI Initialization Protocol" in the Platform
 // Init 1.4a Spec, Volume 5.
 //
-STATIC EFI_PCI_HOT_PLUG_INIT_PROTOCOL  mPciHotPlugInit;
+STATIC EFI_PCI_HOT_PLUG_INIT_PROTOCOL mPciHotPlugInit;
+
 
 //
 // Resource padding template for the GetResourcePadding() protocol member
@@ -56,10 +58,11 @@ STATIC EFI_PCI_HOT_PLUG_INIT_PROTOCOL  mPciHotPlugInit;
 //
 #pragma pack (1)
 typedef struct {
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR    Padding[4];
-  EFI_ACPI_END_TAG_DESCRIPTOR          EndDesc;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR Padding[4];
+  EFI_ACPI_END_TAG_DESCRIPTOR       EndDesc;
 } RESOURCE_PADDING;
 #pragma pack ()
+
 
 /**
   Initialize a RESOURCE_PADDING object.
@@ -70,10 +73,10 @@ typedef struct {
 STATIC
 VOID
 InitializeResourcePadding (
-  OUT RESOURCE_PADDING  *ResourcePadding
+  OUT RESOURCE_PADDING *ResourcePadding
   )
 {
-  UINTN  Index;
+  UINTN Index;
 
   ZeroMem (ResourcePadding, sizeof *ResourcePadding);
 
@@ -81,17 +84,17 @@ InitializeResourcePadding (
   // Fill in the Padding fields that don't vary across resource types.
   //
   for (Index = 0; Index < ARRAY_SIZE (ResourcePadding->Padding); ++Index) {
-    EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Descriptor;
+    EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *Descriptor;
 
     Descriptor       = ResourcePadding->Padding + Index;
     Descriptor->Desc = ACPI_ADDRESS_SPACE_DESCRIPTOR;
     Descriptor->Len  = (UINT16)(
-                                sizeof (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR) -
-                                OFFSET_OF (
-                                  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR,
-                                  ResType
-                                  )
-                                );
+                         sizeof (EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR) -
+                         OFFSET_OF (
+                           EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR,
+                           ResType
+                           )
+                         );
   }
 
   //
@@ -99,6 +102,7 @@ InitializeResourcePadding (
   //
   ResourcePadding->EndDesc.Desc = ACPI_END_TAG_DESCRIPTOR;
 }
+
 
 /**
   Set up a descriptor entry for reserving IO space.
@@ -113,14 +117,15 @@ InitializeResourcePadding (
 STATIC
 VOID
 SetIoPadding (
-  IN OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Descriptor,
-  IN     UINTN                              SizeExponent
+  IN OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *Descriptor,
+  IN     UINTN                             SizeExponent
   )
 {
-  Descriptor->ResType      = ACPI_ADDRESS_SPACE_TYPE_IO;
-  Descriptor->AddrLen      = LShiftU64 (1, SizeExponent);
+  Descriptor->ResType = ACPI_ADDRESS_SPACE_TYPE_IO;
+  Descriptor->AddrLen = LShiftU64 (1, SizeExponent);
   Descriptor->AddrRangeMax = Descriptor->AddrLen - 1;
 }
+
 
 /**
   Set up a descriptor entry for reserving MMIO space.
@@ -147,10 +152,10 @@ SetIoPadding (
 STATIC
 VOID
 SetMmioPadding (
-  IN OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR  *Descriptor,
-  IN     BOOLEAN                            Prefetchable,
-  IN     BOOLEAN                            ThirtyTwoBitOnly,
-  IN     UINTN                              SizeExponent
+  IN OUT EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR *Descriptor,
+  IN     BOOLEAN                           Prefetchable,
+  IN     BOOLEAN                           ThirtyTwoBitOnly,
+  IN     UINTN                             SizeExponent
   )
 {
   Descriptor->ResType = ACPI_ADDRESS_SPACE_TYPE_MEM;
@@ -163,10 +168,10 @@ SetMmioPadding (
       EFI_ACPI_MEMORY_RESOURCE_SPECIFIC_FLAG_NON_CACHEABLE;
     Descriptor->AddrSpaceGranularity = 32;
   }
-
-  Descriptor->AddrLen      = LShiftU64 (1, SizeExponent);
+  Descriptor->AddrLen = LShiftU64 (1, SizeExponent);
   Descriptor->AddrRangeMax = Descriptor->AddrLen - 1;
 }
+
 
 /**
   Round up a positive 32-bit value to the next whole power of two, and return
@@ -185,10 +190,10 @@ SetMmioPadding (
 STATIC
 INTN
 HighBitSetRoundUp32 (
-  IN UINT32  Operand
+  IN UINT32 Operand
   )
 {
-  INTN  HighBit;
+  INTN HighBit;
 
   HighBit = HighBitSet32 (Operand);
   if (HighBit == -1) {
@@ -197,16 +202,15 @@ HighBitSetRoundUp32 (
     //
     return HighBit;
   }
-
   if ((Operand & (Operand - 1)) != 0) {
     //
     // Operand is not a whole power of two.
     //
     ++HighBit;
   }
-
   return (HighBit < 32) ? HighBit : -1;
 }
+
 
 /**
   Round up a positive 64-bit value to the next whole power of two, and return
@@ -225,10 +229,10 @@ HighBitSetRoundUp32 (
 STATIC
 INTN
 HighBitSetRoundUp64 (
-  IN UINT64  Operand
+  IN UINT64 Operand
   )
 {
-  INTN  HighBit;
+  INTN HighBit;
 
   HighBit = HighBitSet64 (Operand);
   if (HighBit == -1) {
@@ -237,16 +241,15 @@ HighBitSetRoundUp64 (
     //
     return HighBit;
   }
-
   if ((Operand & (Operand - 1)) != 0) {
     //
     // Operand is not a whole power of two.
     //
     ++HighBit;
   }
-
   return (HighBit < 64) ? HighBit : -1;
 }
+
 
 /**
   Look up the QEMU-specific Resource Reservation capability in the conventional
@@ -270,16 +273,16 @@ HighBitSetRoundUp64 (
 STATIC
 EFI_STATUS
 QueryReservationHint (
-  IN  CONST EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS  *HpcPciAddress,
-  OUT QEMU_PCI_BRIDGE_CAPABILITY_RESOURCE_RESERVATION    *ReservationHint
-  )
+  IN  CONST EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS *HpcPciAddress,
+  OUT QEMU_PCI_BRIDGE_CAPABILITY_RESOURCE_RESERVATION   *ReservationHint
+)
 {
-  UINT16        PciVendorId;
-  EFI_STATUS    Status;
-  PCI_CAP_DEV   *PciDevice;
-  PCI_CAP_LIST  *CapList;
-  UINT16        VendorInstance;
-  PCI_CAP       *VendorCap;
+  UINT16       PciVendorId;
+  EFI_STATUS   Status;
+  PCI_CAP_DEV  *PciDevice;
+  PCI_CAP_LIST *CapList;
+  UINT16       VendorInstance;
+  PCI_CAP      *VendorCap;
 
   //
   // Check the vendor identifier.
@@ -310,7 +313,6 @@ QueryReservationHint (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   Status = PciCapListInit (PciDevice, &CapList);
   if (EFI_ERROR (Status)) {
     goto UninitPciDevice;
@@ -321,9 +323,9 @@ QueryReservationHint (
   // capability.
   //
   VendorInstance = 0;
-  for ( ; ;) {
-    UINT8  VendorLength;
-    UINT8  BridgeCapType;
+  for (;;) {
+    UINT8 VendorLength;
+    UINT8 BridgeCapType;
 
     Status = PciCapListFindCap (
                CapList,
@@ -349,7 +351,6 @@ QueryReservationHint (
     if (EFI_ERROR (Status)) {
       goto UninitCapList;
     }
-
     if (VendorLength != sizeof *ReservationHint) {
       continue;
     }
@@ -367,10 +368,8 @@ QueryReservationHint (
     if (EFI_ERROR (Status)) {
       goto UninitCapList;
     }
-
     if (BridgeCapType ==
-        QEMU_PCI_BRIDGE_CAPABILITY_TYPE_RESOURCE_RESERVATION)
-    {
+        QEMU_PCI_BRIDGE_CAPABILITY_TYPE_RESOURCE_RESERVATION) {
       //
       // We have a match.
       //
@@ -397,6 +396,7 @@ UninitPciDevice:
 
   return Status;
 }
+
 
 /**
   Returns a list of root Hot Plug Controllers (HPCs) that require
@@ -428,12 +428,12 @@ STATIC
 EFI_STATUS
 EFIAPI
 GetRootHpcList (
-  IN  EFI_PCI_HOT_PLUG_INIT_PROTOCOL  *This,
-  OUT UINTN                           *HpcCount,
-  OUT EFI_HPC_LOCATION                **HpcList
+  IN  EFI_PCI_HOT_PLUG_INIT_PROTOCOL *This,
+  OUT UINTN                          *HpcCount,
+  OUT EFI_HPC_LOCATION               **HpcList
   )
 {
-  if ((HpcCount == NULL) || (HpcList == NULL)) {
+  if (HpcCount == NULL || HpcList == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -442,9 +442,10 @@ GetRootHpcList (
   // that would require special initialization.
   //
   *HpcCount = 0;
-  *HpcList  = NULL;
+  *HpcList = NULL;
   return EFI_SUCCESS;
 }
+
 
 /**
   Initializes one root Hot Plug Controller (HPC). This process may causes
@@ -485,11 +486,11 @@ STATIC
 EFI_STATUS
 EFIAPI
 InitializeRootHpc (
-  IN  EFI_PCI_HOT_PLUG_INIT_PROTOCOL  *This,
-  IN  EFI_DEVICE_PATH_PROTOCOL        *HpcDevicePath,
-  IN  UINT64                          HpcPciAddress,
-  IN  EFI_EVENT                       Event  OPTIONAL,
-  OUT EFI_HPC_STATE                   *HpcState
+  IN  EFI_PCI_HOT_PLUG_INIT_PROTOCOL *This,
+  IN  EFI_DEVICE_PATH_PROTOCOL       *HpcDevicePath,
+  IN  UINT64                         HpcPciAddress,
+  IN  EFI_EVENT                      Event, OPTIONAL
+  OUT EFI_HPC_STATE                  *HpcState
   )
 {
   //
@@ -501,9 +502,9 @@ InitializeRootHpc (
   if (HpcState == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-
   return EFI_UNSUPPORTED;
 }
+
 
 /**
   Returns the resource padding that is required by the PCI bus that is
@@ -545,50 +546,43 @@ STATIC
 EFI_STATUS
 EFIAPI
 GetResourcePadding (
-  IN  EFI_PCI_HOT_PLUG_INIT_PROTOCOL  *This,
-  IN  EFI_DEVICE_PATH_PROTOCOL        *HpcDevicePath,
-  IN  UINT64                          HpcPciAddress,
-  OUT EFI_HPC_STATE                   *HpcState,
-  OUT VOID                            **Padding,
-  OUT EFI_HPC_PADDING_ATTRIBUTES      *Attributes
+  IN  EFI_PCI_HOT_PLUG_INIT_PROTOCOL *This,
+  IN  EFI_DEVICE_PATH_PROTOCOL       *HpcDevicePath,
+  IN  UINT64                         HpcPciAddress,
+  OUT EFI_HPC_STATE                  *HpcState,
+  OUT VOID                           **Padding,
+  OUT EFI_HPC_PADDING_ATTRIBUTES     *Attributes
   )
 {
-  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS      *Address;
-  BOOLEAN                                          DefaultIo;
-  BOOLEAN                                          DefaultMmio;
-  RESOURCE_PADDING                                 ReservationRequest;
-  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR                *FirstResource;
-  EFI_STATUS                                       ReservationHintStatus;
-  QEMU_PCI_BRIDGE_CAPABILITY_RESOURCE_RESERVATION  ReservationHint;
+  EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS     *Address;
+  BOOLEAN                                         DefaultIo;
+  BOOLEAN                                         DefaultMmio;
+  RESOURCE_PADDING                                ReservationRequest;
+  EFI_ACPI_ADDRESS_SPACE_DESCRIPTOR               *FirstResource;
+  EFI_STATUS                                      ReservationHintStatus;
+  QEMU_PCI_BRIDGE_CAPABILITY_RESOURCE_RESERVATION ReservationHint;
 
   Address = (EFI_PCI_ROOT_BRIDGE_IO_PROTOCOL_PCI_ADDRESS *)&HpcPciAddress;
 
-  DEBUG_CODE_BEGIN ();
-  CHAR16  *DevicePathString;
+  DEBUG_CODE (
+    CHAR16                                      *DevicePathString;
 
-  DevicePathString = ConvertDevicePathToText (HpcDevicePath, FALSE, FALSE);
+    DevicePathString = ConvertDevicePathToText (HpcDevicePath, FALSE, FALSE);
 
-  DEBUG ((
-    DEBUG_VERBOSE,
-    "%a: Address=%02x:%02x.%x DevicePath=%s\n",
-    __FUNCTION__,
-    Address->Bus,
-    Address->Device,
-    Address->Function,
-    (DevicePathString == NULL) ? L"<unavailable>" : DevicePathString
-    ));
+    DEBUG ((EFI_D_VERBOSE, "%a: Address=%02x:%02x.%x DevicePath=%s\n",
+      __FUNCTION__, Address->Bus, Address->Device, Address->Function,
+      (DevicePathString == NULL) ? L"<unavailable>" : DevicePathString));
 
-  if (DevicePathString != NULL) {
-    FreePool (DevicePathString);
-  }
+    if (DevicePathString != NULL) {
+      FreePool (DevicePathString);
+    }
+    );
 
-  DEBUG_CODE_END ();
-
-  if ((HpcState == NULL) || (Padding == NULL) || (Attributes == NULL)) {
+  if (HpcState == NULL || Padding == NULL || Attributes == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  DefaultIo   = TRUE;
+  DefaultIo = TRUE;
   DefaultMmio = TRUE;
 
   //
@@ -605,7 +599,7 @@ GetResourcePadding (
   //
   ReservationHintStatus = QueryReservationHint (Address, &ReservationHint);
   if (!EFI_ERROR (ReservationHintStatus)) {
-    INTN  HighBit;
+    INTN HighBit;
 
     DEBUG ((
       DEBUG_VERBOSE,
@@ -624,84 +618,82 @@ GetResourcePadding (
     // (a) Reserve bus numbers.
     //
     switch (ReservationHint.BusNumbers) {
-      case 0:
-        //
-        // No reservation needed.
-        //
-        break;
-      case MAX_UINT32:
-        //
-        // Firmware default (unspecified). Treat it as "no reservation needed".
-        //
-        break;
-      default:
-        //
-        // Request the specified amount.
-        //
-        --FirstResource;
-        FirstResource->ResType = ACPI_ADDRESS_SPACE_TYPE_BUS;
-        FirstResource->AddrLen = ReservationHint.BusNumbers;
-        break;
+    case 0:
+      //
+      // No reservation needed.
+      //
+      break;
+    case MAX_UINT32:
+      //
+      // Firmware default (unspecified). Treat it as "no reservation needed".
+      //
+      break;
+    default:
+      //
+      // Request the specified amount.
+      //
+      --FirstResource;
+      FirstResource->ResType = ACPI_ADDRESS_SPACE_TYPE_BUS;
+      FirstResource->AddrLen = ReservationHint.BusNumbers;
+      break;
     }
 
     //
     // (b) Reserve IO space.
     //
     switch (ReservationHint.Io) {
-      case 0:
-        //
-        // No reservation needed, disable our built-in.
-        //
+    case 0:
+      //
+      // No reservation needed, disable our built-in.
+      //
+      DefaultIo = FALSE;
+      break;
+    case MAX_UINT64:
+      //
+      // Firmware default (unspecified). Stick with our built-in.
+      //
+      break;
+    default:
+      //
+      // Round the specified amount up to the next power of two. If rounding is
+      // successful, reserve the rounded value. Fall back to the default
+      // otherwise.
+      //
+      HighBit = HighBitSetRoundUp64 (ReservationHint.Io);
+      if (HighBit != -1) {
+        SetIoPadding (--FirstResource, (UINTN)HighBit);
         DefaultIo = FALSE;
-        break;
-      case MAX_UINT64:
-        //
-        // Firmware default (unspecified). Stick with our built-in.
-        //
-        break;
-      default:
-        //
-        // Round the specified amount up to the next power of two. If rounding is
-        // successful, reserve the rounded value. Fall back to the default
-        // otherwise.
-        //
-        HighBit = HighBitSetRoundUp64 (ReservationHint.Io);
-        if (HighBit != -1) {
-          SetIoPadding (--FirstResource, (UINTN)HighBit);
-          DefaultIo = FALSE;
-        }
-
-        break;
+      }
+      break;
     }
 
     //
     // (c) Reserve non-prefetchable MMIO space (32-bit only).
     //
     switch (ReservationHint.NonPrefetchable32BitMmio) {
-      case 0:
-        //
-        // No reservation needed, disable our built-in.
-        //
+    case 0:
+      //
+      // No reservation needed, disable our built-in.
+      //
+      DefaultMmio = FALSE;
+      break;
+    case MAX_UINT32:
+      //
+      // Firmware default (unspecified). Stick with our built-in.
+      //
+      break;
+    default:
+      //
+      // Round the specified amount up to the next power of two. If rounding is
+      // successful, reserve the rounded value. Fall back to the default
+      // otherwise.
+      //
+      HighBit = HighBitSetRoundUp32 (ReservationHint.NonPrefetchable32BitMmio);
+      if (HighBit != -1) {
+        SetMmioPadding (--FirstResource, FALSE, TRUE, (UINTN)HighBit);
         DefaultMmio = FALSE;
-        break;
-      case MAX_UINT32:
-        //
-        // Firmware default (unspecified). Stick with our built-in.
-        //
-        break;
-      default:
-        //
-        // Round the specified amount up to the next power of two. If rounding is
-        // successful, reserve the rounded value. Fall back to the default
-        // otherwise.
-        //
-        HighBit = HighBitSetRoundUp32 (ReservationHint.NonPrefetchable32BitMmio);
-        if (HighBit != -1) {
-          SetMmioPadding (--FirstResource, FALSE, TRUE, (UINTN)HighBit);
-          DefaultMmio = FALSE;
-        }
-
-        break;
+      }
+      break;
     }
 
     //
@@ -716,16 +708,14 @@ GetResourcePadding (
     // rounding is successful, reserve the rounded value. Do not reserve
     // prefetchable MMIO space otherwise.
     //
-    if ((ReservationHint.Prefetchable32BitMmio > 0) &&
-        (ReservationHint.Prefetchable32BitMmio < MAX_UINT32))
-    {
+    if (ReservationHint.Prefetchable32BitMmio > 0 &&
+        ReservationHint.Prefetchable32BitMmio < MAX_UINT32) {
       HighBit = HighBitSetRoundUp32 (ReservationHint.Prefetchable32BitMmio);
       if (HighBit != -1) {
         SetMmioPadding (--FirstResource, TRUE, TRUE, (UINTN)HighBit);
       }
-    } else if ((ReservationHint.Prefetchable64BitMmio > 0) &&
-               (ReservationHint.Prefetchable64BitMmio < MAX_UINT64))
-    {
+    } else if (ReservationHint.Prefetchable64BitMmio > 0 &&
+               ReservationHint.Prefetchable64BitMmio < MAX_UINT64) {
       HighBit = HighBitSetRoundUp64 (ReservationHint.Prefetchable64BitMmio);
       if (HighBit != -1) {
         SetMmioPadding (--FirstResource, TRUE, FALSE, (UINTN)HighBit);
@@ -779,6 +769,7 @@ GetResourcePadding (
   return EFI_SUCCESS;
 }
 
+
 /**
   Entry point for this driver.
 
@@ -792,22 +783,18 @@ GetResourcePadding (
 EFI_STATUS
 EFIAPI
 DriverInitialize (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE       ImageHandle,
+  IN EFI_SYSTEM_TABLE *SystemTable
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS Status;
 
   mPciExtConfSpaceSupported = (PcdGet16 (PcdOvmfHostBridgePciDevId) ==
                                INTEL_Q35_MCH_DEVICE_ID);
-  mPciHotPlugInit.GetRootHpcList     = GetRootHpcList;
-  mPciHotPlugInit.InitializeRootHpc  = InitializeRootHpc;
+  mPciHotPlugInit.GetRootHpcList = GetRootHpcList;
+  mPciHotPlugInit.InitializeRootHpc = InitializeRootHpc;
   mPciHotPlugInit.GetResourcePadding = GetResourcePadding;
-  Status                             = gBS->InstallMultipleProtocolInterfaces (
-                                              &ImageHandle,
-                                              &gEfiPciHotPlugInitProtocolGuid,
-                                              &mPciHotPlugInit,
-                                              NULL
-                                              );
+  Status = gBS->InstallMultipleProtocolInterfaces (&ImageHandle,
+                  &gEfiPciHotPlugInitProtocolGuid, &mPciHotPlugInit, NULL);
   return Status;
 }

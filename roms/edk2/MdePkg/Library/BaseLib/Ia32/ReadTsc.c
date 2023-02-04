@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Reads the current value of Time Stamp Counter (TSC).
 
@@ -25,3 +28,4 @@ AsmReadTsc (
     rdtsc
   }
 }
+

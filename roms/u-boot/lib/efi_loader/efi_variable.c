@@ -1,439 +1,336 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * UEFI runtime variable services
+ *  EFI utils
  *
- * Copyright (c) 2017 Rob Clark
+ *  Copyright (c) 2017 Rob Clark
  */
 
-#define LOG_CATEGORY LOGC_EFI
-
-#include <common.h>
-#include <efi_loader.h>
-#include <efi_variable.h>
-#include <env.h>
-#include <env_internal.h>
-#include <hexdump.h>
-#include <log.h>
 #include <malloc.h>
-#include <rtc.h>
-#include <search.h>
-#include <uuid.h>
-#include <crypto/pkcs7_parser.h>
-#include <linux/compat.h>
-#include <u-boot/crc.h>
-#include <asm/sections.h>
+#include <charset.h>
+#include <efi_loader.h>
 
-#ifdef CONFIG_EFI_SECURE_BOOT
+#define READ_ONLY BIT(31)
 
-/**
- * efi_variable_authenticate - authenticate a variable
- * @variable:	Variable name in u16
- * @vendor:	Guid of variable
- * @data_size:	Size of @data
- * @data:	Pointer to variable's value
- * @given_attr:	Attributes to be given at SetVariable()
- * @env_attr:	Attributes that an existing variable holds
- * @time:	signed time that an existing variable holds
+/*
+ * Mapping between EFI variables and u-boot variables:
  *
- * Called by efi_set_variable() to verify that the input is correct.
- * Will replace the given data pointer with another that points to
- * the actual data to store in the internal memory.
- * On success, @data and @data_size will be replaced with variable's
- * actual data, excluding authentication data, and its size, and variable's
- * attributes and signed time will also be returned in @env_attr and @time,
- * respectively.
+ *   efi_$guid_$varname = {attributes}(type)value
  *
- * Return:	status code
+ * For example:
+ *
+ *   efi_8be4df61-93ca-11d2-aa0d-00e098032b8c_OsIndicationsSupported=
+ *      "{ro,boot,run}(blob)0000000000000000"
+ *   efi_8be4df61-93ca-11d2-aa0d-00e098032b8c_BootOrder=
+ *      "(blob)00010000"
+ *
+ * The attributes are a comma separated list of these possible
+ * attributes:
+ *
+ *   + ro   - read-only
+ *   + boot - boot-services access
+ *   + run  - runtime access
+ *
+ * NOTE: with current implementation, no variables are available after
+ * ExitBootServices, and all are persisted (if possible).
+ *
+ * If not specified, the attributes default to "{boot}".
+ *
+ * The required type is one of:
+ *
+ *   + utf8 - raw utf8 string
+ *   + blob - arbitrary length hex string
+ *
+ * Maybe a utf16 type would be useful to for a string value to be auto
+ * converted to utf16?
  */
-static efi_status_t efi_variable_authenticate(u16 *variable,
-					      const efi_guid_t *vendor,
-					      efi_uintn_t *data_size,
-					      const void **data, u32 given_attr,
-					      u32 *env_attr, u64 *time)
+
+#define PREFIX_LEN (strlen("efi_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx_"))
+
+static int hex(int ch)
 {
-	const struct efi_variable_authentication_2 *auth;
-	struct efi_signature_store *truststore, *truststore2;
-	struct pkcs7_message *var_sig;
-	struct efi_image_regions *regs;
-	struct efi_time timestamp;
-	struct rtc_time tm;
-	u64 new_time;
-	u8 *ebuf;
-	enum efi_auth_var_type var_type;
-	efi_status_t ret;
+	if (ch >= 'a' && ch <= 'f')
+		return ch-'a'+10;
+	if (ch >= '0' && ch <= '9')
+		return ch-'0';
+	if (ch >= 'A' && ch <= 'F')
+		return ch-'A'+10;
+	return -1;
+}
 
-	var_sig = NULL;
-	truststore = NULL;
-	truststore2 = NULL;
-	regs = NULL;
-	ebuf = NULL;
-	ret = EFI_SECURITY_VIOLATION;
+static int hex2mem(u8 *mem, const char *hexstr, int size)
+{
+	int nibble;
+	int i;
 
-	if (*data_size < sizeof(struct efi_variable_authentication_2))
-		goto err;
+	for (i = 0; i < size; i++) {
+		if (*hexstr == '\0')
+			break;
 
-	/* authentication data */
-	auth = *data;
-	if (*data_size < (sizeof(auth->time_stamp)
-				+ auth->auth_info.hdr.dwLength))
-		goto err;
+		nibble = hex(*hexstr);
+		if (nibble < 0)
+			return -1;
 
-	if (guidcmp(&auth->auth_info.cert_type, &efi_guid_cert_type_pkcs7))
-		goto err;
+		*mem = nibble;
+		hexstr++;
 
-	memcpy(&timestamp, &auth->time_stamp, sizeof(timestamp));
-	if (timestamp.pad1 || timestamp.nanosecond || timestamp.timezone ||
-	    timestamp.daylight || timestamp.pad2)
-		goto err;
+		nibble = hex(*hexstr);
+		if (nibble < 0)
+			return -1;
 
-	*data += sizeof(auth->time_stamp) + auth->auth_info.hdr.dwLength;
-	*data_size -= (sizeof(auth->time_stamp)
-				+ auth->auth_info.hdr.dwLength);
-
-	memset(&tm, 0, sizeof(tm));
-	tm.tm_year = timestamp.year;
-	tm.tm_mon = timestamp.month;
-	tm.tm_mday = timestamp.day;
-	tm.tm_hour = timestamp.hour;
-	tm.tm_min = timestamp.minute;
-	tm.tm_sec = timestamp.second;
-	new_time = rtc_mktime(&tm);
-
-	if (!efi_secure_boot_enabled()) {
-		/* finished checking */
-		*time = new_time;
-		return EFI_SUCCESS;
+		*mem = (*mem << 4) | nibble;
+		hexstr++;
+		mem++;
 	}
 
-	if (new_time <= *time)
-		goto err;
+	return i;
+}
 
-	/* data to be digested */
-	regs = calloc(sizeof(*regs) + sizeof(struct image_region) * 5, 1);
-	if (!regs)
-		goto err;
-	regs->max = 5;
-	efi_image_region_add(regs, (uint8_t *)variable,
-			     (uint8_t *)variable
-				+ u16_strlen(variable) * sizeof(u16), 1);
-	efi_image_region_add(regs, (uint8_t *)vendor,
-			     (uint8_t *)vendor + sizeof(*vendor), 1);
-	efi_image_region_add(regs, (uint8_t *)&given_attr,
-			     (uint8_t *)&given_attr + sizeof(given_attr), 1);
-	efi_image_region_add(regs, (uint8_t *)&timestamp,
-			     (uint8_t *)&timestamp + sizeof(timestamp), 1);
-	efi_image_region_add(regs, (uint8_t *)*data,
-			     (uint8_t *)*data + *data_size, 1);
+static char *mem2hex(char *hexstr, const u8 *mem, int count)
+{
+	static const char hexchars[] = "0123456789abcdef";
 
-	/* variable's signature list */
-	if (auth->auth_info.hdr.dwLength < sizeof(auth->auth_info))
-		goto err;
-
-	/* ebuf should be kept valid during the authentication */
-	var_sig = efi_parse_pkcs7_header(auth->auth_info.cert_data,
-					 auth->auth_info.hdr.dwLength
-					 - sizeof(auth->auth_info),
-					 &ebuf);
-	if (!var_sig) {
-		EFI_PRINT("Parsing variable's signature failed\n");
-		goto err;
+	while (count-- > 0) {
+		u8 ch = *mem++;
+		*hexstr++ = hexchars[ch >> 4];
+		*hexstr++ = hexchars[ch & 0xf];
 	}
 
-	/* signature database used for authentication */
-	var_type = efi_auth_var_get_type(variable, vendor);
-	switch (var_type) {
-	case EFI_AUTH_VAR_PK:
-	case EFI_AUTH_VAR_KEK:
-		/* with PK */
-		truststore = efi_sigstore_parse_sigdb(L"PK");
-		if (!truststore)
-			goto err;
-		break;
-	case EFI_AUTH_VAR_DB:
-	case EFI_AUTH_VAR_DBX:
-		/* with PK and KEK */
-		truststore = efi_sigstore_parse_sigdb(L"KEK");
-		truststore2 = efi_sigstore_parse_sigdb(L"PK");
-		if (!truststore) {
-			if (!truststore2)
-				goto err;
+	return hexstr;
+}
 
-			truststore = truststore2;
-			truststore2 = NULL;
-		}
-		break;
-	default:
-		/* TODO: support private authenticated variables */
-		goto err;
+static efi_status_t efi_to_native(char **native, const u16 *variable_name,
+				  efi_guid_t *vendor)
+{
+	size_t len;
+	char *pos;
+
+	len = PREFIX_LEN + utf16_utf8_strlen(variable_name) + 1;
+	*native = malloc(len);
+	if (!*native)
+		return EFI_OUT_OF_RESOURCES;
+
+	pos = *native;
+	pos += sprintf(pos, "efi_%pUl_", vendor);
+	utf16_utf8_strcpy(&pos, variable_name);
+
+	return EFI_SUCCESS;
+}
+
+static const char *prefix(const char *str, const char *prefix)
+{
+	size_t n = strlen(prefix);
+	if (!strncmp(prefix, str, n))
+		return str + n;
+	return NULL;
+}
+
+/* parse attributes part of variable value, if present: */
+static const char *parse_attr(const char *str, u32 *attrp)
+{
+	u32 attr = 0;
+	char sep = '{';
+
+	if (*str != '{') {
+		*attrp = EFI_VARIABLE_BOOTSERVICE_ACCESS;
+		return str;
 	}
 
-	/* verify signature */
-	if (efi_signature_verify(regs, var_sig, truststore, NULL)) {
-		EFI_PRINT("Verified\n");
-	} else {
-		if (truststore2 &&
-		    efi_signature_verify(regs, var_sig, truststore2, NULL)) {
-			EFI_PRINT("Verified\n");
+	while (*str == sep) {
+		const char *s;
+
+		str++;
+
+		if ((s = prefix(str, "ro"))) {
+			attr |= READ_ONLY;
+		} else if ((s = prefix(str, "boot"))) {
+			attr |= EFI_VARIABLE_BOOTSERVICE_ACCESS;
+		} else if ((s = prefix(str, "run"))) {
+			attr |= EFI_VARIABLE_RUNTIME_ACCESS;
 		} else {
-			EFI_PRINT("Verifying variable's signature failed\n");
-			goto err;
+			printf("invalid attribute: %s\n", str);
+			break;
 		}
+
+		str = s;
+		sep = ',';
 	}
 
-	/* finished checking */
-	*time = new_time;
-	ret = EFI_SUCCESS;
+	str++;
 
-err:
-	efi_sigstore_free(truststore);
-	efi_sigstore_free(truststore2);
-	pkcs7_free_message(var_sig);
-	free(ebuf);
-	free(regs);
+	*attrp = attr;
 
-	return ret;
-}
-#else
-static efi_status_t efi_variable_authenticate(u16 *variable,
-					      const efi_guid_t *vendor,
-					      efi_uintn_t *data_size,
-					      const void **data, u32 given_attr,
-					      u32 *env_attr, u64 *time)
-{
-	return EFI_SUCCESS;
-}
-#endif /* CONFIG_EFI_SECURE_BOOT */
-
-efi_status_t __efi_runtime
-efi_get_variable_int(u16 *variable_name, const efi_guid_t *vendor,
-		     u32 *attributes, efi_uintn_t *data_size, void *data,
-		     u64 *timep)
-{
-	return efi_get_variable_mem(variable_name, vendor, attributes, data_size, data, timep);
+	return str;
 }
 
-efi_status_t __efi_runtime
-efi_get_next_variable_name_int(efi_uintn_t *variable_name_size,
-			       u16 *variable_name, efi_guid_t *vendor)
+/* http://wiki.phoenix.com/wiki/index.php/EFI_RUNTIME_SERVICES#GetVariable.28.29 */
+efi_status_t EFIAPI efi_get_variable(u16 *variable_name, efi_guid_t *vendor,
+				     u32 *attributes, efi_uintn_t *data_size,
+				     void *data)
 {
-	return efi_get_next_variable_name_mem(variable_name_size, variable_name, vendor);
-}
-
-efi_status_t efi_set_variable_int(u16 *variable_name, const efi_guid_t *vendor,
-				  u32 attributes, efi_uintn_t data_size,
-				  const void *data, bool ro_check)
-{
-	struct efi_var_entry *var;
-	efi_uintn_t ret;
-	bool append, delete;
-	u64 time = 0;
-	enum efi_auth_var_type var_type;
-
-	if (!variable_name || !*variable_name || !vendor ||
-	    ((attributes & EFI_VARIABLE_RUNTIME_ACCESS) &&
-	     !(attributes & EFI_VARIABLE_BOOTSERVICE_ACCESS)))
-		return EFI_INVALID_PARAMETER;
-
-	/* check if a variable exists */
-	var = efi_var_mem_find(vendor, variable_name, NULL);
-	append = !!(attributes & EFI_VARIABLE_APPEND_WRITE);
-	attributes &= ~(u32)EFI_VARIABLE_APPEND_WRITE;
-	delete = !append && (!data_size || !attributes);
-
-	/* check attributes */
-	var_type = efi_auth_var_get_type(variable_name, vendor);
-	if (var) {
-		if (ro_check && (var->attr & EFI_VARIABLE_READ_ONLY))
-			return EFI_WRITE_PROTECTED;
-
-		if (IS_ENABLED(CONFIG_EFI_VARIABLES_PRESEED)) {
-			if (var_type != EFI_AUTH_VAR_NONE)
-				return EFI_WRITE_PROTECTED;
-		}
-
-		/* attributes won't be changed */
-		if (!delete &&
-		    ((ro_check && var->attr != attributes) ||
-		     (!ro_check && ((var->attr & ~(u32)EFI_VARIABLE_READ_ONLY)
-				    != (attributes & ~(u32)EFI_VARIABLE_READ_ONLY))))) {
-			return EFI_INVALID_PARAMETER;
-		}
-		time = var->time;
-	} else {
-		if (delete || append)
-			/*
-			 * Trying to delete or to update a non-existent
-			 * variable.
-			 */
-			return EFI_NOT_FOUND;
-	}
-
-	if (var_type != EFI_AUTH_VAR_NONE) {
-		/* authentication is mandatory */
-		if (!(attributes &
-		      EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS)) {
-			EFI_PRINT("%ls: TIME_BASED_AUTHENTICATED_WRITE_ACCESS required\n",
-				  variable_name);
-			return EFI_INVALID_PARAMETER;
-		}
-	}
-
-	/* authenticate a variable */
-	if (IS_ENABLED(CONFIG_EFI_SECURE_BOOT)) {
-		if (attributes & EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS)
-			return EFI_INVALID_PARAMETER;
-		if (attributes &
-		    EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS) {
-			u32 env_attr;
-
-			ret = efi_variable_authenticate(variable_name, vendor,
-							&data_size, &data,
-							attributes, &env_attr,
-							&time);
-			if (ret != EFI_SUCCESS)
-				return ret;
-
-			/* last chance to check for delete */
-			if (!data_size)
-				delete = true;
-		}
-	} else {
-		if (attributes &
-		    (EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS |
-		     EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS)) {
-			EFI_PRINT("Secure boot is not configured\n");
-			return EFI_INVALID_PARAMETER;
-		}
-	}
-
-	if (delete) {
-		/* EFI_NOT_FOUND has been handled before */
-		attributes = var->attr;
-		ret = EFI_SUCCESS;
-	} else if (append) {
-		u16 *old_data = var->name;
-
-		for (; *old_data; ++old_data)
-			;
-		++old_data;
-		ret = efi_var_mem_ins(variable_name, vendor, attributes,
-				      var->length, old_data, data_size, data,
-				      time);
-	} else {
-		ret = efi_var_mem_ins(variable_name, vendor, attributes,
-				      data_size, data, 0, NULL, time);
-	}
-	efi_var_mem_del(var);
-
-	if (ret != EFI_SUCCESS)
-		return ret;
-
-	if (var_type == EFI_AUTH_VAR_PK)
-		ret = efi_init_secure_state();
-	else
-		ret = EFI_SUCCESS;
-
-	/* Write non-volatile EFI variables to file */
-	if (attributes & EFI_VARIABLE_NON_VOLATILE &&
-	    ret == EFI_SUCCESS && efi_obj_list_initialized == EFI_SUCCESS)
-		efi_var_to_file();
-
-	return EFI_SUCCESS;
-}
-
-efi_status_t efi_query_variable_info_int(u32 attributes,
-					 u64 *maximum_variable_storage_size,
-					 u64 *remaining_variable_storage_size,
-					 u64 *maximum_variable_size)
-{
-	*maximum_variable_storage_size = EFI_VAR_BUF_SIZE -
-					 sizeof(struct efi_var_file);
-	*remaining_variable_storage_size = efi_var_mem_free();
-	*maximum_variable_size = EFI_VAR_BUF_SIZE -
-				 sizeof(struct efi_var_file) -
-				 sizeof(struct efi_var_entry);
-	return EFI_SUCCESS;
-}
-
-/**
- * efi_query_variable_info_runtime() - runtime implementation of
- *				       QueryVariableInfo()
- *
- * @attributes:				bitmask to select variables to be
- *					queried
- * @maximum_variable_storage_size:	maximum size of storage area for the
- *					selected variable types
- * @remaining_variable_storage_size:	remaining size of storage are for the
- *					selected variable types
- * @maximum_variable_size:		maximum size of a variable of the
- *					selected type
- * Returns:				status code
- */
-efi_status_t __efi_runtime EFIAPI efi_query_variable_info_runtime(
-			u32 attributes,
-			u64 *maximum_variable_storage_size,
-			u64 *remaining_variable_storage_size,
-			u64 *maximum_variable_size)
-{
-	return EFI_UNSUPPORTED;
-}
-
-/**
- * efi_set_variable_runtime() - runtime implementation of SetVariable()
- *
- * @variable_name:	name of the variable
- * @vendor:		vendor GUID
- * @attributes:		attributes of the variable
- * @data_size:		size of the buffer with the variable value
- * @data:		buffer with the variable value
- * Return:		status code
- */
-static efi_status_t __efi_runtime EFIAPI
-efi_set_variable_runtime(u16 *variable_name, const efi_guid_t *vendor,
-			 u32 attributes, efi_uintn_t data_size,
-			 const void *data)
-{
-	return EFI_UNSUPPORTED;
-}
-
-/**
- * efi_variables_boot_exit_notify() - notify ExitBootServices() is called
- */
-void efi_variables_boot_exit_notify(void)
-{
-	/* Switch variable services functions to runtime version */
-	efi_runtime_services.get_variable = efi_get_variable_runtime;
-	efi_runtime_services.get_next_variable_name =
-				efi_get_next_variable_name_runtime;
-	efi_runtime_services.set_variable = efi_set_variable_runtime;
-	efi_runtime_services.query_variable_info =
-				efi_query_variable_info_runtime;
-	efi_update_table_header_crc32(&efi_runtime_services.hdr);
-}
-
-/**
- * efi_init_variables() - initialize variable services
- *
- * Return:	status code
- */
-efi_status_t efi_init_variables(void)
-{
+	char *native_name;
 	efi_status_t ret;
+	unsigned long in_size;
+	const char *val, *s;
+	u32 attr;
 
-	ret = efi_var_mem_init();
-	if (ret != EFI_SUCCESS)
-		return ret;
+	EFI_ENTRY("\"%ls\" %pUl %p %p %p", variable_name, vendor, attributes,
+		  data_size, data);
 
-	if (IS_ENABLED(CONFIG_EFI_VARIABLES_PRESEED)) {
-		ret = efi_var_restore((struct efi_var_file *)
-				      __efi_var_file_begin);
-		if (ret != EFI_SUCCESS)
-			log_err("Invalid EFI variable seed\n");
+	if (!variable_name || !vendor || !data_size)
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+
+	ret = efi_to_native(&native_name, variable_name, vendor);
+	if (ret)
+		return EFI_EXIT(ret);
+
+	debug("%s: get '%s'\n", __func__, native_name);
+
+	val = env_get(native_name);
+	free(native_name);
+	if (!val)
+		return EFI_EXIT(EFI_NOT_FOUND);
+
+	val = parse_attr(val, &attr);
+
+	in_size = *data_size;
+
+	if ((s = prefix(val, "(blob)"))) {
+		unsigned len = strlen(s);
+
+		/* number of hexadecimal digits must be even */
+		if (len & 1)
+			return EFI_EXIT(EFI_DEVICE_ERROR);
+
+		/* two characters per byte: */
+		len /= 2;
+		*data_size = len;
+
+		if (in_size < len)
+			return EFI_EXIT(EFI_BUFFER_TOO_SMALL);
+
+		if (!data)
+			return EFI_EXIT(EFI_INVALID_PARAMETER);
+
+		if (hex2mem(data, s, len) != len)
+			return EFI_EXIT(EFI_DEVICE_ERROR);
+
+		debug("%s: got value: \"%s\"\n", __func__, s);
+	} else if ((s = prefix(val, "(utf8)"))) {
+		unsigned len = strlen(s) + 1;
+
+		*data_size = len;
+
+		if (in_size < len)
+			return EFI_EXIT(EFI_BUFFER_TOO_SMALL);
+
+		if (!data)
+			return EFI_EXIT(EFI_INVALID_PARAMETER);
+
+		memcpy(data, s, len);
+		((char *)data)[len] = '\0';
+
+		debug("%s: got value: \"%s\"\n", __func__, (char *)data);
+	} else {
+		debug("%s: invalid value: '%s'\n", __func__, val);
+		return EFI_EXIT(EFI_DEVICE_ERROR);
 	}
 
-	ret = efi_var_from_file();
-	if (ret != EFI_SUCCESS)
-		return ret;
+	if (attributes)
+		*attributes = attr & EFI_VARIABLE_MASK;
 
-	return efi_init_secure_state();
+	return EFI_EXIT(EFI_SUCCESS);
+}
+
+/* http://wiki.phoenix.com/wiki/index.php/EFI_RUNTIME_SERVICES#GetNextVariableName.28.29 */
+efi_status_t EFIAPI efi_get_next_variable_name(efi_uintn_t *variable_name_size,
+					       u16 *variable_name,
+					       efi_guid_t *vendor)
+{
+	EFI_ENTRY("%p \"%ls\" %pUl", variable_name_size, variable_name, vendor);
+
+	return EFI_EXIT(EFI_DEVICE_ERROR);
+}
+
+/* http://wiki.phoenix.com/wiki/index.php/EFI_RUNTIME_SERVICES#SetVariable.28.29 */
+efi_status_t EFIAPI efi_set_variable(u16 *variable_name, efi_guid_t *vendor,
+				     u32 attributes, efi_uintn_t data_size,
+				     void *data)
+{
+	char *native_name = NULL, *val = NULL, *s;
+	efi_status_t ret = EFI_SUCCESS;
+	u32 attr;
+
+	EFI_ENTRY("\"%ls\" %pUl %x %zu %p", variable_name, vendor, attributes,
+		  data_size, data);
+
+	if (!variable_name || !vendor) {
+		ret = EFI_INVALID_PARAMETER;
+		goto out;
+	}
+
+	ret = efi_to_native(&native_name, variable_name, vendor);
+	if (ret)
+		goto out;
+
+#define ACCESS_ATTR (EFI_VARIABLE_RUNTIME_ACCESS | EFI_VARIABLE_BOOTSERVICE_ACCESS)
+
+	if ((data_size == 0) || !(attributes & ACCESS_ATTR)) {
+		/* delete the variable: */
+		env_set(native_name, NULL);
+		ret = EFI_SUCCESS;
+		goto out;
+	}
+
+	val = env_get(native_name);
+	if (val) {
+		parse_attr(val, &attr);
+
+		if (attr & READ_ONLY) {
+			/* We should not free val */
+			val = NULL;
+			ret = EFI_WRITE_PROTECTED;
+			goto out;
+		}
+	}
+
+	val = malloc(2 * data_size + strlen("{ro,run,boot}(blob)") + 1);
+	if (!val) {
+		ret = EFI_OUT_OF_RESOURCES;
+		goto out;
+	}
+
+	s = val;
+
+	/* store attributes: */
+	attributes &= (EFI_VARIABLE_BOOTSERVICE_ACCESS | EFI_VARIABLE_RUNTIME_ACCESS);
+	s += sprintf(s, "{");
+	while (attributes) {
+		u32 attr = 1 << (ffs(attributes) - 1);
+
+		if (attr == EFI_VARIABLE_BOOTSERVICE_ACCESS)
+			s += sprintf(s, "boot");
+		else if (attr == EFI_VARIABLE_RUNTIME_ACCESS)
+			s += sprintf(s, "run");
+
+		attributes &= ~attr;
+		if (attributes)
+			s += sprintf(s, ",");
+	}
+	s += sprintf(s, "}");
+
+	/* store payload: */
+	s += sprintf(s, "(blob)");
+	s = mem2hex(s, data, data_size);
+	*s = '\0';
+
+	debug("%s: setting: %s=%s\n", __func__, native_name, val);
+
+	if (env_set(native_name, val))
+		ret = EFI_DEVICE_ERROR;
+
+out:
+	free(native_name);
+	free(val);
+
+	return EFI_EXIT(ret);
 }

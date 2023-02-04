@@ -21,7 +21,6 @@
 #include "hw/virtio/virtio-crypto.h"
 #include "qapi/error.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 typedef struct VirtIOCryptoPCI VirtIOCryptoPCI;
 
@@ -29,8 +28,8 @@ typedef struct VirtIOCryptoPCI VirtIOCryptoPCI;
  * virtio-crypto-pci: This extends VirtioPCIProxy.
  */
 #define TYPE_VIRTIO_CRYPTO_PCI "virtio-crypto-pci"
-DECLARE_INSTANCE_CHECKER(VirtIOCryptoPCI, VIRTIO_CRYPTO_PCI,
-                         TYPE_VIRTIO_CRYPTO_PCI)
+#define VIRTIO_CRYPTO_PCI(obj) \
+        OBJECT_CHECK(VirtIOCryptoPCI, (obj), TYPE_VIRTIO_CRYPTO_PCI)
 
 struct VirtIOCryptoPCI {
     VirtIOPCIProxy parent_obj;

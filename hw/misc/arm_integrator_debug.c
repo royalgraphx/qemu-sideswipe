@@ -6,7 +6,7 @@
  * to this area.
  *
  * The real h/w is described at:
- *  https://developer.arm.com/documentation/dui0159/b/peripherals-and-interfaces/debug-leds-and-dip-switch-interface
+ *  http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0159b/Babbfijf.html
  *
  * Copyright (c) 2013 Alex Bennée <alex@bennee.com>
  *
@@ -19,15 +19,15 @@
 #include "hw/misc/arm_integrator_debug.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
-OBJECT_DECLARE_SIMPLE_TYPE(IntegratorDebugState, INTEGRATOR_DEBUG)
+#define INTEGRATOR_DEBUG(obj) \
+    OBJECT_CHECK(IntegratorDebugState, (obj), TYPE_INTEGRATOR_DEBUG)
 
-struct IntegratorDebugState {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
-};
+} IntegratorDebugState;
 
 static uint64_t intdbg_control_read(void *opaque, hwaddr offset,
                                     unsigned size)

@@ -4,10 +4,7 @@
  * Copyright (C) 2012 Xilinx, Inc. All rights reserved.
  */
 #include <common.h>
-#include <cpu_func.h>
-#include <init.h>
 #include <zynqpl.h>
-#include <asm/cache.h>
 #include <asm/io.h>
 #include <asm/arch/clk.h>
 #include <asm/arch/hardware.h>
@@ -17,7 +14,8 @@
 #define ZYNQ_SILICON_VER_MASK	0xF0000000
 #define ZYNQ_SILICON_VER_SHIFT	28
 
-#if CONFIG_IS_ENABLED(FPGA)
+#if (defined(CONFIG_FPGA) && !defined(CONFIG_SPL_BUILD)) || \
+    (defined(CONFIG_SPL_FPGA_SUPPORT) && defined(CONFIG_SPL_BUILD))
 xilinx_desc fpga = {
 	.family = xilinx_zynq,
 	.iface = devcfg,
@@ -78,14 +76,14 @@ unsigned int zynq_get_silicon_version(void)
 						>> ZYNQ_SILICON_VER_SHIFT;
 }
 
-void reset_cpu(void)
+void reset_cpu(ulong addr)
 {
 	zynq_slcr_cpu_reset();
 	while (1)
 		;
 }
 
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+#ifndef CONFIG_SYS_DCACHE_OFF
 void enable_caches(void)
 {
 	/* Enable D-cache. I-cache is already enabled in start.S */
@@ -110,7 +108,8 @@ static int __maybe_unused cpu_desc_id(void)
 #if defined(CONFIG_ARCH_EARLY_INIT_R)
 int arch_early_init_r(void)
 {
-#if CONFIG_IS_ENABLED(FPGA)
+#if (defined(CONFIG_FPGA) && !defined(CONFIG_SPL_BUILD)) || \
+    (defined(CONFIG_SPL_FPGA_SUPPORT) && defined(CONFIG_SPL_BUILD))
 	int cpu_id = cpu_desc_id();
 
 	if (cpu_id < 0)

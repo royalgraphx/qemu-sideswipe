@@ -59,15 +59,15 @@ GetHobList (
 VOID *
 EFIAPI
 GetNextHob (
-  IN UINT16      Type,
-  IN CONST VOID  *HobStart
+  IN UINT16                 Type,
+  IN CONST VOID             *HobStart
   )
 {
   EFI_PEI_HOB_POINTERS  Hob;
 
   ASSERT (HobStart != NULL);
 
-  Hob.Raw = (UINT8 *)HobStart;
+  Hob.Raw = (UINT8 *) HobStart;
   //
   // Parse the HOB list until end of list or matching type is found.
   //
@@ -75,10 +75,8 @@ GetNextHob (
     if (Hob.Header->HobType == Type) {
       return Hob.Raw;
     }
-
     Hob.Raw = GET_NEXT_HOB (Hob);
   }
-
   return NULL;
 }
 
@@ -98,10 +96,10 @@ GetNextHob (
 VOID *
 EFIAPI
 GetFirstHob (
-  IN UINT16  Type
+  IN UINT16                 Type
   )
 {
-  VOID  *HobList;
+  VOID      *HobList;
 
   HobList = GetHobList ();
   return GetNextHob (Type, HobList);
@@ -132,21 +130,19 @@ GetFirstHob (
 VOID *
 EFIAPI
 GetNextGuidHob (
-  IN CONST EFI_GUID  *Guid,
-  IN CONST VOID      *HobStart
+  IN CONST EFI_GUID         *Guid,
+  IN CONST VOID             *HobStart
   )
 {
   EFI_PEI_HOB_POINTERS  GuidHob;
 
-  GuidHob.Raw = (UINT8 *)HobStart;
+  GuidHob.Raw = (UINT8 *) HobStart;
   while ((GuidHob.Raw = GetNextHob (EFI_HOB_TYPE_GUID_EXTENSION, GuidHob.Raw)) != NULL) {
     if (CompareGuid (Guid, &GuidHob.Guid->Name)) {
       break;
     }
-
     GuidHob.Raw = GET_NEXT_HOB (GuidHob);
   }
-
   return GuidHob.Raw;
 }
 
@@ -171,10 +167,10 @@ GetNextGuidHob (
 VOID *
 EFIAPI
 GetFirstGuidHob (
-  IN CONST EFI_GUID  *Guid
+  IN CONST EFI_GUID         *Guid
   )
 {
-  VOID  *HobList;
+  VOID      *HobList;
 
   HobList = GetHobList ();
   return GetNextGuidHob (Guid, HobList);
@@ -199,11 +195,11 @@ GetBootModeHob (
   VOID
   )
 {
-  EFI_HOB_HANDOFF_INFO_TABLE  *HandOffHob;
+  EFI_HOB_HANDOFF_INFO_TABLE    *HandOffHob;
 
-  HandOffHob = (EFI_HOB_HANDOFF_INFO_TABLE *)GetHobList ();
+  HandOffHob = (EFI_HOB_HANDOFF_INFO_TABLE *) GetHobList ();
 
-  return HandOffHob->BootMode;
+  return  HandOffHob->BootMode;
 }
 
 /**
@@ -225,10 +221,10 @@ GetBootModeHob (
 VOID
 EFIAPI
 BuildModuleHob (
-  IN CONST EFI_GUID        *ModuleName,
-  IN EFI_PHYSICAL_ADDRESS  MemoryAllocationModule,
-  IN UINT64                ModuleLength,
-  IN EFI_PHYSICAL_ADDRESS  EntryPoint
+  IN CONST EFI_GUID         *ModuleName,
+  IN EFI_PHYSICAL_ADDRESS   MemoryAllocationModule,
+  IN UINT64                 ModuleLength,
+  IN EFI_PHYSICAL_ADDRESS   EntryPoint
   )
 {
   //
@@ -324,8 +320,8 @@ BuildResourceDescriptorHob (
 VOID *
 EFIAPI
 BuildGuidHob (
-  IN CONST EFI_GUID  *Guid,
-  IN UINTN           DataLength
+  IN CONST EFI_GUID              *Guid,
+  IN UINTN                       DataLength
   )
 {
   //
@@ -363,9 +359,9 @@ BuildGuidHob (
 VOID *
 EFIAPI
 BuildGuidDataHob (
-  IN CONST EFI_GUID  *Guid,
-  IN VOID            *Data,
-  IN UINTN           DataLength
+  IN CONST EFI_GUID              *Guid,
+  IN VOID                        *Data,
+  IN UINTN                       DataLength
   )
 {
   //
@@ -392,8 +388,8 @@ BuildGuidDataHob (
 VOID
 EFIAPI
 BuildFvHob (
-  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN UINT64                Length
+  IN EFI_PHYSICAL_ADDRESS        BaseAddress,
+  IN UINT64                      Length
   )
 {
   //
@@ -421,10 +417,10 @@ BuildFvHob (
 VOID
 EFIAPI
 BuildFv2Hob (
-  IN          EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN          UINT64                Length,
-  IN CONST    EFI_GUID              *FvName,
-  IN CONST    EFI_GUID              *FileName
+  IN          EFI_PHYSICAL_ADDRESS        BaseAddress,
+  IN          UINT64                      Length,
+  IN CONST    EFI_GUID                    *FvName,
+  IN CONST    EFI_GUID                    *FileName
   )
 {
   ASSERT (FALSE);
@@ -454,12 +450,12 @@ BuildFv2Hob (
 VOID
 EFIAPI
 BuildFv3Hob (
-  IN          EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN          UINT64                Length,
-  IN          UINT32                AuthenticationStatus,
-  IN          BOOLEAN               ExtractedFv,
-  IN CONST    EFI_GUID              *FvName  OPTIONAL,
-  IN CONST    EFI_GUID              *FileName OPTIONAL
+  IN          EFI_PHYSICAL_ADDRESS        BaseAddress,
+  IN          UINT64                      Length,
+  IN          UINT32                      AuthenticationStatus,
+  IN          BOOLEAN                     ExtractedFv,
+  IN CONST    EFI_GUID                    *FvName, OPTIONAL
+  IN CONST    EFI_GUID                    *FileName OPTIONAL
   )
 {
   ASSERT (FALSE);
@@ -482,8 +478,8 @@ BuildFv3Hob (
 VOID
 EFIAPI
 BuildCvHob (
-  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN UINT64                Length
+  IN EFI_PHYSICAL_ADDRESS        BaseAddress,
+  IN UINT64                      Length
   )
 {
   //
@@ -508,8 +504,8 @@ BuildCvHob (
 VOID
 EFIAPI
 BuildCpuHob (
-  IN UINT8  SizeOfMemorySpace,
-  IN UINT8  SizeOfIoSpace
+  IN UINT8                       SizeOfMemorySpace,
+  IN UINT8                       SizeOfIoSpace
   )
 {
   //
@@ -534,8 +530,8 @@ BuildCpuHob (
 VOID
 EFIAPI
 BuildStackHob (
-  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN UINT64                Length
+  IN EFI_PHYSICAL_ADDRESS        BaseAddress,
+  IN UINT64                      Length
   )
 {
   //
@@ -561,9 +557,9 @@ BuildStackHob (
 VOID
 EFIAPI
 BuildBspStoreHob (
-  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN UINT64                Length,
-  IN EFI_MEMORY_TYPE       MemoryType
+  IN EFI_PHYSICAL_ADDRESS        BaseAddress,
+  IN UINT64                      Length,
+  IN EFI_MEMORY_TYPE             MemoryType
   )
 {
   //
@@ -589,9 +585,9 @@ BuildBspStoreHob (
 VOID
 EFIAPI
 BuildMemoryAllocationHob (
-  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN UINT64                Length,
-  IN EFI_MEMORY_TYPE       MemoryType
+  IN EFI_PHYSICAL_ADDRESS        BaseAddress,
+  IN UINT64                      Length,
+  IN EFI_MEMORY_TYPE             MemoryType
   )
 {
   //

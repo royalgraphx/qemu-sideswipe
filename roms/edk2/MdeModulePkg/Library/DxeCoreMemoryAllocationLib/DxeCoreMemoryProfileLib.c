@@ -6,6 +6,7 @@
 
 **/
 
+
 #include <PiDxe.h>
 
 #include <Guid/MemoryProfile.h>
@@ -37,13 +38,14 @@
 EFI_STATUS
 EFIAPI
 MemoryProfileLibRecord (
-  IN PHYSICAL_ADDRESS       CallerAddress,
-  IN MEMORY_PROFILE_ACTION  Action,
-  IN EFI_MEMORY_TYPE        MemoryType,
-  IN VOID                   *Buffer,
-  IN UINTN                  Size,
-  IN CHAR8                  *ActionString OPTIONAL
+  IN PHYSICAL_ADDRESS           CallerAddress,
+  IN MEMORY_PROFILE_ACTION      Action,
+  IN EFI_MEMORY_TYPE            MemoryType,
+  IN VOID                       *Buffer,
+  IN UINTN                      Size,
+  IN CHAR8                      *ActionString OPTIONAL
   )
 {
   return CoreUpdateProfile (CallerAddress, Action, MemoryType, Size, Buffer, ActionString);
 }
+

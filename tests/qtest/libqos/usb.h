@@ -1,7 +1,7 @@
 #ifndef LIBQOS_USB_H
 #define LIBQOS_USB_H
 
-#include "pci-pc.h"
+#include "libqos/pci-pc.h"
 
 struct qhc {
     QPCIDevice *dev;

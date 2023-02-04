@@ -6,8 +6,6 @@
 
 #include <common.h>
 #include <command.h>
-#include <env.h>
-#include <log.h>
 #include <stdio_dev.h>
 #include <net.h>
 
@@ -57,7 +55,7 @@ static int is_broadcast(struct in_addr ip)
 	static struct in_addr netmask;
 	static struct in_addr our_ip;
 	static int env_changed_id;
-	int env_id = env_get_id();
+	int env_id = get_env_id();
 
 	/* update only when the environment has changed */
 	if (env_changed_id != env_id) {
@@ -77,7 +75,7 @@ static int refresh_settings_from_env(void)
 {
 	const char *p;
 	static int env_changed_id;
-	int env_id = env_get_id();
+	int env_id = get_env_id();
 
 	/* update only when the environment has changed */
 	if (env_changed_id != env_id) {

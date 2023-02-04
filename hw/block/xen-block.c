@@ -243,6 +243,7 @@ static void xen_block_realize(XenDevice *xendev, Error **errp)
     }
 
     blk_set_dev_ops(blk, &xen_block_dev_ops, blockdev);
+    blk_set_guest_block_size(blk, conf->logical_block_size);
 
     if (conf->discard_granularity == -1) {
         conf->discard_granularity = conf->physical_block_size;
@@ -252,7 +253,6 @@ static void xen_block_realize(XenDevice *xendev, Error **errp)
         xen_device_backend_printf(xendev, "feature-discard", "%u", 1);
         xen_device_backend_printf(xendev, "discard-granularity", "%u",
                                   conf->discard_granularity);
-        xen_device_backend_printf(xendev, "discard-alignment", "%u", 0);
     }
 
     xen_device_backend_printf(xendev, "feature-flush-cache", "%u", 1);
@@ -335,8 +335,9 @@ static char *disk_to_vbd_name(unsigned int disk)
 static void xen_block_get_vdev(Object *obj, Visitor *v, const char *name,
                                void *opaque, Error **errp)
 {
+    DeviceState *dev = DEVICE(obj);
     Property *prop = opaque;
-    XenBlockVdev *vdev = object_field_prop_ptr(obj, prop);
+    XenBlockVdev *vdev = qdev_get_prop_ptr(dev, prop);
     char *str;
 
     switch (vdev->type) {
@@ -395,10 +396,16 @@ static int vbd_name_to_disk(const char *name, const char **endp,
 static void xen_block_set_vdev(Object *obj, Visitor *v, const char *name,
                                void *opaque, Error **errp)
 {
+    DeviceState *dev = DEVICE(obj);
     Property *prop = opaque;
-    XenBlockVdev *vdev = object_field_prop_ptr(obj, prop);
+    XenBlockVdev *vdev = qdev_get_prop_ptr(dev, prop);
     char *str, *p;
     const char *end;
+
+    if (dev->realized) {
+        qdev_prop_set_after_realize(dev, name, errp);
+        return;
+    }
 
     if (!visit_type_str(v, name, &str, errp)) {
         return;
@@ -567,7 +574,7 @@ static void xen_disk_realize(XenBlockDevice *blockdev, Error **errp)
         return;
     }
 
-    blockdev->info = blk_supports_write_perm(conf->blk) ? 0 : VDISK_READONLY;
+    blockdev->info = blk_is_read_only(conf->blk) ? VDISK_READONLY : 0;
 }
 
 static void xen_disk_class_init(ObjectClass *class, void *data)
@@ -727,8 +734,6 @@ static XenBlockDrive *xen_block_drive_create(const char *id,
     XenBlockDrive *drive = NULL;
     QDict *file_layer;
     QDict *driver_layer;
-    struct stat st;
-    int rc;
 
     if (params) {
         char **v = g_strsplit(params, ":", 2);
@@ -762,17 +767,7 @@ static XenBlockDrive *xen_block_drive_create(const char *id,
     file_layer = qdict_new();
     driver_layer = qdict_new();
 
-    rc = stat(filename, &st);
-    if (rc) {
-        error_setg_errno(errp, errno, "Could not stat file '%s'", filename);
-        goto done;
-    }
-    if (S_ISBLK(st.st_mode)) {
-        qdict_put_str(file_layer, "driver", "host_device");
-    } else {
-        qdict_put_str(file_layer, "driver", "file");
-    }
-
+    qdict_put_str(file_layer, "driver", "file");
     qdict_put_str(file_layer, "filename", filename);
     g_free(filename);
 
@@ -847,17 +842,17 @@ static XenBlockIOThread *xen_block_iothread_create(const char *id,
 {
     ERRP_GUARD();
     XenBlockIOThread *iothread = g_new(XenBlockIOThread, 1);
-    ObjectOptions *opts;
+    QDict *opts;
+    QObject *ret_data = NULL;
 
     iothread->id = g_strdup(id);
 
-    opts = g_new(ObjectOptions, 1);
-    *opts = (ObjectOptions) {
-        .qom_type = OBJECT_TYPE_IOTHREAD,
-        .id = g_strdup(id),
-    };
-    qmp_object_add(opts, errp);
-    qapi_free_ObjectOptions(opts);
+    opts = qdict_new();
+    qdict_put_str(opts, "qom-type", TYPE_IOTHREAD);
+    qdict_put_str(opts, "id", id);
+    qmp_object_add(opts, &ret_data, errp);
+    qobject_unref(opts);
+    qobject_unref(ret_data);
 
     if (*errp) {
         g_free(iothread->id);
@@ -982,15 +977,6 @@ static void xen_block_device_destroy(XenBackendInstance *backend,
     trace_xen_block_device_destroy(vdev->number);
 
     object_unparent(OBJECT(xendev));
-
-    /*
-     * Drain all pending RCU callbacks as object_unparent() frees `xendev'
-     * in a RCU callback.
-     * And due to the property "drive" still existing in `xendev', we
-     * can't destroy the XenBlockDrive associated with `xendev' with
-     * xen_block_drive_destroy() below.
-     */
-    drain_call_rcu();
 
     if (iothread) {
         xen_block_iothread_destroy(iothread, errp);

@@ -6,12 +6,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 #include "Snp.h"
 
 //
 // EFI Component Name Functions
 //
-
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
 
@@ -58,6 +58,7 @@ SimpleNetworkComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -130,12 +131,13 @@ SimpleNetworkComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 SimpleNetworkComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   );
+
 
 //
 // EFI Component Name Protocol
@@ -149,13 +151,14 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gSimpleNetworkCompone
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gSimpleNetworkComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)SimpleNetworkComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)SimpleNetworkComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gSimpleNetworkComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) SimpleNetworkComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) SimpleNetworkComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mSimpleNetworkDriverNameTable[] = {
+
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mSimpleNetworkDriverNameTable[] = {
   {
     "eng;en",
     L"Simple Network Protocol Driver"
@@ -166,7 +169,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mSimpleNetworkDriverName
   }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  *gSimpleNetworkControllerNameTable = NULL;
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE *gSimpleNetworkControllerNameTable = NULL;
 
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
@@ -236,19 +239,19 @@ SimpleNetworkComponentNameGetDriverName (
 **/
 EFI_STATUS
 UpdateName (
-  IN  EFI_SIMPLE_NETWORK_PROTOCOL  *Snp
+  IN  EFI_SIMPLE_NETWORK_PROTOCOL   *Snp
   )
 {
-  EFI_STATUS  Status;
-  CHAR16      HandleName[80];
-  UINTN       OffSet;
-  UINTN       Index;
+  EFI_STATUS                       Status;
+  CHAR16                           HandleName[80];
+  UINTN                            OffSet;
+  UINTN                            Index;
 
   if (Snp == NULL) {
     return EFI_INVALID_PARAMETER;
   }
 
-  OffSet  = 0;
+  OffSet = 0;
   OffSet += UnicodeSPrint (
               HandleName,
               sizeof (HandleName),
@@ -262,7 +265,6 @@ UpdateName (
                 Snp->Mode->CurrentAddress.Addr[Index]
                 );
   }
-
   ASSERT (OffSet > 0);
   //
   // Remove the last '-'
@@ -370,15 +372,15 @@ UpdateName (
 EFI_STATUS
 EFIAPI
 SimpleNetworkComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   )
 {
-  EFI_STATUS                   Status;
-  EFI_SIMPLE_NETWORK_PROTOCOL  *Snp;
+  EFI_STATUS                    Status;
+  EFI_SIMPLE_NETWORK_PROTOCOL   *Snp;
 
   if (ChildHandle != NULL) {
     return EFI_UNSUPPORTED;
@@ -410,7 +412,6 @@ SimpleNetworkComponentNameGetControllerName (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Update the component name for this child handle.
   //

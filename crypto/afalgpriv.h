@@ -15,7 +15,6 @@
 #define QCRYPTO_AFALGPRIV_H
 
 #include <linux/if_alg.h>
-#include "crypto/cipher.h"
 
 #define SALG_TYPE_LEN_MAX 14
 #define SALG_NAME_LEN_MAX 64
@@ -33,8 +32,6 @@
 typedef struct QCryptoAFAlg QCryptoAFAlg;
 
 struct QCryptoAFAlg {
-    QCryptoCipher base;
-
     int tfmfd;
     int opfd;
     struct msghdr *msg;

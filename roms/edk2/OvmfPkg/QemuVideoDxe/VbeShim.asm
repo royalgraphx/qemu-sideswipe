@@ -49,7 +49,7 @@ Handler:
   je         ReadEdid
   cmp        ah, 0x00
   je         SetModeLegacy
-  DebugLog   StrUnknownFunction
+  DebugLog   StrUnkownFunction
 Hang:
   jmp        Hang
 
@@ -93,7 +93,7 @@ GetModeInfo:
   and        cx, ~0x4000 ; clear potentially set LFB bit in mode number
   cmp        cx, 0x00f1
   je         KnownMode1
-  DebugLog   StrUnknownMode
+  DebugLog   StrUnkownMode
   jmp        Hang
 KnownMode1:
   ; target (es:di) set on input
@@ -155,7 +155,7 @@ SetMode:
 
   cmp        bx, 0x40f1
   je         KnownMode2
-  DebugLog   StrUnknownMode
+  DebugLog   StrUnkownMode
   jmp        Hang
 KnownMode2:
 
@@ -203,7 +203,7 @@ SetModeLegacy:
   je         KnownMode3
   cmp        al, 0x12
   je         KnownMode4
-  DebugLog   StrUnknownMode
+  DebugLog   StrUnkownMode
   jmp        Hang
 KnownMode3:
   mov        al, 0x30
@@ -252,7 +252,7 @@ StrExitSuccess:
 StrExitUnsupported:
   db 'Unsupported', 0x0a, 0
 
-StrUnknownFunction:
+StrUnkownFunction:
   db 'Unknown Function', 0x0a, 0
 
 StrEnterGetInfo:
@@ -270,8 +270,8 @@ StrEnterSetMode:
 StrEnterSetModeLegacy:
   db 'SetModeLegacy', 0x0a, 0
 
-StrUnknownMode:
-  db 'Unknown Mode', 0x0a, 0
+StrUnkownMode:
+  db 'Unkown Mode', 0x0a, 0
 
 StrGetPmCapabilities:
   db 'GetPmCapabilities', 0x0a, 0

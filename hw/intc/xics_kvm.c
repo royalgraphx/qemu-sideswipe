@@ -27,6 +27,8 @@
 
 #include "qemu/osdep.h"
 #include "qapi/error.h"
+#include "qemu-common.h"
+#include "cpu.h"
 #include "trace.h"
 #include "sysemu/kvm.h"
 #include "hw/ppc/spapr.h"
@@ -482,7 +484,7 @@ void xics_kvm_disconnect(SpaprInterruptController *intc)
  * support destruction of a KVM XICS device while the VM is running.
  * Required to start a spapr machine with ic-mode=dual,kernel-irqchip=on.
  */
-bool xics_kvm_has_broken_disconnect(void)
+bool xics_kvm_has_broken_disconnect(SpaprMachineState *spapr)
 {
     int rc;
 

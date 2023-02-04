@@ -21,7 +21,7 @@ config DM_KEYBOARD
 	  input and update LEDs if the keyboard has them.
 
 config SPL_DM_KEYBOARD
-	bool "Enable driver model keyboard support for SPL"
+	bool "Enable driver model keyboard support"
 	depends on SPL_DM
 	help
 	  This adds a uclass for keyboards and implements keyboard support
@@ -30,7 +30,7 @@ config SPL_DM_KEYBOARD
 	  input and update LEDs if the keyboard has them.
 
 config TPL_DM_KEYBOARD
-	bool "Enable driver model keyboard support for TPL"
+	bool "Enable driver model keyboard support"
 	depends on TPL_DM
 	help
 	  This adds a uclass for keyboards and implements keyboard support
@@ -72,12 +72,6 @@ config I8042_KEYB
 	  driver handles English and German keyboards - set the environment
 	  variable 'keymap' to "de" to select German. Keyboard repeat is
 	  handled by the keyboard itself.
-
-config TEGRA_KEYBOARD
-	bool "NVIDIA Tegra internal matrix keyboard controller support"
-	help
-	  A matrix keyboard connected directly to the internal keyboard
-	  controller on Tegra SoCs.
 
 config TWL4030_INPUT
 	bool "Enable TWL4030 Input controller"

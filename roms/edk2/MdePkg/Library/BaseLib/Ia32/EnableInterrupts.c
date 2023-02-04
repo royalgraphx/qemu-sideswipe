@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Enables CPU interrupts.
 
@@ -20,3 +23,4 @@ EnableInterrupts (
     sti
   }
 }
+

@@ -20,11 +20,6 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
-/* Type INTN in UEFI specification */
-#define efi_intn_t ssize_t
-/* Type UINTN in UEFI specification*/
-#define efi_uintn_t size_t
-
 /*
  * EFI on x86_64 uses the Microsoft ABI which is not the default for GCC.
  *
@@ -54,7 +49,7 @@ struct efi_device_path;
 
 typedef struct {
 	u8 b[16];
-} efi_guid_t __attribute__((aligned(8)));
+} efi_guid_t;
 
 #define EFI_BITS_PER_LONG	(sizeof(long) * 8)
 
@@ -96,13 +91,7 @@ typedef struct {
 #define EFI_IP_ADDRESS_CONFLICT		(EFI_ERROR_MASK | 34)
 #define EFI_HTTP_ERROR			(EFI_ERROR_MASK | 35)
 
-#define EFI_WARN_UNKNOWN_GLYPH		1
-#define EFI_WARN_DELETE_FAILURE		2
-#define EFI_WARN_WRITE_FAILURE		3
-#define EFI_WARN_BUFFER_TOO_SMALL	4
-#define EFI_WARN_STALE_DATA		5
-#define EFI_WARN_FILE_SYSTEM		6
-#define EFI_WARN_RESET_REQUIRED		7
+#define EFI_WARN_DELETE_FAILURE	2
 
 typedef unsigned long efi_status_t;
 typedef u64 efi_physical_addr_t;
@@ -179,16 +168,9 @@ enum efi_mem_type {
 	 * part of the processor.
 	 */
 	EFI_PAL_CODE,
-	/*
-	 * Byte addressable non-volatile memory.
-	 */
-	EFI_PERSISTENT_MEMORY_TYPE,
-	/*
-	 * Unaccepted memory must be accepted by boot target before usage.
-	 */
-	EFI_UNACCEPTED_MEMORY_TYPE,
 
 	EFI_MAX_MEMORY_TYPE,
+	EFI_TABLE_END,	/* For efi_build_mem_table() */
 };
 
 /* Attribute values */
@@ -204,13 +186,11 @@ enum efi_mem_type {
 #define EFI_MEMORY_MORE_RELIABLE \
 				((u64)0x0000000000010000ULL)	/* higher reliability */
 #define EFI_MEMORY_RO		((u64)0x0000000000020000ULL)	/* read-only */
-#define EFI_MEMORY_SP		((u64)0x0000000000040000ULL)	/* specific-purpose memory (SPM) */
-#define EFI_MEMORY_CPU_CRYPTO	((u64)0x0000000000080000ULL)	/* cryptographically protectable */
 #define EFI_MEMORY_RUNTIME	((u64)0x8000000000000000ULL)	/* range requires runtime mapping */
 #define EFI_MEM_DESC_VERSION	1
 
 #define EFI_PAGE_SHIFT		12
-#define EFI_PAGE_SIZE		(1ULL << EFI_PAGE_SHIFT)
+#define EFI_PAGE_SIZE		(1UL << EFI_PAGE_SHIFT)
 #define EFI_PAGE_MASK		(EFI_PAGE_SIZE - 1)
 
 struct efi_mem_desc {
@@ -489,5 +469,18 @@ void efi_putc(struct efi_priv *priv, const char ch);
  * of the requested type, -EPROTONOSUPPORT if the table has the wrong version
  */
 int efi_info_get(enum efi_entry_t type, void **datap, int *sizep);
+
+/**
+ * efi_build_mem_table() - make a sorted copy of the memory table
+ *
+ * @map:	Pointer to EFI memory map table
+ * @size:	Size of table in bytes
+ * @skip_bs:	True to skip boot-time memory and merge it with conventional
+ *		memory. This will significantly reduce the number of table
+ *		entries.
+ * @return pointer to the new table. It should be freed with free() by the
+ *	   caller
+ */
+void *efi_build_mem_table(struct efi_entry_memmap *map, int size, bool skip_bs);
 
 #endif /* _LINUX_EFI_H */

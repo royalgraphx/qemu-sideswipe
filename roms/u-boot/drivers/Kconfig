@@ -10,15 +10,9 @@ source "drivers/ata/Kconfig"
 
 source "drivers/axi/Kconfig"
 
-source "drivers/bus/Kconfig"
-
 source "drivers/block/Kconfig"
 
 source "drivers/bootcount/Kconfig"
-
-source "drivers/button/Kconfig"
-
-source "drivers/cache/Kconfig"
 
 source "drivers/clk/Kconfig"
 
@@ -29,6 +23,8 @@ source "drivers/crypto/Kconfig"
 source "drivers/ddr/Kconfig"
 
 source "drivers/demo/Kconfig"
+
+source "drivers/board/Kconfig"
 
 source "drivers/ddr/fsl/Kconfig"
 
@@ -62,17 +58,13 @@ source "drivers/mmc/Kconfig"
 
 source "drivers/mtd/Kconfig"
 
-source "drivers/mux/Kconfig"
-
 source "drivers/net/Kconfig"
 
 source "drivers/nvme/Kconfig"
 
 source "drivers/pci/Kconfig"
 
-source "drivers/pci_endpoint/Kconfig"
-
-source "drivers/pch/Kconfig"
+source "drivers/pcmcia/Kconfig"
 
 source "drivers/phy/Kconfig"
 
@@ -94,8 +86,6 @@ source "drivers/remoteproc/Kconfig"
 
 source "drivers/reset/Kconfig"
 
-source "drivers/rng/Kconfig"
-
 source "drivers/rtc/Kconfig"
 
 source "drivers/scsi/Kconfig"
@@ -106,13 +96,9 @@ source "drivers/smem/Kconfig"
 
 source "drivers/sound/Kconfig"
 
-source "drivers/soc/Kconfig"
-
 source "drivers/spi/Kconfig"
 
 source "drivers/spmi/Kconfig"
-
-source "drivers/sysinfo/Kconfig"
 
 source "drivers/sysreset/Kconfig"
 
@@ -126,8 +112,6 @@ source "drivers/tpm/Kconfig"
 
 source "drivers/usb/Kconfig"
 
-source "drivers/ufs/Kconfig"
-
 source "drivers/video/Kconfig"
 
 source "drivers/virtio/Kconfig"
@@ -137,8 +121,6 @@ source "drivers/w1/Kconfig"
 source "drivers/w1-eeprom/Kconfig"
 
 source "drivers/watchdog/Kconfig"
-
-source "drivers/xen/Kconfig"
 
 config PHYS_TO_BUS
 	bool "Custom physical to bus address mapping"

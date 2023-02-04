@@ -33,35 +33,26 @@ import re
 import random
 import argparse
 from itertools import chain
-from pathlib import Path
 
-try:
-    from qemu.machine import QEMUMachine
-    from qemu.qmp import ConnectError
-except ModuleNotFoundError as exc:
-    path = Path(__file__).resolve()
-    print(f"Module '{exc.name}' not found.")
-    print("  Try 'make check-venv' from your build directory,")
-    print("  and then one way to run this script is like so:")
-    print(f'  > $builddir/tests/venv/bin/python3 "{path}"')
-    sys.exit(1)
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'python'))
+from qemu.machine import QEMUMachine
 
 logger = logging.getLogger('device-crash-test')
 dbg = logger.debug
 
 
-# Purposes of the following rule list:
+# Purposes of the following whitelist:
 # * Avoiding verbose log messages when we find known non-fatal
 #   (exitcode=1) errors
 # * Avoiding fatal errors when we find known crashes
 # * Skipping machines/devices that are known not to work out of
 #   the box, when running in --quick mode
 #
-# Keeping the rule list updated is desirable, but not required,
+# Keeping the whitelist updated is desirable, but not required,
 # because unexpected cases where QEMU exits with exitcode=1 will
 # just trigger a INFO message.
 
-# Valid error rule keys:
+# Valid whitelist entry keys:
 # * accel: regexp, full match only
 # * machine: regexp, full match only
 # * device: regexp, full match only
@@ -71,7 +62,7 @@ dbg = logger.debug
 # * expected: if True, QEMU is expected to always fail every time
 #   when testing the corresponding test case
 # * loglevel: log level of log output when there's a match.
-ERROR_RULE_LIST = [
+ERROR_WHITELIST = [
     # Machines that won't work out of the box:
     #             MACHINE                         | ERROR MESSAGE
     {'machine':'niagara', 'expected':True},       # Unable to load a firmware for -M niagara
@@ -85,6 +76,7 @@ ERROR_RULE_LIST = [
     {'device':'ics', 'expected':True},                     # ics_base_realize: required link 'xics' not found: Property '.xics' not found
     # "-device ide-cd" does work on more recent QEMU versions, so it doesn't have expected=True
     {'device':'ide-cd'},                                 # No drive specified
+    {'device':'ide-drive', 'expected':True},               # No drive specified
     {'device':'ide-hd', 'expected':True},                  # No drive specified
     {'device':'ipmi-bmc-extern', 'expected':True},         # IPMI external bmc requires chardev attribute
     {'device':'isa-debugcon', 'expected':True},            # Can't create serial device, empty char device
@@ -101,8 +93,8 @@ ERROR_RULE_LIST = [
     {'device':'pci-bridge', 'expected':True},              # Bridge chassis not specified. Each bridge is required to be assigned a unique chassis id > 0.
     {'device':'pci-bridge-seat', 'expected':True},         # Bridge chassis not specified. Each bridge is required to be assigned a unique chassis id > 0.
     {'device':'pxb', 'expected':True},                     # Bridge chassis not specified. Each bridge is required to be assigned a unique chassis id > 0.
-    {'device':'pxb-cxl', 'expected':True},                 # pxb-cxl devices cannot reside on a PCI bus.
     {'device':'scsi-block', 'expected':True},              # drive property not set
+    {'device':'scsi-disk', 'expected':True},               # drive property not set
     {'device':'scsi-generic', 'expected':True},            # drive property not set
     {'device':'scsi-hd', 'expected':True},                 # drive property not set
     {'device':'spapr-pci-host-bridge', 'expected':True},   # BUID not specified for PHB
@@ -194,65 +186,65 @@ ERROR_RULE_LIST = [
 ]
 
 
-def errorRuleTestCaseMatch(rule, t):
-    """Check if a test case specification can match a error rule
+def whitelistTestCaseMatch(wl, t):
+    """Check if a test case specification can match a whitelist entry
 
-    This only checks if a error rule is a candidate match
+    This only checks if a whitelist entry is a candidate match
     for a given test case, it won't check if the test case
-    results/output match the rule.  See ruleListResultMatch().
+    results/output match the entry.  See whitelistResultMatch().
     """
-    return (('machine' not in rule or
+    return (('machine' not in wl or
              'machine' not in t or
-             re.match(rule['machine'] + '$', t['machine'])) and
-            ('accel' not in rule or
+             re.match(wl['machine'] + '$', t['machine'])) and
+            ('accel' not in wl or
              'accel' not in t or
-             re.match(rule['accel'] + '$', t['accel'])) and
-            ('device' not in rule or
+             re.match(wl['accel'] + '$', t['accel'])) and
+            ('device' not in wl or
              'device' not in t or
-             re.match(rule['device'] + '$', t['device'])))
+             re.match(wl['device'] + '$', t['device'])))
 
 
-def ruleListCandidates(t):
+def whitelistCandidates(t):
     """Generate the list of candidates that can match a test case"""
-    for i, rule in enumerate(ERROR_RULE_LIST):
-        if errorRuleTestCaseMatch(rule, t):
-            yield (i, rule)
+    for i, wl in enumerate(ERROR_WHITELIST):
+        if whitelistTestCaseMatch(wl, t):
+            yield (i, wl)
 
 
 def findExpectedResult(t):
-    """Check if there's an expected=True error rule for a test case
+    """Check if there's an expected=True whitelist entry for a test case
 
-    Returns (i, rule) tuple, where i is the index in
-    ERROR_RULE_LIST and rule is the error rule itself.
+    Returns (i, wl) tuple, where i is the index in
+    ERROR_WHITELIST and wl is the whitelist entry itself.
     """
-    for i, rule in ruleListCandidates(t):
-        if rule.get('expected'):
-            return (i, rule)
+    for i, wl in whitelistCandidates(t):
+        if wl.get('expected'):
+            return (i, wl)
 
 
-def ruleListResultMatch(rule, r):
-    """Check if test case results/output match a error rule
+def whitelistResultMatch(wl, r):
+    """Check if test case results/output match a whitelist entry
 
     It is valid to call this function only if
-    errorRuleTestCaseMatch() is True for the rule (e.g. on
-    rules returned by ruleListCandidates())
+    whitelistTestCaseMatch() is True for the entry (e.g. on
+    entries returned by whitelistCandidates())
     """
-    assert errorRuleTestCaseMatch(rule, r['testcase'])
-    return ((rule.get('exitcode', 1) is None or
-             r['exitcode'] == rule.get('exitcode', 1)) and
-            ('log' not in rule or
-             re.search(rule['log'], r['log'], re.MULTILINE)))
+    assert whitelistTestCaseMatch(wl, r['testcase'])
+    return ((wl.get('exitcode', 1) is None or
+             r['exitcode'] == wl.get('exitcode', 1)) and
+            ('log' not in wl or
+             re.search(wl['log'], r['log'], re.MULTILINE)))
 
 
-def checkResultRuleList(r):
-    """Look up error rule for a given test case result
+def checkResultWhitelist(r):
+    """Look up whitelist entry for a given test case result
 
-    Returns (i, rule) tuple, where i is the index in
-    ERROR_RULE_LIST and rule is the error rule itself.
+    Returns (i, wl) tuple, where i is the index in
+    ERROR_WHITELIST and wl is the whitelist entry itself.
     """
-    for i, rule in ruleListCandidates(r['testcase']):
-        if ruleListResultMatch(rule, r):
-            return i, rule
+    for i, wl in whitelistCandidates(r['testcase']):
+        if whitelistResultMatch(wl, r):
+            return i, wl
 
     raise Exception("this should never happen")
 
@@ -326,7 +318,9 @@ class QemuBinaryInfo(object):
         try:
             vm.launch()
             mi['runnable'] = True
-        except Exception:
+        except KeyboardInterrupt:
+            raise
+        except:
             dbg("exception trying to run binary=%s machine=%s", self.binary, machine, exc_info=sys.exc_info())
             dbg("log: %r", vm.get_log())
             mi['runnable'] = False
@@ -362,14 +356,14 @@ def checkOneCase(args, testcase):
             '-device', qemuOptsEscape(device)]
     cmdline = ' '.join([binary] + args)
     dbg("will launch QEMU: %s", cmdline)
-    vm = QEMUMachine(binary=binary, args=args, qmp_timer=15)
+    vm = QEMUMachine(binary=binary, args=args)
 
-    exc = None
     exc_traceback = None
     try:
         vm.launch()
-    except Exception as this_exc:
-        exc = this_exc
+    except KeyboardInterrupt:
+        raise
+    except:
         exc_traceback = traceback.format_exc()
         dbg("Exception while running test case")
     finally:
@@ -377,9 +371,8 @@ def checkOneCase(args, testcase):
         ec = vm.exitcode()
         log = vm.get_log()
 
-    if exc is not None or ec != 0:
-        return {'exc': exc,
-                'exc_traceback':exc_traceback,
+    if exc_traceback is not None or ec != 0:
+        return {'exc_traceback':exc_traceback,
                 'exitcode':ec,
                 'log':log,
                 'testcase':testcase,
@@ -390,9 +383,7 @@ def binariesToTest(args, testcase):
     if args.qemu:
         r = args.qemu
     else:
-        r = [f.path for f in os.scandir('.')
-             if f.name.startswith('qemu-system-') and
-                f.is_file() and os.access(f, os.X_OK)]
+        r = glob.glob('./*-softmmu/qemu-system-*')
     return r
 
 
@@ -467,17 +458,6 @@ def logFailure(f, level):
     for l in f['log'].strip().split('\n'):
         logger.log(level, "log: %s", l)
     logger.log(level, "exit code: %r", f['exitcode'])
-
-    # If the Exception is merely a QMP connect error,
-    # reduce the logging level for its traceback to
-    # improve visual clarity.
-    if isinstance(f.get('exc'), ConnectError):
-        logger.log(level, "%s.%s: %s",
-                   type(f['exc']).__module__,
-                   type(f['exc']).__qualname__,
-                   str(f['exc']))
-        level = logging.DEBUG
-
     if f['exc_traceback']:
         logger.log(level, "exception:")
         for l in f['exc_traceback'].split('\n'):
@@ -522,12 +502,6 @@ def main():
         lvl = logging.WARN
     logging.basicConfig(stream=sys.stdout, level=lvl, format='%(levelname)s: %(message)s')
 
-    if not args.debug:
-        # Async QMP, when in use, is chatty about connection failures.
-        # This script knowingly generates a ton of connection errors.
-        # Silence this logger.
-        logging.getLogger('qemu.qmp.qmp_client').setLevel(logging.CRITICAL)
-
     fatal_failures = []
     wl_stats = {}
     skipped = 0
@@ -567,12 +541,12 @@ def main():
             break
 
         if f:
-            i, rule = checkResultRuleList(f)
-            dbg("testcase: %r, rule list match: %r", t, rule)
+            i, wl = checkResultWhitelist(f)
+            dbg("testcase: %r, whitelist match: %r", t, wl)
             wl_stats.setdefault(i, []).append(f)
-            level = rule.get('loglevel', logging.DEBUG)
+            level = wl.get('loglevel', logging.DEBUG)
             logFailure(f, level)
-            if rule.get('fatal') or (args.strict and level >= logging.WARN):
+            if wl.get('fatal') or (args.strict and level >= logging.WARN):
                 fatal_failures.append(f)
         else:
             dbg("success: %s", formatTestCase(t))
@@ -584,10 +558,10 @@ def main():
         logger.info("Skipped %d test cases", skipped)
 
     if args.debug:
-        stats = sorted([(len(wl_stats.get(i, [])), rule) for i, rule in
-                         enumerate(ERROR_RULE_LIST)], key=lambda x: x[0])
-        for count, rule in stats:
-            dbg("error rule stats: %d: %r", count, rule)
+        stats = sorted([(len(wl_stats.get(i, [])), wl) for i, wl in
+                         enumerate(ERROR_WHITELIST)], key=lambda x: x[0])
+        for count, wl in stats:
+            dbg("whitelist entry stats: %d: %r", count, wl)
 
     if fatal_failures:
         for f in fatal_failures:

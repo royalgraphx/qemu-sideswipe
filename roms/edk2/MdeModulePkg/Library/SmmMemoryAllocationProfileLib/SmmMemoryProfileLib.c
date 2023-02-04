@@ -14,8 +14,8 @@
 
 #include <Guid/MemoryProfile.h>
 
-EDKII_MEMORY_PROFILE_PROTOCOL      *mLibProfileProtocol;
-EDKII_SMM_MEMORY_PROFILE_PROTOCOL  *mLibSmmProfileProtocol;
+EDKII_MEMORY_PROFILE_PROTOCOL     *mLibProfileProtocol;
+EDKII_SMM_MEMORY_PROFILE_PROTOCOL *mLibSmmProfileProtocol;
 
 /**
   Check whether the start address of buffer is within any of the SMRAM ranges.
@@ -28,7 +28,7 @@ EDKII_SMM_MEMORY_PROFILE_PROTOCOL  *mLibSmmProfileProtocol;
 BOOLEAN
 EFIAPI
 BufferInSmram (
-  IN VOID  *Buffer
+  IN VOID *Buffer
   );
 
 /**
@@ -47,7 +47,7 @@ SmmMemoryProfileLibConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                Status;
 
   //
   // Locate Profile Protocol
@@ -98,19 +98,18 @@ SmmMemoryProfileLibConstructor (
 EFI_STATUS
 EFIAPI
 MemoryProfileLibRecord (
-  IN PHYSICAL_ADDRESS       CallerAddress,
-  IN MEMORY_PROFILE_ACTION  Action,
-  IN EFI_MEMORY_TYPE        MemoryType,
-  IN VOID                   *Buffer,
-  IN UINTN                  Size,
-  IN CHAR8                  *ActionString OPTIONAL
+  IN PHYSICAL_ADDRESS           CallerAddress,
+  IN MEMORY_PROFILE_ACTION      Action,
+  IN EFI_MEMORY_TYPE            MemoryType,
+  IN VOID                       *Buffer,
+  IN UINTN                      Size,
+  IN CHAR8                      *ActionString OPTIONAL
   )
 {
   if (BufferInSmram (Buffer)) {
     if (mLibSmmProfileProtocol == NULL) {
       return EFI_UNSUPPORTED;
     }
-
     return mLibSmmProfileProtocol->Record (
                                      mLibSmmProfileProtocol,
                                      CallerAddress,
@@ -124,7 +123,6 @@ MemoryProfileLibRecord (
     if (mLibProfileProtocol == NULL) {
       return EFI_UNSUPPORTED;
     }
-
     return mLibProfileProtocol->Record (
                                   mLibProfileProtocol,
                                   CallerAddress,
@@ -136,3 +134,4 @@ MemoryProfileLibRecord (
                                   );
   }
 }
+

@@ -19,8 +19,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 
-if test -z "$1"; then
-  echo "Usage: $0 INPUTFILE..."
+output=$1
+shift
+
+if test -z "$output" || test -z "$1"; then
+  echo "Usage: $0 OUTPUTFILE INPUTFILE..."
+  exit 1
+fi
+
+if test -e "$output"; then
+  echo "Output file \"$output\" already exists; refusing to overwrite."
   exit 1
 fi
 
@@ -52,18 +60,17 @@ for input; do
       printf "'\''\\n'\'', \n"
     } END {
       print "  0 };"
-    }' < $input
+    }' < $input >> $output
 done
 
-echo
-echo '#include "exec/gdbstub.h"'
-echo "const char *const xml_builtin[][2] = {"
+echo >> $output
+echo "const char *const xml_builtin[][2] = {" >> $output
 
 for input; do
   basename=$(echo $input | sed 's,.*/,,')
   arrayname=xml_feature_$(echo $input | sed 's,.*/,,; s/[-.]/_/g')
-  echo "  { \"$basename\", $arrayname },"
+  echo "  { \"$basename\", $arrayname }," >> $output
 done
 
-echo "  { (char *)0, (char *)0 }"
-echo "};"
+echo "  { (char *)0, (char *)0 }" >> $output
+echo "};" >> $output

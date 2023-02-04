@@ -143,14 +143,6 @@ static void check_nodes_props(struct check *c, struct dt_info *dti, struct node 
 		check_nodes_props(c, dti, child);
 }
 
-static bool is_multiple_of(int multiple, int divisor)
-{
-	if (divisor == 0)
-		return multiple == 0;
-	else
-		return (multiple % divisor) == 0;
-}
-
 static bool run_check(struct check *c, struct dt_info *dti)
 {
 	struct node *dt = dti->dt;
@@ -305,8 +297,7 @@ ERROR(duplicate_property_names, check_duplicate_property_names, NULL);
 #define LOWERCASE	"abcdefghijklmnopqrstuvwxyz"
 #define UPPERCASE	"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 #define DIGITS		"0123456789"
-#define NODECHARS	LOWERCASE UPPERCASE DIGITS ",._+-@"
-#define PROPCHARS	LOWERCASE UPPERCASE DIGITS ",._+*#?-"
+#define PROPNODECHARS	LOWERCASE UPPERCASE DIGITS ",._+*#?-"
 #define PROPNODECHARSSTRICT	LOWERCASE UPPERCASE DIGITS ",-"
 
 static void check_node_name_chars(struct check *c, struct dt_info *dti,
@@ -318,7 +309,7 @@ static void check_node_name_chars(struct check *c, struct dt_info *dti,
 		FAIL(c, dti, node, "Bad character '%c' in node name",
 		     node->name[n]);
 }
-ERROR(node_name_chars, check_node_name_chars, NODECHARS);
+ERROR(node_name_chars, check_node_name_chars, PROPNODECHARS "@");
 
 static void check_node_name_chars_strict(struct check *c, struct dt_info *dti,
 					 struct node *node)
@@ -338,20 +329,6 @@ static void check_node_name_format(struct check *c, struct dt_info *dti,
 		FAIL(c, dti, node, "multiple '@' characters in node name");
 }
 ERROR(node_name_format, check_node_name_format, NULL, &node_name_chars);
-
-static void check_node_name_vs_property_name(struct check *c,
-					     struct dt_info *dti,
-					     struct node *node)
-{
-	if (!node->parent)
-		return;
-
-	if (get_property(node->parent, node->name)) {
-		FAIL(c, dti, node, "node name and property name conflict");
-	}
-}
-WARNING(node_name_vs_property_name, check_node_name_vs_property_name,
-	NULL, &node_name_chars);
 
 static void check_unit_address_vs_reg(struct check *c, struct dt_info *dti,
 				      struct node *node)
@@ -393,7 +370,7 @@ static void check_property_name_chars(struct check *c, struct dt_info *dti,
 				  prop->name[n]);
 	}
 }
-ERROR(property_name_chars, check_property_name_chars, PROPCHARS);
+ERROR(property_name_chars, check_property_name_chars, PROPNODECHARS);
 
 static void check_property_name_chars_strict(struct check *c,
 					     struct dt_info *dti,
@@ -680,6 +657,7 @@ ERROR(omit_unused_nodes, fixup_omit_unused_nodes, NULL, &phandle_references, &pa
  */
 WARNING_IF_NOT_CELL(address_cells_is_cell, "#address-cells");
 WARNING_IF_NOT_CELL(size_cells_is_cell, "#size-cells");
+WARNING_IF_NOT_CELL(interrupt_cells_is_cell, "#interrupt-cells");
 
 WARNING_IF_NOT_STRING(device_type_is_string, "device_type");
 WARNING_IF_NOT_STRING(model_is_string, "model");
@@ -694,7 +672,8 @@ static void check_names_is_string_list(struct check *c, struct dt_info *dti,
 	struct property *prop;
 
 	for_each_property(node, prop) {
-		if (!strends(prop->name, "-names"))
+		const char *s = strrchr(prop->name, '-');
+		if (!s || !streq(s, "-names"))
 			continue;
 
 		c->data = prop->name;
@@ -774,7 +753,7 @@ static void check_reg_format(struct check *c, struct dt_info *dti,
 	size_cells = node_size_cells(node->parent);
 	entrylen = (addr_cells + size_cells) * sizeof(cell_t);
 
-	if (!is_multiple_of(prop->val.len, entrylen))
+	if (!entrylen || (prop->val.len % entrylen) != 0)
 		FAIL_PROP(c, dti, node, prop, "property has invalid length (%d bytes) "
 			  "(#address-cells == %d, #size-cells == %d)",
 			  prop->val.len, addr_cells, size_cells);
@@ -815,7 +794,7 @@ static void check_ranges_format(struct check *c, struct dt_info *dti,
 				  "#size-cells (%d) differs from %s (%d)",
 				  ranges, c_size_cells, node->parent->fullpath,
 				  p_size_cells);
-	} else if (!is_multiple_of(prop->val.len, entrylen)) {
+	} else if ((prop->val.len % entrylen) != 0) {
 		FAIL_PROP(c, dti, node, prop, "\"%s\" property has invalid length (%d bytes) "
 			  "(parent #address-cells == %d, child #address-cells == %d, "
 			  "#size-cells == %d)", ranges, prop->val.len,
@@ -912,8 +891,10 @@ static void check_pci_device_reg(struct check *c, struct dt_info *dti, struct no
 		return;
 
 	prop = get_property(node, "reg");
-	if (!prop)
+	if (!prop) {
+		FAIL(c, dti, node, "missing PCI reg property");
 		return;
+	}
 
 	cells = (cell_t *)prop->val.val;
 	if (cells[1] || cells[2])
@@ -1041,9 +1022,6 @@ static void check_i2c_bus_bridge(struct check *c, struct dt_info *dti, struct no
 }
 WARNING(i2c_bus_bridge, check_i2c_bus_bridge, NULL, &addr_size_cells);
 
-#define I2C_OWN_SLAVE_ADDRESS	(1U << 30)
-#define I2C_TEN_BIT_ADDRESS	(1U << 31)
-
 static void check_i2c_bus_reg(struct check *c, struct dt_info *dti, struct node *node)
 {
 	struct property *prop;
@@ -1066,8 +1044,6 @@ static void check_i2c_bus_reg(struct check *c, struct dt_info *dti, struct node 
 	}
 
 	reg = fdt32_to_cpu(*cells);
-	/* Ignore I2C_OWN_SLAVE_ADDRESS */
-	reg &= ~I2C_OWN_SLAVE_ADDRESS;
 	snprintf(unit_addr, sizeof(unit_addr), "%x", reg);
 	if (!streq(unitname, unit_addr))
 		FAIL(c, dti, node, "I2C bus unit address format error, expected \"%s\"",
@@ -1075,15 +1051,10 @@ static void check_i2c_bus_reg(struct check *c, struct dt_info *dti, struct node 
 
 	for (len = prop->val.len; len > 0; len -= 4) {
 		reg = fdt32_to_cpu(*(cells++));
-		/* Ignore I2C_OWN_SLAVE_ADDRESS */
-		reg &= ~I2C_OWN_SLAVE_ADDRESS;
-
-		if ((reg & I2C_TEN_BIT_ADDRESS) && ((reg & ~I2C_TEN_BIT_ADDRESS) > 0x3ff))
+		if (reg > 0x3ff)
 			FAIL_PROP(c, dti, node, prop, "I2C address must be less than 10-bits, got \"0x%x\"",
 				  reg);
-		else if (reg > 0x7f)
-			FAIL_PROP(c, dti, node, prop, "I2C address must be less than 7-bits, got \"0x%x\". Set I2C_TEN_BIT_ADDRESS for 10 bit addresses or fix the property",
-				  reg);
+
 	}
 }
 WARNING(i2c_bus_reg, check_i2c_bus_reg, NULL, &reg_format, &i2c_bus_bridge);
@@ -1390,7 +1361,7 @@ static void check_property_phandle_args(struct check *c,
 	struct node *root = dti->dt;
 	int cell, cellsize = 0;
 
-	if (!is_multiple_of(prop->val.len, sizeof(cell_t))) {
+	if (prop->val.len % sizeof(cell_t)) {
 		FAIL_PROP(c, dti, node, prop,
 			  "property size (%d) is invalid, expected multiple of %zu",
 			  prop->val.len, sizeof(cell_t));
@@ -1473,8 +1444,7 @@ static void check_provider_cells_property(struct check *c,
 }
 #define WARNING_PROPERTY_PHANDLE_CELLS(nm, propname, cells_name, ...) \
 	static struct provider nm##_provider = { (propname), (cells_name), __VA_ARGS__ }; \
-	WARNING_IF_NOT_CELL(nm##_is_cell, cells_name); \
-	WARNING(nm##_property, check_provider_cells_property, &nm##_provider, &nm##_is_cell, &phandle_references);
+	WARNING(nm##_property, check_provider_cells_property, &nm##_provider, &phandle_references);
 
 WARNING_PROPERTY_PHANDLE_CELLS(clocks, "clocks", "#clock-cells");
 WARNING_PROPERTY_PHANDLE_CELLS(cooling_device, "cooling-device", "#cooling-cells");
@@ -1495,17 +1465,24 @@ WARNING_PROPERTY_PHANDLE_CELLS(thermal_sensors, "thermal-sensors", "#thermal-sen
 
 static bool prop_is_gpio(struct property *prop)
 {
+	char *str;
+
 	/*
 	 * *-gpios and *-gpio can appear in property names,
 	 * so skip over any false matches (only one known ATM)
 	 */
-	if (strends(prop->name, ",nr-gpios"))
+	if (strstr(prop->name, "nr-gpio"))
 		return false;
 
-	return strends(prop->name, "-gpios") ||
-		streq(prop->name, "gpios") ||
-		strends(prop->name, "-gpio") ||
-		streq(prop->name, "gpio");
+	str = strrchr(prop->name, '-');
+	if (str)
+		str++;
+	else
+		str = prop->name;
+	if (!(streq(str, "gpios") || streq(str, "gpio")))
+		return false;
+
+	return true;
 }
 
 static void check_gpios_property(struct check *c,
@@ -1540,10 +1517,13 @@ static void check_deprecated_gpio_property(struct check *c,
 	struct property *prop;
 
 	for_each_property(node, prop) {
+		char *str;
+
 		if (!prop_is_gpio(prop))
 			continue;
 
-		if (!strends(prop->name, "gpio"))
+		str = strstr(prop->name, "gpio");
+		if (!streq(str, "gpio"))
 			continue;
 
 		FAIL_PROP(c, dti, node, prop,
@@ -1567,28 +1547,6 @@ static bool node_is_interrupt_provider(struct node *node)
 
 	return false;
 }
-
-static void check_interrupt_provider(struct check *c,
-				     struct dt_info *dti,
-				     struct node *node)
-{
-	struct property *prop;
-
-	if (!node_is_interrupt_provider(node))
-		return;
-
-	prop = get_property(node, "#interrupt-cells");
-	if (!prop)
-		FAIL(c, dti, node,
-		     "Missing #interrupt-cells in interrupt provider");
-
-	prop = get_property(node, "#address-cells");
-	if (!prop)
-		FAIL(c, dti, node,
-		     "Missing #address-cells in interrupt provider");
-}
-WARNING(interrupt_provider, check_interrupt_provider, NULL);
-
 static void check_interrupts_property(struct check *c,
 				      struct dt_info *dti,
 				      struct node *node)
@@ -1602,7 +1560,7 @@ static void check_interrupts_property(struct check *c,
 	if (!irq_prop)
 		return;
 
-	if (!is_multiple_of(irq_prop->val.len, sizeof(cell_t)))
+	if (irq_prop->val.len % sizeof(cell_t))
 		FAIL_PROP(c, dti, node, irq_prop, "size (%d) is invalid, expected multiple of %zu",
 		     irq_prop->val.len, sizeof(cell_t));
 
@@ -1646,12 +1604,12 @@ static void check_interrupts_property(struct check *c,
 
 	prop = get_property(irq_node, "#interrupt-cells");
 	if (!prop) {
-		/* We warn about that already in another test. */
+		FAIL(c, dti, irq_node, "Missing #interrupt-cells in interrupt-parent");
 		return;
 	}
 
 	irq_cells = propval_cell(prop);
-	if (!is_multiple_of(irq_prop->val.len, irq_cells * sizeof(cell_t))) {
+	if (irq_prop->val.len % (irq_cells * sizeof(cell_t))) {
 		FAIL_PROP(c, dti, node, prop,
 			  "size is (%d), expected multiple of %d",
 			  irq_prop->val.len, (int)(irq_cells * sizeof(cell_t)));
@@ -1808,7 +1766,7 @@ WARNING(graph_endpoint, check_graph_endpoint, NULL, &graph_nodes);
 static struct check *check_table[] = {
 	&duplicate_node_names, &duplicate_property_names,
 	&node_name_chars, &node_name_format, &property_name_chars,
-	&name_is_string, &name_properties, &node_name_vs_property_name,
+	&name_is_string, &name_properties,
 
 	&duplicate_label,
 
@@ -1816,7 +1774,7 @@ static struct check *check_table[] = {
 	&phandle_references, &path_references,
 	&omit_unused_nodes,
 
-	&address_cells_is_cell, &size_cells_is_cell,
+	&address_cells_is_cell, &size_cells_is_cell, &interrupt_cells_is_cell,
 	&device_type_is_string, &model_is_string, &status_is_string,
 	&label_is_string,
 
@@ -1851,42 +1809,25 @@ static struct check *check_table[] = {
 	&chosen_node_is_root, &chosen_node_bootargs, &chosen_node_stdout_path,
 
 	&clocks_property,
-	&clocks_is_cell,
 	&cooling_device_property,
-	&cooling_device_is_cell,
 	&dmas_property,
-	&dmas_is_cell,
 	&hwlocks_property,
-	&hwlocks_is_cell,
 	&interrupts_extended_property,
-	&interrupts_extended_is_cell,
 	&io_channels_property,
-	&io_channels_is_cell,
 	&iommus_property,
-	&iommus_is_cell,
 	&mboxes_property,
-	&mboxes_is_cell,
 	&msi_parent_property,
-	&msi_parent_is_cell,
 	&mux_controls_property,
-	&mux_controls_is_cell,
 	&phys_property,
-	&phys_is_cell,
 	&power_domains_property,
-	&power_domains_is_cell,
 	&pwms_property,
-	&pwms_is_cell,
 	&resets_property,
-	&resets_is_cell,
 	&sound_dai_property,
-	&sound_dai_is_cell,
 	&thermal_sensors_property,
-	&thermal_sensors_is_cell,
 
 	&deprecated_gpio_property,
 	&gpios_property,
 	&interrupts_property,
-	&interrupt_provider,
 
 	&alias_paths,
 

@@ -1,7 +1,7 @@
 /** @file
   XSDT table parser
 
-  Copyright (c) 2016 - 2019, ARM Limited. All rights reserved.
+  Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
   @par Reference(s):
@@ -15,11 +15,11 @@
 #include "AcpiTableParser.h"
 
 // Local variables
-STATIC ACPI_DESCRIPTION_HEADER_INFO  AcpiHdrInfo;
+STATIC ACPI_DESCRIPTION_HEADER_INFO AcpiHdrInfo;
 
 /** An ACPI_PARSER array describing the ACPI XSDT table.
 */
-STATIC CONST ACPI_PARSER  XsdtParser[] = {
+STATIC CONST ACPI_PARSER XsdtParser[] = {
   PARSE_ACPI_HEADER (&AcpiHdrInfo)
 };
 
@@ -30,7 +30,7 @@ CONST ACPI_DESCRIPTION_HEADER_INFO *
 EFIAPI
 GetAcpiXsdtHeaderInfo (
   VOID
-  )
+)
 {
   return &AcpiHdrInfo;
 }
@@ -48,48 +48,58 @@ GetAcpiXsdtHeaderInfo (
 VOID
 EFIAPI
 ParseAcpiXsdt (
-  IN BOOLEAN  Trace,
-  IN UINT8    *Ptr,
-  IN UINT32   AcpiTableLength,
-  IN UINT8    AcpiTableRevision
+  IN BOOLEAN Trace,
+  IN UINT8*  Ptr,
+  IN UINT32  AcpiTableLength,
+  IN UINT8   AcpiTableRevision
   )
 {
-  UINT32  Offset;
-  UINT32  TableOffset;
-  UINT64  *TablePointer;
-  UINTN   EntryIndex;
-  CHAR16  Buffer[32];
+  UINT32        Offset;
+  UINT32        TableOffset;
+  UINT64*       TablePointer;
+  UINTN         EntryIndex;
+  CHAR16        Buffer[32];
+
+  // Parse the ACPI header to get the length
+  ParseAcpi (
+    FALSE,
+    0,
+    "XSDT",
+    Ptr,
+    ACPI_DESCRIPTION_HEADER_LENGTH,
+    PARSER_PARAMS (XsdtParser)
+    );
 
   Offset = ParseAcpi (
              Trace,
              0,
              "XSDT",
              Ptr,
-             AcpiTableLength,
+             *AcpiHdrInfo.Length,
              PARSER_PARAMS (XsdtParser)
              );
 
   TableOffset = Offset;
 
   if (Trace) {
-    EntryIndex   = 0;
-    TablePointer = (UINT64 *)(Ptr + TableOffset);
-    while (Offset < AcpiTableLength) {
-      CONST UINT32  *Signature;
-      CONST UINT32  *Length;
-      CONST UINT8   *Revision;
+    EntryIndex = 0;
+    TablePointer = (UINT64*)(Ptr + TableOffset);
+    while (Offset < (*AcpiHdrInfo.Length)) {
+      CONST UINT32* Signature;
+      CONST UINT32* Length;
+      CONST UINT8*  Revision;
 
-      if ((UINT64 *)(UINTN)(*TablePointer) != NULL) {
-        UINT8  *SignaturePtr;
+      if ((UINT64*)(UINTN)(*TablePointer) != NULL) {
+        UINT8*      SignaturePtr;
 
         ParseAcpiHeader (
-          (UINT8 *)(UINTN)(*TablePointer),
+          (UINT8*)(UINTN)(*TablePointer),
           &Signature,
           &Length,
           &Revision
           );
 
-        SignaturePtr = (UINT8 *)Signature;
+        SignaturePtr = (UINT8*)Signature;
 
         UnicodeSPrint (
           Buffer,
@@ -114,7 +124,7 @@ ParseAcpiXsdt (
       Print (L"0x%lx\n", *TablePointer);
 
       // Validate the table pointers are not NULL
-      if ((UINT64 *)(UINTN)(*TablePointer) == NULL) {
+      if ((UINT64*)(UINTN)(*TablePointer) == NULL) {
         IncrementErrorCount ();
         Print (
           L"ERROR: Invalid table entry at 0x%lx, table address is 0x%lx\n",
@@ -122,20 +132,18 @@ ParseAcpiXsdt (
           *TablePointer
           );
       }
-
       Offset += sizeof (UINT64);
       TablePointer++;
     } // while
   }
 
   // Process the tables
-  Offset       = TableOffset;
-  TablePointer = (UINT64 *)(Ptr + TableOffset);
-  while (Offset < AcpiTableLength) {
-    if ((UINT64 *)(UINTN)(*TablePointer) != NULL) {
-      ProcessAcpiTable ((UINT8 *)(UINTN)(*TablePointer));
+  Offset = TableOffset;
+  TablePointer = (UINT64*)(Ptr + TableOffset);
+  while (Offset < (*AcpiHdrInfo.Length)) {
+    if ((UINT64*)(UINTN)(*TablePointer) != NULL) {
+      ProcessAcpiTable ((UINT8*)(UINTN)(*TablePointer));
     }
-
     Offset += sizeof (UINT64);
     TablePointer++;
   } // while

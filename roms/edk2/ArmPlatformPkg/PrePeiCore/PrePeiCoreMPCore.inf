@@ -16,7 +16,6 @@
 
 [Sources.common]
   MainMPCore.c
-  PrePeiCore.h
   PrePeiCore.c
 
 [Sources.ARM]
@@ -44,7 +43,6 @@
 [LibraryClasses]
   ArmLib
   ArmPlatformLib
-  CacheMaintenanceLib
   BaseLib
   DebugLib
   DebugAgentLib
@@ -63,7 +61,6 @@
 [FixedPcd]
   gArmTokenSpaceGuid.PcdFvBaseAddress
   gArmTokenSpaceGuid.PcdFvSize
-  gArmTokenSpaceGuid.PcdVFPEnabled
 
   gArmPlatformTokenSpaceGuid.PcdCPUCoresStackBase
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize

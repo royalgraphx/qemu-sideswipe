@@ -6,3 +6,5 @@
 #include <configs/bmips_common.h>
 #include <configs/bmips_bcm6338.h>
 
+#define CONFIG_ENV_SIZE			(8 * 1024)
+

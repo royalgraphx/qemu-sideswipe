@@ -16,8 +16,6 @@
 #include "hw/arm/pxa.h"
 #include "hw/sysbus.h"
 #include "migration/vmstate.h"
-#include "qom/object.h"
-#include "target/arm/cpregs.h"
 
 #define ICIP	0x00	/* Interrupt Controller IRQ Pending register */
 #define ICMR	0x04	/* Interrupt Controller Mask register */
@@ -39,9 +37,10 @@
 #define PXA2XX_PIC_SRCS	40
 
 #define TYPE_PXA2XX_PIC "pxa2xx_pic"
-OBJECT_DECLARE_SIMPLE_TYPE(PXA2xxPICState, PXA2XX_PIC)
+#define PXA2XX_PIC(obj) \
+    OBJECT_CHECK(PXA2xxPICState, (obj), TYPE_PXA2XX_PIC)
 
-struct PXA2xxPICState {
+typedef struct {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
@@ -53,7 +52,7 @@ struct PXA2xxPICState {
     uint32_t is_fiq[2];
     uint32_t int_idle;
     uint32_t priority[PXA2XX_PIC_SRCS];
-};
+} PXA2xxPICState;
 
 static void pxa2xx_pic_update(void *opaque)
 {
@@ -257,6 +256,7 @@ static const ARMCPRegInfo pxa_pic_cp_reginfo[] = {
     REGINFO_FOR_PIC_CP("ICLR2", 8),
     REGINFO_FOR_PIC_CP("ICFP2", 9),
     REGINFO_FOR_PIC_CP("ICPR2", 0xa),
+    REGINFO_SENTINEL
 };
 
 static const MemoryRegionOps pxa2xx_pic_ops = {
@@ -301,7 +301,7 @@ DeviceState *pxa2xx_pic_init(hwaddr base, ARMCPU *cpu)
     return dev;
 }
 
-static const VMStateDescription vmstate_pxa2xx_pic_regs = {
+static VMStateDescription vmstate_pxa2xx_pic_regs = {
     .name = "pxa2xx_pic",
     .version_id = 0,
     .minimum_version_id = 0,

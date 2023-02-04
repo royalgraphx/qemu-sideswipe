@@ -50,6 +50,6 @@ qemu_edk2_set_cross_env "$emulation_target"
 build \
   --cmd-len=65536 \
   -n "$edk2_thread_count" \
-  --buildtarget=RELEASE \
+  --buildtarget=DEBUG \
   --tagname="$edk2_toolchain" \
   "${args[@]}"

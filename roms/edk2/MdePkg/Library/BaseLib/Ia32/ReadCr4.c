@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Reads the current value of the Control Register 4 (CR4).
 
@@ -28,3 +31,4 @@ AsmReadCr4 (
     _emit  0xE0
   }
 }
+

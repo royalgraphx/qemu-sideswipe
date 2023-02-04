@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Writes the current Local Descriptor Table Register (GDTR) selector.
 
@@ -18,7 +21,7 @@
 VOID
 EFIAPI
 AsmWriteLdtr (
-  IN UINT16  Ldtr
+  IN UINT16 Ldtr
   )
 {
   _asm {
@@ -27,3 +30,4 @@ AsmWriteLdtr (
     lldt    ax
   }
 }
+

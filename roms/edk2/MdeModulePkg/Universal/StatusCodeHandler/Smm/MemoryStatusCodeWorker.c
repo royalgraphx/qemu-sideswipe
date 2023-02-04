@@ -7,38 +7,39 @@
 
 **/
 
-#include "StatusCodeHandlerMm.h"
+#include "StatusCodeHandlerSmm.h"
 
-RUNTIME_MEMORY_STATUSCODE_HEADER  *mMmMemoryStatusCodeTable;
+RUNTIME_MEMORY_STATUSCODE_HEADER  *mSmmMemoryStatusCodeTable;
 
 /**
-  Initialize MM memory status code table as initialization for memory status code worker
+  Initialize SMM memory status code table as initialization for memory status code worker
 
-  @retval EFI_SUCCESS  MM memory status code table successfully initialized.
-  @retval others       Errors from gMmst->MmInstallConfigurationTable().
+  @retval EFI_SUCCESS  SMM memory status code table successfully initialized.
+  @retval others       Errors from gSmst->SmmInstallConfigurationTable().
 **/
 EFI_STATUS
 MemoryStatusCodeInitializeWorker (
   VOID
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                        Status;
 
   //
-  // Allocate MM memory status code pool.
+  // Allocate SMM memory status code pool.
   //
-  mMmMemoryStatusCodeTable = (RUNTIME_MEMORY_STATUSCODE_HEADER *)AllocateZeroPool (sizeof (RUNTIME_MEMORY_STATUSCODE_HEADER) + PcdGet16 (PcdStatusCodeMemorySize) * 1024);
-  ASSERT (mMmMemoryStatusCodeTable != NULL);
+  mSmmMemoryStatusCodeTable = (RUNTIME_MEMORY_STATUSCODE_HEADER *)AllocateZeroPool (sizeof (RUNTIME_MEMORY_STATUSCODE_HEADER) + PcdGet16 (PcdStatusCodeMemorySize) * 1024);
+  ASSERT (mSmmMemoryStatusCodeTable != NULL);
 
-  mMmMemoryStatusCodeTable->MaxRecordsNumber = (PcdGet16 (PcdStatusCodeMemorySize) * 1024) / sizeof (MEMORY_STATUSCODE_RECORD);
-  Status                                     = gMmst->MmInstallConfigurationTable (
-                                                        gMmst,
-                                                        &gMemoryStatusCodeRecordGuid,
-                                                        &mMmMemoryStatusCodeTable,
-                                                        sizeof (mMmMemoryStatusCodeTable)
-                                                        );
+  mSmmMemoryStatusCodeTable->MaxRecordsNumber = (PcdGet16 (PcdStatusCodeMemorySize) * 1024) / sizeof (MEMORY_STATUSCODE_RECORD);
+  Status = gSmst->SmmInstallConfigurationTable (
+                    gSmst,
+                    &gMemoryStatusCodeRecordGuid,
+                    &mSmmMemoryStatusCodeTable,
+                    sizeof (mSmmMemoryStatusCodeTable)
+                    );
   return Status;
 }
+
 
 /**
   Report status code into runtime memory. If the runtime pool is full, roll back to the
@@ -61,20 +62,20 @@ MemoryStatusCodeInitializeWorker (
 EFI_STATUS
 EFIAPI
 MemoryStatusCodeReportWorker (
-  IN EFI_STATUS_CODE_TYPE   CodeType,
-  IN EFI_STATUS_CODE_VALUE  Value,
-  IN UINT32                 Instance,
-  IN EFI_GUID               *CallerId,
-  IN EFI_STATUS_CODE_DATA   *Data OPTIONAL
+  IN EFI_STATUS_CODE_TYPE               CodeType,
+  IN EFI_STATUS_CODE_VALUE              Value,
+  IN UINT32                             Instance,
+  IN EFI_GUID                           *CallerId,
+  IN EFI_STATUS_CODE_DATA               *Data OPTIONAL
   )
 {
-  MEMORY_STATUSCODE_RECORD  *Record;
+  MEMORY_STATUSCODE_RECORD              *Record;
 
   //
   // Locate current record buffer.
   //
-  Record = (MEMORY_STATUSCODE_RECORD *)(mMmMemoryStatusCodeTable + 1);
-  Record = &Record[mMmMemoryStatusCodeTable->RecordIndex++];
+  Record = (MEMORY_STATUSCODE_RECORD *) (mSmmMemoryStatusCodeTable + 1);
+  Record = &Record[mSmmMemoryStatusCodeTable->RecordIndex++];
 
   //
   // Save status code.
@@ -91,13 +92,16 @@ MemoryStatusCodeReportWorker (
   // so the first record is pointed by record index.
   // If it is less then max number, index of the first record is zero.
   //
-  mMmMemoryStatusCodeTable->NumberOfRecords++;
-  if (mMmMemoryStatusCodeTable->RecordIndex == mMmMemoryStatusCodeTable->MaxRecordsNumber) {
+  mSmmMemoryStatusCodeTable->NumberOfRecords++;
+  if (mSmmMemoryStatusCodeTable->RecordIndex == mSmmMemoryStatusCodeTable->MaxRecordsNumber) {
     //
     // Wrap around record index.
     //
-    mMmMemoryStatusCodeTable->RecordIndex = 0;
+    mSmmMemoryStatusCodeTable->RecordIndex = 0;
   }
 
   return EFI_SUCCESS;
 }
+
+
+

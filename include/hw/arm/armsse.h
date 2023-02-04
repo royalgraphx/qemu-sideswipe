@@ -14,9 +14,9 @@
  * hardware, which include the IoT Kit and the SSE-050, SSE-100 and
  * SSE-200. Currently we model:
  *  - the Arm IoT Kit which is documented in
- *    https://developer.arm.com/documentation/ecm0601256/latest
+ * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ecm0601256/index.html
  *  - the SSE-200 which is documented in
- *    https://developer.arm.com/documentation/101104/latest/
+ * http://infocenter.arm.com/help/topic/com.arm.doc.101104_0100_00_en/corelink_sse200_subsystem_for_embedded_technical_reference_manual_101104_0100_00_en.pdf
  *
  * The IoTKit contains:
  *  a Cortex-M33
@@ -37,10 +37,9 @@
  *  per-CPU identity and control register blocks
  *
  * QEMU interface:
- *  + Clock input "MAINCLK": clock for CPUs and most peripherals
- *  + Clock input "S32KCLK": slow 32KHz clock used for a few peripherals
  *  + QOM property "memory" is a MemoryRegion containing the devices provided
  *    by the board model.
+ *  + QOM property "MAINCLK" is the frequency of the main system clock
  *  + QOM property "EXP_NUMIRQ" sets the number of expansion interrupts.
  *    (In hardware, the SSE-200 permits the number of expansion interrupts
  *    for the two CPUs to be configured separately, but we restrict it to
@@ -97,24 +96,18 @@
 #include "hw/misc/tz-mpc.h"
 #include "hw/timer/cmsdk-apb-timer.h"
 #include "hw/timer/cmsdk-apb-dualtimer.h"
-#include "hw/timer/sse-counter.h"
-#include "hw/timer/sse-timer.h"
 #include "hw/watchdog/cmsdk-apb-watchdog.h"
 #include "hw/misc/iotkit-sysctl.h"
 #include "hw/misc/iotkit-sysinfo.h"
 #include "hw/misc/armsse-cpuid.h"
 #include "hw/misc/armsse-mhu.h"
-#include "hw/misc/armsse-cpu-pwrctrl.h"
 #include "hw/misc/unimp.h"
 #include "hw/or-irq.h"
-#include "hw/clock.h"
 #include "hw/core/split-irq.h"
 #include "hw/cpu/cluster.h"
-#include "qom/object.h"
 
-#define TYPE_ARM_SSE "arm-sse"
-OBJECT_DECLARE_TYPE(ARMSSE, ARMSSEClass,
-                    ARM_SSE)
+#define TYPE_ARMSSE "arm-sse"
+#define ARMSSE(obj) OBJECT_CHECK(ARMSSE, (obj), TYPE_ARMSSE)
 
 /*
  * These type names are for specific IoTKit subsystems; other than
@@ -123,14 +116,12 @@ OBJECT_DECLARE_TYPE(ARMSSE, ARMSSEClass,
  */
 #define TYPE_IOTKIT "iotkit"
 #define TYPE_SSE200 "sse-200"
-#define TYPE_SSE300 "sse-300"
 
 /* We have an IRQ splitter and an OR gate input for each external PPC
  * and the 2 internal PPCs
  */
-#define NUM_INTERNAL_PPCS 2
 #define NUM_EXTERNAL_PPCS (IOTS_NUM_AHB_EXP_PPC + IOTS_NUM_APB_EXP_PPC)
-#define NUM_PPCS (NUM_EXTERNAL_PPCS + NUM_INTERNAL_PPCS)
+#define NUM_PPCS (NUM_EXTERNAL_PPCS + 2)
 
 #define MAX_SRAM_BANKS 4
 #if MAX_SRAM_BANKS > IOTS_NUM_MPC
@@ -139,12 +130,17 @@ OBJECT_DECLARE_TYPE(ARMSSE, ARMSSEClass,
 
 #define SSE_MAX_CPUS 2
 
-#define NUM_PPUS 8
+/* These define what each PPU in the ppu[] index is for */
+#define CPU0CORE_PPU 0
+#define CPU1CORE_PPU 1
+#define DBG_PPU 2
+#define RAM0_PPU 3
+#define RAM1_PPU 4
+#define RAM2_PPU 5
+#define RAM3_PPU 6
+#define NUM_PPUS 7
 
-/* Number of CPU IRQs used by the SSE itself */
-#define NUM_SSE_IRQS 32
-
-struct ARMSSE {
+typedef struct ARMSSE {
     /*< private >*/
     SysBusDevice parent_obj;
 
@@ -152,9 +148,12 @@ struct ARMSSE {
     ARMv7MState armv7m[SSE_MAX_CPUS];
     CPUClusterState cluster[SSE_MAX_CPUS];
     IoTKitSecCtl secctl;
-    TZPPC apb_ppc[NUM_INTERNAL_PPCS];
+    TZPPC apb_ppc0;
+    TZPPC apb_ppc1;
     TZMPC mpc[IOTS_NUM_MPC];
-    CMSDKAPBTimer timer[3];
+    CMSDKAPBTIMER timer0;
+    CMSDKAPBTIMER timer1;
+    CMSDKAPBTIMER s32ktimer;
     qemu_or_irq ppc_irq_orgate;
     SplitIRQ sec_resp_splitter;
     SplitIRQ ppc_irq_splitter[NUM_PPCS];
@@ -162,26 +161,23 @@ struct ARMSSE {
     qemu_or_irq mpc_irq_orgate;
     qemu_or_irq nmi_orgate;
 
-    SplitIRQ cpu_irq_splitter[NUM_SSE_IRQS];
+    SplitIRQ cpu_irq_splitter[32];
 
     CMSDKAPBDualTimer dualtimer;
 
-    CMSDKAPBWatchdog cmsdk_watchdog[3];
-
-    SSECounter sse_counter;
-    SSETimer sse_timer[4];
+    CMSDKAPBWatchdog s32kwatchdog;
+    CMSDKAPBWatchdog nswatchdog;
+    CMSDKAPBWatchdog swatchdog;
 
     IoTKitSysCtl sysctl;
     IoTKitSysCtl sysinfo;
 
     ARMSSEMHU mhu[2];
-    UnimplementedDeviceState unimp[NUM_PPUS];
+    UnimplementedDeviceState ppu[NUM_PPUS];
     UnimplementedDeviceState cachectrl[SSE_MAX_CPUS];
     UnimplementedDeviceState cpusecctrl[SSE_MAX_CPUS];
 
     ARMSSECPUID cpuid[SSE_MAX_CPUS];
-
-    ARMSSECPUPwrCtrl cpu_pwrctrl[SSE_MAX_CPUS];
 
     /*
      * 'container' holds all devices seen by all CPUs.
@@ -198,8 +194,6 @@ struct ARMSSE {
     MemoryRegion alias2;
     MemoryRegion alias3[SSE_MAX_CPUS];
     MemoryRegion sram[MAX_SRAM_BANKS];
-    MemoryRegion itcm;
-    MemoryRegion dtcm;
 
     qemu_irq *exp_irqs[SSE_MAX_CPUS];
     qemu_irq ppc0_irq;
@@ -213,24 +207,26 @@ struct ARMSSE {
 
     uint32_t nsccfg;
 
-    Clock *mainclk;
-    Clock *s32kclk;
-
     /* Properties */
     MemoryRegion *board_memory;
     uint32_t exp_numirq;
+    uint32_t mainclk_frq;
     uint32_t sram_addr_width;
     uint32_t init_svtor;
     bool cpu_fpu[SSE_MAX_CPUS];
     bool cpu_dsp[SSE_MAX_CPUS];
-};
+} ARMSSE;
 
 typedef struct ARMSSEInfo ARMSSEInfo;
 
-struct ARMSSEClass {
-    SysBusDeviceClass parent_class;
+typedef struct ARMSSEClass {
+    DeviceClass parent_class;
     const ARMSSEInfo *info;
-};
+} ARMSSEClass;
 
+#define ARMSSE_CLASS(klass) \
+    OBJECT_CLASS_CHECK(ARMSSEClass, (klass), TYPE_ARMSSE)
+#define ARMSSE_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(ARMSSEClass, (obj), TYPE_ARMSSE)
 
 #endif

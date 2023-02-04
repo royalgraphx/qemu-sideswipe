@@ -50,7 +50,6 @@
 [Protocols]
   gEfiSmmBase2ProtocolGuid                      ## PRODUCES
   gEfiSmmCommunicationProtocolGuid              ## PRODUCES
-  gEfiMmCommunication2ProtocolGuid              ## PRODUCES
   gEfiSmmAccess2ProtocolGuid                    ## CONSUMES
   ## NOTIFY
   ## CONSUMES
@@ -58,23 +57,23 @@
   gEfiSmmControl2ProtocolGuid                   ## CONSUMES
   ## NOTIFY
   ## SOMETIMES_CONSUMES
-  ## UNDEFINED # Used to do smm communication
+  ## UNDEFINED # Used to do smm communcation
   gEfiDxeSmmReadyToLockProtocolGuid
   gEfiCpuArchProtocolGuid                       ## SOMETIMES_CONSUMES
 
 [Guids]
   ## CONSUMES           ## Event
-  ## PRODUCES           ## UNDEFINED # Used to do smm communication
+  ## PRODUCES           ## UNDEFINED # Used to do smm communcation
   gEfiEventDxeDispatchGuid
   gEfiEventReadyToBootGuid                      ## CONSUMES             ## Event
   ## SOMETIMES_CONSUMES ## Event
-  ## SOMETIMES_PRODUCES ## UNDEFINED # Used to do smm communication
+  ## SOMETIMES_PRODUCES ## UNDEFINED # Used to do smm communcation
   gEfiEventLegacyBootGuid
   ## SOMETIMES_CONSUMES ## Event
-  ## SOMETIMES_PRODUCES ## UNDEFINED # Used to do smm communication
+  ## SOMETIMES_PRODUCES ## UNDEFINED # Used to do smm communcation
   gEfiEventExitBootServicesGuid
   ## SOMETIMES_CONSUMES ## Event
-  ## SOMETIMES_PRODUCES ## UNDEFINED # Used to do smm communication
+  ## SOMETIMES_PRODUCES ## UNDEFINED # Used to do smm communcation
   gEfiEventReadyToBootGuid
   gEfiEventVirtualAddressChangeGuid             ## CONSUMES             ## Event
   gEfiEndOfDxeEventGroupGuid                    ## CONSUMES             ## Event

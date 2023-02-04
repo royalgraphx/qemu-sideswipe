@@ -45,6 +45,67 @@ emulator.
 Linux User space emulator
 -------------------------
 
+Quick Start
+~~~~~~~~~~~
+
+In order to launch a Linux process, QEMU needs the process executable
+itself and all the target (x86) dynamic libraries used by it.
+
+-  On x86, you can just try to launch any process by using the native
+   libraries::
+
+      qemu-i386 -L / /bin/ls
+
+   ``-L /`` tells that the x86 dynamic linker must be searched with a
+   ``/`` prefix.
+
+-  Since QEMU is also a linux process, you can launch QEMU with QEMU
+   (NOTE: you can only do that if you compiled QEMU from the sources)::
+
+      qemu-i386 -L / qemu-i386 -L / /bin/ls
+
+-  On non x86 CPUs, you need first to download at least an x86 glibc
+   (``qemu-runtime-i386-XXX-.tar.gz`` on the QEMU web page). Ensure that
+   ``LD_LIBRARY_PATH`` is not set::
+
+      unset LD_LIBRARY_PATH
+
+   Then you can launch the precompiled ``ls`` x86 executable::
+
+      qemu-i386 tests/i386/ls
+
+   You can look at ``scripts/qemu-binfmt-conf.sh`` so that QEMU is
+   automatically launched by the Linux kernel when you try to launch x86
+   executables. It requires the ``binfmt_misc`` module in the Linux
+   kernel.
+
+-  The x86 version of QEMU is also included. You can try weird things
+   such as::
+
+      qemu-i386 /usr/local/qemu-i386/bin/qemu-i386 \
+                /usr/local/qemu-i386/bin/ls-i386
+
+Wine launch
+~~~~~~~~~~~
+
+-  Ensure that you have a working QEMU with the x86 glibc distribution
+   (see previous section). In order to verify it, you must be able to
+   do::
+
+      qemu-i386 /usr/local/qemu-i386/bin/ls-i386
+
+-  Download the binary x86 Wine install (``qemu-XXX-i386-wine.tar.gz``
+   on the QEMU web page).
+
+-  Configure Wine on your account. Look at the provided script
+   ``/usr/local/qemu-i386/bin/wine-conf.sh``. Your previous
+   ``${HOME}/.wine`` directory is saved to ``${HOME}/.wine.org``.
+
+-  Then you can try the example ``putty.exe``::
+
+      qemu-i386 /usr/local/qemu-i386/wine/bin/wine \
+                /usr/local/qemu-i386/wine/c/Program\ Files/putty.exe
+
 Command line options
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -109,80 +170,68 @@ QEMU_STRACE
 Other binaries
 ~~~~~~~~~~~~~~
 
--  user mode (Alpha)
+user mode (Alpha)
+``qemu-alpha`` TODO.
 
-   * ``qemu-alpha`` TODO.
+user mode (Arm)
+``qemu-armeb`` TODO.
 
--  user mode (Arm)
+user mode (Arm)
+``qemu-arm`` is also capable of running Arm \"Angel\" semihosted ELF
+binaries (as implemented by the arm-elf and arm-eabi Newlib/GDB
+configurations), and arm-uclinux bFLT format binaries.
 
-   * ``qemu-armeb`` TODO.
+user mode (ColdFire)
+user mode (M68K)
+``qemu-m68k`` is capable of running semihosted binaries using the BDM
+(m5xxx-ram-hosted.ld) or m68k-sim (sim.ld) syscall interfaces, and
+coldfire uClinux bFLT format binaries.
 
-   * ``qemu-arm`` is also capable of running Arm \"Angel\" semihosted ELF
-     binaries (as implemented by the arm-elf and arm-eabi Newlib/GDB
-     configurations), and arm-uclinux bFLT format binaries.
+The binary format is detected automatically.
 
--  user mode (ColdFire)
+user mode (Cris)
+``qemu-cris`` TODO.
 
--  user mode (M68K)
+user mode (i386)
+``qemu-i386`` TODO. ``qemu-x86_64`` TODO.
 
-   * ``qemu-m68k`` is capable of running semihosted binaries using the BDM
-     (m5xxx-ram-hosted.ld) or m68k-sim (sim.ld) syscall interfaces, and
-     coldfire uClinux bFLT format binaries.
+user mode (Microblaze)
+``qemu-microblaze`` TODO.
 
-   The binary format is detected automatically.
+user mode (MIPS)
+``qemu-mips`` executes 32-bit big endian MIPS binaries (MIPS O32 ABI).
 
--  user mode (Cris)
+``qemu-mipsel`` executes 32-bit little endian MIPS binaries (MIPS O32
+ABI).
 
-   * ``qemu-cris`` TODO.
+``qemu-mips64`` executes 64-bit big endian MIPS binaries (MIPS N64 ABI).
 
--  user mode (i386)
+``qemu-mips64el`` executes 64-bit little endian MIPS binaries (MIPS N64
+ABI).
 
-   * ``qemu-i386`` TODO.
-   * ``qemu-x86_64`` TODO.
+``qemu-mipsn32`` executes 32-bit big endian MIPS binaries (MIPS N32
+ABI).
 
--  user mode (Microblaze)
+``qemu-mipsn32el`` executes 32-bit little endian MIPS binaries (MIPS N32
+ABI).
 
-   * ``qemu-microblaze`` TODO.
+user mode (NiosII)
+``qemu-nios2`` TODO.
 
--  user mode (MIPS)
+user mode (PowerPC)
+``qemu-ppc64abi32`` TODO. ``qemu-ppc64`` TODO. ``qemu-ppc`` TODO.
 
-   * ``qemu-mips`` executes 32-bit big endian MIPS binaries (MIPS O32 ABI).
+user mode (SH4)
+``qemu-sh4eb`` TODO. ``qemu-sh4`` TODO.
 
-   * ``qemu-mipsel`` executes 32-bit little endian MIPS binaries (MIPS O32 ABI).
+user mode (SPARC)
+``qemu-sparc`` can execute Sparc32 binaries (Sparc32 CPU, 32 bit ABI).
 
-   * ``qemu-mips64`` executes 64-bit big endian MIPS binaries (MIPS N64 ABI).
+``qemu-sparc32plus`` can execute Sparc32 and SPARC32PLUS binaries
+(Sparc64 CPU, 32 bit ABI).
 
-   * ``qemu-mips64el`` executes 64-bit little endian MIPS binaries (MIPS N64
-     ABI).
-
-   * ``qemu-mipsn32`` executes 32-bit big endian MIPS binaries (MIPS N32 ABI).
-
-   * ``qemu-mipsn32el`` executes 32-bit little endian MIPS binaries (MIPS N32
-     ABI).
-
--  user mode (NiosII)
-
-   * ``qemu-nios2`` TODO.
-
--  user mode (PowerPC)
-
-   * ``qemu-ppc64`` TODO.
-   * ``qemu-ppc`` TODO.
-
--  user mode (SH4)
-
-   * ``qemu-sh4eb`` TODO.
-   * ``qemu-sh4`` TODO.
-
--  user mode (SPARC)
-
-   * ``qemu-sparc`` can execute Sparc32 binaries (Sparc32 CPU, 32 bit ABI).
-
-   * ``qemu-sparc32plus`` can execute Sparc32 and SPARC32PLUS binaries
-     (Sparc64 CPU, 32 bit ABI).
-
-   * ``qemu-sparc64`` can execute some Sparc64 (Sparc64 CPU, 64 bit ABI) and
-     SPARC32PLUS binaries (Sparc64 CPU, 32 bit ABI).
+``qemu-sparc64`` can execute some Sparc64 (Sparc64 CPU, 64 bit ABI) and
+SPARC32PLUS binaries (Sparc64 CPU, 32 bit ABI).
 
 BSD User space emulator
 -----------------------

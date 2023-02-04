@@ -1552,7 +1552,8 @@ static void ehci_hub_close ( struct usb_hub *hub __unused ) {
  * @ret rc		Return status code
  */
 static int ehci_root_open ( struct usb_hub *hub ) {
-	struct ehci_device *ehci = usb_hub_get_drvdata ( hub );
+	struct usb_bus *bus = hub->bus;
+	struct ehci_device *ehci = usb_bus_get_hostdata ( bus );
 	uint32_t portsc;
 	unsigned int i;
 
@@ -1570,6 +1571,9 @@ static int ehci_root_open ( struct usb_hub *hub ) {
 	/* Wait 20ms after potentially enabling power to a port */
 	mdelay ( EHCI_PORT_POWER_DELAY_MS );
 
+	/* Record hub driver private data */
+	usb_hub_set_drvdata ( hub, ehci );
+
 	return 0;
 }
 
@@ -1583,6 +1587,9 @@ static void ehci_root_close ( struct usb_hub *hub ) {
 
 	/* Route all ports back to companion controllers */
 	writel ( 0, ehci->op + EHCI_OP_CONFIGFLAG );
+
+	/* Clear hub driver private data */
+	usb_hub_set_drvdata ( hub, NULL );
 }
 
 /**
@@ -2091,6 +2098,5 @@ static void ehci_shutdown ( int booting ) {
 
 /** Startup/shutdown function */
 struct startup_fn ehci_startup __startup_fn ( STARTUP_LATE ) = {
-	.name = "ehci",
 	.shutdown = ehci_shutdown,
 };

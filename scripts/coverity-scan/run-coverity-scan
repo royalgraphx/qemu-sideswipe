@@ -380,29 +380,27 @@ export PATH="$TOOLBIN:$PATH"
 
 cd "$SRCDIR"
 
-echo "Nuking build directory..."
-rm -rf +build
-mkdir +build
-cd +build
+echo "Doing make distclean..."
+make distclean
 
 echo "Configuring..."
 # We configure with a fixed set of enables here to ensure that we don't
 # accidentally reduce the scope of the analysis by doing the build on
 # the system that's missing a dependency that we need to build part of
 # the codebase.
-../configure --disable-modules --enable-sdl --enable-gtk \
+./configure --disable-modules --enable-sdl --enable-gtk \
     --enable-opengl --enable-vte --enable-gnutls \
     --enable-nettle --enable-curses --enable-curl \
     --audio-drv-list=oss,alsa,sdl,pa --enable-virtfs \
-    --enable-vnc --enable-vnc-sasl --enable-vnc-jpeg --enable-png \
+    --enable-vnc --enable-vnc-sasl --enable-vnc-jpeg --enable-vnc-png \
     --enable-xen --enable-brlapi \
     --enable-linux-aio --enable-attr \
     --enable-cap-ng --enable-trace-backends=log --enable-spice --enable-rbd \
-    --enable-libusb --enable-usb-redir \
+    --enable-xfsctl --enable-libusb --enable-usb-redir \
     --enable-libiscsi --enable-libnfs --enable-seccomp \
     --enable-tpm --enable-libssh --enable-lzo --enable-snappy --enable-bzip2 \
     --enable-numa --enable-rdma --enable-smartcard --enable-virglrenderer \
-    --enable-mpath --enable-glusterfs \
+    --enable-mpath --enable-libxml2 --enable-glusterfs \
     --enable-virtfs --enable-zstd
 
 echo "Running cov-build..."

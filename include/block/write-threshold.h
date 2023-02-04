@@ -13,7 +13,7 @@
 #ifndef BLOCK_WRITE_THRESHOLD_H
 #define BLOCK_WRITE_THRESHOLD_H
 
-#include "qemu/typedefs.h"
+#include "block/block_int.h"
 
 /*
  * bdrv_write_threshold_set:
@@ -36,12 +36,27 @@ void bdrv_write_threshold_set(BlockDriverState *bs, uint64_t threshold_bytes);
 uint64_t bdrv_write_threshold_get(const BlockDriverState *bs);
 
 /*
- * bdrv_write_threshold_check_write
+ * bdrv_write_threshold_is_set
  *
- * Check whether the specified request exceeds the write threshold.
- * If so, send a corresponding event and disable write threshold checking.
+ * Tell if a write threshold is set for a given BDS.
  */
-void bdrv_write_threshold_check_write(BlockDriverState *bs, int64_t offset,
-                                      int64_t bytes);
+bool bdrv_write_threshold_is_set(const BlockDriverState *bs);
+
+/*
+ * bdrv_write_threshold_exceeded
+ *
+ * Return the extent of a write request that exceeded the threshold,
+ * or zero if the request is below the threshold.
+ * Return zero also if the threshold was not set.
+ *
+ * NOTE: here we assume the following holds for each request this code
+ * deals with:
+ *
+ * assert((req->offset + req->bytes) <= UINT64_MAX)
+ *
+ * Please not there is *not* an actual C assert().
+ */
+uint64_t bdrv_write_threshold_exceeded(const BlockDriverState *bs,
+                                       const BdrvTrackedRequest *req);
 
 #endif

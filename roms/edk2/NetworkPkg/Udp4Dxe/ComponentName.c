@@ -5,12 +5,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 #include "Udp4Impl.h"
 
 //
 // EFI Component Name Functions
 //
-
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
 
@@ -57,6 +57,7 @@ UdpComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -129,12 +130,13 @@ UdpComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 UdpComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   );
+
 
 //
 // EFI Component Name Protocol
@@ -148,13 +150,14 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gUdp4ComponentName = 
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gUdp4ComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)UdpComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)UdpComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gUdp4ComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) UdpComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) UdpComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mUdpDriverNameTable[] = {
+
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mUdpDriverNameTable[] = {
   {
     "eng;en",
     L"UDP Network Service Driver"
@@ -165,7 +168,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mUdpDriverNameTable[] = 
   }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  *gUdpControllerNameTable = NULL;
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE *gUdpControllerNameTable = NULL;
 
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
@@ -235,12 +238,12 @@ UdpComponentNameGetDriverName (
 **/
 EFI_STATUS
 UpdateName (
-  EFI_UDP4_PROTOCOL  *Udp4
+  EFI_UDP4_PROTOCOL             *Udp4
   )
 {
-  EFI_STATUS            Status;
-  CHAR16                HandleName[64];
-  EFI_UDP4_CONFIG_DATA  Udp4ConfigData;
+  EFI_STATUS                       Status;
+  CHAR16                           HandleName[64];
+  EFI_UDP4_CONFIG_DATA             Udp4ConfigData;
 
   if (Udp4 == NULL) {
     return EFI_INVALID_PARAMETER;
@@ -252,9 +255,7 @@ UpdateName (
   //
   Status = Udp4->GetModeData (Udp4, &Udp4ConfigData, NULL, NULL, NULL);
   if (!EFI_ERROR (Status)) {
-    UnicodeSPrint (
-      HandleName,
-      sizeof (HandleName),
+    UnicodeSPrint (HandleName, sizeof (HandleName),
       L"UDPv4 (SrcPort=%d, DestPort=%d)",
       Udp4ConfigData.StationPort,
       Udp4ConfigData.RemotePort
@@ -365,15 +366,15 @@ UpdateName (
 EFI_STATUS
 EFIAPI
 UdpComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   )
 {
-  EFI_STATUS         Status;
-  EFI_UDP4_PROTOCOL  *Udp4;
+  EFI_STATUS                    Status;
+  EFI_UDP4_PROTOCOL             *Udp4;
 
   //
   // Only provide names for child handles.
@@ -425,3 +426,4 @@ UdpComponentNameGetControllerName (
            (BOOLEAN)(This == &gUdp4ComponentName)
            );
 }
+

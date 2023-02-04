@@ -6,11 +6,7 @@
 
 #include <common.h>
 #include <dm.h>
-#include <init.h>
-#include <log.h>
 #include <ram.h>
-#include <asm/bitops.h>
-#include <asm/global_data.h>
 #include <dt-bindings/memory/mpc83xx-sdram.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -173,8 +169,8 @@ static int mpc83xx_sdram_static_init(ofnode node, u32 cs, u32 mapaddr, u32 size)
 	odt_rd_cfg = ofnode_read_u32_default(node, "odt_rd_cfg", 0);
 	switch (odt_rd_cfg) {
 	case ODT_RD_ONLY_OTHER_DIMM:
-		if (!IS_ENABLED(CONFIG_ARCH_MPC8360) &&
-		    !IS_ENABLED(CONFIG_ARCH_MPC837X)) {
+		if (!IS_ENABLED(CONFIG_MPC8360) &&
+		    !IS_ENABLED(CONFIG_MPC837x)) {
 			debug("%s: odt_rd_cfg value %d invalid.\n",
 			      ofnode_get_name(node), odt_rd_cfg);
 			return -EINVAL;
@@ -183,10 +179,10 @@ static int mpc83xx_sdram_static_init(ofnode node, u32 cs, u32 mapaddr, u32 size)
 	case ODT_RD_NEVER:
 	case ODT_RD_ONLY_CURRENT:
 	case ODT_RD_ONLY_OTHER_CS:
-		if (!IS_ENABLED(CONFIG_ARCH_MPC830X) &&
-		    !IS_ENABLED(CONFIG_ARCH_MPC831X) &&
-		    !IS_ENABLED(CONFIG_ARCH_MPC8360) &&
-		    !IS_ENABLED(CONFIG_ARCH_MPC837X)) {
+		if (!IS_ENABLED(CONFIG_MPC830x) &&
+		    !IS_ENABLED(CONFIG_MPC831x) &&
+		    !IS_ENABLED(CONFIG_MPC8360) &&
+		    !IS_ENABLED(CONFIG_MPC837x)) {
 			debug("%s: odt_rd_cfg value %d invalid.\n",
 			      ofnode_get_name(node), odt_rd_cfg);
 			return -EINVAL;
@@ -204,8 +200,8 @@ static int mpc83xx_sdram_static_init(ofnode node, u32 cs, u32 mapaddr, u32 size)
 	odt_wr_cfg = ofnode_read_u32_default(node, "odt_wr_cfg", 0);
 	switch (odt_wr_cfg) {
 	case ODT_WR_ONLY_OTHER_DIMM:
-		if (!IS_ENABLED(CONFIG_ARCH_MPC8360) &&
-		    !IS_ENABLED(CONFIG_ARCH_MPC837X)) {
+		if (!IS_ENABLED(CONFIG_MPC8360) &&
+		    !IS_ENABLED(CONFIG_MPC837x)) {
 			debug("%s: odt_wr_cfg value %d invalid.\n",
 			      ofnode_get_name(node), odt_wr_cfg);
 			return -EINVAL;
@@ -214,10 +210,10 @@ static int mpc83xx_sdram_static_init(ofnode node, u32 cs, u32 mapaddr, u32 size)
 	case ODT_WR_NEVER:
 	case ODT_WR_ONLY_CURRENT:
 	case ODT_WR_ONLY_OTHER_CS:
-		if (!IS_ENABLED(CONFIG_ARCH_MPC830X) &&
-		    !IS_ENABLED(CONFIG_ARCH_MPC831X) &&
-		    !IS_ENABLED(CONFIG_ARCH_MPC8360) &&
-		    !IS_ENABLED(CONFIG_ARCH_MPC837X)) {
+		if (!IS_ENABLED(CONFIG_MPC830x) &&
+		    !IS_ENABLED(CONFIG_MPC831x) &&
+		    !IS_ENABLED(CONFIG_MPC8360) &&
+		    !IS_ENABLED(CONFIG_MPC837x)) {
 			debug("%s: odt_wr_cfg value %d invalid.\n",
 			      ofnode_get_name(node), odt_wr_cfg);
 			return -EINVAL;
@@ -306,7 +302,7 @@ static int mpc83xx_sdram_spd_init(ofnode node, u32 cs, u32 mapaddr, u32 size)
 	return 0;
 }
 
-static int mpc83xx_sdram_of_to_plat(struct udevice *dev)
+static int mpc83xx_sdram_ofdata_to_platdata(struct udevice *dev)
 {
 	return 0;
 }
@@ -1094,7 +1090,7 @@ U_BOOT_DRIVER(mpc83xx_sdram) = {
 	.id = UCLASS_RAM,
 	.of_match = mpc83xx_sdram_ids,
 	.ops = &mpc83xx_sdram_ops,
-	.of_to_plat = mpc83xx_sdram_of_to_plat,
+	.ofdata_to_platdata = mpc83xx_sdram_ofdata_to_platdata,
 	.probe = mpc83xx_sdram_probe,
-	.priv_auto	= sizeof(struct mpc83xx_sdram_priv),
+	.priv_auto_alloc_size = sizeof(struct mpc83xx_sdram_priv),
 };

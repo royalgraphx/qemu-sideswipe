@@ -16,12 +16,13 @@
 // the holes are filled in, then the download or upload has completed.
 //
 typedef struct {
-  LIST_ENTRY    Link;
-  INTN          Start;
-  INTN          End;
-  INTN          Round;
-  INTN          Bound;
+  LIST_ENTRY                Link;
+  INTN                      Start;
+  INTN                      End;
+  INTN                      Round;
+  INTN                      Bound;
 } MTFTP6_BLOCK_RANGE;
+
 
 /**
   Initialize the block range for either RRQ or WRQ. RRQ and WRQ have
@@ -45,10 +46,11 @@ typedef struct {
 **/
 EFI_STATUS
 Mtftp6InitBlockRange (
-  IN LIST_ENTRY  *Head,
-  IN UINT16      Start,
-  IN UINT16      End
+  IN LIST_ENTRY             *Head,
+  IN UINT16                 Start,
+  IN UINT16                 End
   );
+
 
 /**
   Get the first valid block number on the range list.
@@ -61,8 +63,9 @@ Mtftp6InitBlockRange (
 **/
 INTN
 Mtftp6GetNextBlockNum (
-  IN LIST_ENTRY  *Head
+  IN LIST_ENTRY             *Head
   );
+
 
 /**
   Set the last block number of the block range list. It
@@ -77,9 +80,10 @@ Mtftp6GetNextBlockNum (
 **/
 VOID
 Mtftp6SetLastBlockNum (
-  IN LIST_ENTRY  *Head,
-  IN UINT16      Last
+  IN LIST_ENTRY             *Head,
+  IN UINT16                 Last
   );
+
 
 /**
   Remove the block number from the block range list.
@@ -96,11 +100,12 @@ Mtftp6SetLastBlockNum (
 **/
 EFI_STATUS
 Mtftp6RemoveBlockNum (
-  IN LIST_ENTRY  *Head,
-  IN UINT16      Num,
-  IN BOOLEAN     Completed,
-  OUT UINT64     *BlockCounter
+  IN LIST_ENTRY             *Head,
+  IN UINT16                 Num,
+  IN BOOLEAN                Completed,
+  OUT UINT64                *BlockCounter
   );
+
 
 /**
   Build and transmit the request packet for the Mtftp6 instance.
@@ -115,9 +120,10 @@ Mtftp6RemoveBlockNum (
 **/
 EFI_STATUS
 Mtftp6SendRequest (
-  IN MTFTP6_INSTANCE  *Instance,
-  IN UINT16           Operation
+  IN MTFTP6_INSTANCE        *Instance,
+  IN UINT16                 Operation
   );
+
 
 /**
   Build and send an error packet.
@@ -133,10 +139,11 @@ Mtftp6SendRequest (
 **/
 EFI_STATUS
 Mtftp6SendError (
-  IN MTFTP6_INSTANCE  *Instance,
-  IN UINT16           ErrCode,
-  IN UINT8            *ErrInfo
+  IN MTFTP6_INSTANCE        *Instance,
+  IN UINT16                 ErrCode,
+  IN UINT8*                 ErrInfo
   );
+
 
 /**
   Send the packet for the Mtftp6 instance.
@@ -150,9 +157,10 @@ Mtftp6SendError (
 **/
 EFI_STATUS
 Mtftp6TransmitPacket (
-  IN MTFTP6_INSTANCE  *Instance,
-  IN NET_BUF          *Packet
+  IN MTFTP6_INSTANCE        *Instance,
+  IN NET_BUF                *Packet
   );
+
 
 /**
   Check packet for GetInfo callback routine.
@@ -169,11 +177,12 @@ Mtftp6TransmitPacket (
 EFI_STATUS
 EFIAPI
 Mtftp6CheckPacket (
-  IN EFI_MTFTP6_PROTOCOL  *This,
-  IN EFI_MTFTP6_TOKEN     *Token,
-  IN UINT16               PacketLen,
-  IN EFI_MTFTP6_PACKET    *Packet
+  IN EFI_MTFTP6_PROTOCOL    *This,
+  IN EFI_MTFTP6_TOKEN       *Token,
+  IN UINT16                 PacketLen,
+  IN EFI_MTFTP6_PACKET      *Packet
   );
+
 
 /**
   The dummy configure routine for create a new Udp6 Io.
@@ -187,9 +196,10 @@ Mtftp6CheckPacket (
 EFI_STATUS
 EFIAPI
 Mtftp6ConfigDummyUdpIo (
-  IN UDP_IO  *UdpIo,
-  IN VOID    *Context
+  IN UDP_IO                 *UdpIo,
+  IN VOID                   *Context
   );
+
 
 /**
   The configure routine for the Mtftp6 instance to transmit/receive.
@@ -207,12 +217,13 @@ Mtftp6ConfigDummyUdpIo (
 **/
 EFI_STATUS
 Mtftp6ConfigUdpIo (
-  IN UDP_IO            *UdpIo,
-  IN EFI_IPv6_ADDRESS  *ServerIp,
-  IN UINT16            ServerPort,
-  IN EFI_IPv6_ADDRESS  *LocalIp,
-  IN UINT16            LocalPort
+  IN UDP_IO                 *UdpIo,
+  IN EFI_IPv6_ADDRESS       *ServerIp,
+  IN UINT16                 ServerPort,
+  IN EFI_IPv6_ADDRESS       *LocalIp,
+  IN UINT16                 LocalPort
   );
+
 
 /**
   Clean up the current Mtftp6 operation.
@@ -223,9 +234,10 @@ Mtftp6ConfigUdpIo (
 **/
 VOID
 Mtftp6OperationClean (
-  IN MTFTP6_INSTANCE  *Instance,
-  IN EFI_STATUS       Result
+  IN MTFTP6_INSTANCE        *Instance,
+  IN EFI_STATUS             Result
   );
+
 
 /**
   Start the Mtftp6 instance to perform the operation, such as read file,
@@ -243,10 +255,11 @@ Mtftp6OperationClean (
 **/
 EFI_STATUS
 Mtftp6OperationStart (
-  IN EFI_MTFTP6_PROTOCOL  *This,
-  IN EFI_MTFTP6_TOKEN     *Token,
-  IN UINT16               OpCode
+  IN EFI_MTFTP6_PROTOCOL    *This,
+  IN EFI_MTFTP6_TOKEN       *Token,
+  IN UINT16                 OpCode
   );
+
 
 /**
   The timer ticking routine for the Mtftp6 instance.
@@ -258,9 +271,10 @@ Mtftp6OperationStart (
 VOID
 EFIAPI
 Mtftp6OnTimerTick (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT              Event,
+  IN VOID                   *Context
   );
+
 
 /**
   The packet process callback for Mtftp6 upload.
@@ -274,11 +288,12 @@ Mtftp6OnTimerTick (
 VOID
 EFIAPI
 Mtftp6WrqInput (
-  IN NET_BUF        *UdpPacket,
-  IN UDP_END_POINT  *UdpEpt,
-  IN EFI_STATUS     IoStatus,
-  IN VOID           *Context
+  IN NET_BUF                *UdpPacket,
+  IN UDP_END_POINT          *UdpEpt,
+  IN EFI_STATUS             IoStatus,
+  IN VOID                   *Context
   );
+
 
 /**
   Start the Mtftp6 instance to upload. It will first init some states,
@@ -293,9 +308,10 @@ Mtftp6WrqInput (
 **/
 EFI_STATUS
 Mtftp6WrqStart (
-  IN MTFTP6_INSTANCE  *Instance,
-  IN UINT16           Operation
+  IN MTFTP6_INSTANCE        *Instance,
+  IN UINT16                 Operation
   );
+
 
 /**
   The packet process callback for Mtftp6 download.
@@ -309,15 +325,16 @@ Mtftp6WrqStart (
 VOID
 EFIAPI
 Mtftp6RrqInput (
-  IN NET_BUF        *UdpPacket,
-  IN UDP_END_POINT  *UdpEpt,
-  IN EFI_STATUS     IoStatus,
-  IN VOID           *Context
+  IN NET_BUF                *UdpPacket,
+  IN UDP_END_POINT          *UdpEpt,
+  IN EFI_STATUS             IoStatus,
+  IN VOID                   *Context
   );
+
 
 /**
   Start the Mtftp6 instance to download. It first initializes some
-  of the internal states then builds and sends an RRQ request packet.
+  of the internal states then builds and sends an RRQ reqeuest packet.
   Finally, it starts receive for the downloading.
 
   @param[in]  Instance              The pointer to the Mtftp6 instance.
@@ -329,8 +346,8 @@ Mtftp6RrqInput (
 **/
 EFI_STATUS
 Mtftp6RrqStart (
-  IN MTFTP6_INSTANCE  *Instance,
-  IN UINT16           Operation
+  IN MTFTP6_INSTANCE        *Instance,
+  IN UINT16                 Operation
   );
 
 #endif

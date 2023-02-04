@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 2015-2019 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 2015-2018 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the OpenSSL license (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -116,8 +116,7 @@ sub checkhandshake($$$$)
                     && $message->mt() != TLSProxy::Message::MT_SERVER_HELLO
                     && $message->mt() !=
                        TLSProxy::Message::MT_ENCRYPTED_EXTENSIONS
-                    && $message->mt() != TLSProxy::Message::MT_CERTIFICATE
-                    && $message->mt() != TLSProxy::Message::MT_CERTIFICATE_REQUEST);
+                    && $message->mt() != TLSProxy::Message::MT_CERTIFICATE);
 
             next if $message->mt() == TLSProxy::Message::MT_CERTIFICATE
                     && !TLSProxy::Proxy::is_tls13();
@@ -125,7 +124,7 @@ sub checkhandshake($$$$)
             my $extchnum = 1;
             my $extshnum = 1;
             for (my $extloop = 0;
-                    $extensions[$extloop][3] != 0;
+                    $extensions[$extloop][2] != 0;
                     $extloop++) {
                 $extchnum = 2 if $extensions[$extloop][0] != TLSProxy::Message::MT_CLIENT_HELLO
                                  && TLSProxy::Proxy::is_tls13();
@@ -136,7 +135,6 @@ sub checkhandshake($$$$)
                 next if $extensions[$extloop][0] == TLSProxy::Message::MT_SERVER_HELLO
                                  && $extshnum != $shnum;
                 next if ($message->mt() != $extensions[$extloop][0]);
-                next if ($message->server() != $extensions[$extloop][2]);
                 $numtests++;
             }
             $numtests++;
@@ -184,8 +182,7 @@ sub checkhandshake($$$$)
                     && $message->mt() != TLSProxy::Message::MT_SERVER_HELLO
                     && $message->mt() !=
                        TLSProxy::Message::MT_ENCRYPTED_EXTENSIONS
-                    && $message->mt() != TLSProxy::Message::MT_CERTIFICATE
-                    && $message->mt() != TLSProxy::Message::MT_CERTIFICATE_REQUEST);
+                    && $message->mt() != TLSProxy::Message::MT_CERTIFICATE);
 
             next if $message->mt() == TLSProxy::Message::MT_CERTIFICATE
                     && !TLSProxy::Proxy::is_tls13();
@@ -200,7 +197,7 @@ sub checkhandshake($$$$)
             my $msgexts = $message->extension_data();
             my $extchnum = 1;
             my $extshnum = 1;
-            for (my $extloop = 0, $extcount = 0; $extensions[$extloop][3] != 0;
+            for (my $extloop = 0, $extcount = 0; $extensions[$extloop][2] != 0;
                                 $extloop++) {
                 #In TLSv1.3 we can have two ClientHellos if there has been a
                 #HelloRetryRequest, and they may have different extensions. Skip
@@ -214,13 +211,12 @@ sub checkhandshake($$$$)
                 next if $extensions[$extloop][0] == TLSProxy::Message::MT_SERVER_HELLO
                                  && $extshnum != $shnum;
                 next if ($message->mt() != $extensions[$extloop][0]);
-                next if ($message->server() != $extensions[$extloop][2]);
-                ok (($extensions[$extloop][3] & $exttype) == 0
+                ok (($extensions[$extloop][2] & $exttype) == 0
                       || defined ($msgexts->{$extensions[$extloop][1]}),
                     "Extension presence check (Message: ".$message->mt()
-                    ." Extension: ".($extensions[$extloop][3] & $exttype).", "
+                    ." Extension: ".($extensions[$extloop][2] & $exttype).", "
                     .$extloop.")");
-                $extcount++ if (($extensions[$extloop][3] & $exttype) != 0);
+                $extcount++ if (($extensions[$extloop][2] & $exttype) != 0);
             }
             ok($extcount == keys %$msgexts, "Extensions count mismatch ("
                                             .$extcount.", ".(keys %$msgexts)

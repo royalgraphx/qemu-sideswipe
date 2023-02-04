@@ -31,6 +31,7 @@
 #include "hw/loader.h"
 #include "hw/sparc/sparc64.h"
 #include "hw/rtc/sun4v-rtc.h"
+#include "exec/address-spaces.h"
 #include "sysemu/block-backend.h"
 #include "qemu/error-report.h"
 #include "sysemu/qtest.h"
@@ -98,7 +99,7 @@ static void add_rom_or_fail(const char *file, const hwaddr addr)
 static void niagara_init(MachineState *machine)
 {
     NiagaraBoardState *s = g_new(NiagaraBoardState, 1);
-    DriveInfo *dinfo = drive_get(IF_PFLASH, 0, 0);
+    DriveInfo *dinfo = drive_get_next(IF_PFLASH);
     MemoryRegion *sysmem = get_system_memory();
 
     /* init CPUs */

@@ -16,12 +16,12 @@
 
 VOID
 QemuFlashBeforeProbe (
-  IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN  UINTN                 FdBlockSize,
-  IN  UINTN                 FdBlockCount
+  IN  EFI_PHYSICAL_ADDRESS    BaseAddress,
+  IN  UINTN                   FdBlockSize,
+  IN  UINTN                   FdBlockCount
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   ASSERT (FeaturePcdGet (PcdSmmSmramRequire));
 
@@ -38,26 +38,11 @@ QemuFlashBeforeProbe (
   // C-bit on flash ranges from SMM page table.
   //
 
-  Status = MemEncryptSevClearMmioPageEncMask (
+  Status = MemEncryptSevClearPageEncMask (
              0,
              BaseAddress,
-             EFI_SIZE_TO_PAGES (FdBlockSize * FdBlockCount)
+             EFI_SIZE_TO_PAGES (FdBlockSize * FdBlockCount),
+             FALSE
              );
   ASSERT_EFI_ERROR (Status);
-}
-
-/**
-  Write to QEMU Flash
-
-  @param[in] Ptr    Pointer to the location to write.
-  @param[in] Value  The value to write.
-
-**/
-VOID
-QemuFlashPtrWrite (
-  IN        volatile UINT8  *Ptr,
-  IN        UINT8           Value
-  )
-{
-  *Ptr = Value;
 }

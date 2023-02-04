@@ -42,8 +42,9 @@
 
 #define MAX_SPLIT_LINES 16
 
+typedef struct SplitIRQ SplitIRQ;
 
-OBJECT_DECLARE_SIMPLE_TYPE(SplitIRQ, SPLIT_IRQ)
+#define SPLIT_IRQ(obj) OBJECT_CHECK(SplitIRQ, (obj), TYPE_SPLIT_IRQ)
 
 struct SplitIRQ {
     DeviceState parent_obj;

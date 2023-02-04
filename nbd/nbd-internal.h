@@ -19,7 +19,7 @@
 #ifndef _WIN32
 #include <sys/ioctl.h>
 #endif
-#ifdef HAVE_SYS_IOCCOM_H
+#if defined(__sun__) || defined(__HAIKU__)
 #include <sys/ioccom.h>
 #endif
 

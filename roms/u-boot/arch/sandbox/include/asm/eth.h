@@ -9,8 +9,6 @@
 #ifndef __ETH_H
 #define __ETH_H
 
-#include <net.h>
-
 void sandbox_eth_disable_response(int index, bool disable);
 
 void sandbox_eth_skip_timeout(void);

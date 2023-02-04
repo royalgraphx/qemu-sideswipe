@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw
 #
 # Test VPC open of image with large Max Table Entries value.
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=codyprime@gmail.com
+owner=jcody@redhat.com
 
 seq=`basename $0`
 echo "QA output created by $seq"

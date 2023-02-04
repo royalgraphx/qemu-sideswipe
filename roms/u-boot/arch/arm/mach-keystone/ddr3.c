@@ -6,14 +6,11 @@
  *     Texas Instruments Incorporated, <www.ti.com>
  */
 
-#include <cpu_func.h>
-#include <env.h>
 #include <asm/io.h>
 #include <common.h>
 #include <asm/arch/msmc.h>
 #include <asm/arch/ddr3.h>
 #include <asm/arch/psc_defs.h>
-#include <linux/delay.h>
 
 #include <asm/ti-common/ti-edma3.h>
 
@@ -345,7 +342,7 @@ void ddr3_check_ecc_int(u32 base)
 
 		if (!ecc_test) {
 			puts("Reseting the device ...\n");
-			reset_cpu();
+			reset_cpu(0);
 		}
 	}
 
@@ -445,7 +442,7 @@ void ddr3_err_reset_workaround(void)
 		tmp &= ~KS2_RSTYPE_PLL_SOFT;
 		__raw_writel(tmp, KS2_RSTCTRL_RSCFG);
 
-		reset_cpu();
+		reset_cpu(0);
 	}
 }
 #endif

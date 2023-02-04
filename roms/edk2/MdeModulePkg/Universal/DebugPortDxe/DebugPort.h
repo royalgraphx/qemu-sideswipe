@@ -9,6 +9,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef __DEBUGPORT_H__
 #define __DEBUGPORT_H__
 
+
 #include <Uefi.h>
 
 #include <Protocol/DevicePath.h>
@@ -29,9 +30,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 // Driver Binding Externs
 //
-extern EFI_DRIVER_BINDING_PROTOCOL   gDebugPortDriverBinding;
-extern EFI_COMPONENT_NAME_PROTOCOL   gDebugPortComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL  gDebugPortComponentName2;
+extern EFI_DRIVER_BINDING_PROTOCOL  gDebugPortDriverBinding;
+extern EFI_COMPONENT_NAME_PROTOCOL  gDebugPortComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL gDebugPortComponentName2;
 
 //
 // local type definitions
@@ -59,21 +60,21 @@ typedef struct {
   EFI_STOP_BITS_TYPE          StopBits;
 } DEBUGPORT_DEVICE;
 
-#define DEBUGPORT_DEVICE_FROM_THIS(a)  CR (a, DEBUGPORT_DEVICE, DebugPortInterface, DEBUGPORT_DEVICE_SIGNATURE)
+#define DEBUGPORT_DEVICE_FROM_THIS(a)     CR (a, DEBUGPORT_DEVICE, DebugPortInterface, DEBUGPORT_DEVICE_SIGNATURE)
 
-#define EFI_ACPI_PC_COMPORT_HID  EISA_PNP_ID (0x0500)
-#define EFI_ACPI_16550UART_HID   EISA_PNP_ID (0x0501)
+#define EFI_ACPI_PC_COMPORT_HID           EISA_PNP_ID (0x0500)
+#define EFI_ACPI_16550UART_HID            EISA_PNP_ID (0x0501)
 
-#define DEBUGPORT_UART_DEFAULT_BAUDRATE    115200
-#define DEBUGPORT_UART_DEFAULT_PARITY      0
-#define DEBUGPORT_UART_DEFAULT_FIFO_DEPTH  16
-#define DEBUGPORT_UART_DEFAULT_TIMEOUT     50000///< 5 ms
-#define DEBUGPORT_UART_DEFAULT_DATA_BITS   8
-#define DEBUGPORT_UART_DEFAULT_STOP_BITS   1
+#define DEBUGPORT_UART_DEFAULT_BAUDRATE   115200
+#define DEBUGPORT_UART_DEFAULT_PARITY     0
+#define DEBUGPORT_UART_DEFAULT_FIFO_DEPTH 16
+#define DEBUGPORT_UART_DEFAULT_TIMEOUT    50000 ///< 5 ms
+#define DEBUGPORT_UART_DEFAULT_DATA_BITS  8
+#define DEBUGPORT_UART_DEFAULT_STOP_BITS  1
 
-#define DEBUGPORT_DRIVER_VERSION  1
+#define DEBUGPORT_DRIVER_VERSION          1
 
-#define IS_UART_DEVICEPATH(dp)  (DevicePathType (dp) == MESSAGING_DEVICE_PATH && DevicePathSubType (dp) == MSG_UART_DP)
+#define IS_UART_DEVICEPATH(dp)           (DevicePathType (dp) == MESSAGING_DEVICE_PATH && DevicePathSubType (dp) == MSG_UART_DP)
 
 /**
   Debug Port Driver entry point.
@@ -93,8 +94,8 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 InitializeDebugPortDriver (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE                     ImageHandle,
+  IN EFI_SYSTEM_TABLE               *SystemTable
   );
 
 /**
@@ -121,9 +122,9 @@ InitializeDebugPortDriver (
 EFI_STATUS
 EFIAPI
 DebugPortSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN EFI_HANDLE                     Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
   );
 
 /**
@@ -143,9 +144,9 @@ DebugPortSupported (
 EFI_STATUS
 EFIAPI
 DebugPortStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN EFI_HANDLE                     Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
   );
 
 /**
@@ -165,16 +166,15 @@ DebugPortStart (
 EFI_STATUS
 EFIAPI
 DebugPortStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN  EFI_HANDLE                   Controller,
-  IN  UINTN                        NumberOfChildren,
-  IN  EFI_HANDLE                   *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN  EFI_HANDLE                     Controller,
+  IN  UINTN                          NumberOfChildren,
+  IN  EFI_HANDLE                     *ChildHandleBuffer
   );
 
 //
 // EFI Component Name Functions
 //
-
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
 
@@ -221,6 +221,7 @@ DebugPortComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -293,12 +294,13 @@ DebugPortComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 DebugPortComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   );
+
 
 /**
   DebugPort protocol member function.  Calls SerialIo:GetControl to flush buffer.
@@ -316,7 +318,7 @@ DebugPortComponentNameGetControllerName (
 EFI_STATUS
 EFIAPI
 DebugPortReset (
-  IN EFI_DEBUGPORT_PROTOCOL  *This
+  IN EFI_DEBUGPORT_PROTOCOL         *This
   );
 
 /**
@@ -336,10 +338,10 @@ DebugPortReset (
 EFI_STATUS
 EFIAPI
 DebugPortRead (
-  IN EFI_DEBUGPORT_PROTOCOL  *This,
-  IN UINT32                  Timeout,
-  IN OUT UINTN               *BufferSize,
-  IN VOID                    *Buffer
+  IN EFI_DEBUGPORT_PROTOCOL         *This,
+  IN UINT32                         Timeout,
+  IN OUT UINTN                      *BufferSize,
+  IN VOID                           *Buffer
   );
 
 /**
@@ -360,10 +362,10 @@ DebugPortRead (
 EFI_STATUS
 EFIAPI
 DebugPortWrite (
-  IN EFI_DEBUGPORT_PROTOCOL  *This,
-  IN UINT32                  Timeout,
-  IN OUT UINTN               *BufferSize,
-  OUT VOID                   *Buffer
+  IN EFI_DEBUGPORT_PROTOCOL         *This,
+  IN UINT32                         Timeout,
+  IN OUT UINTN                      *BufferSize,
+  OUT VOID                          *Buffer
   );
 
 /**
@@ -376,13 +378,13 @@ DebugPortWrite (
                               the DebugPort interface.
   @retval EFI_NOT_READY       There are no characters ready to read from the
                               DebugPort interface
-  @retval EFI_DEVICE_ERROR    A hardware failure occurred... (from SerialIo)
+  @retval EFI_DEVICE_ERROR    A hardware failure occured... (from SerialIo)
 
 **/
 EFI_STATUS
 EFIAPI
 DebugPortPoll (
-  IN EFI_DEBUGPORT_PROTOCOL  *This
+  IN EFI_DEBUGPORT_PROTOCOL         *This
   );
 
 #endif

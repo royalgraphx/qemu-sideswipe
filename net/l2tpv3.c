@@ -34,7 +34,7 @@
 #include "qemu/sockets.h"
 #include "qemu/iov.h"
 #include "qemu/main-loop.h"
-#include "qemu/memalign.h"
+
 
 /* The buffer size needs to be investigated for optimum numbers and
  * optimum means of paging in on different systems. This size is
@@ -655,8 +655,9 @@ int net_init_l2tpv3(const Netdev *netdev,
         error_setg(errp, "could not bind socket err=%i", errno);
         goto outerr;
     }
-
-    freeaddrinfo(result);
+    if (result) {
+        freeaddrinfo(result);
+    }
 
     memset(&hints, 0, sizeof(hints));
 
@@ -685,7 +686,9 @@ int net_init_l2tpv3(const Netdev *netdev,
     memcpy(s->dgram_dst, result->ai_addr, result->ai_addrlen);
     s->dst_size = result->ai_addrlen;
 
-    freeaddrinfo(result);
+    if (result) {
+        freeaddrinfo(result);
+    }
 
     if (l2tpv3->has_counter && l2tpv3->counter) {
         s->has_counter = true;
@@ -716,14 +719,15 @@ int net_init_l2tpv3(const Netdev *netdev,
     s->vec = g_new(struct iovec, MAX_L2TPV3_IOVCNT);
     s->header_buf = g_malloc(s->header_size);
 
-    qemu_socket_set_nonblock(fd);
+    qemu_set_nonblock(fd);
 
     s->fd = fd;
     s->counter = 0;
 
     l2tpv3_read_poll(s, true);
 
-    qemu_set_info_str(&s->nc, "l2tpv3: connected");
+    snprintf(s->nc.info_str, sizeof(s->nc.info_str),
+             "l2tpv3: connected");
     return 0;
 outerr:
     qemu_del_net_client(nc);

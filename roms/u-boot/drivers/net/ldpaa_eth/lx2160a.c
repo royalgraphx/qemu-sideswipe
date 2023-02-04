@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2018, 2020 NXP
+ * Copyright 2018 NXP
  */
 #include <common.h>
 #include <phy.h>
@@ -8,7 +8,6 @@
 #include <asm/io.h>
 #include <asm/arch/fsl_serdes.h>
 #include <asm/arch/soc.h>
-#include <linux/mii.h>
 
 u32 dpmac_to_devdisr[] = {
 	[WRIOP1_DPMAC1] = FSL_CHASSIS3_DEVDISR2_DPMAC1,
@@ -57,7 +56,7 @@ phy_interface_t wriop_dpmac_enet_if(int dpmac_id, int lane_prtcl)
 {
 	enum srds_prtcl;
 
-	if (is_device_disabled(dpmac_id))
+	if (is_device_disabled(dpmac_id + 1))
 		return PHY_INTERFACE_MODE_NONE;
 
 	if (lane_prtcl >= SGMII1 && lane_prtcl <= SGMII18)

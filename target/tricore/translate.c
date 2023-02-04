@@ -246,7 +246,7 @@ static void gen_st_2regs_64(TCGv rh, TCGv rl, TCGv address, DisasContext *ctx)
     TCGv_i64 temp = tcg_temp_new_i64();
 
     tcg_gen_concat_i32_i64(temp, rl, rh);
-    tcg_gen_qemu_st_i64(temp, address, ctx->mem_idx, MO_LEUQ);
+    tcg_gen_qemu_st_i64(temp, address, ctx->mem_idx, MO_LEQ);
 
     tcg_temp_free_i64(temp);
 }
@@ -264,7 +264,7 @@ static void gen_ld_2regs_64(TCGv rh, TCGv rl, TCGv address, DisasContext *ctx)
 {
     TCGv_i64 temp = tcg_temp_new_i64();
 
-    tcg_gen_qemu_ld_i64(temp, address, ctx->mem_idx, MO_LEUQ);
+    tcg_gen_qemu_ld_i64(temp, address, ctx->mem_idx, MO_LEQ);
     /* write back to two 32 bit regs */
     tcg_gen_extr_i64_i32(rl, rh, temp);
 
@@ -388,7 +388,7 @@ static inline void gen_mfcr(DisasContext *ctx, TCGv ret, int32_t offset)
         gen_helper_psw_read(ret, cpu_env);
     } else {
         switch (offset) {
-#include "csfr.h.inc"
+#include "csfr.def"
         }
     }
 }
@@ -418,7 +418,7 @@ static inline void gen_mtcr(DisasContext *ctx, TCGv r1,
             gen_helper_psw_write(cpu_env, r1);
         } else {
             switch (offset) {
-#include "csfr.h.inc"
+#include "csfr.def"
             }
         }
     } else {
@@ -3225,15 +3225,39 @@ static inline void gen_save_pc(target_ulong pc)
     tcg_gen_movi_tl(cpu_PC, pc);
 }
 
-static void gen_goto_tb(DisasContext *ctx, int n, target_ulong dest)
+static inline bool use_goto_tb(DisasContext *ctx, target_ulong dest)
 {
-    if (translator_use_goto_tb(&ctx->base, dest)) {
+    if (unlikely(ctx->base.singlestep_enabled)) {
+        return false;
+    }
+
+#ifndef CONFIG_USER_ONLY
+    return (ctx->base.tb->pc & TARGET_PAGE_MASK) == (dest & TARGET_PAGE_MASK);
+#else
+    return true;
+#endif
+}
+
+static void generate_qemu_excp(DisasContext *ctx, int excp)
+{
+    TCGv_i32 tmp = tcg_const_i32(excp);
+    gen_helper_qemu_excp(cpu_env, tmp);
+    ctx->base.is_jmp = DISAS_NORETURN;
+    tcg_temp_free(tmp);
+}
+
+static inline void gen_goto_tb(DisasContext *ctx, int n, target_ulong dest)
+{
+    if (use_goto_tb(ctx, dest)) {
         tcg_gen_goto_tb(n);
         gen_save_pc(dest);
         tcg_gen_exit_tb(ctx->base.tb, n);
     } else {
         gen_save_pc(dest);
-        tcg_gen_lookup_and_goto_ptr();
+        if (ctx->base.singlestep_enabled) {
+            generate_qemu_excp(ctx, EXCP_DEBUG);
+        }
+        tcg_gen_exit_tb(NULL, 0);
     }
 }
 
@@ -5753,8 +5777,8 @@ static void decode_rcpw_insert(DisasContext *ctx)
     switch (op2) {
     case OPC2_32_RCPW_IMASK:
         CHECK_REG_PAIR(r2);
-        /* if pos + width > 32 undefined result */
-        if (pos + width <= 32) {
+        /* if pos + width > 31 undefined result */
+        if (pos + width <= 31) {
             tcg_gen_movi_tl(cpu_gpr_d[r2+1], ((1u << width) - 1) << pos);
             tcg_gen_movi_tl(cpu_gpr_d[r2], (const4 << pos));
         }
@@ -6965,7 +6989,6 @@ static void decode_rrpw_extract_insert(DisasContext *ctx)
     uint32_t op2;
     int r1, r2, r3;
     int32_t pos, width;
-    TCGv temp;
 
     op2 = MASK_OP_RRPW_OP2(ctx->opcode);
     r1 = MASK_OP_RRPW_S1(ctx->opcode);
@@ -6976,12 +6999,7 @@ static void decode_rrpw_extract_insert(DisasContext *ctx)
 
     switch (op2) {
     case OPC2_32_RRPW_EXTR:
-        if (width == 0) {
-                tcg_gen_movi_tl(cpu_gpr_d[r3], 0);
-                break;
-        }
-
-        if (pos + width <= 32) {
+        if (pos + width <= 31) {
             /* optimize special cases */
             if ((pos == 0) && (width == 8)) {
                 tcg_gen_ext8s_tl(cpu_gpr_d[r3], cpu_gpr_d[r1]);
@@ -7003,15 +7021,10 @@ static void decode_rrpw_extract_insert(DisasContext *ctx)
         break;
     case OPC2_32_RRPW_IMASK:
         CHECK_REG_PAIR(r3);
-
-        if (pos + width <= 32) {
-            temp = tcg_temp_new();
-            tcg_gen_movi_tl(temp, ((1u << width) - 1) << pos);
+        if (pos + width <= 31) {
+            tcg_gen_movi_tl(cpu_gpr_d[r3+1], ((1u << width) - 1) << pos);
             tcg_gen_shli_tl(cpu_gpr_d[r3], cpu_gpr_d[r2], pos);
-            tcg_gen_mov_tl(cpu_gpr_d[r3 + 1], temp);
-            tcg_temp_free(temp);
         }
-
         break;
     case OPC2_32_RRPW_INSERT:
         if (pos + width <= 32) {
@@ -8798,6 +8811,21 @@ static void tricore_tr_insn_start(DisasContextBase *dcbase, CPUState *cpu)
     tcg_gen_insn_start(ctx->base.pc_next);
 }
 
+static bool tricore_tr_breakpoint_check(DisasContextBase *dcbase, CPUState *cpu,
+                                      const CPUBreakpoint *bp)
+{
+    DisasContext *ctx = container_of(dcbase, DisasContext, base);
+    generate_qemu_excp(ctx, EXCP_DEBUG);
+    /*
+     * The address covered by the breakpoint must be included in
+     * [tb->pc, tb->pc + tb->size) in order to for it to be
+     * properly cleared -- thus we increment the PC here so that
+     * the logic setting tb->size below does the right thing.
+     */
+    ctx->base.pc_next += 4;
+    return true;
+}
+
 static bool insn_crosses_page(CPUTriCoreState *env, DisasContext *ctx)
 {
     /*
@@ -8861,31 +8889,35 @@ static void tricore_tr_tb_stop(DisasContextBase *dcbase, CPUState *cpu)
     }
 }
 
-static void tricore_tr_disas_log(const DisasContextBase *dcbase,
-                                 CPUState *cpu, FILE *logfile)
+static void tricore_tr_disas_log(const DisasContextBase *dcbase, CPUState *cpu)
 {
-    fprintf(logfile, "IN: %s\n", lookup_symbol(dcbase->pc_first));
-    target_disas(logfile, cpu, dcbase->pc_first, dcbase->tb->size);
+    qemu_log("IN: %s\n", lookup_symbol(dcbase->pc_first));
+    log_target_disas(cpu, dcbase->pc_first, dcbase->tb->size);
 }
 
 static const TranslatorOps tricore_tr_ops = {
     .init_disas_context = tricore_tr_init_disas_context,
     .tb_start           = tricore_tr_tb_start,
     .insn_start         = tricore_tr_insn_start,
+    .breakpoint_check   = tricore_tr_breakpoint_check,
     .translate_insn     = tricore_tr_translate_insn,
     .tb_stop            = tricore_tr_tb_stop,
     .disas_log          = tricore_tr_disas_log,
 };
 
 
-void gen_intermediate_code(CPUState *cs, TranslationBlock *tb, int max_insns,
-                           target_ulong pc, void *host_pc)
+void gen_intermediate_code(CPUState *cs, TranslationBlock *tb, int max_insns)
 {
     DisasContext ctx;
-    translator_loop(cs, tb, max_insns, pc, host_pc,
-                    &tricore_tr_ops, &ctx.base);
+    translator_loop(&tricore_tr_ops, &ctx.base, cs, tb, max_insns);
 }
 
+void
+restore_state_to_opc(CPUTriCoreState *env, TranslationBlock *tb,
+                     target_ulong *data)
+{
+    env->PC = data[0];
+}
 /*
  *
  * Initialization

@@ -12,7 +12,6 @@
 #include "avb_sha.h"
 #include "avb_util.h"
 #include "avb_vbmeta_image.h"
-#include <malloc.h>
 
 typedef struct IAvbKey {
   unsigned int len; /* Length of n[] in number of uint32_t */

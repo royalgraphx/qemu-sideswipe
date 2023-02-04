@@ -6,12 +6,12 @@
 
 **/
 
-#ifndef ARM_DISASSEMBLER_LIB_H_
-#define ARM_DISASSEMBLER_LIB_H_
+#ifndef __ARM_DISASSEBLER_LIB_H__
+#define __ARM_DISASSEBLER_LIB_H__
 
 /**
-  Place a disassembly of **OpCodePtr into buffer, and update OpCodePtr to
-  point to next instruction.
+  Place a dissasembly of of **OpCodePtr into buffer, and update OpCodePtr to
+  point to next instructin.
 
   We cheat and only decode instructions that access
   memory. If the instruction is not found we dump the instruction in hex.
@@ -26,12 +26,12 @@
 **/
 VOID
 DisassembleInstruction (
-  IN  UINT8      **OpCodePtr,
-  IN  BOOLEAN    Thumb,
-  IN  BOOLEAN    Extended,
-  IN OUT UINT32  *ItBlock,
-  OUT CHAR8      *Buf,
-  OUT UINTN      Size
+  IN  UINT8     **OpCodePtr,
+  IN  BOOLEAN   Thumb,
+  IN  BOOLEAN   Extended,
+  IN OUT UINT32 *ItBlock,
+  OUT CHAR8     *Buf,
+  OUT UINTN     Size
   );
 
-#endif // ARM_DISASSEMBLER_LIB_H_
+#endif

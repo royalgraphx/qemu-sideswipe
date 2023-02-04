@@ -19,13 +19,7 @@
 //
 // The value of PcdQ35TsegMbytes is saved into this variable at module startup.
 //
-UINT16  mQ35TsegMbytes;
-
-//
-// The value of PcdQ35SmramAtDefaultSmbase is saved into this variable at
-// module startup.
-//
-STATIC BOOLEAN  mQ35SmramAtDefaultSmbase;
+UINT16 mQ35TsegMbytes;
 
 /**
   Save PcdQ35TsegMbytes into mQ35TsegMbytes.
@@ -36,17 +30,6 @@ InitQ35TsegMbytes (
   )
 {
   mQ35TsegMbytes = PcdGet16 (PcdQ35TsegMbytes);
-}
-
-/**
-  Save PcdQ35SmramAtDefaultSmbase into mQ35SmramAtDefaultSmbase.
-**/
-VOID
-InitQ35SmramAtDefaultSmbase (
-  VOID
-  )
-{
-  mQ35SmramAtDefaultSmbase = PcdGetBool (PcdQ35SmramAtDefaultSmbase);
 }
 
 /**
@@ -65,11 +48,11 @@ InitQ35SmramAtDefaultSmbase (
 **/
 VOID
 GetStates (
-  OUT BOOLEAN  *LockState,
-  OUT BOOLEAN  *OpenState
-  )
+  OUT BOOLEAN *LockState,
+  OUT BOOLEAN *OpenState
+)
 {
-  UINT8  SmramVal, EsmramcVal;
+  UINT8 SmramVal, EsmramcVal;
 
   SmramVal   = PciRead8 (DRAMC_REGISTER_Q35 (MCH_SMRAM));
   EsmramcVal = PciRead8 (DRAMC_REGISTER_Q35 (MCH_ESMRAMC));
@@ -91,30 +74,27 @@ GetStates (
 
 EFI_STATUS
 SmramAccessOpen (
-  OUT BOOLEAN  *LockState,
-  OUT BOOLEAN  *OpenState
+  OUT BOOLEAN *LockState,
+  OUT BOOLEAN *OpenState
   )
 {
   //
   // Open TSEG by clearing T_EN.
   //
-  PciAnd8 (
-    DRAMC_REGISTER_Q35 (MCH_ESMRAMC),
-    (UINT8)((~(UINT32)MCH_ESMRAMC_T_EN) & 0xff)
-    );
+  PciAnd8 (DRAMC_REGISTER_Q35 (MCH_ESMRAMC),
+    (UINT8)((~(UINT32)MCH_ESMRAMC_T_EN) & 0xff));
 
   GetStates (LockState, OpenState);
   if (!*OpenState) {
     return EFI_DEVICE_ERROR;
   }
-
   return EFI_SUCCESS;
 }
 
 EFI_STATUS
 SmramAccessClose (
-  OUT BOOLEAN  *LockState,
-  OUT BOOLEAN  *OpenState
+  OUT BOOLEAN *LockState,
+  OUT BOOLEAN *OpenState
   )
 {
   //
@@ -126,14 +106,13 @@ SmramAccessClose (
   if (*OpenState) {
     return EFI_DEVICE_ERROR;
   }
-
   return EFI_SUCCESS;
 }
 
 EFI_STATUS
 SmramAccessLock (
-  OUT    BOOLEAN  *LockState,
-  IN OUT BOOLEAN  *OpenState
+  OUT    BOOLEAN *LockState,
+  IN OUT BOOLEAN *OpenState
   )
 {
   if (*OpenState) {
@@ -144,38 +123,27 @@ SmramAccessLock (
   // Close & lock TSEG by setting T_EN and D_LCK.
   //
   PciOr8 (DRAMC_REGISTER_Q35 (MCH_ESMRAMC), MCH_ESMRAMC_T_EN);
-  PciOr8 (DRAMC_REGISTER_Q35 (MCH_SMRAM), MCH_SMRAM_D_LCK);
-
-  //
-  // Close & lock the SMRAM at the default SMBASE, if it exists.
-  //
-  if (mQ35SmramAtDefaultSmbase) {
-    PciWrite8 (
-      DRAMC_REGISTER_Q35 (MCH_DEFAULT_SMBASE_CTL),
-      MCH_DEFAULT_SMBASE_LCK
-      );
-  }
+  PciOr8 (DRAMC_REGISTER_Q35 (MCH_SMRAM),   MCH_SMRAM_D_LCK);
 
   GetStates (LockState, OpenState);
   if (*OpenState || !*LockState) {
     return EFI_DEVICE_ERROR;
   }
-
   return EFI_SUCCESS;
 }
 
 EFI_STATUS
 SmramAccessGetCapabilities (
-  IN BOOLEAN                   LockState,
-  IN BOOLEAN                   OpenState,
-  IN OUT UINTN                 *SmramMapSize,
-  IN OUT EFI_SMRAM_DESCRIPTOR  *SmramMap
+  IN BOOLEAN                  LockState,
+  IN BOOLEAN                  OpenState,
+  IN OUT UINTN                *SmramMapSize,
+  IN OUT EFI_SMRAM_DESCRIPTOR *SmramMap
   )
 {
-  UINTN   OriginalSize;
-  UINT32  TsegMemoryBaseMb, TsegMemoryBase;
-  UINT64  CommonRegionState;
-  UINT8   TsegSizeBits;
+  UINTN  OriginalSize;
+  UINT32 TsegMemoryBaseMb, TsegMemoryBase;
+  UINT64 CommonRegionState;
+  UINT8  TsegSizeBits;
 
   OriginalSize  = *SmramMapSize;
   *SmramMapSize = DescIdxCount * sizeof *SmramMap;
@@ -187,7 +155,7 @@ SmramAccessGetCapabilities (
   // Read the TSEG Memory Base register.
   //
   TsegMemoryBaseMb = PciRead32 (DRAMC_REGISTER_Q35 (MCH_TSEGMB));
-  TsegMemoryBase   = (TsegMemoryBaseMb >> MCH_TSEGMB_MB_SHIFT) << 20;
+  TsegMemoryBase = (TsegMemoryBaseMb >> MCH_TSEGMB_MB_SHIFT) << 20;
 
   //
   // Precompute the region state bits that will be set for all regions.
@@ -205,7 +173,7 @@ SmramAccessGetCapabilities (
   SmramMap[DescIdxSmmS3ResumeState].CpuStart      = TsegMemoryBase;
   SmramMap[DescIdxSmmS3ResumeState].PhysicalSize  =
     EFI_PAGES_TO_SIZE (EFI_SIZE_TO_PAGES (sizeof (SMM_S3_RESUME_STATE)));
-  SmramMap[DescIdxSmmS3ResumeState].RegionState =
+  SmramMap[DescIdxSmmS3ResumeState].RegionState   =
     CommonRegionState | EFI_ALLOCATED;
 
   //
@@ -220,7 +188,7 @@ SmramAccessGetCapabilities (
   SmramMap[DescIdxMain].PhysicalStart =
     SmramMap[DescIdxSmmS3ResumeState].PhysicalStart +
     SmramMap[DescIdxSmmS3ResumeState].PhysicalSize;
-  SmramMap[DescIdxMain].CpuStart     = SmramMap[DescIdxMain].PhysicalStart;
+  SmramMap[DescIdxMain].CpuStart = SmramMap[DescIdxMain].PhysicalStart;
   SmramMap[DescIdxMain].PhysicalSize =
     (TsegSizeBits == MCH_ESMRAMC_TSEG_8MB ? SIZE_8MB :
      TsegSizeBits == MCH_ESMRAMC_TSEG_2MB ? SIZE_2MB :

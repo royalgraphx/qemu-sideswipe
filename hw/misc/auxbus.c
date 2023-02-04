@@ -45,6 +45,8 @@
     }                                                                          \
 } while (0)
 
+#define TYPE_AUXTOI2C "aux-to-i2c-bridge"
+#define AUXTOI2C(obj) OBJECT_CHECK(AUXTOI2CState, (obj), TYPE_AUXTOI2C)
 
 static void aux_slave_dev_print(Monitor *mon, DeviceState *dev, int indent);
 static inline I2CBus *aux_bridge_get_i2c_bus(AUXTOI2CState *bridge);
@@ -65,7 +67,7 @@ AUXBus *aux_bus_init(DeviceState *parent, const char *name)
     AUXBus *bus;
     Object *auxtoi2c;
 
-    bus = AUX_BUS(qbus_new(TYPE_AUX_BUS, parent, name));
+    bus = AUX_BUS(qbus_create(TYPE_AUX_BUS, parent, name));
     auxtoi2c = object_new_with_props(TYPE_AUXTOI2C, OBJECT(bus), "i2c",
                                      &error_abort, NULL);
 
@@ -106,6 +108,7 @@ AUXReply aux_request(AUXBus *bus, AUXCommand cmd, uint32_t address,
     AUXReply ret = AUX_NACK;
     I2CBus *i2c_bus = aux_get_i2c_bus(bus);
     size_t i;
+    bool is_write = false;
 
     DPRINTF("request at address 0x%" PRIX32 ", command %u, len %u\n", address,
             cmd, len);
@@ -116,10 +119,11 @@ AUXReply aux_request(AUXBus *bus, AUXCommand cmd, uint32_t address,
      */
     case WRITE_AUX:
     case READ_AUX:
+        is_write = cmd == READ_AUX ? false : true;
         for (i = 0; i < len; i++) {
             if (!address_space_rw(&bus->aux_addr_space, address++,
                                   MEMTXATTRS_UNSPECIFIED, data++, 1,
-                                  cmd == WRITE_AUX)) {
+                                  is_write)) {
                 ret = AUX_I2C_ACK;
             } else {
                 ret = AUX_NACK;
@@ -131,37 +135,24 @@ AUXReply aux_request(AUXBus *bus, AUXCommand cmd, uint32_t address,
      * Classic I2C transactions..
      */
     case READ_I2C:
-        if (i2c_bus_busy(i2c_bus)) {
-            i2c_end_transfer(i2c_bus);
-        }
-
-        if (i2c_start_recv(i2c_bus, address)) {
-            ret = AUX_I2C_NACK;
-            break;
-        }
-
-        ret = AUX_I2C_ACK;
-        for (i = 0; i < len; i++) {
-            data[i] = i2c_recv(i2c_bus);
-        }
-        i2c_end_transfer(i2c_bus);
-        break;
     case WRITE_I2C:
+        is_write = cmd == READ_I2C ? false : true;
         if (i2c_bus_busy(i2c_bus)) {
             i2c_end_transfer(i2c_bus);
         }
 
-        if (i2c_start_send(i2c_bus, address)) {
+        if (i2c_start_transfer(i2c_bus, address, is_write)) {
             ret = AUX_I2C_NACK;
             break;
         }
 
         ret = AUX_I2C_ACK;
-        for (i = 0; i < len; i++) {
-            if (i2c_send(i2c_bus, data[i]) < 0) {
+        while (len > 0) {
+            if (i2c_send_recv(i2c_bus, data++, is_write) < 0) {
                 ret = AUX_I2C_NACK;
                 break;
             }
+            len--;
         }
         i2c_end_transfer(i2c_bus);
         break;
@@ -174,43 +165,14 @@ AUXReply aux_request(AUXBus *bus, AUXCommand cmd, uint32_t address,
      *  - We changed the address.
      */
     case WRITE_I2C_MOT:
-        ret = AUX_I2C_NACK;
-        if (!i2c_bus_busy(i2c_bus)) {
-            /*
-             * No transactions started..
-             */
-            if (i2c_start_send(i2c_bus, address)) {
-                break;
-            }
-        } else if ((address != bus->last_i2c_address) ||
-                   (bus->last_transaction != cmd)) {
-            /*
-             * Transaction started but we need to restart..
-             */
-            i2c_end_transfer(i2c_bus);
-            if (i2c_start_send(i2c_bus, address)) {
-                break;
-            }
-        }
-
-        bus->last_transaction = cmd;
-        bus->last_i2c_address = address;
-        ret = AUX_I2C_ACK;
-        for (i = 0; i < len; i++) {
-            if (i2c_send(i2c_bus, data[i]) < 0) {
-                i2c_end_transfer(i2c_bus);
-                ret = AUX_I2C_NACK;
-                break;
-            }
-        }
-        break;
     case READ_I2C_MOT:
+        is_write = cmd == READ_I2C_MOT ? false : true;
         ret = AUX_I2C_NACK;
         if (!i2c_bus_busy(i2c_bus)) {
             /*
              * No transactions started..
              */
-            if (i2c_start_recv(i2c_bus, address)) {
+            if (i2c_start_transfer(i2c_bus, address, is_write)) {
                 break;
             }
         } else if ((address != bus->last_i2c_address) ||
@@ -219,17 +181,23 @@ AUXReply aux_request(AUXBus *bus, AUXCommand cmd, uint32_t address,
              * Transaction started but we need to restart..
              */
             i2c_end_transfer(i2c_bus);
-            if (i2c_start_recv(i2c_bus, address)) {
+            if (i2c_start_transfer(i2c_bus, address, is_write)) {
                 break;
             }
         }
 
         bus->last_transaction = cmd;
         bus->last_i2c_address = address;
-        for (i = 0; i < len; i++) {
-            data[i] = i2c_recv(i2c_bus);
+        while (len > 0) {
+            if (i2c_send_recv(i2c_bus, data++, is_write) < 0) {
+                i2c_end_transfer(i2c_bus);
+                break;
+            }
+            len--;
         }
-        ret = AUX_I2C_ACK;
+        if (len == 0) {
+            ret = AUX_I2C_ACK;
+        }
         break;
     default:
         qemu_log_mask(LOG_UNIMP, "AUX cmd=%u not implemented\n", cmd);

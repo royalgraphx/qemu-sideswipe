@@ -22,11 +22,11 @@
 #include <openssl/objects.h>
 #include <crypto/cryptodev.h>
 
-#include "crypto/engine.h"
+#include "internal/engine.h"
 
 /* #define ENGINE_DEVCRYPTO_DEBUG */
 
-#if CRYPTO_ALGORITHM_MIN < CRYPTO_ALGORITHM_MAX
+#ifdef CRYPTO_ALGORITHM_MIN
 # define CHECK_BSD_STYLE_MACROS
 #endif
 

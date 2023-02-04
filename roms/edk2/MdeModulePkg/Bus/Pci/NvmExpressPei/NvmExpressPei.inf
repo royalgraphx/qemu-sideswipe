@@ -56,7 +56,6 @@
   gEdkiiPeiNvmExpressHostControllerPpiGuid       ## CONSUMES
   gEdkiiIoMmuPpiGuid                             ## CONSUMES
   gEfiEndOfPeiSignalPpiGuid                      ## CONSUMES
-  gEdkiiPeiNvmExpressPassThruPpiGuid             ## SOMETIMES_PRODUCES
   gEfiPeiVirtualBlockIoPpiGuid                   ## SOMETIMES_PRODUCES
   gEfiPeiVirtualBlockIo2PpiGuid                  ## SOMETIMES_PRODUCES
   gEdkiiPeiStorageSecurityCommandPpiGuid         ## SOMETIMES_PRODUCES

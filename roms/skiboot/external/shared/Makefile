@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 .DEFAULT_GOAL := all
 GET_ARCH := ../../external/common/get_arch.sh
 include ../../external/common/rules.mk

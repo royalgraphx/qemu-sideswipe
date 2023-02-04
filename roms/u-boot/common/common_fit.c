@@ -7,7 +7,6 @@
 #include <common.h>
 #include <errno.h>
 #include <image.h>
-#include <log.h>
 #include <linux/libfdt.h>
 
 ulong fdt_getprop_u32(const void *fdt, int node, const char *prop)
@@ -20,11 +19,6 @@ ulong fdt_getprop_u32(const void *fdt, int node, const char *prop)
 		return FDT_ERROR;
 
 	return fdt32_to_cpu(*cell);
-}
-
-__weak int board_fit_config_name_match(const char *name)
-{
-	return -EINVAL;
 }
 
 /*
@@ -72,7 +66,7 @@ int fit_find_config_node(const void *fdt)
 		if (board_fit_config_name_match(name))
 			continue;
 
-		debug("Selecting config '%s'\n", name);
+		debug("Selecting config '%s'", name);
 
 		return node;
 	}

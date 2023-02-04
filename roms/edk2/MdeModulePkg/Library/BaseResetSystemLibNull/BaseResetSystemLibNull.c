@@ -59,6 +59,20 @@ ResetShutdown (
 }
 
 /**
+  This function causes the system to enter S3 and then wake up immediately.
+
+  If this function returns, it means that the system does not support S3 feature.
+**/
+VOID
+EFIAPI
+EnterS3WithImmediateWake (
+  VOID
+  )
+{
+  ASSERT (FALSE);
+}
+
+/**
   This function causes a systemwide reset. The exact type of the reset is
   defined by the EFI_GUID that follows the Null-terminated Unicode string passed
   into ResetData. If the platform does not recognize the EFI_GUID in ResetData
@@ -72,8 +86,8 @@ ResetShutdown (
 VOID
 EFIAPI
 ResetPlatformSpecific (
-  IN UINTN  DataSize,
-  IN VOID   *ResetData
+  IN UINTN   DataSize,
+  IN VOID    *ResetData
   )
 {
   ResetCold ();
@@ -94,11 +108,12 @@ ResetPlatformSpecific (
 VOID
 EFIAPI
 ResetSystem (
-  IN EFI_RESET_TYPE  ResetType,
-  IN EFI_STATUS      ResetStatus,
-  IN UINTN           DataSize,
-  IN VOID            *ResetData OPTIONAL
+  IN EFI_RESET_TYPE               ResetType,
+  IN EFI_STATUS                   ResetStatus,
+  IN UINTN                        DataSize,
+  IN VOID                         *ResetData OPTIONAL
   )
 {
   ASSERT (FALSE);
 }
+

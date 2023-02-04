@@ -7,21 +7,19 @@
 #include <dm.h>
 #include <dt-structs.h>
 #include <errno.h>
-#include <init.h>
 #include <ram.h>
 #include <regmap.h>
 #include <syscon.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
-#include <asm/arch-rockchip/clock.h>
-#include <asm/arch-rockchip/cru_rk322x.h>
-#include <asm/arch-rockchip/grf_rk322x.h>
-#include <asm/arch-rockchip/hardware.h>
-#include <asm/arch-rockchip/sdram_rk322x.h>
-#include <asm/arch-rockchip/uart.h>
-#include <asm/arch-rockchip/sdram.h>
+#include <asm/arch/clock.h>
+#include <asm/arch/cru_rk322x.h>
+#include <asm/arch/grf_rk322x.h>
+#include <asm/arch/hardware.h>
+#include <asm/arch/sdram_rk322x.h>
+#include <asm/arch/timer.h>
+#include <asm/arch/uart.h>
+#include <asm/arch/sdram_common.h>
 #include <asm/types.h>
-#include <linux/delay.h>
 #include <linux/err.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -51,7 +49,7 @@ struct rk322x_sdram_params {
 		struct regmap *map;
 };
 
-#ifdef CONFIG_TPL_BUILD
+#ifdef CONFIG_SPL_BUILD
 /*
  * [7:6]  bank(n:n bit bank)
  * [5:4]  row(13+n)
@@ -98,26 +96,26 @@ void phy_pctrl_reset(struct rk322x_cru *cru,
 			1 << DDRCTRL_PSRST_SHIFT | 1 << DDRCTRL_SRST_SHIFT |
 			1 << DDRPHY_PSRST_SHIFT | 1 << DDRPHY_SRST_SHIFT);
 
-	udelay(10);
+	rockchip_udelay(10);
 
 	rk_clrreg(&cru->cru_softrst_con[5], 1 << DDRPHY_PSRST_SHIFT |
 						  1 << DDRPHY_SRST_SHIFT);
-	udelay(10);
+	rockchip_udelay(10);
 
 	rk_clrreg(&cru->cru_softrst_con[5], 1 << DDRCTRL_PSRST_SHIFT |
 						  1 << DDRCTRL_SRST_SHIFT);
-	udelay(10);
+	rockchip_udelay(10);
 
 	clrbits_le32(&ddr_phy->ddrphy_reg[0],
 		     SOFT_RESET_MASK << SOFT_RESET_SHIFT);
-	udelay(10);
+	rockchip_udelay(10);
 	setbits_le32(&ddr_phy->ddrphy_reg[0],
 		     SOFT_DERESET_ANALOG);
-	udelay(5);
+	rockchip_udelay(5);
 	setbits_le32(&ddr_phy->ddrphy_reg[0],
 		     SOFT_DERESET_DIGITAL);
 
-	udelay(1);
+	rockchip_udelay(1);
 }
 
 void phy_dll_bypass_set(struct rk322x_ddr_phy *ddr_phy, u32 freq)
@@ -156,7 +154,7 @@ static void send_command(struct rk322x_ddr_pctl *pctl,
 			 u32 rank, u32 cmd, u32 arg)
 {
 	writel((START_CMD | (rank << 20) | arg | cmd), &pctl->mcmd);
-	udelay(1);
+	rockchip_udelay(1);
 	while (readl(&pctl->mcmd) & START_CMD)
 		;
 }
@@ -169,7 +167,7 @@ static void memory_init(struct chan_info *chan,
 
 	if (dramtype == DDR3) {
 		send_command(pctl, 3, DESELECT_CMD, 0);
-		udelay(1);
+		rockchip_udelay(1);
 		send_command(pctl, 3, PREA_CMD, 0);
 		send_command(pctl, 3, MRS_CMD,
 			     (0x02 & BANK_ADDR_MASK) << BANK_ADDR_SHIFT |
@@ -198,17 +196,17 @@ static void memory_init(struct chan_info *chan,
 			     (0x63 & LPDDR23_MA_MASK) << LPDDR23_MA_SHIFT |
 			     (0 & LPDDR23_OP_MASK) <<
 			     LPDDR23_OP_SHIFT);
-		udelay(10);
+		rockchip_udelay(10);
 		send_command(pctl, 3, MRS_CMD,
 			     (0x10 & LPDDR23_MA_MASK) << LPDDR23_MA_SHIFT |
 			     (0xff & LPDDR23_OP_MASK) <<
 			     LPDDR23_OP_SHIFT);
-		udelay(1);
+		rockchip_udelay(1);
 		send_command(pctl, 3, MRS_CMD,
 			     (0x10 & LPDDR23_MA_MASK) << LPDDR23_MA_SHIFT |
 			     (0xff & LPDDR23_OP_MASK) <<
 			     LPDDR23_OP_SHIFT);
-		udelay(1);
+		rockchip_udelay(1);
 		send_command(pctl, 3, MRS_CMD,
 			     (1 & LPDDR23_MA_MASK) << LPDDR23_MA_SHIFT |
 			     (sdram_params->phy_timing.mr[1] &
@@ -245,7 +243,7 @@ static u32 data_training(struct chan_info *chan)
 			DQS_SQU_CAL_SEL_CS0);
 	setbits_le32(&ddr_phy->ddrphy_reg[2], DQS_SQU_CAL_START);
 
-	udelay(30);
+	rockchip_udelay(30);
 	ret = readl(&ddr_phy->ddrphy_reg[0xff]);
 
 	clrbits_le32(&ddr_phy->ddrphy_reg[2],
@@ -369,9 +367,9 @@ static void phy_softreset(struct dram_info *dram)
 
 	writel(GRF_DDRPHY_BUFFEREN_CORE_EN, &grf->soc_con[0]);
 	clrbits_le32(&ddr_phy->ddrphy_reg[0], 0x3 << 2);
-	udelay(1);
+	rockchip_udelay(1);
 	setbits_le32(&ddr_phy->ddrphy_reg[0], 1 << 2);
-	udelay(5);
+	rockchip_udelay(5);
 	setbits_le32(&ddr_phy->ddrphy_reg[0], 1 << 3);
 	writel(GRF_DDRPHY_BUFFEREN_CORE_DIS, &grf->soc_con[0]);
 }
@@ -714,10 +712,10 @@ out:
 	return ret;
 }
 
-static int rk322x_dmc_of_to_plat(struct udevice *dev)
+static int rk322x_dmc_ofdata_to_platdata(struct udevice *dev)
 {
 #if !CONFIG_IS_ENABLED(OF_PLATDATA)
-	struct rk322x_sdram_params *params = dev_get_plat(dev);
+	struct rk322x_sdram_params *params = dev_get_platdata(dev);
 	const void *blob = gd->fdt_blob;
 	int node = dev_of_offset(dev);
 	int ret;
@@ -752,12 +750,12 @@ static int rk322x_dmc_of_to_plat(struct udevice *dev)
 
 	return 0;
 }
-#endif /* CONFIG_TPL_BUILD */
+#endif /* CONFIG_SPL_BUILD */
 
 #if CONFIG_IS_ENABLED(OF_PLATDATA)
-static int conv_of_plat(struct udevice *dev)
+static int conv_of_platdata(struct udevice *dev)
 {
-	struct rk322x_sdram_params *plat = dev_get_plat(dev);
+	struct rk322x_sdram_params *plat = dev_get_platdata(dev);
 	struct dtd_rockchip_rk322x_dmc *of_plat = &plat->of_plat;
 	int ret;
 
@@ -768,8 +766,9 @@ static int conv_of_plat(struct udevice *dev)
 	memcpy(&plat->base, of_plat->rockchip_sdram_params, sizeof(plat->base));
 
 	plat->num_channels = 1;
-	ret = regmap_init_mem_plat(dev, of_plat->reg,
-				   ARRAY_SIZE(of_plat->reg) / 2, &plat->map);
+	ret = regmap_init_mem_platdata(dev, of_plat->reg,
+				       ARRAY_SIZE(of_plat->reg) / 2,
+				       &plat->map);
 	if (ret)
 		return ret;
 
@@ -779,17 +778,17 @@ static int conv_of_plat(struct udevice *dev)
 
 static int rk322x_dmc_probe(struct udevice *dev)
 {
-#ifdef CONFIG_TPL_BUILD
-	struct rk322x_sdram_params *plat = dev_get_plat(dev);
+#ifdef CONFIG_SPL_BUILD
+	struct rk322x_sdram_params *plat = dev_get_platdata(dev);
 	int ret;
 	struct udevice *dev_clk;
 #endif
 	struct dram_info *priv = dev_get_priv(dev);
 
 	priv->grf = syscon_get_first_range(ROCKCHIP_SYSCON_GRF);
-#ifdef CONFIG_TPL_BUILD
+#ifdef CONFIG_SPL_BUILD
 #if CONFIG_IS_ENABLED(OF_PLATDATA)
-	ret = conv_of_plat(dev);
+	ret = conv_of_platdata(dev);
 	if (ret)
 		return ret;
 #endif
@@ -843,13 +842,13 @@ U_BOOT_DRIVER(dmc_rk322x) = {
 	.id = UCLASS_RAM,
 	.of_match = rk322x_dmc_ids,
 	.ops = &rk322x_dmc_ops,
-#ifdef CONFIG_TPL_BUILD
-	.of_to_plat = rk322x_dmc_of_to_plat,
+#ifdef CONFIG_SPL_BUILD
+	.ofdata_to_platdata = rk322x_dmc_ofdata_to_platdata,
 #endif
 	.probe = rk322x_dmc_probe,
-	.priv_auto	= sizeof(struct dram_info),
-#ifdef CONFIG_TPL_BUILD
-	.plat_auto	= sizeof(struct rk322x_sdram_params),
+	.priv_auto_alloc_size = sizeof(struct dram_info),
+#ifdef CONFIG_SPL_BUILD
+	.platdata_auto_alloc_size = sizeof(struct rk322x_sdram_params),
 #endif
 };
 

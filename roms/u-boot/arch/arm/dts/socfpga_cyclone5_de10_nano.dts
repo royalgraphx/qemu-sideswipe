@@ -6,7 +6,6 @@
  */
 
 #include "socfpga_cyclone5.dtsi"
-#include "socfpga-common-u-boot.dtsi"
 
 / {
 	model = "Terasic DE10-Nano";
@@ -26,6 +25,10 @@
 		name = "memory";
 		device_type = "memory";
 		reg = <0x0 0x40000000>; /* 1GB */
+	};
+
+	soc {
+		u-boot,dm-pre-reloc;
 	};
 };
 
@@ -77,7 +80,6 @@
 };
 
 &uart0 {
-	clock-frequency = <100000000>;
 	u-boot,dm-pre-reloc;
 };
 

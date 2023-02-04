@@ -19,12 +19,5 @@ SECTIONS
 
         // Discard regular data sections to force a link error if
         // 16bit code attempts to access data not marked with VAR16.
-        /DISCARD/ : {
-                *(.text*)
-                *(.rodata*)
-                *(.data*)
-                *(.bss*)
-                *(COMMON)
-                *(.note*)
-                }
+        /DISCARD/ : { *(.text*) *(.rodata*) *(.data*) *(.bss*) *(COMMON) }
 }

@@ -13,11 +13,7 @@
 
 #include "libqtest.h"
 
-#ifndef _WIN32
 QTestState *global_qtest __attribute__((common, weak));
-#else
-__declspec(selectany) QTestState *global_qtest;
-#endif
 
 /**
  * qtest_start:
@@ -51,12 +47,12 @@ static inline void qtest_end(void)
 /**
  * qmp:
  * @fmt...: QMP message to send to qemu, formatted like
- * qobject_from_jsonf_nofail().  See parse_interpolation() for what's
+ * qobject_from_jsonf_nofail().  See parse_escape() for what's
  * supported after '%'.
  *
  * Sends a QMP message to QEMU and returns the response.
  */
-G_GNUC_PRINTF(1, 2)
+GCC_FMT_ATTR(1, 2)
 static inline QDict *qmp(const char *fmt, ...)
 {
     va_list ap;

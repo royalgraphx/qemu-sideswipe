@@ -31,17 +31,16 @@
 #include "qapi/error.h"
 #include "qapi/visitor.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
-OBJECT_DECLARE_SIMPLE_TYPE(ISANE2000State, ISA_NE2000)
+#define ISA_NE2000(obj) OBJECT_CHECK(ISANE2000State, (obj), TYPE_ISA_NE2000)
 
-struct ISANE2000State {
+typedef struct ISANE2000State {
     ISADevice parent_obj;
 
     uint32_t iobase;
     uint32_t isairq;
     NE2000State ne2000;
-};
+} ISANE2000State;
 
 static NetClientInfo net_ne2000_isa_info = {
     .type = NET_CLIENT_DRIVER_NIC,
@@ -68,7 +67,7 @@ static void isa_ne2000_realizefn(DeviceState *dev, Error **errp)
     ne2000_setup_io(s, DEVICE(isadev), 0x20);
     isa_register_ioport(isadev, &s->io, isa->iobase);
 
-    s->irq = isa_get_irq(isadev, isa->isairq);
+    isa_init_irq(isadev, &s->irq, isa->isairq);
 
     qemu_macaddr_default_if_unset(&s->c.macaddr);
     ne2000_reset(s);

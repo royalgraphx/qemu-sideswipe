@@ -8,7 +8,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
-#include "XenSmbiosPlatformDxe.h"
+#include "SmbiosPlatformDxe.h"
 
 /**
   Locates the Xen SMBIOS data if it exists

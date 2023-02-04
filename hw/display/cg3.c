@@ -24,7 +24,7 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/datadir.h"
+#include "qemu-common.h"
 #include "qapi/error.h"
 #include "qemu/error-report.h"
 #include "ui/console.h"
@@ -36,7 +36,6 @@
 #include "qemu/log.h"
 #include "qemu/module.h"
 #include "trace.h"
-#include "qom/object.h"
 
 /* Change to 1 to enable debugging */
 #define DEBUG_CG3 0
@@ -66,9 +65,9 @@
 #define CG3_VRAM_OFFSET 0x800000
 
 #define TYPE_CG3 "cgthree"
-OBJECT_DECLARE_SIMPLE_TYPE(CG3State, CG3)
+#define CG3(obj) OBJECT_CHECK(CG3State, (obj), TYPE_CG3)
 
-struct CG3State {
+typedef struct CG3State {
     SysBusDevice parent_obj;
 
     QemuConsole *con;
@@ -83,7 +82,7 @@ struct CG3State {
     uint8_t r[256], g[256], b[256];
     uint16_t width, height, depth;
     uint8_t dac_index, dac_state;
-};
+} CG3State;
 
 static void cg3_update_display(void *opaque)
 {

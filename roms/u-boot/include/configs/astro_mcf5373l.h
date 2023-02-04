@@ -38,6 +38,7 @@
 #error No card type defined!
 #endif
 
+/* Command line configuration */
 /*
  * CONFIG_RAM defines if u-boot is loaded via BDM (or started from
  * a different bootloader that has already performed RAM setup) or
@@ -56,6 +57,7 @@
 
 /* Timer */
 #define CONFIG_MCFTMR
+#undef CONFIG_MCFPIT
 
 /* I2C */
 #define CONFIG_SYS_I2C
@@ -107,6 +109,8 @@
  */
 
 #ifndef CONFIG_MONITOR_IS_IN_RAM
+#define CONFIG_ENV_OFFSET		0x1FF8000
+#define CONFIG_ENV_SECT_SIZE		0x8000
 #else
 /*
  * environment in RAM - This is used to use a single PC-based application
@@ -114,6 +118,8 @@
  * to execute the commands from the environment. Feedback is done via setting
  * and reading memory locations.
  */
+#define CONFIG_ENV_ADDR		0x40060000
+#define CONFIG_ENV_SECT_SIZE	0x8000
 #endif
 
 /* here we put our FPGA configuration... */
@@ -169,6 +175,9 @@
 /* End of user parameters to be customized */
 
 /* Defines memory range for test */
+
+#define CONFIG_SYS_MEMTEST_START	0x40020000
+#define CONFIG_SYS_MEMTEST_END		0x41ffffff
 
 /*
  * Low Level Configuration Settings

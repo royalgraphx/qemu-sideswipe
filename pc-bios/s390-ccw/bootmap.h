@@ -64,16 +64,11 @@ typedef struct BootMapTable {
     BootMapPointer entry[];
 } __attribute__ ((packed)) BootMapTable;
 
-typedef union ComponentEntryData {
-    uint64_t load_psw;
-    uint64_t load_addr;
-} ComponentEntryData;
-
 typedef struct ComponentEntry {
     ScsiBlockPtr data;
     uint8_t pad[7];
     uint8_t component_type;
-    ComponentEntryData compdat;
+    uint64_t load_address;
 } __attribute((packed)) ComponentEntry;
 
 typedef struct ComponentHeader {

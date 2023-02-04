@@ -1,5 +1,5 @@
 ## @file
-#  Initializes MemoryOverwriteRequestControlLock variable
+#  Initilizes MemoryOverwriteRequestControlLock variable
 #
 #  This module will add Variable Hook and allow MemoryOverwriteRequestControlLock variable set only once.
 #

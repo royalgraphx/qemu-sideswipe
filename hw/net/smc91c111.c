@@ -19,15 +19,14 @@
 #include "qemu/module.h"
 /* For crc32 */
 #include <zlib.h>
-#include "qom/object.h"
 
 /* Number of 2k memory pages available.  */
 #define NUM_PACKETS 4
 
 #define TYPE_SMC91C111 "smc91c111"
-OBJECT_DECLARE_SIMPLE_TYPE(smc91c111_state, SMC91C111)
+#define SMC91C111(obj) OBJECT_CHECK(smc91c111_state, (obj), TYPE_SMC91C111)
 
-struct smc91c111_state {
+typedef struct {
     SysBusDevice parent_obj;
 
     NICState *nic;
@@ -56,7 +55,7 @@ struct smc91c111_state {
     uint8_t int_level;
     uint8_t int_mask;
     MemoryRegion mmio;
-};
+} smc91c111_state;
 
 static const VMStateDescription vmstate_smc91c111 = {
     .name = "smc91c111",

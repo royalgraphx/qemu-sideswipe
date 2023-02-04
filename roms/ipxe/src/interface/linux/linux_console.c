@@ -150,7 +150,6 @@ static void linux_console_shutdown(int flags __unused)
 }
 
 struct startup_fn linux_console_startup_fn __startup_fn(STARTUP_EARLY) = {
-	.name = "linux_console",
 	.startup = linux_console_startup,
 	.shutdown = linux_console_shutdown,
 };

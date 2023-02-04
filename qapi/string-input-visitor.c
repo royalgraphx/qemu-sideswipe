@@ -332,7 +332,22 @@ static bool parse_type_bool(Visitor *v, const char *name, bool *obj,
     StringInputVisitor *siv = to_siv(v);
 
     assert(siv->lm == LM_NONE);
-    return qapi_bool_parse(name ? name : "null", siv->string, obj, errp);
+    if (!strcasecmp(siv->string, "on") ||
+        !strcasecmp(siv->string, "yes") ||
+        !strcasecmp(siv->string, "true")) {
+        *obj = true;
+        return true;
+    }
+    if (!strcasecmp(siv->string, "off") ||
+        !strcasecmp(siv->string, "no") ||
+        !strcasecmp(siv->string, "false")) {
+        *obj = false;
+        return true;
+    }
+
+    error_setg(errp, QERR_INVALID_PARAMETER_TYPE, name ? name : "null",
+               "boolean");
+    return false;
 }
 
 static bool parse_type_str(Visitor *v, const char *name, char **obj,

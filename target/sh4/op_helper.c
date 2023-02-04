@@ -29,9 +29,6 @@ void superh_cpu_do_unaligned_access(CPUState *cs, vaddr addr,
                                     MMUAccessType access_type,
                                     int mmu_idx, uintptr_t retaddr)
 {
-    CPUSH4State *env = cs->env_ptr;
-
-    env->tea = addr;
     switch (access_type) {
     case MMU_INST_FETCH:
     case MMU_DATA_LOAD:
@@ -40,8 +37,6 @@ void superh_cpu_do_unaligned_access(CPUState *cs, vaddr addr,
     case MMU_DATA_STORE:
         cs->exception_index = 0x100;
         break;
-    default:
-        g_assert_not_reached();
     }
     cpu_loop_exit_restore(cs, retaddr);
 }
@@ -57,9 +52,8 @@ void helper_ldtlb(CPUSH4State *env)
 #endif
 }
 
-static inline G_NORETURN
-void raise_exception(CPUSH4State *env, int index,
-                     uintptr_t retaddr)
+static inline void QEMU_NORETURN raise_exception(CPUSH4State *env, int index,
+                                                 uintptr_t retaddr)
 {
     CPUState *cs = env_cpu(env);
 
@@ -85,6 +79,11 @@ void helper_raise_fpu_disable(CPUSH4State *env)
 void helper_raise_slot_fpu_disable(CPUSH4State *env)
 {
     raise_exception(env, 0x820, 0);
+}
+
+void helper_debug(CPUSH4State *env)
+{
+    raise_exception(env, EXCP_DEBUG, 0);
 }
 
 void helper_sleep(CPUSH4State *env)
@@ -399,11 +398,9 @@ float32 helper_fsrra_FT(CPUSH4State *env, float32 t0)
     /* "Approximate" 1/sqrt(x) via actual computation.  */
     t0 = float32_sqrt(t0, &env->fp_status);
     t0 = float32_div(float32_one, t0, &env->fp_status);
-    /*
-     * Since this is supposed to be an approximation, an imprecision
-     * exception is required.  One supposes this also follows the usual
-     * IEEE rule that other exceptions take precedence.
-     */
+    /* Since this is supposed to be an approximation, an imprecision
+       exception is required.  One supposes this also follows the usual
+       IEEE rule that other exceptions take precidence.  */
     if (get_float_exception_flags(&env->fp_status) == 0) {
         set_float_exception_flags(float_flag_inexact, &env->fp_status);
     }

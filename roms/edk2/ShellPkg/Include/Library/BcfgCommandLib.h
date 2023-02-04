@@ -43,3 +43,4 @@ BcfgLibraryUnregisterBcfgCommand (
   );
 
 #endif
+

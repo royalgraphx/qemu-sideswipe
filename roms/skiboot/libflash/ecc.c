@@ -1,9 +1,20 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * This is based on the hostboot ecc code
+/* Copyright 2013-2014 IBM Corp.
  *
- * Copyright 2013-2019 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
+/* This is based on the hostboot ecc code */
 
 #include <stdint.h>
 #include <inttypes.h>
@@ -142,32 +153,28 @@ static inline uint64_t eccflipbit(uint64_t data, uint8_t bit)
 	return data ^ (1ul << (63 - bit));
 }
 
-static int eccbyte(beint64_t *dst, struct ecc64 *src)
+static int eccbyte(uint64_t *dst, struct ecc64 *src)
 {
 	uint8_t ecc, badbit;
 	uint64_t data;
 
-	data = be64_to_cpu(src->data);
+	data = src->data;
 	ecc = src->ecc;
 
-	badbit = eccverify(data, ecc);
+	badbit = eccverify(be64_to_cpu(data), ecc);
 	if (badbit == UE) {
-		FL_ERR("ECC: uncorrectable error: %016llx %02x\n", (unsigned long long int)data, ecc);
+		FL_ERR("ECC: uncorrectable error: %016lx %02x\n",
+				(long unsigned int)be64_to_cpu(data), ecc);
 		return badbit;
 	}
+	*dst = data;
 	if (badbit <= UE)
 		FL_INF("ECC: correctable error: %i\n", badbit);
 	if (badbit < 64)
-		*dst = cpu_to_be64(eccflipbit(data, badbit));
-	else
-		*dst = cpu_to_be64(data);
+		*dst = (uint64_t)be64_to_cpu(eccflipbit(be64_to_cpu(data),
+					badbit));
 
 	return 0;
-}
-
-static beint64_t *inc_beint64_by(const void *p, uint64_t i)
-{
-	return (beint64_t *)(((char *)p) + i);
 }
 
 static uint64_t *inc_uint64_by(const void *p, uint64_t i)
@@ -204,7 +211,7 @@ static uint64_t whole_ecc_structs(uint64_t i)
  * @retval: 0 - success
  * @retfal: other - fail
  */
-int memcpy_from_ecc(beint64_t *dst, struct ecc64 *src, uint64_t len)
+int memcpy_from_ecc(uint64_t *dst, struct ecc64 *src, uint64_t len)
 {
 	uint32_t i;
 
@@ -260,7 +267,7 @@ int memcpy_from_ecc(beint64_t *dst, struct ecc64 *src, uint64_t len)
  * @retval: 0 - success
  * @retfal: other - fail
  */
-int memcpy_from_ecc_unaligned(beint64_t *dst, struct ecc64 *src,
+int memcpy_from_ecc_unaligned(uint64_t *dst, struct ecc64 *src,
 		uint64_t len, uint8_t alignment)
 {
 	char data[BYTES_PER_ECC];
@@ -277,14 +284,14 @@ int memcpy_from_ecc_unaligned(beint64_t *dst, struct ecc64 *src,
 	 * required - otherwise jump straight to memcpy_from_ecc()
 	 */
 	if (alignment) {
-		rc = eccbyte((beint64_t *)data, src);
+		rc = eccbyte((uint64_t *)data, src);
 		if (rc)
 			return rc;
 
 		memcpy(dst, &data[alignment], bytes_wanted);
 
 		src = inc_ecc64_by(src, sizeof(struct ecc64));
-		dst = inc_beint64_by(dst, bytes_wanted);
+		dst = inc_uint64_by(dst, bytes_wanted);
 		len -= bytes_wanted;
 	}
 
@@ -303,7 +310,7 @@ int memcpy_from_ecc_unaligned(beint64_t *dst, struct ecc64 *src,
 	}
 
 	if (len) {
-		rc = eccbyte((beint64_t *)data, src);
+		rc = eccbyte((uint64_t *)data, src);
 		if (rc)
 			return rc;
 
@@ -327,7 +334,7 @@ int memcpy_from_ecc_unaligned(beint64_t *dst, struct ecc64 *src,
  * @retval: 0 - success
  * @retfal: other - fail
  */
-int memcpy_to_ecc(struct ecc64 *dst, const beint64_t *src, uint64_t len)
+int memcpy_to_ecc(struct ecc64 *dst, const uint64_t *src, uint64_t len)
 {
 	struct ecc64 ecc_word;
 	uint64_t i;
@@ -394,7 +401,7 @@ int memcpy_to_ecc(struct ecc64 *dst, const beint64_t *src, uint64_t len)
  * @retfal: other - fail
  */
 
-int memcpy_to_ecc_unaligned(struct ecc64 *dst, const beint64_t *src,
+int memcpy_to_ecc_unaligned(struct ecc64 *dst, const uint64_t *src,
 		uint64_t len, uint8_t alignment)
 {
 	struct ecc64 ecc_word;
@@ -416,7 +423,7 @@ int memcpy_to_ecc_unaligned(struct ecc64 *dst, const beint64_t *src,
 				sizeof(struct ecc64) - alignment);
 
 		dst = inc_ecc64_by(dst, sizeof(struct ecc64) - alignment);
-		src = inc_beint64_by(src, bytes_wanted);
+		src = inc_uint64_by(src, bytes_wanted);
 		len -= bytes_wanted;
 	}
 

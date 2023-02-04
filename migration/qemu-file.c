@@ -23,7 +23,6 @@
  */
 #include "qemu/osdep.h"
 #include <zlib.h>
-#include "qemu/madvise.h"
 #include "qemu/error-report.h"
 #include "qemu/iov.h"
 #include "migration.h"
@@ -35,24 +34,15 @@
 #define MAX_IOV_SIZE MIN_CONST(IOV_MAX, 64)
 
 struct QEMUFile {
+    const QEMUFileOps *ops;
     const QEMUFileHooks *hooks;
-    QIOChannel *ioc;
-    bool is_writable;
+    void *opaque;
 
-    /*
-     * Maximum amount of data in bytes to transfer during one
-     * rate limiting time window
-     */
-    int64_t rate_limit_max;
-    /*
-     * Total amount of data in bytes queued for transfer
-     * during this rate limiting time window
-     */
-    int64_t rate_limit_used;
+    int64_t bytes_xfer;
+    int64_t xfer_limit;
 
-    /* The sum of bytes transferred on the wire */
-    int64_t total_transferred;
-
+    int64_t pos; /* start of buffer when writing, end of buffer
+                    when reading */
     int buf_index;
     int buf_size; /* 0 when writing */
     uint8_t buf[IO_BUF_SIZE];
@@ -70,49 +60,33 @@ struct QEMUFile {
 /*
  * Stop a file from being read/written - not all backing files can do this
  * typically only sockets can.
- *
- * TODO: convert to propagate Error objects instead of squashing
- * to a fixed errno value
  */
 int qemu_file_shutdown(QEMUFile *f)
 {
-    int ret = 0;
+    int ret;
 
     f->shutdown = true;
+    if (!f->ops->shut_down) {
+        return -ENOSYS;
+    }
+    ret = f->ops->shut_down(f->opaque, true, true, NULL);
 
-    /*
-     * We must set qemufile error before the real shutdown(), otherwise
-     * there can be a race window where we thought IO all went though
-     * (because last_error==NULL) but actually IO has already stopped.
-     *
-     * If without correct ordering, the race can happen like this:
-     *
-     *      page receiver                     other thread
-     *      -------------                     ------------
-     *      qemu_get_buffer()
-     *                                        do shutdown()
-     *        returns 0 (buffer all zero)
-     *        (we didn't check this retcode)
-     *      try to detect IO error
-     *        last_error==NULL, IO okay
-     *      install ALL-ZERO page
-     *                                        set last_error
-     *      --> guest crash!
-     */
     if (!f->last_error) {
         qemu_file_set_error(f, -EIO);
     }
-
-    if (!qio_channel_has_feature(f->ioc,
-                                 QIO_CHANNEL_FEATURE_SHUTDOWN)) {
-        return -ENOSYS;
-    }
-
-    if (qio_channel_shutdown(f->ioc, QIO_CHANNEL_SHUTDOWN_BOTH, NULL) < 0) {
-        ret = -EIO;
-    }
-
     return ret;
+}
+
+/*
+ * Result: QEMUFile* for a 'return path' for comms in the opposite direction
+ *         NULL if not available
+ */
+QEMUFile *qemu_file_get_return_path(QEMUFile *f)
+{
+    if (!f->ops->get_return_path) {
+        return NULL;
+    }
+    return f->ops->get_return_path(f->opaque);
 }
 
 bool qemu_file_mode_is_not_valid(const char *mode)
@@ -127,37 +101,17 @@ bool qemu_file_mode_is_not_valid(const char *mode)
     return false;
 }
 
-static QEMUFile *qemu_file_new_impl(QIOChannel *ioc, bool is_writable)
+QEMUFile *qemu_fopen_ops(void *opaque, const QEMUFileOps *ops)
 {
     QEMUFile *f;
 
     f = g_new0(QEMUFile, 1);
 
-    object_ref(ioc);
-    f->ioc = ioc;
-    f->is_writable = is_writable;
-
+    f->opaque = opaque;
+    f->ops = ops;
     return f;
 }
 
-/*
- * Result: QEMUFile* for a 'return path' for comms in the opposite direction
- *         NULL if not available
- */
-QEMUFile *qemu_file_get_return_path(QEMUFile *f)
-{
-    return qemu_file_new_impl(f->ioc, !f->is_writable);
-}
-
-QEMUFile *qemu_file_new_output(QIOChannel *ioc)
-{
-    return qemu_file_new_impl(ioc, true);
-}
-
-QEMUFile *qemu_file_new_input(QIOChannel *ioc)
-{
-    return qemu_file_new_impl(ioc, false);
-}
 
 void qemu_file_set_hooks(QEMUFile *f, const QEMUFileHooks *hooks)
 {
@@ -179,33 +133,6 @@ int qemu_file_get_error_obj(QEMUFile *f, Error **errp)
         *errp = f->last_error_obj ? error_copy(f->last_error_obj) : NULL;
     }
     return f->last_error;
-}
-
-/*
- * Get last error for either stream f1 or f2 with optional Error*.
- * The error returned (non-zero) can be either from f1 or f2.
- *
- * If any of the qemufile* is NULL, then skip the check on that file.
- *
- * When there is no error on both qemufile, zero is returned.
- */
-int qemu_file_get_error_obj_any(QEMUFile *f1, QEMUFile *f2, Error **errp)
-{
-    int ret = 0;
-
-    if (f1) {
-        ret = qemu_file_get_error_obj(f1, errp);
-        /* If there's already error detected, return */
-        if (ret) {
-            return ret;
-        }
-    }
-
-    if (f2) {
-        ret = qemu_file_get_error_obj(f2, errp);
-    }
-
-    return ret;
 }
 
 /*
@@ -243,7 +170,7 @@ void qemu_file_set_error(QEMUFile *f, int ret)
 
 bool qemu_file_is_writable(QEMUFile *f)
 {
-    return f->is_writable;
+    return f->ops->writev_buffer;
 }
 
 static void qemu_iovec_release_ram(QEMUFile *f)
@@ -281,7 +208,6 @@ static void qemu_iovec_release_ram(QEMUFile *f)
     memset(f->may_free, 0, sizeof(f->may_free));
 }
 
-
 /**
  * Flushes QEMUFile buffer
  *
@@ -290,6 +216,10 @@ static void qemu_iovec_release_ram(QEMUFile *f)
  */
 void qemu_fflush(QEMUFile *f)
 {
+    ssize_t ret = 0;
+    ssize_t expect = 0;
+    Error *local_error = NULL;
+
     if (!qemu_file_is_writable(f)) {
         return;
     }
@@ -298,18 +228,22 @@ void qemu_fflush(QEMUFile *f)
         return;
     }
     if (f->iovcnt > 0) {
-        Error *local_error = NULL;
-        if (qio_channel_writev_all(f->ioc,
-                                   f->iov, f->iovcnt,
-                                   &local_error) < 0) {
-            qemu_file_set_error_obj(f, -EIO, local_error);
-        } else {
-            f->total_transferred += iov_size(f->iov, f->iovcnt);
-        }
+        expect = iov_size(f->iov, f->iovcnt);
+        ret = f->ops->writev_buffer(f->opaque, f->iov, f->iovcnt, f->pos,
+                                    &local_error);
 
         qemu_iovec_release_ram(f);
     }
 
+    if (ret >= 0) {
+        f->pos += ret;
+    }
+    /* We expect the QEMUFile write impl to send the full
+     * data set we requested, so sanity check that.
+     */
+    if (ret != expect) {
+        qemu_file_set_error_obj(f, ret < 0 ? ret : -EIO, local_error);
+    }
     f->buf_index = 0;
     f->iovcnt = 0;
 }
@@ -319,7 +253,7 @@ void ram_control_before_iterate(QEMUFile *f, uint64_t flags)
     int ret = 0;
 
     if (f->hooks && f->hooks->before_ram_iterate) {
-        ret = f->hooks->before_ram_iterate(f, flags, NULL);
+        ret = f->hooks->before_ram_iterate(f, f->opaque, flags, NULL);
         if (ret < 0) {
             qemu_file_set_error(f, ret);
         }
@@ -331,7 +265,7 @@ void ram_control_after_iterate(QEMUFile *f, uint64_t flags)
     int ret = 0;
 
     if (f->hooks && f->hooks->after_ram_iterate) {
-        ret = f->hooks->after_ram_iterate(f, flags, NULL);
+        ret = f->hooks->after_ram_iterate(f, f->opaque, flags, NULL);
         if (ret < 0) {
             qemu_file_set_error(f, ret);
         }
@@ -343,7 +277,7 @@ void ram_control_load_hook(QEMUFile *f, uint64_t flags, void *data)
     int ret = -EINVAL;
 
     if (f->hooks && f->hooks->hook_ram_load) {
-        ret = f->hooks->hook_ram_load(f, flags, data);
+        ret = f->hooks->hook_ram_load(f, f->opaque, flags, data);
         if (ret < 0) {
             qemu_file_set_error(f, ret);
         }
@@ -363,16 +297,16 @@ size_t ram_control_save_page(QEMUFile *f, ram_addr_t block_offset,
                              uint64_t *bytes_sent)
 {
     if (f->hooks && f->hooks->save_page) {
-        int ret = f->hooks->save_page(f, block_offset,
+        int ret = f->hooks->save_page(f, f->opaque, block_offset,
                                       offset, size, bytes_sent);
         if (ret != RAM_SAVE_CONTROL_NOT_SUPP) {
-            f->rate_limit_used += size;
+            f->bytes_xfer += size;
         }
 
         if (ret != RAM_SAVE_CONTROL_DELAYED &&
             ret != RAM_SAVE_CONTROL_NOT_SUPP) {
             if (bytes_sent && *bytes_sent > 0) {
-                qemu_file_credit_transfer(f, *bytes_sent);
+                qemu_update_position(f, *bytes_sent);
             } else if (ret < 0) {
                 qemu_file_set_error(f, ret);
             }
@@ -411,37 +345,25 @@ static ssize_t qemu_fill_buffer(QEMUFile *f)
         return 0;
     }
 
-    do {
-        len = qio_channel_read(f->ioc,
-                               (char *)f->buf + pending,
-                               IO_BUF_SIZE - pending,
-                               &local_error);
-        if (len == QIO_CHANNEL_ERR_BLOCK) {
-            if (qemu_in_coroutine()) {
-                qio_channel_yield(f->ioc, G_IO_IN);
-            } else {
-                qio_channel_wait(f->ioc, G_IO_IN);
-            }
-        } else if (len < 0) {
-            len = -EIO;
-        }
-    } while (len == QIO_CHANNEL_ERR_BLOCK);
-
+    len = f->ops->get_buffer(f->opaque, f->buf + pending, f->pos,
+                             IO_BUF_SIZE - pending, &local_error);
     if (len > 0) {
         f->buf_size += len;
-        f->total_transferred += len;
+        f->pos += len;
     } else if (len == 0) {
         qemu_file_set_error_obj(f, -EIO, local_error);
-    } else {
+    } else if (len != -EAGAIN) {
         qemu_file_set_error_obj(f, len, local_error);
+    } else {
+        error_free(local_error);
     }
 
     return len;
 }
 
-void qemu_file_credit_transfer(QEMUFile *f, size_t size)
+void qemu_update_position(QEMUFile *f, size_t size)
 {
-    f->total_transferred += size;
+    f->pos += size;
 }
 
 /** Closes the file
@@ -454,16 +376,16 @@ void qemu_file_credit_transfer(QEMUFile *f, size_t size)
  */
 int qemu_fclose(QEMUFile *f)
 {
-    int ret, ret2;
+    int ret;
     qemu_fflush(f);
     ret = qemu_file_get_error(f);
 
-    ret2 = qio_channel_close(f->ioc, NULL);
-    if (ret >= 0) {
-        ret = ret2;
+    if (f->ops->close) {
+        int ret2 = f->ops->close(f->opaque, NULL);
+        if (ret >= 0) {
+            ret = ret2;
+        }
     }
-    g_clear_pointer(&f->ioc, object_unref);
-
     /* If any error was spotted before closing, we should report it
      * instead of the close() return value.
      */
@@ -494,11 +416,6 @@ static int add_to_iovec(QEMUFile *f, const uint8_t *buf, size_t size,
     {
         f->iov[f->iovcnt - 1].iov_len += size;
     } else {
-        if (f->iovcnt >= MAX_IOV_SIZE) {
-            /* Should only happen if a previous fflush failed */
-            assert(f->shutdown || !qemu_file_is_writable(f));
-            return 1;
-        }
         if (may_free) {
             set_bit(f->iovcnt, f->may_free);
         }
@@ -531,7 +448,7 @@ void qemu_put_buffer_async(QEMUFile *f, const uint8_t *buf, size_t size,
         return;
     }
 
-    f->rate_limit_used += size;
+    f->bytes_xfer += size;
     add_to_iovec(f, buf, size, may_free);
 }
 
@@ -549,7 +466,7 @@ void qemu_put_buffer(QEMUFile *f, const uint8_t *buf, size_t size)
             l = size;
         }
         memcpy(f->buf + f->buf_index, buf, l);
-        f->rate_limit_used += l;
+        f->bytes_xfer += l;
         add_buf_to_iovec(f, l);
         if (qemu_file_get_error(f)) {
             break;
@@ -566,7 +483,7 @@ void qemu_put_byte(QEMUFile *f, int v)
     }
 
     f->buf[f->buf_index] = v;
-    f->rate_limit_used++;
+    f->bytes_xfer++;
     add_buf_to_iovec(f, 1);
 }
 
@@ -678,7 +595,7 @@ size_t qemu_get_buffer_in_place(QEMUFile *f, uint8_t **buf, size_t size)
 {
     if (size < IO_BUF_SIZE) {
         size_t res;
-        uint8_t *src = NULL;
+        uint8_t *src;
 
         res = qemu_peek_buffer(f, &src, size, 0);
 
@@ -722,9 +639,9 @@ int qemu_get_byte(QEMUFile *f)
     return result;
 }
 
-int64_t qemu_file_total_transferred_fast(QEMUFile *f)
+int64_t qemu_ftell_fast(QEMUFile *f)
 {
-    int64_t ret = f->total_transferred;
+    int64_t ret = f->pos;
     int i;
 
     for (i = 0; i < f->iovcnt; i++) {
@@ -734,10 +651,10 @@ int64_t qemu_file_total_transferred_fast(QEMUFile *f)
     return ret;
 }
 
-int64_t qemu_file_total_transferred(QEMUFile *f)
+int64_t qemu_ftell(QEMUFile *f)
 {
     qemu_fflush(f);
-    return f->total_transferred;
+    return f->pos;
 }
 
 int qemu_file_rate_limit(QEMUFile *f)
@@ -748,7 +665,7 @@ int qemu_file_rate_limit(QEMUFile *f)
     if (qemu_file_get_error(f)) {
         return 1;
     }
-    if (f->rate_limit_max > 0 && f->rate_limit_used > f->rate_limit_max) {
+    if (f->xfer_limit > 0 && f->bytes_xfer > f->xfer_limit) {
         return 1;
     }
     return 0;
@@ -756,22 +673,22 @@ int qemu_file_rate_limit(QEMUFile *f)
 
 int64_t qemu_file_get_rate_limit(QEMUFile *f)
 {
-    return f->rate_limit_max;
+    return f->xfer_limit;
 }
 
 void qemu_file_set_rate_limit(QEMUFile *f, int64_t limit)
 {
-    f->rate_limit_max = limit;
+    f->xfer_limit = limit;
 }
 
 void qemu_file_reset_rate_limit(QEMUFile *f)
 {
-    f->rate_limit_used = 0;
+    f->bytes_xfer = 0;
 }
 
-void qemu_file_acct_rate_limit(QEMUFile *f, int64_t len)
+void qemu_file_update_transfer(QEMUFile *f, int64_t len)
 {
-    f->rate_limit_used += len;
+    f->bytes_xfer += len;
 }
 
 void qemu_put_be16(QEMUFile *f, unsigned int v)
@@ -925,18 +842,7 @@ void qemu_put_counted_string(QEMUFile *f, const char *str)
  */
 void qemu_file_set_blocking(QEMUFile *f, bool block)
 {
-    qio_channel_set_blocking(f->ioc, block, NULL);
-}
-
-/*
- * qemu_file_get_ioc:
- *
- * Get the ioc object for the file, without incrementing
- * the reference count.
- *
- * Returns: the ioc object
- */
-QIOChannel *qemu_file_get_ioc(QEMUFile *file)
-{
-    return file->ioc;
+    if (f->ops->set_blocking) {
+        f->ops->set_blocking(f->opaque, block, NULL);
+    }
 }

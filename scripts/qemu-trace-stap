@@ -55,6 +55,11 @@ def tapset_dir(binary):
     return os.path.realpath(tapset)
 
 
+def tapset_env(tapset_dir):
+    tenv = copy.copy(os.environ)
+    tenv["SYSTEMTAP_TAPSET"] = tapset_dir
+    return tenv
+
 def cmd_run(args):
     prefix = probe_prefix(args.binary)
     tapsets = tapset_dir(args.binary)
@@ -76,11 +81,11 @@ def cmd_run(args):
 
     # We request an 8MB buffer, since the stap default 1MB buffer
     # can be easily overflowed by frequently firing QEMU traces
-    stapargs = ["stap", "-s", "8", "-I", tapsets ]
+    stapargs = ["stap", "-s", "8"]
     if args.pid is not None:
         stapargs.extend(["-x", args.pid])
     stapargs.extend(["-e", script])
-    subprocess.call(stapargs)
+    subprocess.call(stapargs, env=tapset_env(tapsets))
 
 
 def cmd_list(args):
@@ -96,9 +101,10 @@ def cmd_list(args):
 
         if verbose:
             print("Listing probes with name '%s'" % script)
-        proc = subprocess.Popen(["stap", "-I", tapsets, "-l", script],
+        proc = subprocess.Popen(["stap", "-l", script],
                                 stdout=subprocess.PIPE,
-                                universal_newlines=True)
+                                universal_newlines=True,
+                                env=tapset_env(tapsets))
         out, err = proc.communicate()
         if proc.returncode != 0:
             print("No probes found, are the tapsets installed in %s" % tapset_dir(args.binary))

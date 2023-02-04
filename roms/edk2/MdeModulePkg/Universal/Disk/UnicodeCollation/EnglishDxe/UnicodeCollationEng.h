@@ -9,6 +9,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef _UNICODE_COLLATION_ENG_H_
 #define _UNICODE_COLLATION_ENG_H_
 
+
+
 #include <Uefi.h>
 
 #include <Protocol/UnicodeCollation.h>
@@ -31,17 +33,16 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 // Macro to map character a to upper case.
 //
-#define TO_UPPER(a)  (CHAR16) ((a) <= 0xFF ? mEngUpperMap[a] : (a))
+#define TO_UPPER(a)      (CHAR16) ((a) <= 0xFF ? mEngUpperMap[a] : (a))
 
 //
 // Macro to map character a to lower case.
 //
-#define TO_LOWER(a)  (CHAR16) ((a) <= 0xFF ? mEngLowerMap[a] : (a))
+#define TO_LOWER(a)      (CHAR16) ((a) <= 0xFF ? mEngLowerMap[a] : (a))
 
 //
 // Prototypes
 //
-
 /**
   Performs a case-insensitive comparison of two Null-terminated strings.
 
@@ -57,9 +58,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 INTN
 EFIAPI
 EngStriColl (
-  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
-  IN CHAR16                          *Str1,
-  IN CHAR16                          *Str2
+  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
+  IN CHAR16                           *Str1,
+  IN CHAR16                           *Str2
   );
 
 /**
@@ -77,9 +78,9 @@ EngStriColl (
 BOOLEAN
 EFIAPI
 EngMetaiMatch (
-  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
-  IN CHAR16                          *String,
-  IN CHAR16                          *Pattern
+  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
+  IN CHAR16                           *String,
+  IN CHAR16                           *Pattern
   );
 
 /**
@@ -93,8 +94,8 @@ EngMetaiMatch (
 VOID
 EFIAPI
 EngStrLwr (
-  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
-  IN OUT CHAR16                      *Str
+  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
+  IN OUT CHAR16                       *Str
   );
 
 /**
@@ -108,8 +109,8 @@ EngStrLwr (
 VOID
 EFIAPI
 EngStrUpr (
-  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
-  IN OUT CHAR16                      *Str
+  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
+  IN OUT CHAR16                       *Str
   );
 
 /**
@@ -126,10 +127,10 @@ EngStrUpr (
 VOID
 EFIAPI
 EngFatToStr (
-  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
-  IN UINTN                           FatSize,
-  IN CHAR8                           *Fat,
-  OUT CHAR16                         *String
+  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
+  IN UINTN                            FatSize,
+  IN CHAR8                            *Fat,
+  OUT CHAR16                          *String
   );
 
 /**
@@ -150,10 +151,10 @@ EngFatToStr (
 BOOLEAN
 EFIAPI
 EngStrToFat (
-  IN EFI_UNICODE_COLLATION_PROTOCOL  *This,
-  IN CHAR16                          *String,
-  IN UINTN                           FatSize,
-  OUT CHAR8                          *Fat
+  IN EFI_UNICODE_COLLATION_PROTOCOL   *This,
+  IN CHAR16                           *String,
+  IN UINTN                            FatSize,
+  OUT CHAR8                           *Fat
   );
 
 /**
@@ -172,8 +173,9 @@ EngStrToFat (
 EFI_STATUS
 EFIAPI
 InitializeUnicodeCollationEng (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE       ImageHandle,
+  IN EFI_SYSTEM_TABLE *SystemTable
   );
 
 #endif
+

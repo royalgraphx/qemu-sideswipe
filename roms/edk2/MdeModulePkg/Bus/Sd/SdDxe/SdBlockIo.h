@@ -26,8 +26,8 @@
 EFI_STATUS
 EFIAPI
 SdReset (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  BOOLEAN                ExtendedVerification
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  BOOLEAN                 ExtendedVerification
   );
 
 /**
@@ -43,7 +43,7 @@ SdReset (
   @retval EFI_SUCCESS           The data was read correctly from the device.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the read.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHANGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The read request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -56,7 +56,7 @@ SdReadBlocks (
   IN     UINT32                 MediaId,
   IN     EFI_LBA                Lba,
   IN     UINTN                  BufferSize,
-  OUT VOID                      *Buffer
+     OUT VOID                   *Buffer
   );
 
 /**
@@ -73,7 +73,7 @@ SdReadBlocks (
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -82,11 +82,11 @@ SdReadBlocks (
 EFI_STATUS
 EFIAPI
 SdWriteBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  UINT32                 MediaId,
-  IN  EFI_LBA                Lba,
-  IN  UINTN                  BufferSize,
-  IN  VOID                   *Buffer
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  UINT32                  MediaId,
+  IN  EFI_LBA                 Lba,
+  IN  UINTN                   BufferSize,
+  IN  VOID                    *Buffer
   );
 
 /**
@@ -102,7 +102,7 @@ SdWriteBlocks (
 EFI_STATUS
 EFIAPI
 SdFlushBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This
+  IN  EFI_BLOCK_IO_PROTOCOL   *This
   );
 
 /**
@@ -152,12 +152,12 @@ SdResetEx (
 EFI_STATUS
 EFIAPI
 SdReadBlocksEx (
-  IN     EFI_BLOCK_IO2_PROTOCOL  *This,
-  IN     UINT32                  MediaId,
-  IN     EFI_LBA                 Lba,
-  IN OUT EFI_BLOCK_IO2_TOKEN     *Token,
-  IN     UINTN                   BufferSize,
-  OUT VOID                       *Buffer
+  IN     EFI_BLOCK_IO2_PROTOCOL *This,
+  IN     UINT32                 MediaId,
+  IN     EFI_LBA                Lba,
+  IN OUT EFI_BLOCK_IO2_TOKEN    *Token,
+  IN     UINTN                  BufferSize,
+     OUT VOID                   *Buffer
   );
 
 /**
@@ -176,7 +176,7 @@ SdReadBlocksEx (
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -185,12 +185,12 @@ SdReadBlocksEx (
 EFI_STATUS
 EFIAPI
 SdWriteBlocksEx (
-  IN     EFI_BLOCK_IO2_PROTOCOL  *This,
-  IN     UINT32                  MediaId,
-  IN     EFI_LBA                 Lba,
-  IN OUT EFI_BLOCK_IO2_TOKEN     *Token,
-  IN     UINTN                   BufferSize,
-  IN     VOID                    *Buffer
+  IN     EFI_BLOCK_IO2_PROTOCOL *This,
+  IN     UINT32                 MediaId,
+  IN     EFI_LBA                Lba,
+  IN OUT EFI_BLOCK_IO2_TOKEN    *Token,
+  IN     UINTN                  BufferSize,
+  IN     VOID                   *Buffer
   );
 
 /**
@@ -241,11 +241,12 @@ SdFlushBlocksEx (
 EFI_STATUS
 EFIAPI
 SdEraseBlocks (
-  IN     EFI_ERASE_BLOCK_PROTOCOL  *This,
-  IN     UINT32                    MediaId,
-  IN     EFI_LBA                   Lba,
-  IN OUT EFI_ERASE_BLOCK_TOKEN     *Token,
-  IN     UINTN                     Size
+  IN     EFI_ERASE_BLOCK_PROTOCOL      *This,
+  IN     UINT32                        MediaId,
+  IN     EFI_LBA                       Lba,
+  IN OUT EFI_ERASE_BLOCK_TOKEN         *Token,
+  IN     UINTN                         Size
   );
 
 #endif
+

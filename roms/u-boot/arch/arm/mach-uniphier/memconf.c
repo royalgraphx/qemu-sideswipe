@@ -5,6 +5,7 @@
  *   Author: Masahiro Yamada <yamada.masahiro@socionext.com>
  */
 
+#include <common.h>
 #include <linux/errno.h>
 #include <linux/io.h>
 #include <linux/sizes.h>
@@ -139,7 +140,7 @@ static int __uniphier_memconf_init(const struct uniphier_board_data *bd,
 	}
 
 out:
-	writel(val, sg_base + SG_MEMCONF);
+	writel(val, SG_MEMCONF);
 
 	return 0;
 }

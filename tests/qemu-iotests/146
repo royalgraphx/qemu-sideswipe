@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: quick
 #
 # Test VHD image format creator detection and override
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=codyprime@gmail.com
+owner=jcody@redhat.com
 
 seq=`basename $0`
 echo "QA output created by $seq"

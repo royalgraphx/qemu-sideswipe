@@ -11,7 +11,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <Protocol/MpService.h>
 #include <Protocol/SmmCpu.h>
-#include <Register/Intel/SmramSaveStateMap.h>
+#include <Register/SmramSaveStateMap.h>
 #include <CpuHotPlugData.h>
 
 ///
@@ -338,7 +338,7 @@ SmmCpuFeaturesSetSmmRegister (
                         from the save state.
 
   @retval EFI_SUCCESS           The register was read from Save State.
-  @retval EFI_INVALID_PARAMETER  Buffer is NULL.
+  @retval EFI_INVALID_PARAMTER  Buffer is NULL.
   @retval EFI_UNSUPPORTED       This function does not support reading Register.
 
 **/
@@ -364,7 +364,7 @@ SmmCpuFeaturesReadSaveStateRegister (
   @param[in] Buffer    Upon entry, this holds the new CPU register value.
 
   @retval EFI_SUCCESS           The register was written to Save State.
-  @retval EFI_INVALID_PARAMETER  Buffer is NULL.
+  @retval EFI_INVALID_PARAMTER  Buffer is NULL.
   @retval EFI_UNSUPPORTED       This function does not support writing Register.
 **/
 EFI_STATUS
@@ -408,7 +408,7 @@ SmmCpuFeaturesCompleteSmmReadyToLock (
 VOID *
 EFIAPI
 SmmCpuFeaturesAllocatePageTableMemory (
-  IN UINTN  Pages
+  IN UINTN           Pages
   );
 
 #endif

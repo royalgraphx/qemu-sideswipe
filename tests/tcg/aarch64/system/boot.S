@@ -197,7 +197,6 @@ __start:
 	bl	main
 
 	/* pass return value to sys exit */
-_exit:
 	mov    x1, x0
 	ldr    x0, =0x20026 /* ADP_Stopped_ApplicationExit */
 	stp    x0, x1, [sp, #-16]!

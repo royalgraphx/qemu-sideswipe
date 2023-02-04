@@ -9,17 +9,15 @@
 from collections import OrderedDict
 import os
 
-from binman.entry import EntryArg
-from binman.etype.collection import Entry_collection
+from entry import Entry, EntryArg
 
-from dtoc import fdt_util
-from patman import tools
+import fdt_util
+import tools
 
-class Entry_vblock(Entry_collection):
+class Entry_vblock(Entry):
     """An entry which contains a Chromium OS verified boot block
 
     Properties / Entry arguments:
-        - content: List of phandles to entries to sign
         - keydir: Directory containing the public keys to use
         - keyblock: Name of the key file to use (inside keydir)
         - signprivate: Name of provide key file to use (inside keydir)
@@ -37,7 +35,10 @@ class Entry_vblock(Entry_collection):
     and kernel are genuine.
     """
     def __init__(self, section, etype, node):
-        super().__init__(section, etype, node)
+        Entry.__init__(self, section, etype, node)
+        self.content = fdt_util.GetPhandleList(self._node, 'content')
+        if not self.content:
+            self.Raise("Vblock must have a 'content' property")
         (self.keydir, self.keyblock, self.signprivate, self.version,
          self.kernelkey, self.preamble_flags) = self.GetEntryArgsOrProps([
             EntryArg('keydir', str),
@@ -47,21 +48,15 @@ class Entry_vblock(Entry_collection):
             EntryArg('kernelkey', str),
             EntryArg('preamble-flags', int)])
 
-    def GetVblock(self, required):
-        """Get the contents of this entry
-
-        Args:
-            required: True if the data must be present, False if it is OK to
-                return None
-
-        Returns:
-            bytes content of the entry, which is the signed vblock for the
-                provided data
-        """
+    def ObtainContents(self):
         # Join up the data files to be signed
-        input_data = self.GetContents(required)
-        if input_data is None:
-            return None
+        input_data = ''
+        for entry_phandle in self.content:
+            data = self.section.GetContentsByPhandle(entry_phandle, self)
+            if data is None:
+                # Data not available yet
+                return False
+            input_data += data
 
         uniq = self.GetUniqueName()
         output_fname = tools.GetOutputFilename('vblock.%s' % uniq)
@@ -80,16 +75,5 @@ class Entry_vblock(Entry_collection):
         ]
         #out.Notice("Sign '%s' into %s" % (', '.join(self.value), self.label))
         stdout = tools.Run('futility', *args)
-        return tools.ReadFile(output_fname)
-
-    def ObtainContents(self):
-        data = self.GetVblock(False)
-        if data is None:
-            return False
-        self.SetContents(data)
+        self.SetContents(tools.ReadFile(output_fname))
         return True
-
-    def ProcessContents(self):
-        # The blob may have changed due to WriteSymbols()
-        data = self.GetVblock(True)
-        return self.ProcessContentsUpdate(data)

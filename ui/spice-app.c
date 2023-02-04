@@ -27,7 +27,6 @@
 #include <gio/gio.h>
 
 #include "ui/console.h"
-#include "ui/spice-display.h"
 #include "qemu/config-file.h"
 #include "qemu/option.h"
 #include "qemu/cutils.h"
@@ -36,24 +35,17 @@
 #include "io/channel-command.h"
 #include "chardev/spice.h"
 #include "sysemu/sysemu.h"
-#include "qom/object.h"
 
 static const char *tmp_dir;
 static char *app_dir;
 static char *sock_path;
 
-struct VCChardev {
+typedef struct VCChardev {
     SpiceChardev parent;
-};
-
-struct VCChardevClass {
-    ChardevClass parent;
-    void (*parent_open)(Chardev *chr, ChardevBackend *backend,
-                        bool *be_opened, Error **errp);
-};
+} VCChardev;
 
 #define TYPE_CHARDEV_VC "chardev-vc"
-OBJECT_DECLARE_TYPE(VCChardev, VCChardevClass, CHARDEV_VC)
+#define VC_CHARDEV(obj) OBJECT_CHECK(VCChardev, (obj), TYPE_CHARDEV_VC)
 
 static ChardevBackend *
 chr_spice_backend_new(void)
@@ -71,7 +63,6 @@ static void vc_chr_open(Chardev *chr,
                         bool *be_opened,
                         Error **errp)
 {
-    VCChardevClass *vc = CHARDEV_VC_GET_CLASS(chr);
     ChardevBackend *be;
     const char *fqdn = NULL;
 
@@ -86,7 +77,7 @@ static void vc_chr_open(Chardev *chr,
     be = chr_spice_backend_new();
     be->u.spiceport.data->fqdn = fqdn ?
         g_strdup(fqdn) : g_strdup_printf("org.qemu.console.%s", chr->label);
-    vc->parent_open(chr, be, be_opened, errp);
+    qemu_chr_open_spice_port(chr, be, be_opened, errp);
     qapi_free_ChardevBackend(be);
 }
 
@@ -97,10 +88,7 @@ static void vc_chr_set_echo(Chardev *chr, bool echo)
 
 static void char_vc_class_init(ObjectClass *oc, void *data)
 {
-    VCChardevClass *vc = CHARDEV_VC_CLASS(oc);
     ChardevClass *cc = CHARDEV_CLASS(oc);
-
-    vc->parent_open = cc->open;
 
     cc->parse = qemu_chr_parse_vc;
     cc->open = vc_chr_open;
@@ -112,7 +100,6 @@ static const TypeInfo char_vc_type_info = {
     .parent = TYPE_CHARDEV_SPICEPORT,
     .instance_size = sizeof(VCChardev),
     .class_init = char_vc_class_init,
-    .class_size = sizeof(VCChardevClass),
 };
 
 static void spice_app_atexit(void)
@@ -130,7 +117,7 @@ static void spice_app_atexit(void)
 static void spice_app_display_early_init(DisplayOptions *opts)
 {
     QemuOpts *qopts;
-    QemuOptsList *list;
+    ChardevBackend *be = chr_spice_backend_new();
     GError *err = NULL;
 
     if (opts->has_full_screen) {
@@ -161,34 +148,20 @@ static void spice_app_display_early_init(DisplayOptions *opts)
             exit(1);
         }
     }
-    list = qemu_find_opts("spice");
-    if (list == NULL) {
-        error_report("spice-app missing spice support");
-        exit(1);
-    }
 
     type_register(&char_vc_type_info);
 
     sock_path = g_strjoin("", app_dir, "/", "spice.sock", NULL);
-    qopts = qemu_opts_create(list, NULL, 0, &error_abort);
+    qopts = qemu_opts_create(qemu_find_opts("spice"), NULL, 0, &error_abort);
     qemu_opt_set(qopts, "disable-ticketing", "on", &error_abort);
     qemu_opt_set(qopts, "unix", "on", &error_abort);
     qemu_opt_set(qopts, "addr", sock_path, &error_abort);
     qemu_opt_set(qopts, "image-compression", "off", &error_abort);
     qemu_opt_set(qopts, "streaming-video", "off", &error_abort);
-#ifdef HAVE_SPICE_GL
+#ifdef CONFIG_OPENGL
     qemu_opt_set(qopts, "gl", opts->has_gl ? "on" : "off", &error_abort);
     display_opengl = opts->has_gl;
 #endif
-}
-
-static void spice_app_display_init(DisplayState *ds, DisplayOptions *opts)
-{
-    ChardevBackend *be = chr_spice_backend_new();
-    QemuOpts *qopts;
-    GError *err = NULL;
-    gchar *uri;
-
     be->u.spiceport.data->fqdn = g_strdup("org.qemu.monitor.qmp.0");
     qemu_chardev_new("org.qemu.monitor.qmp", TYPE_CHARDEV_SPICEPORT,
                      be, NULL, &error_abort);
@@ -198,6 +171,13 @@ static void spice_app_display_init(DisplayState *ds, DisplayOptions *opts)
     qemu_opt_set(qopts, "mode", "control", &error_abort);
 
     qapi_free_ChardevBackend(be);
+}
+
+static void spice_app_display_init(DisplayState *ds, DisplayOptions *opts)
+{
+    GError *err = NULL;
+    gchar *uri;
+
     uri = g_strjoin("", "spice+unix://", app_dir, "/", "spice.sock", NULL);
     info_report("Launching display with URI: %s", uri);
     g_app_info_launch_default_for_uri(uri, NULL, &err);
@@ -222,6 +202,3 @@ static void register_spice_app(void)
 }
 
 type_init(register_spice_app);
-
-module_dep("ui-spice-core");
-module_dep("chardev-spice");

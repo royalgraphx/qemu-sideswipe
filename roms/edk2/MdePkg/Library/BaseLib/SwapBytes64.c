@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 #include "BaseLibInternals.h"
 
 /**
@@ -23,7 +26,7 @@
 UINT64
 EFIAPI
 SwapBytes64 (
-  IN      UINT64  Value
+  IN      UINT64                    Value
   )
 {
   return InternalMathSwapBytes64 (Value);

@@ -139,7 +139,6 @@ SpaprIrq spapr_irq_dual = {
 
 static int spapr_irq_check(SpaprMachineState *spapr, Error **errp)
 {
-    ERRP_GUARD();
     MachineState *machine = MACHINE(spapr);
 
     /*
@@ -172,7 +171,7 @@ static int spapr_irq_check(SpaprMachineState *spapr, Error **errp)
          * To cover both and not confuse the OS, add an early failure in
          * QEMU.
          */
-        if (!spapr->irq->xics) {
+        if (spapr->irq == &spapr_irq_xive) {
             error_setg(errp, "XIVE-only machines require a POWER9 CPU");
             return -1;
         }
@@ -180,19 +179,14 @@ static int spapr_irq_check(SpaprMachineState *spapr, Error **errp)
 
     /*
      * On a POWER9 host, some older KVM XICS devices cannot be destroyed and
-     * re-created. Same happens with KVM nested guests. Detect that early to
-     * avoid QEMU to exit later when the guest reboots.
+     * re-created. Detect that early to avoid QEMU to exit later when the
+     * guest reboots.
      */
     if (kvm_enabled() &&
         spapr->irq == &spapr_irq_dual &&
         kvm_kernel_irqchip_required() &&
-        xics_kvm_has_broken_disconnect()) {
-        error_setg(errp,
-            "KVM is incompatible with ic-mode=dual,kernel-irqchip=on");
-        error_append_hint(errp,
-            "This can happen with an old KVM or in a KVM nested guest.\n");
-        error_append_hint(errp,
-            "Try without kernel-irqchip or with kernel-irqchip=off.\n");
+        xics_kvm_has_broken_disconnect(spapr)) {
+        error_setg(errp, "KVM is too old to support ic-mode=dual,kernel-irqchip=on");
         return -1;
     }
 

@@ -370,14 +370,12 @@ const char * settings_name ( struct settings *settings ) {
 static struct settings *
 parse_settings_name ( const char *name, get_child_settings_t get_child ) {
 	struct settings *settings = &settings_root;
-	char *name_copy;
+	char name_copy[ strlen ( name ) + 1 ];
 	char *subname;
 	char *remainder;
 
 	/* Create modifiable copy of name */
-	name_copy = strdup ( name );
-	if ( ! name_copy )
-		return NULL;
+	memcpy ( name_copy, name, sizeof ( name_copy ) );
 	remainder = name_copy;
 
 	/* Parse each name component in turn */
@@ -390,9 +388,6 @@ parse_settings_name ( const char *name, get_child_settings_t get_child ) {
 		if ( ! settings )
 			break;
 	}
-
-	/* Free modifiable copy of name */
-	free ( name_copy );
 
 	return settings;
 }

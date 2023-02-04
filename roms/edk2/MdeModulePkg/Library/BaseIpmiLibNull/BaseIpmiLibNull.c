@@ -10,6 +10,7 @@
 #include <Library/DebugLib.h>
 #include <Library/IpmiLib.h>
 
+
 /**
   This service enables submitting commands via Ipmi.
 
@@ -31,12 +32,12 @@
 EFI_STATUS
 EFIAPI
 IpmiSubmitCommand (
-  IN     UINT8   NetFunction,
-  IN     UINT8   Command,
-  IN     UINT8   *RequestData,
-  IN     UINT32  RequestDataSize,
-  OUT UINT8      *ResponseData,
-  IN OUT UINT32  *ResponseDataSize
+  IN     UINT8     NetFunction,
+  IN     UINT8     Command,
+  IN     UINT8     *RequestData,
+  IN     UINT32    RequestDataSize,
+     OUT UINT8     *ResponseData,
+  IN OUT UINT32    *ResponseDataSize
   )
 {
   //

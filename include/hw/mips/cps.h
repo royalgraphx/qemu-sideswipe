@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,18 +21,16 @@
 #define MIPS_CPS_H
 
 #include "hw/sysbus.h"
-#include "hw/clock.h"
 #include "hw/misc/mips_cmgcr.h"
 #include "hw/intc/mips_gic.h"
 #include "hw/misc/mips_cpc.h"
 #include "hw/misc/mips_itu.h"
 #include "target/mips/cpu.h"
-#include "qom/object.h"
 
 #define TYPE_MIPS_CPS "mips-cps"
-OBJECT_DECLARE_SIMPLE_TYPE(MIPSCPSState, MIPS_CPS)
+#define MIPS_CPS(obj) OBJECT_CHECK(MIPSCPSState, (obj), TYPE_MIPS_CPS)
 
-struct MIPSCPSState {
+typedef struct MIPSCPSState {
     SysBusDevice parent_obj;
 
     uint32_t num_vp;
@@ -44,8 +42,7 @@ struct MIPSCPSState {
     MIPSGICState gic;
     MIPSCPCState cpc;
     MIPSITUState itu;
-    Clock *clock;
-};
+} MIPSCPSState;
 
 qemu_irq get_cps_irq(MIPSCPSState *cps, int pin_number);
 

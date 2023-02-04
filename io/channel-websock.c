@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -32,7 +32,7 @@
 
 #define QIO_CHANNEL_WEBSOCK_CLIENT_KEY_LEN 24
 #define QIO_CHANNEL_WEBSOCK_GUID "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-#define QIO_CHANNEL_WEBSOCK_GUID_LEN (sizeof(QIO_CHANNEL_WEBSOCK_GUID) - 1)
+#define QIO_CHANNEL_WEBSOCK_GUID_LEN strlen(QIO_CHANNEL_WEBSOCK_GUID)
 
 #define QIO_CHANNEL_WEBSOCK_HEADER_PROTOCOL "sec-websocket-protocol"
 #define QIO_CHANNEL_WEBSOCK_HEADER_VERSION "sec-websocket-version"
@@ -157,7 +157,7 @@ enum {
     QIO_CHANNEL_WEBSOCK_OPCODE_PONG = 0xA
 };
 
-static void G_GNUC_PRINTF(2, 3)
+static void GCC_FMT_ATTR(2, 3)
 qio_channel_websock_handshake_send_res(QIOChannelWebsock *ioc,
                                        const char *resmsg,
                                        ...)
@@ -177,9 +177,15 @@ qio_channel_websock_handshake_send_res(QIOChannelWebsock *ioc,
 
 static gchar *qio_channel_websock_date_str(void)
 {
-    g_autoptr(GDateTime) now = g_date_time_new_now_utc();
+    struct tm tm;
+    time_t now = time(NULL);
+    char datebuf[128];
 
-    return g_date_time_format(now, "%a, %d %b %Y %H:%M:%S GMT");
+    gmtime_r(&now, &tm);
+
+    strftime(datebuf, sizeof(datebuf), "%a, %d %b %Y %H:%M:%S GMT", &tm);
+
+    return g_strdup(datebuf);
 }
 
 static void qio_channel_websock_handshake_send_res_err(QIOChannelWebsock *ioc,
@@ -740,7 +746,7 @@ static int qio_channel_websock_decode_header(QIOChannelWebsock *ioc,
             opcode != QIO_CHANNEL_WEBSOCK_OPCODE_CLOSE &&
             opcode != QIO_CHANNEL_WEBSOCK_OPCODE_PING &&
             opcode != QIO_CHANNEL_WEBSOCK_OPCODE_PONG) {
-            error_setg(errp, "unsupported opcode: 0x%04x; only binary, close, "
+            error_setg(errp, "unsupported opcode: %#04x; only binary, close, "
                        "ping, and pong websocket frames are supported", opcode);
             qio_channel_websock_write_close(
                 ioc, QIO_CHANNEL_WEBSOCK_STATUS_INVALID_DATA ,
@@ -1127,7 +1133,6 @@ static ssize_t qio_channel_websock_writev(QIOChannel *ioc,
                                           size_t niov,
                                           int *fds,
                                           size_t nfds,
-                                          int flags,
                                           Error **errp)
 {
     QIOChannelWebsock *wioc = QIO_CHANNEL_WEBSOCK(ioc);

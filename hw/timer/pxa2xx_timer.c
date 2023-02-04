@@ -17,7 +17,6 @@
 #include "migration/vmstate.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 #define OSMR0	0x00
 #define OSMR1	0x04
@@ -67,8 +66,10 @@ static int pxa2xx_timer4_freq[8] = {
 };
 
 #define TYPE_PXA2XX_TIMER "pxa2xx-timer"
-OBJECT_DECLARE_SIMPLE_TYPE(PXA2xxTimerInfo, PXA2XX_TIMER)
+#define PXA2XX_TIMER(obj) \
+    OBJECT_CHECK(PXA2xxTimerInfo, (obj), TYPE_PXA2XX_TIMER)
 
+typedef struct PXA2xxTimerInfo PXA2xxTimerInfo;
 
 typedef struct {
     uint32_t value;

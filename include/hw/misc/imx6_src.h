@@ -13,7 +13,6 @@
 
 #include "hw/sysbus.h"
 #include "qemu/bitops.h"
-#include "qom/object.h"
 
 #define SRC_SCR 0
 #define SRC_SBMR1 1
@@ -58,9 +57,9 @@
 #define EXTRACT(value, name) extract32(value, name##_SHIFT, name##_LENGTH)
 
 #define TYPE_IMX6_SRC "imx6.src"
-OBJECT_DECLARE_SIMPLE_TYPE(IMX6SRCState, IMX6_SRC)
+#define IMX6_SRC(obj) OBJECT_CHECK(IMX6SRCState, (obj), TYPE_IMX6_SRC)
 
-struct IMX6SRCState {
+typedef struct IMX6SRCState {
     /* <private> */
     SysBusDevice parent_obj;
 
@@ -69,6 +68,6 @@ struct IMX6SRCState {
 
     uint32_t regs[SRC_MAX];
 
-};
+} IMX6SRCState;
 
 #endif /* IMX6_SRC_H */

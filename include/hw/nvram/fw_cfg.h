@@ -5,22 +5,24 @@
 #include "standard-headers/linux/qemu_fw_cfg.h"
 #include "hw/sysbus.h"
 #include "sysemu/dma.h"
-#include "qom/object.h"
 
 #define TYPE_FW_CFG     "fw_cfg"
 #define TYPE_FW_CFG_IO  "fw_cfg_io"
 #define TYPE_FW_CFG_MEM "fw_cfg_mem"
 #define TYPE_FW_CFG_DATA_GENERATOR_INTERFACE "fw_cfg-data-generator"
 
-OBJECT_DECLARE_SIMPLE_TYPE(FWCfgState, FW_CFG)
-OBJECT_DECLARE_SIMPLE_TYPE(FWCfgIoState, FW_CFG_IO)
-OBJECT_DECLARE_SIMPLE_TYPE(FWCfgMemState, FW_CFG_MEM)
+#define FW_CFG(obj)     OBJECT_CHECK(FWCfgState,    (obj), TYPE_FW_CFG)
+#define FW_CFG_IO(obj)  OBJECT_CHECK(FWCfgIoState,  (obj), TYPE_FW_CFG_IO)
+#define FW_CFG_MEM(obj) OBJECT_CHECK(FWCfgMemState, (obj), TYPE_FW_CFG_MEM)
 
-typedef struct FWCfgDataGeneratorClass FWCfgDataGeneratorClass;
-DECLARE_CLASS_CHECKERS(FWCfgDataGeneratorClass, FW_CFG_DATA_GENERATOR,
+#define FW_CFG_DATA_GENERATOR_CLASS(class) \
+    OBJECT_CLASS_CHECK(FWCfgDataGeneratorClass, (class), \
                        TYPE_FW_CFG_DATA_GENERATOR_INTERFACE)
+#define FW_CFG_DATA_GENERATOR_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(FWCfgDataGeneratorClass, (obj), \
+                     TYPE_FW_CFG_DATA_GENERATOR_INTERFACE)
 
-struct FWCfgDataGeneratorClass {
+typedef struct FWCfgDataGeneratorClass {
     /*< private >*/
     InterfaceClass parent_class;
     /*< public >*/
@@ -37,7 +39,7 @@ struct FWCfgDataGeneratorClass {
      * required.
      */
     GByteArray *(*get_data)(Object *obj, Error **errp);
-};
+} FWCfgDataGeneratorClass;
 
 typedef struct fw_cfg_file FWCfgFile;
 
@@ -116,28 +118,6 @@ struct FWCfgMemState {
  * is only linked, NOT copied, into the data structure of the fw_cfg device.
  */
 void fw_cfg_add_bytes(FWCfgState *s, uint16_t key, void *data, size_t len);
-
-/**
- * fw_cfg_add_bytes_callback:
- * @s: fw_cfg device being modified
- * @key: selector key value for new fw_cfg item
- * @select_cb: callback function when selecting
- * @write_cb: callback function after a write
- * @callback_opaque: argument to be passed into callback function
- * @data: pointer to start of item data
- * @len: size of item data
- * @read_only: is file read only
- *
- * Add a new fw_cfg item, available by selecting the given key, as a raw
- * "blob" of the given size. The data referenced by the starting pointer
- * is only linked, NOT copied, into the data structure of the fw_cfg device.
- */
-void fw_cfg_add_bytes_callback(FWCfgState *s, uint16_t key,
-                               FWCfgCallback select_cb,
-                               FWCfgWriteCallback write_cb,
-                               void *callback_opaque,
-                               void *data, size_t len,
-                               bool read_only);
 
 /**
  * fw_cfg_add_string:
@@ -330,15 +310,6 @@ void *fw_cfg_modify_file(FWCfgState *s, const char *filename, void *data,
 bool fw_cfg_add_from_generator(FWCfgState *s, const char *filename,
                                const char *gen_id, Error **errp);
 
-/**
- * fw_cfg_add_extra_pci_roots:
- * @bus: main pci root bus to be scanned from
- * @s: fw_cfg device being modified
- *
- * Add a new fw_cfg item...
- */
-void fw_cfg_add_extra_pci_roots(PCIBus *bus, FWCfgState *s);
-
 FWCfgState *fw_cfg_init_io_dma(uint32_t iobase, uint32_t dma_iobase,
                                 AddressSpace *dma_as);
 FWCfgState *fw_cfg_init_io(uint32_t iobase);
@@ -363,26 +334,5 @@ bool fw_cfg_dma_enabled(void *opaque);
  *          key lookup failure.
  */
 const char *fw_cfg_arch_key_name(uint16_t key);
-
-/**
- * load_image_to_fw_cfg() - Load an image file into an fw_cfg entry identified
- *                          by key.
- * @fw_cfg:         The firmware config instance to store the data in.
- * @size_key:       The firmware config key to store the size of the loaded
- *                  data under, with fw_cfg_add_i32().
- * @data_key:       The firmware config key to store the loaded data under,
- *                  with fw_cfg_add_bytes().
- * @image_name:     The name of the image file to load. If it is NULL, the
- *                  function returns without doing anything.
- * @try_decompress: Whether the image should be decompressed (gunzipped) before
- *                  adding it to fw_cfg. If decompression fails, the image is
- *                  loaded as-is.
- *
- * In case of failure, the function prints an error message to stderr and the
- * process exits with status 1.
- */
-void load_image_to_fw_cfg(FWCfgState *fw_cfg, uint16_t size_key,
-                          uint16_t data_key, const char *image_name,
-                          bool try_decompress);
 
 #endif

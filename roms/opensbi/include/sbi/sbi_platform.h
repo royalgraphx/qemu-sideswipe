@@ -38,35 +38,40 @@
 
 #define SBI_PLATFORM_TLB_RANGE_FLUSH_LIMIT_DEFAULT		(1UL << 12)
 
-#ifndef __ASSEMBLER__
+#ifndef __ASSEMBLY__
 
-#include <sbi/sbi_ecall_interface.h>
+#include <sbi/sbi_ecall.h>
 #include <sbi/sbi_error.h>
 #include <sbi/sbi_scratch.h>
+#include <sbi/sbi_trap.h>
 #include <sbi/sbi_version.h>
-
-struct sbi_domain_memregion;
-struct sbi_trap_info;
-struct sbi_trap_regs;
 
 /** Possible feature flags of a platform */
 enum sbi_platform_features {
+	/** Platform has timer value */
+	SBI_PLATFORM_HAS_TIMER_VALUE = (1 << 0),
+	/** Platform has HART hotplug support */
+	SBI_PLATFORM_HAS_HART_HOTPLUG = (1 << 1),
+	/** Platform has PMP support */
+	SBI_PLATFORM_HAS_PMP = (1 << 2),
+	/** Platform has S-mode counter enable */
+	SBI_PLATFORM_HAS_SCOUNTEREN = (1 << 3),
+	/** Platform has M-mode counter enable */
+	SBI_PLATFORM_HAS_MCOUNTEREN = (1 << 4),
 	/** Platform has fault delegation support */
-	SBI_PLATFORM_HAS_MFAULTS_DELEGATION = (1 << 1),
-
-	/** Last index of Platform features*/
-	SBI_PLATFORM_HAS_LAST_FEATURE = SBI_PLATFORM_HAS_MFAULTS_DELEGATION,
+	SBI_PLATFORM_HAS_MFAULTS_DELEGATION = (1 << 5),
+	/** Platform has custom secondary hart booting support */
+	SBI_PLATFORM_HAS_HART_SECONDARY_BOOT = (1 << 6),
 };
 
 /** Default feature set for a platform */
 #define SBI_PLATFORM_DEFAULT_FEATURES                                \
-	(SBI_PLATFORM_HAS_MFAULTS_DELEGATION)
+	(SBI_PLATFORM_HAS_TIMER_VALUE | SBI_PLATFORM_HAS_PMP |       \
+	 SBI_PLATFORM_HAS_SCOUNTEREN | SBI_PLATFORM_HAS_MCOUNTEREN | \
+	 SBI_PLATFORM_HAS_MFAULTS_DELEGATION)
 
 /** Platform functions */
 struct sbi_platform_operations {
-	/* Platform nascent initialization */
-	int (*nascent_init)(void);
-
 	/** Platform early initialization */
 	int (*early_init)(bool cold_boot);
 	/** Platform final initialization */
@@ -89,18 +94,19 @@ struct sbi_platform_operations {
 	 */
 	int (*misa_get_xlen)(void);
 
-	/** Initialize (or populate) HART extensions for the platform */
-	int (*extensions_init)(void);
+	/** Get number of PMP regions for given HART */
+	u32 (*pmp_region_count)(u32 hartid);
+	/**
+	 * Get PMP regions details (namely: protection, base address,
+	 * and size) for given HART
+	 */
+	int (*pmp_region_info)(u32 hartid, u32 index, ulong *prot, ulong *addr,
+			       ulong *log2size);
 
-	/** Initialize (or populate) domains for the platform */
-	int (*domains_init)(void);
-
-	/** Initialize hw performance counters */
-	int (*pmu_init)(void);
-
-	/** Get platform specific mhpmevent value */
-	uint64_t (*pmu_xlate_to_mhpmevent)(uint32_t event_idx, uint64_t data);
-
+	/** Write a character to the platform console output */
+	void (*console_putc)(char ch);
+	/** Read a character from the platform console input */
+	int (*console_getc)(void);
 	/** Initialize the platform console */
 	int (*console_init)(void);
 
@@ -109,6 +115,10 @@ struct sbi_platform_operations {
 	/** Exit the platform interrupt controller for current HART */
 	void (*irqchip_exit)(void);
 
+	/** Send IPI to a target HART */
+	void (*ipi_send)(u32 target_hart);
+	/** Clear IPI for a target HART */
+	void (*ipi_clear)(u32 target_hart);
 	/** Initialize IPI for current HART */
 	int (*ipi_init)(bool cold_boot);
 	/** Exit IPI for current HART */
@@ -117,19 +127,38 @@ struct sbi_platform_operations {
 	/** Get tlb flush limit value **/
 	u64 (*get_tlbr_flush_limit)(void);
 
+	/** Get platform timer value */
+	u64 (*timer_value)(void);
+	/** Start platform timer event for current HART */
+	void (*timer_event_start)(u64 next_event);
+	/** Stop platform timer event for current HART */
+	void (*timer_event_stop)(void);
 	/** Initialize platform timer for current HART */
 	int (*timer_init)(bool cold_boot);
 	/** Exit platform timer for current HART */
 	void (*timer_exit)(void);
 
+	/** Bringup the given hart */
+	int (*hart_start)(u32 hartid, ulong saddr);
+	/**
+	 * Stop the current hart from running. This call doesn't expect to
+	 * return if success.
+	 */
+	int (*hart_stop)(void);
+
+	/** Reboot the platform */
+	int (*system_reboot)(u32 type);
+	/** Shutdown or poweroff the platform */
+	int (*system_shutdown)(u32 type);
+
 	/** platform specific SBI extension implementation probe function */
 	int (*vendor_ext_check)(long extid);
 	/** platform specific SBI extension implementation provider */
 	int (*vendor_ext_provider)(long extid, long funcid,
-				   const struct sbi_trap_regs *regs,
+				   unsigned long *args,
 				   unsigned long *out_value,
 				   struct sbi_trap_info *out_trap);
-};
+} __packed;
 
 /** Platform default per-HART stack size for exception/interrupt handling */
 #define SBI_PLATFORM_DEFAULT_HART_STACK_SIZE	8192
@@ -176,57 +205,7 @@ struct sbi_platform {
 	 * 2. HART id < SBI_HARTMASK_MAX_BITS
 	 */
 	const u32 *hart_index2id;
-};
-
-/**
- * Prevent modification of struct sbi_platform from affecting
- * SBI_PLATFORM_xxx_OFFSET
- */
-_Static_assert(
-	offsetof(struct sbi_platform, opensbi_version)
-		== SBI_PLATFORM_OPENSBI_VERSION_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_OPENSBI_VERSION_OFFSET");
-_Static_assert(
-	offsetof(struct sbi_platform, platform_version)
-		== SBI_PLATFORM_VERSION_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_VERSION_OFFSET");
-_Static_assert(
-	offsetof(struct sbi_platform, name)
-		== SBI_PLATFORM_NAME_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_NAME_OFFSET");
-_Static_assert(
-	offsetof(struct sbi_platform, features)
-		== SBI_PLATFORM_FEATURES_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_FEATURES_OFFSET");
-_Static_assert(
-	offsetof(struct sbi_platform, hart_count)
-		== SBI_PLATFORM_HART_COUNT_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_HART_COUNT_OFFSET");
-_Static_assert(
-	offsetof(struct sbi_platform, hart_stack_size)
-		== SBI_PLATFORM_HART_STACK_SIZE_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_HART_STACK_SIZE_OFFSET");
-_Static_assert(
-	offsetof(struct sbi_platform, platform_ops_addr)
-		== SBI_PLATFORM_OPS_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_OPS_OFFSET");
-_Static_assert(
-	offsetof(struct sbi_platform, firmware_context)
-		== SBI_PLATFORM_FIRMWARE_CONTEXT_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_FIRMWARE_CONTEXT_OFFSET");
-_Static_assert(
-	offsetof(struct sbi_platform, hart_index2id)
-		== SBI_PLATFORM_HART_INDEX2ID_OFFSET,
-	"struct sbi_platform definition has changed, please redefine "
-	"SBI_PLATFORM_HART_INDEX2ID_OFFSET");
+} __packed;
 
 /** Get pointer to sbi_platform for sbi_scratch pointer */
 #define sbi_platform_ptr(__s) \
@@ -238,31 +217,26 @@ _Static_assert(
 #define sbi_platform_ops(__p) \
 	((const struct sbi_platform_operations *)(__p)->platform_ops_addr)
 
+/** Check whether the platform supports timer value */
+#define sbi_platform_has_timer_value(__p) \
+	((__p)->features & SBI_PLATFORM_HAS_TIMER_VALUE)
+/** Check whether the platform supports HART hotplug */
+#define sbi_platform_has_hart_hotplug(__p) \
+	((__p)->features & SBI_PLATFORM_HAS_HART_HOTPLUG)
+/** Check whether the platform has PMP support */
+#define sbi_platform_has_pmp(__p) ((__p)->features & SBI_PLATFORM_HAS_PMP)
+/** Check whether the platform supports scounteren CSR */
+#define sbi_platform_has_scounteren(__p) \
+	((__p)->features & SBI_PLATFORM_HAS_SCOUNTEREN)
+/** Check whether the platform supports mcounteren CSR */
+#define sbi_platform_has_mcounteren(__p) \
+	((__p)->features & SBI_PLATFORM_HAS_MCOUNTEREN)
 /** Check whether the platform supports fault delegation */
 #define sbi_platform_has_mfaults_delegation(__p) \
 	((__p)->features & SBI_PLATFORM_HAS_MFAULTS_DELEGATION)
-
-/**
- * Get HART index for the given HART
- *
- * @param plat pointer to struct sbi_platform
- * @param hartid HART ID
- *
- * @return 0 <= value < hart_count for valid HART otherwise -1U
- */
-u32 sbi_platform_hart_index(const struct sbi_platform *plat, u32 hartid);
-
-/**
- * Get the platform features in string format
- *
- * @param plat pointer to struct sbi_platform
- * @param features_str pointer to a char array where the features string will be
- *		       updated
- * @param nfstr length of the features_str. The feature string will be truncated
- *		if nfstr is not long enough.
- */
-void sbi_platform_get_features_str(const struct sbi_platform *plat,
-				   char *features_str, int nfstr);
+/** Check whether the platform supports custom secondary hart booting support */
+#define sbi_platform_has_hart_secondary_boot(__p) \
+	((__p)->features & SBI_PLATFORM_HAS_HART_SECONDARY_BOOT)
 
 /**
  * Get name of the platform
@@ -276,21 +250,6 @@ static inline const char *sbi_platform_name(const struct sbi_platform *plat)
 	if (plat)
 		return plat->name;
 	return "Unknown";
-}
-
-/**
- * Get the platform features
- *
- * @param plat pointer to struct sbi_platform
- *
- * @return the features value currently set for the given platform
- */
-static inline unsigned long sbi_platform_get_features(
-						const struct sbi_platform *plat)
-{
-	if (plat)
-		return plat->features;
-	return 0;
 }
 
 /**
@@ -338,6 +297,32 @@ static inline u32 sbi_platform_hart_stack_size(const struct sbi_platform *plat)
 }
 
 /**
+ * Get HART index for the given HART
+ *
+ * @param plat pointer to struct sbi_platform
+ * @param hartid HART ID
+ *
+ * @return 0 <= value < hart_count for valid HART otherwise -1U
+ */
+static inline u32 sbi_platform_hart_index(const struct sbi_platform *plat,
+					  u32 hartid)
+{
+	u32 i;
+
+	if (!plat)
+		return -1U;
+	if (plat->hart_index2id) {
+		for (i = 0; i < plat->hart_count; i++) {
+			if (plat->hart_index2id[i] == hartid)
+				return i;
+		}
+		return -1U;
+	}
+
+	return hartid;
+}
+
+/**
  * Check whether given HART is invalid
  *
  * @param plat pointer to struct sbi_platform
@@ -356,20 +341,36 @@ static inline bool sbi_platform_hart_invalid(const struct sbi_platform *plat,
 }
 
 /**
- * Nascent (very early) initialization for current HART
+ * Bringup a given hart from previous stage. Platform should implement this
+ * operation if they support a custom mechanism to start a hart. Otherwise,
+ * a generic WFI based approach will be used to start/stop a hart in OpenSBI.
  *
- * NOTE: This function can be used to do very early initialization of
- * platform specific per-HART CSRs and devices.
+ * @param plat pointer to struct sbi_platform
+ * @param hartid HART id
+ * @param saddr M-mode start physical address for the HART
+ *
+ * @return 0 if sucessful and negative error code on failure
+ */
+static inline int sbi_platform_hart_start(const struct sbi_platform *plat,
+					  u32 hartid, ulong saddr)
+{
+	if (plat && sbi_platform_ops(plat)->hart_start)
+		return sbi_platform_ops(plat)->hart_start(hartid, saddr);
+	return SBI_ENOTSUPP;
+}
+
+/**
+ * Stop the current hart in OpenSBI.
  *
  * @param plat pointer to struct sbi_platform
  *
- * @return 0 on success and negative error code on failure
+ * @return Negative error code on failure. It doesn't return on success.
  */
-static inline int sbi_platform_nascent_init(const struct sbi_platform *plat)
+static inline int sbi_platform_hart_stop(const struct sbi_platform *plat)
 {
-	if (plat && sbi_platform_ops(plat)->nascent_init)
-		return sbi_platform_ops(plat)->nascent_init();
-	return 0;
+	if (plat && sbi_platform_ops(plat)->hart_stop)
+		return sbi_platform_ops(plat)->hart_stop();
+	return SBI_ENOTSUPP;
 }
 
 /**
@@ -457,65 +458,70 @@ static inline int sbi_platform_misa_xlen(const struct sbi_platform *plat)
 }
 
 /**
- * Initialize (or populate) HART extensions for the platform
+ * Get the number of PMP regions of a HART
  *
  * @param plat pointer to struct sbi_platform
+ * @param hartid HART ID
  *
- * @return 0 on success and negative error code on failure
+ * @return number of PMP regions
  */
-static inline int sbi_platform_extensions_init(
-					const struct sbi_platform *plat)
+static inline u32 sbi_platform_pmp_region_count(const struct sbi_platform *plat,
+						u32 hartid)
 {
-	if (plat && sbi_platform_ops(plat)->extensions_init)
-		return sbi_platform_ops(plat)->extensions_init();
+	if (plat && sbi_platform_ops(plat)->pmp_region_count)
+		return sbi_platform_ops(plat)->pmp_region_count(hartid);
 	return 0;
 }
 
 /**
- * Initialize (or populate) domains for the platform
+ * Get PMP regions details (namely: protection, base address,
+ * and size) of a HART
  *
  * @param plat pointer to struct sbi_platform
+ * @param hartid HART ID
+ * @param index index of PMP region for which we want details
+ * @param prot output pointer for PMP region protection
+ * @param addr output pointer for PMP region base address
+ * @param log2size output pointer for log-of-2 PMP region size
  *
  * @return 0 on success and negative error code on failure
  */
-static inline int sbi_platform_domains_init(const struct sbi_platform *plat)
+static inline int sbi_platform_pmp_region_info(const struct sbi_platform *plat,
+						u32 hartid, u32 index,
+						ulong *prot, ulong *addr,
+						ulong *log2size)
 {
-	if (plat && sbi_platform_ops(plat)->domains_init)
-		return sbi_platform_ops(plat)->domains_init();
+	if (plat && sbi_platform_ops(plat)->pmp_region_info)
+		return sbi_platform_ops(plat)->pmp_region_info(hartid, index, prot, addr,
+                                                                              log2size);
 	return 0;
 }
 
 /**
- * Setup hw PMU events for the platform
+ * Write a character to the platform console output
  *
  * @param plat pointer to struct sbi_platform
- *
- * @return 0 on success and negative error code on failure
+ * @param ch character to write
  */
-static inline int sbi_platform_pmu_init(const struct sbi_platform *plat)
+static inline void sbi_platform_console_putc(const struct sbi_platform *plat,
+						char ch)
 {
-	if (plat && sbi_platform_ops(plat)->pmu_init)
-		return sbi_platform_ops(plat)->pmu_init();
-	return 0;
+	if (plat && sbi_platform_ops(plat)->console_putc)
+		sbi_platform_ops(plat)->console_putc(ch);
 }
 
 /**
- * Get the value to be written in mhpmeventx for event_idx
+ * Read a character from the platform console input
  *
  * @param plat pointer to struct sbi_platform
- * @param event_idx ID of the PMU event
- * @param data Additional configuration data passed from supervisor software
  *
- * @return expected value by the platform or 0 if platform doesn't know about
- * the event
+ * @return character read from console input
  */
-static inline uint64_t sbi_platform_pmu_xlate_to_mhpmevent(const struct sbi_platform *plat,
-						      uint32_t event_idx, uint64_t data)
+static inline int sbi_platform_console_getc(const struct sbi_platform *plat)
 {
-	if (plat && sbi_platform_ops(plat)->pmu_xlate_to_mhpmevent)
-		return sbi_platform_ops(plat)->pmu_xlate_to_mhpmevent(event_idx,
-								      data);
-	return 0;
+	if (plat && sbi_platform_ops(plat)->console_getc)
+		return sbi_platform_ops(plat)->console_getc();
+	return -1;
 }
 
 /**
@@ -560,6 +566,32 @@ static inline void sbi_platform_irqchip_exit(const struct sbi_platform *plat)
 }
 
 /**
+ * Send IPI to a target HART
+ *
+ * @param plat pointer to struct sbi_platform
+ * @param target_hart HART ID of IPI target
+ */
+static inline void sbi_platform_ipi_send(const struct sbi_platform *plat,
+					 u32 target_hart)
+{
+	if (plat && sbi_platform_ops(plat)->ipi_send)
+		sbi_platform_ops(plat)->ipi_send(target_hart);
+}
+
+/**
+ * Clear IPI for a target HART
+ *
+ * @param plat pointer to struct sbi_platform
+ * @param target_hart HART ID of IPI target
+ */
+static inline void sbi_platform_ipi_clear(const struct sbi_platform *plat,
+					  u32 target_hart)
+{
+	if (plat && sbi_platform_ops(plat)->ipi_clear)
+		sbi_platform_ops(plat)->ipi_clear(target_hart);
+}
+
+/**
  * Initialize the platform IPI support for current HART
  *
  * @param plat pointer to struct sbi_platform
@@ -584,6 +616,45 @@ static inline void sbi_platform_ipi_exit(const struct sbi_platform *plat)
 {
 	if (plat && sbi_platform_ops(plat)->ipi_exit)
 		sbi_platform_ops(plat)->ipi_exit();
+}
+
+/**
+ * Get platform timer value
+ *
+ * @param plat pointer to struct sbi_platform
+ *
+ * @return 64-bit timer value
+ */
+static inline u64 sbi_platform_timer_value(const struct sbi_platform *plat)
+{
+	if (plat && sbi_platform_ops(plat)->timer_value)
+		return sbi_platform_ops(plat)->timer_value();
+	return 0;
+}
+
+/**
+ * Start platform timer event for current HART
+ *
+ * @param plat pointer to struct struct sbi_platform
+ * @param next_event timer value when timer event will happen
+ */
+static inline void
+sbi_platform_timer_event_start(const struct sbi_platform *plat, u64 next_event)
+{
+	if (plat && sbi_platform_ops(plat)->timer_event_start)
+		sbi_platform_ops(plat)->timer_event_start(next_event);
+}
+
+/**
+ * Stop platform timer event for current HART
+ *
+ * @param plat pointer to struct sbi_platform
+ */
+static inline void
+sbi_platform_timer_event_stop(const struct sbi_platform *plat)
+{
+	if (plat && sbi_platform_ops(plat)->timer_event_stop)
+		sbi_platform_ops(plat)->timer_event_stop();
 }
 
 /**
@@ -614,6 +685,38 @@ static inline void sbi_platform_timer_exit(const struct sbi_platform *plat)
 }
 
 /**
+ * Reboot the platform
+ *
+ * @param plat pointer to struct sbi_platform
+ * @param type type of reboot
+ *
+ * @return 0 on success and negative error code on failure
+ */
+static inline int sbi_platform_system_reboot(const struct sbi_platform *plat,
+					     u32 type)
+{
+	if (plat && sbi_platform_ops(plat)->system_reboot)
+		return sbi_platform_ops(plat)->system_reboot(type);
+	return 0;
+}
+
+/**
+ * Shutdown or poweroff the platform
+ *
+ * @param plat pointer to struct sbi_platform
+ * @param type type of shutdown or poweroff
+ *
+ * @return 0 on success and negative error code on failure
+ */
+static inline int sbi_platform_system_shutdown(const struct sbi_platform *plat,
+					       u32 type)
+{
+	if (plat && sbi_platform_ops(plat)->system_shutdown)
+		return sbi_platform_ops(plat)->system_shutdown(type);
+	return 0;
+}
+
+/**
  * Check if a vendor extension is implemented or not.
  *
  * @param plat pointer to struct sbi_platform
@@ -636,7 +739,7 @@ static inline int sbi_platform_vendor_ext_check(const struct sbi_platform *plat,
  * @param plat pointer to struct sbi_platform
  * @param extid	vendor SBI extension id
  * @param funcid SBI function id within the extension id
- * @param regs pointer to trap registers passed by the caller
+ * @param args pointer to arguments passed by the caller
  * @param out_value output value that can be filled by the callee
  * @param out_trap trap info that can be filled by the callee
  *
@@ -645,13 +748,13 @@ static inline int sbi_platform_vendor_ext_check(const struct sbi_platform *plat,
 static inline int sbi_platform_vendor_ext_provider(
 					const struct sbi_platform *plat,
 					long extid, long funcid,
-					const struct sbi_trap_regs *regs,
+					unsigned long *args,
 					unsigned long *out_value,
 					struct sbi_trap_info *out_trap)
 {
 	if (plat && sbi_platform_ops(plat)->vendor_ext_provider) {
 		return sbi_platform_ops(plat)->vendor_ext_provider(extid,
-								funcid, regs,
+								funcid, args,
 								out_value,
 								out_trap);
 	}

@@ -2,7 +2,6 @@
 #define HW_MCF_H
 /* Motorola ColdFire device prototypes.  */
 
-#include "exec/hwaddr.h"
 #include "target/m68k/cpu-qom.h"
 
 /* mcf_uart.c */
@@ -19,6 +18,7 @@ qemu_irq *mcf_intc_init(struct MemoryRegion *sysmem,
                         M68kCPU *cpu);
 
 /* mcf5206.c */
-#define TYPE_MCF5206_MBAR "mcf5206-mbar"
+qemu_irq *mcf5206_init(struct MemoryRegion *sysmem,
+                       uint32_t base, M68kCPU *cpu);
 
 #endif

@@ -20,6 +20,7 @@
 #define CONFIG_MACH_TYPE MACH_TYPE_ETHERNUT5
 
 /* CPU information */
+#define CONFIG_ARCH_CPU_INIT
 
 /* ARM asynchronous clock */
 #define CONFIG_SYS_AT91_SLOW_CLOCK	32768	/* slow clock xtal */
@@ -37,6 +38,9 @@
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_SYS_SDRAM_BASE
 #define CONFIG_LOADADDR			CONFIG_SYS_LOAD_ADDR
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + (1 << 20))
+#define CONFIG_SYS_MEMTEST_START	CONFIG_SYS_SDRAM_BASE
+#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_TEXT_BASE \
+					- CONFIG_SYS_MALLOC_LEN)
 
 /* 512kB on-chip NOR flash */
 # define CONFIG_SYS_MAX_FLASH_BANKS	1
@@ -47,6 +51,10 @@
 
 
 /* bootstrap + u-boot + env + linux in dataflash on CS0 */
+#define CONFIG_ENV_OFFSET	0x3DE000
+#define CONFIG_ENV_SIZE		(132 << 10)
+#define CONFIG_ENV_SECT_SIZE	CONFIG_ENV_SIZE
+#define CONFIG_ENV_SPI_MAX_HZ	15000000
 
 /* NAND flash */
 #ifdef CONFIG_CMD_NAND
@@ -62,6 +70,7 @@
 
 /* JFFS2 */
 #ifdef CONFIG_CMD_JFFS2
+#define CONFIG_JFFS2_CMDLINE
 #define CONFIG_JFFS2_NAND
 #endif
 
@@ -91,6 +100,7 @@
 
 /* RTC */
 #if defined(CONFIG_CMD_DATE) || defined(CONFIG_CMD_SNTP)
+#define CONFIG_RTC_PCF8563
 #define CONFIG_SYS_I2C_RTC_ADDR		0x51
 #endif
 

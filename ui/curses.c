@@ -30,6 +30,7 @@
 #endif
 #include <locale.h>
 #include <wchar.h>
+#include <langinfo.h>
 #include <iconv.h>
 
 #include "qapi/error.h"
@@ -37,10 +38,6 @@
 #include "ui/console.h"
 #include "ui/input.h"
 #include "sysemu/sysemu.h"
-
-#if defined(__APPLE__) || defined(__OpenBSD__)
-#define _XOPEN_SOURCE_EXTENDED 1
-#endif
 
 /* KEY_EVENT is defined in wincon.h and in curses.h. Avoid redefinition. */
 #undef KEY_EVENT
@@ -69,7 +66,7 @@ static void curses_update(DisplayChangeListener *dcl,
                           int x, int y, int w, int h)
 {
     console_ch_t *line;
-    g_autofree cchar_t *curses_line = g_new(cchar_t, width);
+    cchar_t curses_line[width];
     wchar_t wch[CCHARW_MAX];
     attr_t attrs;
     short colors;
@@ -266,7 +263,7 @@ static int curses2foo(const int _curses2foo[], const int _curseskey2foo[],
 static void curses_refresh(DisplayChangeListener *dcl)
 {
     int chr, keysym, keycode, keycode_alt;
-    enum maybe_keycode maybe_keycode = CURSES_KEYCODE;
+    enum maybe_keycode maybe_keycode;
 
     curses_winch_check();
 
@@ -303,7 +300,7 @@ static void curses_refresh(DisplayChangeListener *dcl)
 
         /* alt or esc key */
         if (keycode == 1) {
-            enum maybe_keycode next_maybe_keycode = CURSES_KEYCODE;
+            enum maybe_keycode next_maybe_keycode;
             int nextchr = console_getch(&next_maybe_keycode);
 
             if (nextchr != -1) {
@@ -529,7 +526,6 @@ static void font_setup(void)
     iconv_t nativecharset_to_ucs2;
     iconv_t font_conv;
     int i;
-    g_autofree gchar *local_codeset = g_get_codeset();
 
     /*
      * Control characters are normally non-printable, but VGA does have
@@ -570,14 +566,14 @@ static void font_setup(void)
       0x25bc
     };
 
-    ucs2_to_nativecharset = iconv_open(local_codeset, "UCS-2");
+    ucs2_to_nativecharset = iconv_open(nl_langinfo(CODESET), "UCS-2");
     if (ucs2_to_nativecharset == (iconv_t) -1) {
         fprintf(stderr, "Could not convert font glyphs from UCS-2: '%s'\n",
                         strerror(errno));
         exit(1);
     }
 
-    nativecharset_to_ucs2 = iconv_open("UCS-2", local_codeset);
+    nativecharset_to_ucs2 = iconv_open("UCS-2", nl_langinfo(CODESET));
     if (nativecharset_to_ucs2 == (iconv_t) -1) {
         iconv_close(ucs2_to_nativecharset);
         fprintf(stderr, "Could not convert font glyphs to UCS-2: '%s'\n",
@@ -585,7 +581,7 @@ static void font_setup(void)
         exit(1);
     }
 
-    font_conv = iconv_open(local_codeset, font_charset);
+    font_conv = iconv_open(nl_langinfo(CODESET), font_charset);
     if (font_conv == (iconv_t) -1) {
         iconv_close(ucs2_to_nativecharset);
         iconv_close(nativecharset_to_ucs2);
@@ -606,7 +602,7 @@ static void font_setup(void)
     /* DEL */
     convert_ucs(0x7F, 0x2302, ucs2_to_nativecharset);
 
-    if (strcmp(local_codeset, "UTF-8")) {
+    if (strcmp(nl_langinfo(CODESET), "UTF-8")) {
         /* Non-Unicode capable, use termcap equivalents for those available */
         for (i = 0; i <= 0xFF; i++) {
             wchar_t wch[CCHARW_MAX];

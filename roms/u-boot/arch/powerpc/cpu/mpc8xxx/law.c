@@ -7,8 +7,6 @@
  */
 
 #include <common.h>
-#include <asm/bitops.h>
-#include <asm/global_data.h>
 #include <linux/compiler.h>
 #include <asm/fsl_law.h>
 #include <asm/io.h>
@@ -261,7 +259,7 @@ void init_laws(void)
 #error FSL_HW_NUM_LAWS can not be greater than 32 w/o code changes
 #endif
 
-#if defined(CONFIG_NXP_ESBC) && defined(CONFIG_E500) && \
+#if defined(CONFIG_SECURE_BOOT) && defined(CONFIG_E500) && \
 						!defined(CONFIG_E500MC)
 	/* ISBC (Boot ROM) creates a LAW 0 entry for non PBL platforms,
 	 * which is not disabled before transferring the control to uboot.
@@ -270,7 +268,7 @@ void init_laws(void)
 	disable_law(0);
 #endif
 
-#if !defined(CONFIG_NXP_ESBC)
+#if !defined(CONFIG_SECURE_BOOT)
 	/*
 	 * if any non DDR LAWs has been created earlier, remove them before
 	 * LAW table is parsed.

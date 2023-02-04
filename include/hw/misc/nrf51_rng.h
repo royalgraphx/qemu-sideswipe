@@ -36,9 +36,8 @@
 
 #include "hw/sysbus.h"
 #include "qemu/timer.h"
-#include "qom/object.h"
 #define TYPE_NRF51_RNG "nrf51_soc.rng"
-OBJECT_DECLARE_SIMPLE_TYPE(NRF51RNGState, NRF51_RNG)
+#define NRF51_RNG(obj) OBJECT_CHECK(NRF51RNGState, (obj), TYPE_NRF51_RNG)
 
 #define NRF51_RNG_SIZE         0x1000
 
@@ -55,7 +54,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(NRF51RNGState, NRF51_RNG)
 #define NRF51_RNG_REG_CONFIG_DECEN 0
 #define NRF51_RNG_REG_VALUE    0x508
 
-struct NRF51RNGState {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion mmio;
@@ -79,7 +78,7 @@ struct NRF51RNGState {
     uint32_t interrupt_enabled;
     uint32_t filter_enabled;
 
-};
+} NRF51RNGState;
 
 
 #endif /* NRF51_RNG_H */

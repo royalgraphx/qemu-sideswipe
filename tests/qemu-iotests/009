@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # Nolan I qcow2 corruption - incorrectly reports free clusters
 #

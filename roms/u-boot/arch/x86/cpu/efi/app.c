@@ -4,9 +4,7 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
 #include <fdtdec.h>
-#include <init.h>
 #include <netdev.h>
 
 int arch_cpu_init(void)
@@ -24,7 +22,7 @@ int print_cpuinfo(void)
 	return default_print_cpuinfo();
 }
 
-void board_final_init(void)
+void board_final_cleanup(void)
 {
 }
 

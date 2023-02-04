@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -73,12 +73,6 @@ static int cpu_get_free_index(void)
 }
 
 CPUTailQ cpus = QTAILQ_HEAD_INITIALIZER(cpus);
-static unsigned int cpu_list_generation_id;
-
-unsigned int cpu_list_generation_id_get(void)
-{
-    return cpu_list_generation_id;
-}
 
 void cpu_list_add(CPUState *cpu)
 {
@@ -90,7 +84,6 @@ void cpu_list_add(CPUState *cpu)
         assert(!cpu_index_auto_assigned);
     }
     QTAILQ_INSERT_TAIL_RCU(&cpus, cpu, node);
-    cpu_list_generation_id++;
 }
 
 void cpu_list_remove(CPUState *cpu)
@@ -103,7 +96,6 @@ void cpu_list_remove(CPUState *cpu)
 
     QTAILQ_REMOVE_RCU(&cpus, cpu, node);
     cpu->cpu_index = UNASSIGNED_CPU_INDEX;
-    cpu_list_generation_id++;
 }
 
 CPUState *qemu_get_cpu(int index)
@@ -156,7 +148,7 @@ void do_run_on_cpu(CPUState *cpu, run_on_cpu_func func, run_on_cpu_data data,
     wi.exclusive = false;
 
     queue_work_on_cpu(cpu, &wi);
-    while (!qatomic_mb_read(&wi.done)) {
+    while (!atomic_mb_read(&wi.done)) {
         CPUState *self_cpu = current_cpu;
 
         qemu_cond_wait(&qemu_work_cond, mutex);
@@ -168,7 +160,7 @@ void async_run_on_cpu(CPUState *cpu, run_on_cpu_func func, run_on_cpu_data data)
 {
     struct qemu_work_item *wi;
 
-    wi = g_new0(struct qemu_work_item, 1);
+    wi = g_malloc0(sizeof(struct qemu_work_item));
     wi->func = func;
     wi->data = data;
     wi->free = true;
@@ -196,20 +188,20 @@ void start_exclusive(void)
     exclusive_idle();
 
     /* Make all other cpus stop executing.  */
-    qatomic_set(&pending_cpus, 1);
+    atomic_set(&pending_cpus, 1);
 
     /* Write pending_cpus before reading other_cpu->running.  */
     smp_mb();
     running_cpus = 0;
     CPU_FOREACH(other_cpu) {
-        if (qatomic_read(&other_cpu->running)) {
+        if (atomic_read(&other_cpu->running)) {
             other_cpu->has_waiter = true;
             running_cpus++;
             qemu_cpu_kick(other_cpu);
         }
     }
 
-    qatomic_set(&pending_cpus, running_cpus + 1);
+    atomic_set(&pending_cpus, running_cpus + 1);
     while (pending_cpus > 1) {
         qemu_cond_wait(&exclusive_cond, &qemu_cpu_list_lock);
     }
@@ -228,7 +220,7 @@ void end_exclusive(void)
     current_cpu->in_exclusive_context = false;
 
     qemu_mutex_lock(&qemu_cpu_list_lock);
-    qatomic_set(&pending_cpus, 0);
+    atomic_set(&pending_cpus, 0);
     qemu_cond_broadcast(&exclusive_resume);
     qemu_mutex_unlock(&qemu_cpu_list_lock);
 }
@@ -236,7 +228,7 @@ void end_exclusive(void)
 /* Wait for exclusive ops to finish, and begin cpu execution.  */
 void cpu_exec_start(CPUState *cpu)
 {
-    qatomic_set(&cpu->running, true);
+    atomic_set(&cpu->running, true);
 
     /* Write cpu->running before reading pending_cpus.  */
     smp_mb();
@@ -254,17 +246,17 @@ void cpu_exec_start(CPUState *cpu)
      * 3. pending_cpus == 0.  Then start_exclusive is definitely going to
      * see cpu->running == true, and it will kick the CPU.
      */
-    if (unlikely(qatomic_read(&pending_cpus))) {
+    if (unlikely(atomic_read(&pending_cpus))) {
         QEMU_LOCK_GUARD(&qemu_cpu_list_lock);
         if (!cpu->has_waiter) {
             /* Not counted in pending_cpus, let the exclusive item
              * run.  Since we have the lock, just set cpu->running to true
              * while holding it; no need to check pending_cpus again.
              */
-            qatomic_set(&cpu->running, false);
+            atomic_set(&cpu->running, false);
             exclusive_idle();
             /* Now pending_cpus is zero.  */
-            qatomic_set(&cpu->running, true);
+            atomic_set(&cpu->running, true);
         } else {
             /* Counted in pending_cpus, go ahead and release the
              * waiter at cpu_exec_end.
@@ -276,7 +268,7 @@ void cpu_exec_start(CPUState *cpu)
 /* Mark cpu as not executing, and release pending exclusive ops.  */
 void cpu_exec_end(CPUState *cpu)
 {
-    qatomic_set(&cpu->running, false);
+    atomic_set(&cpu->running, false);
 
     /* Write cpu->running before reading pending_cpus.  */
     smp_mb();
@@ -296,11 +288,11 @@ void cpu_exec_end(CPUState *cpu)
      * see cpu->running == false, and it can ignore this CPU until the
      * next cpu_exec_start.
      */
-    if (unlikely(qatomic_read(&pending_cpus))) {
+    if (unlikely(atomic_read(&pending_cpus))) {
         QEMU_LOCK_GUARD(&qemu_cpu_list_lock);
         if (cpu->has_waiter) {
             cpu->has_waiter = false;
-            qatomic_set(&pending_cpus, pending_cpus - 1);
+            atomic_set(&pending_cpus, pending_cpus - 1);
             if (pending_cpus == 1) {
                 qemu_cond_signal(&exclusive_cond);
             }
@@ -313,7 +305,7 @@ void async_safe_run_on_cpu(CPUState *cpu, run_on_cpu_func func,
 {
     struct qemu_work_item *wi;
 
-    wi = g_new0(struct qemu_work_item, 1);
+    wi = g_malloc0(sizeof(struct qemu_work_item));
     wi->func = func;
     wi->data = data;
     wi->free = true;
@@ -354,7 +346,7 @@ void process_queued_cpu_work(CPUState *cpu)
         if (wi->free) {
             g_free(wi);
         } else {
-            qatomic_mb_set(&wi->done, true);
+            atomic_mb_set(&wi->done, true);
         }
     }
     qemu_mutex_unlock(&cpu->work_mutex);

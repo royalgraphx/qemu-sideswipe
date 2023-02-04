@@ -6,7 +6,9 @@
 
 **/
 
+
 #include "BaseLibInternals.h"
+
 
 /**
   Returns the lower 32-bits of a Machine Specific Register(MSR).
@@ -25,7 +27,7 @@
 UINT32
 EFIAPI
 AsmReadMsr32 (
-  IN      UINT32  Index
+  IN      UINT32                    Index
   )
 {
   return (UINT32)AsmReadMsr64 (Index);
@@ -51,8 +53,8 @@ AsmReadMsr32 (
 UINT32
 EFIAPI
 AsmWriteMsr32 (
-  IN      UINT32  Index,
-  IN      UINT32  Value
+  IN      UINT32                    Index,
+  IN      UINT32                    Value
   )
 {
   return (UINT32)AsmWriteMsr64 (Index, Value);
@@ -80,8 +82,8 @@ AsmWriteMsr32 (
 UINT32
 EFIAPI
 AsmMsrOr32 (
-  IN      UINT32  Index,
-  IN      UINT32  OrData
+  IN      UINT32                    Index,
+  IN      UINT32                    OrData
   )
 {
   return (UINT32)AsmMsrOr64 (Index, OrData);
@@ -109,8 +111,8 @@ AsmMsrOr32 (
 UINT32
 EFIAPI
 AsmMsrAnd32 (
-  IN      UINT32  Index,
-  IN      UINT32  AndData
+  IN      UINT32                    Index,
+  IN      UINT32                    AndData
   )
 {
   return (UINT32)AsmMsrAnd64 (Index, AndData);
@@ -141,9 +143,9 @@ AsmMsrAnd32 (
 UINT32
 EFIAPI
 AsmMsrAndThenOr32 (
-  IN      UINT32  Index,
-  IN      UINT32  AndData,
-  IN      UINT32  OrData
+  IN      UINT32                    Index,
+  IN      UINT32                    AndData,
+  IN      UINT32                    OrData
   )
 {
   return (UINT32)AsmMsrAndThenOr64 (Index, AndData, OrData);
@@ -174,9 +176,9 @@ AsmMsrAndThenOr32 (
 UINT32
 EFIAPI
 AsmMsrBitFieldRead32 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit
   )
 {
   return BitFieldRead32 (AsmReadMsr32 (Index), StartBit, EndBit);
@@ -210,10 +212,10 @@ AsmMsrBitFieldRead32 (
 UINT32
 EFIAPI
 AsmMsrBitFieldWrite32 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  Value
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    Value
   )
 {
   ASSERT (EndBit < sizeof (Value) * 8);
@@ -251,10 +253,10 @@ AsmMsrBitFieldWrite32 (
 UINT32
 EFIAPI
 AsmMsrBitFieldOr32 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  OrData
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    OrData
   )
 {
   ASSERT (EndBit < sizeof (OrData) * 8);
@@ -292,10 +294,10 @@ AsmMsrBitFieldOr32 (
 UINT32
 EFIAPI
 AsmMsrBitFieldAnd32 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  AndData
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    AndData
   )
 {
   ASSERT (EndBit < sizeof (AndData) * 8);
@@ -337,11 +339,11 @@ AsmMsrBitFieldAnd32 (
 UINT32
 EFIAPI
 AsmMsrBitFieldAndThenOr32 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  AndData,
-  IN      UINT32  OrData
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    AndData,
+  IN      UINT32                    OrData
   )
 {
   ASSERT (EndBit < sizeof (AndData) * 8);
@@ -376,8 +378,8 @@ AsmMsrBitFieldAndThenOr32 (
 UINT64
 EFIAPI
 AsmMsrOr64 (
-  IN      UINT32  Index,
-  IN      UINT64  OrData
+  IN      UINT32                    Index,
+  IN      UINT64                    OrData
   )
 {
   return AsmWriteMsr64 (Index, AsmReadMsr64 (Index) | OrData);
@@ -404,8 +406,8 @@ AsmMsrOr64 (
 UINT64
 EFIAPI
 AsmMsrAnd64 (
-  IN      UINT32  Index,
-  IN      UINT64  AndData
+  IN      UINT32                    Index,
+  IN      UINT64                    AndData
   )
 {
   return AsmWriteMsr64 (Index, AsmReadMsr64 (Index) & AndData);
@@ -435,9 +437,9 @@ AsmMsrAnd64 (
 UINT64
 EFIAPI
 AsmMsrAndThenOr64 (
-  IN      UINT32  Index,
-  IN      UINT64  AndData,
-  IN      UINT64  OrData
+  IN      UINT32                    Index,
+  IN      UINT64                    AndData,
+  IN      UINT64                    OrData
   )
 {
   return AsmWriteMsr64 (Index, (AsmReadMsr64 (Index) & AndData) | OrData);
@@ -468,9 +470,9 @@ AsmMsrAndThenOr64 (
 UINT64
 EFIAPI
 AsmMsrBitFieldRead64 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit
   )
 {
   return BitFieldRead64 (AsmReadMsr64 (Index), StartBit, EndBit);
@@ -503,10 +505,10 @@ AsmMsrBitFieldRead64 (
 UINT64
 EFIAPI
 AsmMsrBitFieldWrite64 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT64  Value
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT64                    Value
   )
 {
   return AsmWriteMsr64 (
@@ -545,10 +547,10 @@ AsmMsrBitFieldWrite64 (
 UINT64
 EFIAPI
 AsmMsrBitFieldOr64 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT64  OrData
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT64                    OrData
   )
 {
   return AsmWriteMsr64 (
@@ -587,10 +589,10 @@ AsmMsrBitFieldOr64 (
 UINT64
 EFIAPI
 AsmMsrBitFieldAnd64 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT64  AndData
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT64                    AndData
   )
 {
   return AsmWriteMsr64 (
@@ -632,11 +634,11 @@ AsmMsrBitFieldAnd64 (
 UINT64
 EFIAPI
 AsmMsrBitFieldAndThenOr64 (
-  IN      UINT32  Index,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT64  AndData,
-  IN      UINT64  OrData
+  IN      UINT32                    Index,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT64                    AndData,
+  IN      UINT64                    OrData
   )
 {
   return AsmWriteMsr64 (

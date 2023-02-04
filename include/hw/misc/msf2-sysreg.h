@@ -26,7 +26,6 @@
 #define HW_MSF2_SYSREG_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 enum {
     ESRAM_CR        = 0x00 / 4,
@@ -62,9 +61,9 @@ enum {
 #define MSF2_SYSREG_MMIO_SIZE     0x300
 
 #define TYPE_MSF2_SYSREG          "msf2-sysreg"
-OBJECT_DECLARE_SIMPLE_TYPE(MSF2SysregState, MSF2_SYSREG)
+#define MSF2_SYSREG(obj)  OBJECT_CHECK(MSF2SysregState, (obj), TYPE_MSF2_SYSREG)
 
-struct MSF2SysregState {
+typedef struct MSF2SysregState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -73,6 +72,6 @@ struct MSF2SysregState {
     uint8_t apb1div;
 
     uint32_t regs[MSF2_SYSREG_MMIO_SIZE / 4];
-};
+} MSF2SysregState;
 
 #endif /* HW_MSF2_SYSREG_H */

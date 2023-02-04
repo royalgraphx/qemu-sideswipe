@@ -4,11 +4,7 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <log.h>
-#include <asm/cache.h>
 #include <asm/io.h>
-#include <asm/arch/base.h>
 #include <asm/arch/mbox.h>
 #include <phys2bus.h>
 
@@ -31,7 +27,7 @@ int bcm2835_mbox_call_raw(u32 chan, u32 send, u32 *recv)
 	/* Drain any stale responses */
 
 	for (;;) {
-		val = readl(&regs->mail0_status);
+		val = readl(&regs->status);
 		if (val & BCM2835_MBOX_STATUS_RD_EMPTY)
 			break;
 		if (get_timer(0) >= endtime) {
@@ -44,7 +40,7 @@ int bcm2835_mbox_call_raw(u32 chan, u32 send, u32 *recv)
 	/* Wait for space to send */
 
 	for (;;) {
-		val = readl(&regs->mail1_status);
+		val = readl(&regs->status);
 		if (!(val & BCM2835_MBOX_STATUS_WR_FULL))
 			break;
 		if (get_timer(0) >= endtime) {
@@ -62,7 +58,7 @@ int bcm2835_mbox_call_raw(u32 chan, u32 send, u32 *recv)
 	/* Wait for the response */
 
 	for (;;) {
-		val = readl(&regs->mail0_status);
+		val = readl(&regs->status);
 		if (!(val & BCM2835_MBOX_STATUS_RD_EMPTY))
 			break;
 		if (get_timer(0) >= endtime) {

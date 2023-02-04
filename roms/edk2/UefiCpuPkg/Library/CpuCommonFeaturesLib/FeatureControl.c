@@ -1,12 +1,34 @@
 /** @file
   Features in MSR_IA32_FEATURE_CONTROL register.
 
-  Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2017, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include "CpuCommonFeatures.h"
+
+/**
+  Prepares for the data used by CPU feature detection and initialization.
+
+  @param[in]  NumberOfProcessors  The number of CPUs in the platform.
+
+  @return  Pointer to a buffer of CPU related configuration data.
+
+  @note This service could be called by BSP only.
+**/
+VOID *
+EFIAPI
+FeatureControlGetConfigData (
+  IN UINTN               NumberOfProcessors
+  )
+{
+  VOID          *ConfigData;
+
+  ConfigData = AllocateZeroPool (sizeof (MSR_IA32_FEATURE_CONTROL_REGISTER) * NumberOfProcessors);
+  ASSERT (ConfigData != NULL);
+  return ConfigData;
+}
 
 /**
   Detects if VMX feature supported on current processor.
@@ -32,6 +54,11 @@ VmxSupport (
   IN VOID                              *ConfigData  OPTIONAL
   )
 {
+  MSR_IA32_FEATURE_CONTROL_REGISTER    *MsrRegister;
+
+  ASSERT (ConfigData != NULL);
+  MsrRegister = (MSR_IA32_FEATURE_CONTROL_REGISTER *) ConfigData;
+  MsrRegister[ProcessorNumber].Uint64 = AsmReadMsr64 (MSR_IA32_FEATURE_CONTROL);
   return (CpuInfo->CpuIdVersionInfoEcx.Bits.VMX == 1);
 }
 
@@ -57,10 +84,12 @@ EFIAPI
 VmxInitialize (
   IN UINTN                             ProcessorNumber,
   IN REGISTER_CPU_FEATURE_INFORMATION  *CpuInfo,
-  IN VOID                              *ConfigData   OPTIONAL,
+  IN VOID                              *ConfigData,  OPTIONAL
   IN BOOLEAN                           State
   )
 {
+  MSR_IA32_FEATURE_CONTROL_REGISTER    *MsrRegister;
+
   //
   // The scope of EnableVmxOutsideSmx bit in the MSR_IA32_FEATURE_CONTROL is core for
   // below processor type, only program MSR_IA32_FEATURE_CONTROL for thread 0 in each
@@ -68,22 +97,24 @@ VmxInitialize (
   //
   if (IS_SILVERMONT_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
       IS_GOLDMONT_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
-      IS_GOLDMONT_PLUS_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel))
-  {
+      IS_GOLDMONT_PLUS_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel)) {
     if (CpuInfo->ProcessorInfo.Location.Thread != 0) {
       return RETURN_SUCCESS;
     }
   }
 
-  CPU_REGISTER_TABLE_TEST_THEN_WRITE_FIELD (
-    ProcessorNumber,
-    Msr,
-    MSR_IA32_FEATURE_CONTROL,
-    MSR_IA32_FEATURE_CONTROL_REGISTER,
-    Bits.EnableVmxOutsideSmx,
-    (State) ? 1 : 0
-    );
-
+  ASSERT (ConfigData != NULL);
+  MsrRegister = (MSR_IA32_FEATURE_CONTROL_REGISTER *) ConfigData;
+  if (MsrRegister[ProcessorNumber].Bits.Lock == 0) {
+    CPU_REGISTER_TABLE_WRITE_FIELD (
+      ProcessorNumber,
+      Msr,
+      MSR_IA32_FEATURE_CONTROL,
+      MSR_IA32_FEATURE_CONTROL_REGISTER,
+      Bits.EnableVmxOutsideSmx,
+      (State) ? 1 : 0
+      );
+  }
   return RETURN_SUCCESS;
 }
 
@@ -111,6 +142,11 @@ LockFeatureControlRegisterSupport (
   IN VOID                              *ConfigData  OPTIONAL
   )
 {
+  MSR_IA32_FEATURE_CONTROL_REGISTER    *MsrRegister;
+
+  ASSERT (ConfigData != NULL);
+  MsrRegister = (MSR_IA32_FEATURE_CONTROL_REGISTER *) ConfigData;
+  MsrRegister[ProcessorNumber].Uint64 = AsmReadMsr64 (MSR_IA32_FEATURE_CONTROL);
   return TRUE;
 }
 
@@ -136,10 +172,12 @@ EFIAPI
 LockFeatureControlRegisterInitialize (
   IN UINTN                             ProcessorNumber,
   IN REGISTER_CPU_FEATURE_INFORMATION  *CpuInfo,
-  IN VOID                              *ConfigData   OPTIONAL,
+  IN VOID                              *ConfigData,  OPTIONAL
   IN BOOLEAN                           State
   )
 {
+  MSR_IA32_FEATURE_CONTROL_REGISTER    *MsrRegister;
+
   //
   // The scope of Lock bit in the MSR_IA32_FEATURE_CONTROL is core for
   // below processor type, only program MSR_IA32_FEATURE_CONTROL for thread 0 in each
@@ -147,22 +185,24 @@ LockFeatureControlRegisterInitialize (
   //
   if (IS_SILVERMONT_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
       IS_GOLDMONT_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
-      IS_GOLDMONT_PLUS_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel))
-  {
+      IS_GOLDMONT_PLUS_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel)) {
     if (CpuInfo->ProcessorInfo.Location.Thread != 0) {
       return RETURN_SUCCESS;
     }
   }
 
-  CPU_REGISTER_TABLE_TEST_THEN_WRITE_FIELD (
-    ProcessorNumber,
-    Msr,
-    MSR_IA32_FEATURE_CONTROL,
-    MSR_IA32_FEATURE_CONTROL_REGISTER,
-    Bits.Lock,
-    1
-    );
-
+  ASSERT (ConfigData != NULL);
+  MsrRegister = (MSR_IA32_FEATURE_CONTROL_REGISTER *) ConfigData;
+  if (MsrRegister[ProcessorNumber].Bits.Lock == 0) {
+    CPU_REGISTER_TABLE_WRITE_FIELD (
+      ProcessorNumber,
+      Msr,
+      MSR_IA32_FEATURE_CONTROL,
+      MSR_IA32_FEATURE_CONTROL_REGISTER,
+      Bits.Lock,
+      1
+      );
+  }
   return RETURN_SUCCESS;
 }
 
@@ -190,6 +230,11 @@ SmxSupport (
   IN VOID                              *ConfigData  OPTIONAL
   )
 {
+  MSR_IA32_FEATURE_CONTROL_REGISTER    *MsrRegister;
+
+  ASSERT (ConfigData != NULL);
+  MsrRegister = (MSR_IA32_FEATURE_CONTROL_REGISTER *) ConfigData;
+  MsrRegister[ProcessorNumber].Uint64 = AsmReadMsr64 (MSR_IA32_FEATURE_CONTROL);
   return (CpuInfo->CpuIdVersionInfoEcx.Bits.SMX == 1);
 }
 
@@ -216,11 +261,12 @@ EFIAPI
 SmxInitialize (
   IN UINTN                             ProcessorNumber,
   IN REGISTER_CPU_FEATURE_INFORMATION  *CpuInfo,
-  IN VOID                              *ConfigData   OPTIONAL,
+  IN VOID                              *ConfigData,  OPTIONAL
   IN BOOLEAN                           State
   )
 {
-  RETURN_STATUS  Status;
+  MSR_IA32_FEATURE_CONTROL_REGISTER    *MsrRegister;
+  RETURN_STATUS                        Status;
 
   //
   // The scope of Lock bit in the MSR_IA32_FEATURE_CONTROL is core for
@@ -228,8 +274,7 @@ SmxInitialize (
   // core.
   //
   if (IS_GOLDMONT_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel) ||
-      IS_GOLDMONT_PLUS_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel))
-  {
+      IS_GOLDMONT_PLUS_PROCESSOR (CpuInfo->DisplayFamily, CpuInfo->DisplayModel)) {
     if (CpuInfo->ProcessorInfo.Location.Thread != 0) {
       return RETURN_SUCCESS;
     }
@@ -239,45 +284,39 @@ SmxInitialize (
 
   if (State && (!IsCpuFeatureInSetting (CPU_FEATURE_VMX))) {
     DEBUG ((DEBUG_WARN, "Warning :: Can't enable SMX feature when VMX feature not enabled, disable it.\n"));
-    State  = FALSE;
+    State = FALSE;
     Status = RETURN_UNSUPPORTED;
   }
 
-  CPU_REGISTER_TABLE_WRITE_FIELD (
-    ProcessorNumber,
-    ControlRegister,
-    4,
-    IA32_CR4,
-    Bits.SMXE,
-    (State) ? 1 : 0
-    )
+  ASSERT (ConfigData != NULL);
+  MsrRegister = (MSR_IA32_FEATURE_CONTROL_REGISTER *) ConfigData;
+  if (MsrRegister[ProcessorNumber].Bits.Lock == 0) {
+    CPU_REGISTER_TABLE_WRITE_FIELD (
+      ProcessorNumber,
+      Msr,
+      MSR_IA32_FEATURE_CONTROL,
+      MSR_IA32_FEATURE_CONTROL_REGISTER,
+      Bits.SenterLocalFunctionEnables,
+      (State) ? 0x7F : 0
+      );
 
-  CPU_REGISTER_TABLE_TEST_THEN_WRITE_FIELD (
-    ProcessorNumber,
-    Msr,
-    MSR_IA32_FEATURE_CONTROL,
-    MSR_IA32_FEATURE_CONTROL_REGISTER,
-    Bits.SenterLocalFunctionEnables,
-    (State) ? 0x7F : 0
-    );
+    CPU_REGISTER_TABLE_WRITE_FIELD (
+      ProcessorNumber,
+      Msr,
+      MSR_IA32_FEATURE_CONTROL,
+      MSR_IA32_FEATURE_CONTROL_REGISTER,
+      Bits.SenterGlobalEnable,
+      (State) ? 1 : 0
+      );
 
-  CPU_REGISTER_TABLE_TEST_THEN_WRITE_FIELD (
-    ProcessorNumber,
-    Msr,
-    MSR_IA32_FEATURE_CONTROL,
-    MSR_IA32_FEATURE_CONTROL_REGISTER,
-    Bits.SenterGlobalEnable,
-    (State) ? 1 : 0
-    );
-
-  CPU_REGISTER_TABLE_TEST_THEN_WRITE_FIELD (
-    ProcessorNumber,
-    Msr,
-    MSR_IA32_FEATURE_CONTROL,
-    MSR_IA32_FEATURE_CONTROL_REGISTER,
-    Bits.EnableVmxInsideSmx,
-    (State) ? 1 : 0
-    );
-
+    CPU_REGISTER_TABLE_WRITE_FIELD (
+      ProcessorNumber,
+      Msr,
+      MSR_IA32_FEATURE_CONTROL,
+      MSR_IA32_FEATURE_CONTROL_REGISTER,
+      Bits.EnableVmxInsideSmx,
+      (State) ? 1 : 0
+      );
+  }
   return Status;
 }

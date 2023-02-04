@@ -126,8 +126,7 @@ ciface_quiesce( unsigned long args[], unsigned long ret[] )
 }
 
 /* ( -- ms ) */
-/* From drivers/timer.c */
-extern unsigned long timer_freq;
+#define TIMER_FREQUENCY 16600000ULL
 
 static void
 ciface_milliseconds( unsigned long args[], unsigned long ret[] )
@@ -147,7 +146,7 @@ ciface_milliseconds( unsigned long args[], unsigned long ret[] )
 		: "cc");
 
 	ticks = (((unsigned long long)tbu) << 32) | (unsigned long long)tbl;
-	msecs = (1000 * ticks) / timer_freq;
+	msecs = (1000 * ticks) / TIMER_FREQUENCY;
 	PUSH( msecs );
 }
 

@@ -26,8 +26,6 @@
 #include <common.h>
 #include <config.h>
 #include <debug_uart.h>
-#include <asm/system.h>
-#include <init.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/dmc.h>
 #include <asm/arch/power.h>

@@ -1,5 +1,5 @@
 /*
- * Copyright 1995-2019 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 1995-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -50,8 +50,7 @@ typedef enum OPTION_choice {
 
 const OPTIONS enc_options[] = {
     {"help", OPT_HELP, '-', "Display this summary"},
-    {"list", OPT_LIST, '-', "List ciphers"},
-    {"ciphers", OPT_LIST, '-', "Alias for -list"},
+    {"ciphers", OPT_LIST, '-', "List ciphers"},
     {"in", OPT_IN, '<', "Input file"},
     {"out", OPT_OUT, '>', "Output file"},
     {"pass", OPT_PASS, 's', "Passphrase source"},
@@ -501,7 +500,7 @@ int enc_main(int argc, char **argv)
         if (hiv != NULL) {
             int siz = EVP_CIPHER_iv_length(cipher);
             if (siz == 0) {
-                BIO_printf(bio_err, "warning: iv not used by this cipher\n");
+                BIO_printf(bio_err, "warning: iv not use by this cipher\n");
             } else if (!set_hex(hiv, iv, siz)) {
                 BIO_printf(bio_err, "invalid hex iv value\n");
                 goto end;
@@ -587,7 +586,7 @@ int enc_main(int argc, char **argv)
     if (benc != NULL)
         wbio = BIO_push(benc, wbio);
 
-    while (BIO_pending(rbio) || !BIO_eof(rbio)) {
+    for (;;) {
         inl = BIO_read(rbio, (char *)buff, bsize);
         if (inl <= 0)
             break;

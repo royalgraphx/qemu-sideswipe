@@ -37,8 +37,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 VOID
 EFIAPI
 SmBusQuickRead (
-  IN  UINTN          SmBusAddress,
-  OUT RETURN_STATUS  *Status       OPTIONAL
+  IN  UINTN                     SmBusAddress,
+  OUT RETURN_STATUS             *Status       OPTIONAL
   )
 {
   ASSERT (!SMBUS_LIB_PEC (SmBusAddress));
@@ -77,8 +77,8 @@ SmBusQuickRead (
 VOID
 EFIAPI
 SmBusQuickWrite (
-  IN  UINTN          SmBusAddress,
-  OUT RETURN_STATUS  *Status       OPTIONAL
+  IN  UINTN                     SmBusAddress,
+  OUT RETURN_STATUS             *Status       OPTIONAL
   )
 {
   ASSERT (!SMBUS_LIB_PEC (SmBusAddress));
@@ -130,7 +130,6 @@ SmBusReceiveByte (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -176,7 +175,6 @@ SmBusSendByte (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -218,7 +216,6 @@ SmBusReadDataByte (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -263,7 +260,6 @@ SmBusWriteDataByte (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -305,7 +301,6 @@ SmBusReadDataWord (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -350,7 +345,6 @@ SmBusWriteDataWord (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -395,7 +389,6 @@ SmBusProcessCall (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -444,7 +437,6 @@ SmBusReadBlock (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -491,7 +483,6 @@ SmBusWriteBlock (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }
 
@@ -543,6 +534,5 @@ SmBusBlockProcessCall (
   if (Status != NULL) {
     *Status = RETURN_UNSUPPORTED;
   }
-
   return 0;
 }

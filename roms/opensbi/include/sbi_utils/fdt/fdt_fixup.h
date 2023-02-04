@@ -22,30 +22,6 @@
 void fdt_cpu_fixup(void *fdt);
 
 /**
- * Fix up the APLIC nodes in the device tree
- *
- * This routine disables APLIC nodes which are not accessible to the next
- * booting stage based on currently assigned domain.
- *
- * It is recommended that platform codes call this helper in their final_init()
- *
- * @param fdt: device tree blob
- */
-void fdt_aplic_fixup(void *fdt);
-
-/**
- * Fix up the IMSIC nodes in the device tree
- *
- * This routine disables IMSIC nodes which are not accessible to the next
- * booting stage based on currently assigned domain.
- *
- * It is recommended that platform codes call this helper in their final_init()
- *
- * @param fdt: device tree blob
- */
-void fdt_imsic_fixup(void *fdt);
-
-/**
  * Fix up the PLIC node in the device tree
  *
  * This routine updates the "interrupt-extended" property of the PLIC node in
@@ -54,8 +30,9 @@ void fdt_imsic_fixup(void *fdt);
  * It is recommended that platform codes call this helper in their final_init()
  *
  * @param fdt: device tree blob
+ * @param compat: PLIC node compatible string
  */
-void fdt_plic_fixup(void *fdt);
+void fdt_plic_fixup(void *fdt, const char *compat);
 
 /**
  * Fix up the reserved memory node in the device tree
@@ -71,26 +48,11 @@ void fdt_plic_fixup(void *fdt);
 int fdt_reserved_memory_fixup(void *fdt);
 
 /**
- * Fix up the reserved memory subnodes in the device tree
- *
- * This routine adds the no-map property to the reserved memory subnodes so
- * that the OS does not map those PMP protected memory regions.
- *
- * Platform codes must call this helper in their final_init() after fdt_fixups()
- * if the OS should not map the PMP protected reserved regions.
- *
- * @param fdt: device tree blob
- * @return zero on success and -ve on failure
- */
-int fdt_reserved_memory_nomap_fixup(void *fdt);
-
-/**
  * General device tree fix-up
  *
  * This routine do all required device tree fix-ups for a typical platform.
- * It fixes up the PLIC node, IMSIC nodes, APLIC nodes, and the reserved
- * memory node in the device tree by calling the corresponding helper
- * routines to accomplish the task.
+ * It fixes up the PLIC node and the reserved memory node in the device tree
+ * by calling the corresponding helper routines to accomplish the task.
  *
  * It is recommended that platform codes call this helper in their final_init()
  *

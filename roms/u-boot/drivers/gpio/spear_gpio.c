@@ -8,7 +8,6 @@
  */
 
 #include <common.h>
-#include <malloc.h>
 #include <asm/arch/hardware.h>
 #include <asm/gpio.h>
 #include <asm/io.h>

@@ -47,7 +47,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <Library/UefiBootServicesTableLib.h>
 #include "FaultTolerantWrite.h"
-VOID  *mFvbRegistration = NULL;
+EFI_EVENT                                 mFvbRegistration = NULL;
+
 
 /**
   Retrieve the FVB protocol interface by HANDLE.
@@ -73,7 +74,7 @@ FtwGetFvbByHandle (
   return gBS->HandleProtocol (
                 FvBlockHandle,
                 &gEfiFirmwareVolumeBlockProtocolGuid,
-                (VOID **)FvBlock
+                (VOID **) FvBlock
                 );
 }
 
@@ -89,10 +90,10 @@ FtwGetFvbByHandle (
 **/
 EFI_STATUS
 FtwGetSarProtocol (
-  OUT VOID  **SarProtocol
+  OUT VOID                                **SarProtocol
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                              Status;
 
   //
   // Locate Swap Address Range protocol
@@ -122,11 +123,11 @@ FtwGetSarProtocol (
 **/
 EFI_STATUS
 GetFvbCountAndBuffer (
-  OUT UINTN       *NumberHandles,
-  OUT EFI_HANDLE  **Buffer
+  OUT UINTN                               *NumberHandles,
+  OUT EFI_HANDLE                          **Buffer
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                              Status;
 
   //
   // Locate all handles of Fvb protocol
@@ -141,6 +142,7 @@ GetFvbCountAndBuffer (
   return Status;
 }
 
+
 /**
   Firmware Volume Block Protocol notification event handler.
 
@@ -151,13 +153,13 @@ GetFvbCountAndBuffer (
 VOID
 EFIAPI
 FvbNotificationEvent (
-  IN  EFI_EVENT  Event,
-  IN  VOID       *Context
+  IN  EFI_EVENT                           Event,
+  IN  VOID                                *Context
   )
 {
-  EFI_STATUS                         Status;
-  EFI_FAULT_TOLERANT_WRITE_PROTOCOL  *FtwProtocol;
-  EFI_FTW_DEVICE                     *FtwDevice;
+  EFI_STATUS                              Status;
+  EFI_FAULT_TOLERANT_WRITE_PROTOCOL       *FtwProtocol;
+  EFI_FTW_DEVICE                          *FtwDevice;
 
   //
   // Just return to avoid installing FaultTolerantWriteProtocol again
@@ -166,19 +168,19 @@ FvbNotificationEvent (
   Status = gBS->LocateProtocol (
                   &gEfiFaultTolerantWriteProtocolGuid,
                   NULL,
-                  (VOID **)&FtwProtocol
+                  (VOID **) &FtwProtocol
                   );
   if (!EFI_ERROR (Status)) {
-    return;
+    return ;
   }
 
   //
   // Found proper FVB protocol and initialize FtwDevice for protocol installation
   //
   FtwDevice = (EFI_FTW_DEVICE *)Context;
-  Status    = InitFtwProtocol (FtwDevice);
-  if (EFI_ERROR (Status)) {
-    return;
+  Status = InitFtwProtocol (FtwDevice);
+  if (EFI_ERROR(Status)) {
+    return ;
   }
 
   //
@@ -198,6 +200,7 @@ FvbNotificationEvent (
   return;
 }
 
+
 /**
   This function is the entry point of the Fault Tolerant Write driver.
 
@@ -212,12 +215,12 @@ FvbNotificationEvent (
 EFI_STATUS
 EFIAPI
 FaultTolerantWriteInitialize (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE                           ImageHandle,
+  IN EFI_SYSTEM_TABLE                     *SystemTable
   )
 {
-  EFI_STATUS      Status;
-  EFI_FTW_DEVICE  *FtwDevice;
+  EFI_STATUS                              Status;
+  EFI_FTW_DEVICE                          *FtwDevice;
 
   FtwDevice = NULL;
 
@@ -225,7 +228,7 @@ FaultTolerantWriteInitialize (
   // Allocate private data structure for FTW protocol and do some initialization
   //
   Status = InitFtwDevice (&FtwDevice);
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR(Status)) {
     return Status;
   }
 
@@ -260,12 +263,12 @@ FaultTolerantWriteInitialize (
 **/
 UINT32
 FtwCalculateCrc32 (
-  IN  VOID   *Buffer,
-  IN  UINTN  Length
+  IN  VOID                         *Buffer,
+  IN  UINTN                        Length
   )
 {
-  EFI_STATUS  Status;
-  UINT32      ReturnValue;
+  EFI_STATUS    Status;
+  UINT32        ReturnValue;
 
   Status = gBS->CalculateCrc32 (Buffer, Length, &ReturnValue);
   ASSERT_EFI_ERROR (Status);

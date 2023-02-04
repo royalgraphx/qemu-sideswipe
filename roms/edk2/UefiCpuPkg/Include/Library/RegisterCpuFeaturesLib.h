@@ -1,7 +1,7 @@
 /** @file
   Register CPU Features Library to register and manage CPU features.
 
-  Copyright (c) 2017 - 2020, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2017 - 2019, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -10,7 +10,7 @@
 #define __REGISTER_CPU_FEATURES_LIB_H__
 
 #include <AcpiCpuData.h>
-#include <Register/Intel/Cpuid.h>
+#include <Register/Cpuid.h>
 #include <Protocol/MpService.h>
 
 ///
@@ -20,94 +20,72 @@
 /// modifiers of a CPU feature.  When used in a list, the define value
 /// CPU_FEATURE_END is used to terminate a list of CPU feature values.
 /// @{
-#define CPU_FEATURE_AESNI                          0
-#define CPU_FEATURE_TURBO_MODE                     1
-#define CPU_FEATURE_MWAIT                          2
-#define CPU_FEATURE_ACPI                           3
-#define CPU_FEATURE_EIST                           4
-#define CPU_FEATURE_RESERVED_5                     5
-#define CPU_FEATURE_FASTSTRINGS                    6
-#define CPU_FEATURE_VMX                            7
-#define CPU_FEATURE_SMX                            8
-#define CPU_FEATURE_LMCE                           9
-#define CPU_FEATURE_LOCK_FEATURE_CONTROL_REGISTER  10
-#define CPU_FEATURE_LIMIT_CPUID_MAX_VAL            11
-#define CPU_FEATURE_MCE                            12
-#define CPU_FEATURE_MCA                            13
-#define CPU_FEATURE_MCG_CTL                        14
-#define CPU_FEATURE_PENDING_BREAK                  15
-#define CPU_FEATURE_C1E                            16
-#define CPU_FEATURE_C1_AUTO_DEMOTION               17
-#define CPU_FEATURE_C3_AUTO_DEMOTION               18
-#define CPU_FEATURE_C1_UNDEMOTION                  19
-#define CPU_FEATURE_C3_UNDEMOTION                  20
-#define CPU_FEATURE_C_STATE                        21
-#define CPU_FEATURE_TM                             22
-#define CPU_FEATURE_TM2                            23
-#define CPU_FEATURE_X2APIC                         24
-#define CPU_FEATURE_RESERVED_25                    25
-#define CPU_FEATURE_RESERVED_26                    26
-#define CPU_FEATURE_RESERVED_27                    27
-#define CPU_FEATURE_RESERVED_28                    28
-#define CPU_FEATURE_RESERVED_29                    29
-#define CPU_FEATURE_RESERVED_30                    30
-#define CPU_FEATURE_RESERVED_31                    31
+#define CPU_FEATURE_AESNI                           0
+#define CPU_FEATURE_TURBO_MODE                      1
+#define CPU_FEATURE_MWAIT                           2
+#define CPU_FEATURE_ACPI                            3
+#define CPU_FEATURE_EIST                            4
+#define CPU_FEATURE_XD                              5
+#define CPU_FEATURE_FASTSTRINGS                     6
+#define CPU_FEATURE_VMX                             7
+#define CPU_FEATURE_SMX                             8
+#define CPU_FEATURE_LMCE                            9
+#define CPU_FEATURE_LOCK_FEATURE_CONTROL_REGISTER   10
+#define CPU_FEATURE_LIMIT_CPUID_MAX_VAL             11
+#define CPU_FEATURE_MCE                             12
+#define CPU_FEATURE_MCA                             13
+#define CPU_FEATURE_MCG_CTL                         14
+#define CPU_FEATURE_PENDING_BREAK                   15
+#define CPU_FEATURE_C1E                             16
+#define CPU_FEATURE_C1_AUTO_DEMOTION                17
+#define CPU_FEATURE_C3_AUTO_DEMOTION                18
+#define CPU_FEATURE_C1_UNDEMOTION                   19
+#define CPU_FEATURE_C3_UNDEMOTION                   20
+#define CPU_FEATURE_C_STATE                         21
+#define CPU_FEATURE_TM                              22
+#define CPU_FEATURE_TM2                             23
+#define CPU_FEATURE_X2APIC                          24
+#define CPU_FEATURE_RESERVED_25                     25
+#define CPU_FEATURE_RESERVED_26                     26
+#define CPU_FEATURE_RESERVED_27                     27
+#define CPU_FEATURE_RESERVED_28                     28
+#define CPU_FEATURE_RESERVED_29                     29
+#define CPU_FEATURE_RESERVED_30                     30
+#define CPU_FEATURE_RESERVED_31                     31
 
-#define CPU_FEATURE_L2_PREFETCHER                 (32+0)
-#define CPU_FEATURE_L1_DATA_PREFETCHER            (32+1)
-#define CPU_FEATURE_HARDWARE_PREFETCHER           (32+2)
-#define CPU_FEATURE_ADJACENT_CACHE_LINE_PREFETCH  (32+3)
-#define CPU_FEATURE_DCU_PREFETCHER                (32+4)
-#define CPU_FEATURE_IP_PREFETCHER                 (32+5)
-#define CPU_FEATURE_MLC_STREAMER_PREFETCHER       (32+6)
-#define CPU_FEATURE_MLC_SPATIAL_PREFETCHER        (32+7)
-#define CPU_FEATURE_THREE_STRIKE_COUNTER          (32+8)
-#define CPU_FEATURE_APIC_TPR_UPDATE_MESSAGE       (32+9)
-#define CPU_FEATURE_ENERGY_PERFORMANCE_BIAS       (32+10)
-#define CPU_FEATURE_PPIN                          (32+11)
-#define CPU_FEATURE_PROC_TRACE                    (32+12)
+#define CPU_FEATURE_L2_PREFETCHER                   (32+0)
+#define CPU_FEATURE_L1_DATA_PREFETCHER              (32+1)
+#define CPU_FEATURE_HARDWARE_PREFETCHER             (32+2)
+#define CPU_FEATURE_ADJACENT_CACHE_LINE_PREFETCH    (32+3)
+#define CPU_FEATURE_DCU_PREFETCHER                  (32+4)
+#define CPU_FEATURE_IP_PREFETCHER                   (32+5)
+#define CPU_FEATURE_MLC_STREAMER_PREFETCHER         (32+6)
+#define CPU_FEATURE_MLC_SPATIAL_PREFETCHER          (32+7)
+#define CPU_FEATURE_THREE_STRICK_COUNTER            (32+8)
+#define CPU_FEATURE_APIC_TPR_UPDATE_MESSAGE         (32+9)
+#define CPU_FEATURE_ENERGY_PERFORMANCE_BIAS         (32+10)
+#define CPU_FEATURE_PPIN                            (32+11)
+#define CPU_FEATURE_PROC_TRACE                      (32+12)
 
-#define CPU_FEATURE_BEFORE_ALL      BIT23
-#define CPU_FEATURE_AFTER_ALL       BIT24
-#define CPU_FEATURE_THREAD_BEFORE   BIT25
-#define CPU_FEATURE_THREAD_AFTER    BIT26
-#define CPU_FEATURE_CORE_BEFORE     BIT27
-#define CPU_FEATURE_CORE_AFTER      BIT28
-#define CPU_FEATURE_PACKAGE_BEFORE  BIT29
-#define CPU_FEATURE_PACKAGE_AFTER   BIT30
-#define CPU_FEATURE_END             MAX_UINT32
+#define CPU_FEATURE_BEFORE_ALL                      BIT23
+#define CPU_FEATURE_AFTER_ALL                       BIT24
+//
+// CPU_FEATURE_BEFORE and CPU_FEATURE_AFTER only mean Thread scope
+// before and Thread scope after.
+// It will be replace with CPU_FEATURE_THREAD_BEFORE and
+// CPU_FEATURE_THREAD_AFTER, and should not be used anymore.
+//
+#define CPU_FEATURE_BEFORE                          BIT25
+#define CPU_FEATURE_AFTER                           BIT26
+
+#define CPU_FEATURE_THREAD_BEFORE                   CPU_FEATURE_BEFORE
+#define CPU_FEATURE_THREAD_AFTER                    CPU_FEATURE_AFTER
+#define CPU_FEATURE_CORE_BEFORE                     BIT27
+#define CPU_FEATURE_CORE_AFTER                      BIT28
+#define CPU_FEATURE_PACKAGE_BEFORE                  BIT29
+#define CPU_FEATURE_PACKAGE_AFTER                   BIT30
+#define CPU_FEATURE_END                             MAX_UINT32
 /// @}
-
-///
-/// The bit field to indicate whether the processor is the first in its parent scope.
-///
-typedef struct {
-  //
-  // Set to 1 when current processor is the first thread in the core it resides in.
-  //
-  UINT32    Thread   : 1;
-  //
-  // Set to 1 when current processor is a thread of the first core in the module it resides in.
-  //
-  UINT32    Core     : 1;
-  //
-  // Set to 1 when current processor is a thread of the first module in the tile it resides in.
-  //
-  UINT32    Module   : 1;
-  //
-  // Set to 1 when current processor is a thread of the first tile in the die it resides in.
-  //
-  UINT32    Tile     : 1;
-  //
-  // Set to 1 when current processor is a thread of the first die in the package it resides in.
-  //
-  UINT32    Die      : 1;
-  //
-  // Set to 1 when current processor is a thread of the first package in the system.
-  //
-  UINT32    Package  : 1;
-  UINT32    Reserved : 26;
-} REGISTER_CPU_FEATURE_FIRST_PROCESSOR;
 
 ///
 /// CPU Information passed into the SupportFunc and InitializeFunc of the
@@ -118,36 +96,31 @@ typedef struct {
   ///
   /// The package that the CPU resides
   ///
-  EFI_PROCESSOR_INFORMATION               ProcessorInfo;
-
-  ///
-  /// The bit flag indicating whether the CPU is the first Thread/Core/Module/Tile/Die/Package in its parent scope.
-  ///
-  REGISTER_CPU_FEATURE_FIRST_PROCESSOR    First;
+  EFI_PROCESSOR_INFORMATION            ProcessorInfo;
   ///
   /// The Display Family of the CPU computed from CPUID leaf CPUID_VERSION_INFO
   ///
-  UINT32                                  DisplayFamily;
+  UINT32                               DisplayFamily;
   ///
   /// The Display Model of the CPU computed from CPUID leaf CPUID_VERSION_INFO
   ///
-  UINT32                                  DisplayModel;
+  UINT32                               DisplayModel;
   ///
   /// The Stepping ID of the CPU computed from CPUID leaf CPUID_VERSION_INFO
   ///
-  UINT32                                  SteppingId;
+  UINT32                               SteppingId;
   ///
   /// The Processor Type of the CPU computed from CPUID leaf CPUID_VERSION_INFO
   ///
-  UINT32                                  ProcessorType;
+  UINT32                               ProcessorType;
   ///
   /// Bit field structured returned in ECX from CPUID leaf CPUID_VERSION_INFO
   ///
-  CPUID_VERSION_INFO_ECX                  CpuIdVersionInfoEcx;
+  CPUID_VERSION_INFO_ECX               CpuIdVersionInfoEcx;
   ///
   /// Bit field structured returned in EDX from CPUID leaf CPUID_VERSION_INFO
   ///
-  CPUID_VERSION_INFO_EDX                  CpuIdVersionInfoEdx;
+  CPUID_VERSION_INFO_EDX               CpuIdVersionInfoEdx;
 } REGISTER_CPU_FEATURE_INFORMATION;
 
 /**
@@ -167,7 +140,7 @@ typedef struct {
 BOOLEAN
 EFIAPI
 IsCpuFeatureSupported (
-  IN UINT32  Feature
+  IN UINT32              Feature
   );
 
 /**
@@ -184,7 +157,7 @@ IsCpuFeatureSupported (
 BOOLEAN
 EFIAPI
 IsCpuFeatureInSetting (
-  IN UINT32  Feature
+  IN UINT32              Feature
   );
 
 /**
@@ -252,7 +225,7 @@ RETURN_STATUS
 (EFIAPI *CPU_FEATURE_INITIALIZE)(
   IN UINTN                             ProcessorNumber,
   IN REGISTER_CPU_FEATURE_INFORMATION  *CpuInfo,
-  IN VOID                              *ConfigData   OPTIONAL,
+  IN VOID                              *ConfigData,  OPTIONAL
   IN BOOLEAN                           State
   );
 
@@ -303,10 +276,10 @@ RETURN_STATUS
 RETURN_STATUS
 EFIAPI
 RegisterCpuFeature (
-  IN CHAR8                        *FeatureName        OPTIONAL,
-  IN CPU_FEATURE_GET_CONFIG_DATA  GetConfigDataFunc   OPTIONAL,
-  IN CPU_FEATURE_SUPPORT          SupportFunc         OPTIONAL,
-  IN CPU_FEATURE_INITIALIZE       InitializeFunc      OPTIONAL,
+  IN CHAR8                             *FeatureName,       OPTIONAL
+  IN CPU_FEATURE_GET_CONFIG_DATA       GetConfigDataFunc,  OPTIONAL
+  IN CPU_FEATURE_SUPPORT               SupportFunc,        OPTIONAL
+  IN CPU_FEATURE_INITIALIZE            InitializeFunc,     OPTIONAL
   ...
   );
 
@@ -348,7 +321,7 @@ CpuFeaturesInitialize (
 VOID
 EFIAPI
 SwitchBspAfterFeaturesInitialize (
-  IN UINTN  ProcessorNumber
+  IN UINTN               ProcessorNumber
   );
 
 /**
@@ -368,37 +341,11 @@ SwitchBspAfterFeaturesInitialize (
 VOID
 EFIAPI
 CpuRegisterTableWrite (
-  IN UINTN          ProcessorNumber,
-  IN REGISTER_TYPE  RegisterType,
-  IN UINT64         Index,
-  IN UINT64         ValueMask,
-  IN UINT64         Value
-  );
-
-/**
-  Adds an entry in specified register table.
-
-  This function adds an entry in specified register table, with given register type,
-  register index, bit section and value.
-
-  Driver will  test the current value before setting new value.
-
-  @param[in]  ProcessorNumber  The index of the CPU to add a register table entry
-  @param[in]  RegisterType     Type of the register to program
-  @param[in]  Index            Index of the register to program
-  @param[in]  ValueMask        Mask of bits in register to write
-  @param[in]  Value            Value to write
-
-  @note This service could be called by BSP only.
-**/
-VOID
-EFIAPI
-CpuRegisterTableTestThenWrite (
-  IN UINTN          ProcessorNumber,
-  IN REGISTER_TYPE  RegisterType,
-  IN UINT64         Index,
-  IN UINT64         ValueMask,
-  IN UINT64         Value
+  IN UINTN               ProcessorNumber,
+  IN REGISTER_TYPE       RegisterType,
+  IN UINT64              Index,
+  IN UINT64              ValueMask,
+  IN UINT64              Value
   );
 
 /**
@@ -418,11 +365,11 @@ CpuRegisterTableTestThenWrite (
 VOID
 EFIAPI
 PreSmmCpuRegisterTableWrite (
-  IN UINTN          ProcessorNumber,
-  IN REGISTER_TYPE  RegisterType,
-  IN UINT64         Index,
-  IN UINT64         ValueMask,
-  IN UINT64         Value
+  IN UINTN               ProcessorNumber,
+  IN REGISTER_TYPE       RegisterType,
+  IN UINT64              Index,
+  IN UINT64              ValueMask,
+  IN UINT64              Value
   );
 
 /**
@@ -444,26 +391,6 @@ PreSmmCpuRegisterTableWrite (
   } while(FALSE);
 
 /**
-  Adds a 32-bit register write entry in specified register table.
-
-  This macro adds an entry in specified register table, with given register type,
-  register index, and value.
-
-  Driver will  test the current value before setting new value.
-
-  @param[in]  ProcessorNumber  The index of the CPU to add a register table entry.
-  @param[in]  RegisterType     Type of the register to program
-  @param[in]  Index            Index of the register to program
-  @param[in]  Value            Value to write
-
-  @note This service could be called by BSP only.
-**/
-#define CPU_REGISTER_TABLE_TEST_THEN_WRITE32(ProcessorNumber, RegisterType, Index, Value)     \
-  do {                                                                                        \
-    CpuRegisterTableTestThenWrite (ProcessorNumber, RegisterType, Index, MAX_UINT32, Value);  \
-  } while(FALSE);
-
-/**
   Adds a 64-bit register write entry in specified register table.
 
   This macro adds an entry in specified register table, with given register type,
@@ -479,26 +406,6 @@ PreSmmCpuRegisterTableWrite (
 #define CPU_REGISTER_TABLE_WRITE64(ProcessorNumber, RegisterType, Index, Value)       \
   do {                                                                                \
     CpuRegisterTableWrite (ProcessorNumber, RegisterType, Index, MAX_UINT64, Value);  \
-  } while(FALSE);
-
-/**
-  Adds a 64-bit register write entry in specified register table.
-
-  This macro adds an entry in specified register table, with given register type,
-  register index, and value.
-
-  Driver will  test the current value before setting new value.
-
-  @param[in]  ProcessorNumber  The index of the CPU to add a register table entry.
-  @param[in]  RegisterType     Type of the register to program
-  @param[in]  Index            Index of the register to program
-  @param[in]  Value            Value to write
-
-  @note This service could be called by BSP only.
-**/
-#define CPU_REGISTER_TABLE_TEST_THEN_WRITE64(ProcessorNumber, RegisterType, Index, Value)     \
-  do {                                                                                        \
-    CpuRegisterTableTestThenWrite (ProcessorNumber, RegisterType, Index, MAX_UINT64, Value);  \
   } while(FALSE);
 
 /**
@@ -522,31 +429,6 @@ PreSmmCpuRegisterTableWrite (
     ValueMask = MAX_UINT64;                                                                      \
     ((Type *)(&ValueMask))->Field = 0;                                                           \
     CpuRegisterTableWrite (ProcessorNumber, RegisterType, Index, ~ValueMask, Value);             \
-  } while(FALSE);
-
-/**
-  Adds a bit field write entry in specified register table.
-
-  This macro adds an entry in specified register table, with given register type,
-  register index, bit field section, and value.
-
-  Driver will  test the current value before setting new value.
-
-  @param[in]  ProcessorNumber  The index of the CPU to add a register table entry.
-  @param[in]  RegisterType     Type of the register to program.
-  @param[in]  Index            Index of the register to program.
-  @param[in]  Type             The data type name of a register structure.
-  @param[in]  Field            The bit fiel name in register structure to write.
-  @param[in]  Value            Value to write to the bit field.
-
-  @note This service could be called by BSP only.
-**/
-#define CPU_REGISTER_TABLE_TEST_THEN_WRITE_FIELD(ProcessorNumber, RegisterType, Index, Type, Field, Value) \
-  do {                                                                                                     \
-    UINT64  ValueMask;                                                                                     \
-    ValueMask = MAX_UINT64;                                                                                \
-    ((Type *)(&ValueMask))->Field = 0;                                                                     \
-    CpuRegisterTableTestThenWrite (ProcessorNumber, RegisterType, Index, ~ValueMask, Value);               \
   } while(FALSE);
 
 /**

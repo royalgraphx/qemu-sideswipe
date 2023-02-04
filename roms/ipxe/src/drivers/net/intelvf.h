@@ -119,12 +119,6 @@ struct intelvf_msg_queues {
 	uint32_t dflt;
 } __attribute__ (( packed ));
 
-/** Raw mailbox message */
-struct intelvf_msg_raw {
-	/** Raw dwords */
-	uint32_t dword[0];
-} __attribute__ (( packed ));
-
 /** Mailbox message */
 union intelvf_msg {
 	/** Message header */
@@ -138,7 +132,7 @@ union intelvf_msg {
 	/** Queue configuration message */
 	struct intelvf_msg_queues queues;
 	/** Raw dwords */
-	struct intelvf_msg_raw raw;
+	uint32_t dword[0];
 };
 
 /** Maximum time to wait for mailbox message

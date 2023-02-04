@@ -56,6 +56,7 @@ PxeBcComponentNameGetDriverName (
   OUT CHAR16                       **DriverName
   );
 
+
 /**
   Retrieves a Unicode string that is the user-readable name of the controller
   that is being managed by a driver.
@@ -134,10 +135,11 @@ PxeBcComponentNameGetControllerName (
   OUT CHAR16                       **ControllerName
   );
 
+
 //
 // EFI Component Name Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gPxeBcComponentName = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL    gPxeBcComponentName  = {
   PxeBcComponentNameGetDriverName,
   PxeBcComponentNameGetControllerName,
   "eng"
@@ -146,13 +148,13 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gPxeBcComponentName =
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gPxeBcComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)PxeBcComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)PxeBcComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL   gPxeBcComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) PxeBcComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) PxeBcComponentNameGetControllerName,
   "en"
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mPxeBcDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE       mPxeBcDriverNameTable[] = {
   {
     "eng;en",
     L"UEFI PXE Base Code Driver"
@@ -163,7 +165,7 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mPxeBcDriverNameTable[] 
   }
 };
 
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mPxeBcControllerNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE       mPxeBcControllerNameTable[] = {
   {
     "eng;en",
     L"PXE Controller"
@@ -221,7 +223,7 @@ PxeBcComponentNameGetDriverName (
   OUT CHAR16                       **DriverName
   )
 {
-  return LookupUnicodeString2 (
+  return LookupUnicodeString2(
            Language,
            This->SupportedLanguages,
            mPxeBcDriverNameTable,
@@ -229,6 +231,7 @@ PxeBcComponentNameGetDriverName (
            (BOOLEAN)(This == &gPxeBcComponentName)
            );
 }
+
 
 /**
   Retrieves a Unicode string that is the user-readable name of the controller
@@ -308,11 +311,11 @@ PxeBcComponentNameGetControllerName (
   OUT CHAR16                       **ControllerName
   )
 {
-  EFI_STATUS              Status;
-  EFI_HANDLE              NicHandle;
-  PXEBC_PRIVATE_PROTOCOL  *Id;
+  EFI_STATUS                      Status;
+  EFI_HANDLE                      NicHandle;
+  PXEBC_PRIVATE_PROTOCOL          *Id;
 
-  if ((ControllerHandle == NULL) || (ChildHandle != NULL)) {
+  if (ControllerHandle == NULL || ChildHandle != NULL) {
     return EFI_UNSUPPORTED;
   }
 
@@ -330,7 +333,7 @@ PxeBcComponentNameGetControllerName (
   Status = gBS->OpenProtocol (
                   NicHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&Id,
+                  (VOID **) &Id,
                   NULL,
                   NULL,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL

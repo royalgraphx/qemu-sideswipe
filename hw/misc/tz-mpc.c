@@ -82,10 +82,8 @@ static void tz_mpc_iommu_notify(TZMPC *s, uint32_t lutidx,
     /* Called when the LUT word at lutidx has changed from oldlut to newlut;
      * must call the IOMMU notifiers for the changed blocks.
      */
-    IOMMUTLBEvent event = {
-        .entry = {
-            .addr_mask = s->blocksize - 1,
-        }
+    IOMMUTLBEntry entry = {
+        .addr_mask = s->blocksize - 1,
     };
     hwaddr addr = lutidx * s->blocksize * 32;
     int i;
@@ -102,28 +100,26 @@ static void tz_mpc_iommu_notify(TZMPC *s, uint32_t lutidx,
         block_is_ns = newlut & (1 << i);
 
         trace_tz_mpc_iommu_notify(addr);
-        event.entry.iova = addr;
-        event.entry.translated_addr = addr;
+        entry.iova = addr;
+        entry.translated_addr = addr;
 
-        event.type = IOMMU_NOTIFIER_UNMAP;
-        event.entry.perm = IOMMU_NONE;
-        memory_region_notify_iommu(&s->upstream, IOMMU_IDX_S, event);
-        memory_region_notify_iommu(&s->upstream, IOMMU_IDX_NS, event);
+        entry.perm = IOMMU_NONE;
+        memory_region_notify_iommu(&s->upstream, IOMMU_IDX_S, entry);
+        memory_region_notify_iommu(&s->upstream, IOMMU_IDX_NS, entry);
 
-        event.type = IOMMU_NOTIFIER_MAP;
-        event.entry.perm = IOMMU_RW;
+        entry.perm = IOMMU_RW;
         if (block_is_ns) {
-            event.entry.target_as = &s->blocked_io_as;
+            entry.target_as = &s->blocked_io_as;
         } else {
-            event.entry.target_as = &s->downstream_as;
+            entry.target_as = &s->downstream_as;
         }
-        memory_region_notify_iommu(&s->upstream, IOMMU_IDX_S, event);
+        memory_region_notify_iommu(&s->upstream, IOMMU_IDX_S, entry);
         if (block_is_ns) {
-            event.entry.target_as = &s->downstream_as;
+            entry.target_as = &s->downstream_as;
         } else {
-            event.entry.target_as = &s->blocked_io_as;
+            entry.target_as = &s->blocked_io_as;
         }
-        memory_region_notify_iommu(&s->upstream, IOMMU_IDX_NS, event);
+        memory_region_notify_iommu(&s->upstream, IOMMU_IDX_NS, entry);
     }
 }
 

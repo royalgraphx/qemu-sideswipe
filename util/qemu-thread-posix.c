@@ -16,7 +16,6 @@
 #include "qemu/notify.h"
 #include "qemu-thread-common.h"
 #include "qemu/tsan.h"
-#include "qemu/bitmap.h"
 
 static bool name_threads;
 
@@ -24,8 +23,7 @@ void qemu_thread_naming(bool enable)
 {
     name_threads = enable;
 
-#if !defined CONFIG_PTHREAD_SETNAME_NP_W_TID && \
-    !defined CONFIG_PTHREAD_SETNAME_NP_WO_TID
+#ifndef CONFIG_THREAD_SETNAME_BYTHREAD
     /* This is a debugging option, not fatal */
     if (enable) {
         fprintf(stderr, "qemu: thread naming not supported on this host\n");
@@ -39,20 +37,12 @@ static void error_exit(int err, const char *msg)
     abort();
 }
 
-static inline clockid_t qemu_timedwait_clockid(void)
-{
-#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
-    return CLOCK_MONOTONIC;
-#else
-    return CLOCK_REALTIME;
-#endif
-}
-
 static void compute_abs_deadline(struct timespec *ts, int ms)
 {
-    clock_gettime(qemu_timedwait_clockid(), ts);
-    ts->tv_nsec += (ms % 1000) * 1000000;
-    ts->tv_sec += ms / 1000;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    ts->tv_nsec = tv.tv_usec * 1000 + (ms % 1000) * 1000000;
+    ts->tv_sec = tv.tv_sec + ms / 1000;
     if (ts->tv_nsec >= 1000000000) {
         ts->tv_sec++;
         ts->tv_nsec -= 1000000000;
@@ -126,57 +116,21 @@ void qemu_rec_mutex_init(QemuRecMutex *mutex)
 
     pthread_mutexattr_init(&attr);
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    err = pthread_mutex_init(&mutex->m.lock, &attr);
+    err = pthread_mutex_init(&mutex->lock, &attr);
     pthread_mutexattr_destroy(&attr);
     if (err) {
         error_exit(err, __func__);
     }
-    mutex->m.initialized = true;
-}
-
-void qemu_rec_mutex_destroy(QemuRecMutex *mutex)
-{
-    qemu_mutex_destroy(&mutex->m);
-}
-
-void qemu_rec_mutex_lock_impl(QemuRecMutex *mutex, const char *file, int line)
-{
-    qemu_mutex_lock_impl(&mutex->m, file, line);
-}
-
-int qemu_rec_mutex_trylock_impl(QemuRecMutex *mutex, const char *file, int line)
-{
-    return qemu_mutex_trylock_impl(&mutex->m, file, line);
-}
-
-void qemu_rec_mutex_unlock_impl(QemuRecMutex *mutex, const char *file, int line)
-{
-    qemu_mutex_unlock_impl(&mutex->m, file, line);
+    mutex->initialized = true;
 }
 
 void qemu_cond_init(QemuCond *cond)
 {
-    pthread_condattr_t attr;
     int err;
 
-    err = pthread_condattr_init(&attr);
-    if (err) {
+    err = pthread_cond_init(&cond->cond, NULL);
+    if (err)
         error_exit(err, __func__);
-    }
-#ifdef CONFIG_PTHREAD_CONDATTR_SETCLOCK
-    err = pthread_condattr_setclock(&attr, qemu_timedwait_clockid());
-    if (err) {
-        error_exit(err, __func__);
-    }
-#endif
-    err = pthread_cond_init(&cond->cond, &attr);
-    if (err) {
-        error_exit(err, __func__);
-    }
-    err = pthread_condattr_destroy(&attr);
-    if (err) {
-        error_exit(err, __func__);
-    }
     cond->initialized = true;
 }
 
@@ -223,15 +177,16 @@ void qemu_cond_wait_impl(QemuCond *cond, QemuMutex *mutex, const char *file, con
         error_exit(err, __func__);
 }
 
-static bool
-qemu_cond_timedwait_ts(QemuCond *cond, QemuMutex *mutex, struct timespec *ts,
-                       const char *file, const int line)
+bool qemu_cond_timedwait_impl(QemuCond *cond, QemuMutex *mutex, int ms,
+                              const char *file, const int line)
 {
     int err;
+    struct timespec ts;
 
     assert(cond->initialized);
     trace_qemu_mutex_unlock(mutex, file, line);
-    err = pthread_cond_timedwait(&cond->cond, &mutex->lock, ts);
+    compute_abs_deadline(&ts, ms);
+    err = pthread_cond_timedwait(&cond->cond, &mutex->lock, &ts);
     trace_qemu_mutex_locked(mutex, file, line);
     if (err && err != ETIMEDOUT) {
         error_exit(err, __func__);
@@ -239,77 +194,152 @@ qemu_cond_timedwait_ts(QemuCond *cond, QemuMutex *mutex, struct timespec *ts,
     return err != ETIMEDOUT;
 }
 
-bool qemu_cond_timedwait_impl(QemuCond *cond, QemuMutex *mutex, int ms,
-                              const char *file, const int line)
-{
-    struct timespec ts;
-
-    compute_abs_deadline(&ts, ms);
-    return qemu_cond_timedwait_ts(cond, mutex, &ts, file, line);
-}
-
 void qemu_sem_init(QemuSemaphore *sem, int init)
 {
-    qemu_mutex_init(&sem->mutex);
-    qemu_cond_init(&sem->cond);
+    int rc;
 
+#ifndef CONFIG_SEM_TIMEDWAIT
+    rc = pthread_mutex_init(&sem->lock, NULL);
+    if (rc != 0) {
+        error_exit(rc, __func__);
+    }
+    rc = pthread_cond_init(&sem->cond, NULL);
+    if (rc != 0) {
+        error_exit(rc, __func__);
+    }
     if (init < 0) {
         error_exit(EINVAL, __func__);
     }
     sem->count = init;
+#else
+    rc = sem_init(&sem->sem, 0, init);
+    if (rc < 0) {
+        error_exit(errno, __func__);
+    }
+#endif
+    sem->initialized = true;
 }
 
 void qemu_sem_destroy(QemuSemaphore *sem)
 {
-    qemu_cond_destroy(&sem->cond);
-    qemu_mutex_destroy(&sem->mutex);
+    int rc;
+
+    assert(sem->initialized);
+    sem->initialized = false;
+#ifndef CONFIG_SEM_TIMEDWAIT
+    rc = pthread_cond_destroy(&sem->cond);
+    if (rc < 0) {
+        error_exit(rc, __func__);
+    }
+    rc = pthread_mutex_destroy(&sem->lock);
+    if (rc < 0) {
+        error_exit(rc, __func__);
+    }
+#else
+    rc = sem_destroy(&sem->sem);
+    if (rc < 0) {
+        error_exit(errno, __func__);
+    }
+#endif
 }
 
 void qemu_sem_post(QemuSemaphore *sem)
 {
-    qemu_mutex_lock(&sem->mutex);
+    int rc;
+
+    assert(sem->initialized);
+#ifndef CONFIG_SEM_TIMEDWAIT
+    pthread_mutex_lock(&sem->lock);
     if (sem->count == UINT_MAX) {
-        error_exit(EINVAL, __func__);
+        rc = EINVAL;
     } else {
         sem->count++;
-        qemu_cond_signal(&sem->cond);
+        rc = pthread_cond_signal(&sem->cond);
     }
-    qemu_mutex_unlock(&sem->mutex);
+    pthread_mutex_unlock(&sem->lock);
+    if (rc != 0) {
+        error_exit(rc, __func__);
+    }
+#else
+    rc = sem_post(&sem->sem);
+    if (rc < 0) {
+        error_exit(errno, __func__);
+    }
+#endif
 }
 
 int qemu_sem_timedwait(QemuSemaphore *sem, int ms)
 {
-    bool rc = true;
+    int rc;
     struct timespec ts;
 
+    assert(sem->initialized);
+#ifndef CONFIG_SEM_TIMEDWAIT
+    rc = 0;
     compute_abs_deadline(&ts, ms);
-    qemu_mutex_lock(&sem->mutex);
+    pthread_mutex_lock(&sem->lock);
     while (sem->count == 0) {
-        if (ms == 0) {
-            rc = false;
-        } else {
-            rc = qemu_cond_timedwait_ts(&sem->cond, &sem->mutex, &ts,
-                                        __FILE__, __LINE__);
-        }
-        if (!rc) { /* timeout */
+        rc = pthread_cond_timedwait(&sem->cond, &sem->lock, &ts);
+        if (rc == ETIMEDOUT) {
             break;
         }
+        if (rc != 0) {
+            error_exit(rc, __func__);
+        }
     }
-    if (rc) {
+    if (rc != ETIMEDOUT) {
         --sem->count;
     }
-    qemu_mutex_unlock(&sem->mutex);
-    return (rc ? 0 : -1);
+    pthread_mutex_unlock(&sem->lock);
+    return (rc == ETIMEDOUT ? -1 : 0);
+#else
+    if (ms <= 0) {
+        /* This is cheaper than sem_timedwait.  */
+        do {
+            rc = sem_trywait(&sem->sem);
+        } while (rc == -1 && errno == EINTR);
+        if (rc == -1 && errno == EAGAIN) {
+            return -1;
+        }
+    } else {
+        compute_abs_deadline(&ts, ms);
+        do {
+            rc = sem_timedwait(&sem->sem, &ts);
+        } while (rc == -1 && errno == EINTR);
+        if (rc == -1 && errno == ETIMEDOUT) {
+            return -1;
+        }
+    }
+    if (rc < 0) {
+        error_exit(errno, __func__);
+    }
+    return 0;
+#endif
 }
 
 void qemu_sem_wait(QemuSemaphore *sem)
 {
-    qemu_mutex_lock(&sem->mutex);
+    int rc;
+
+    assert(sem->initialized);
+#ifndef CONFIG_SEM_TIMEDWAIT
+    pthread_mutex_lock(&sem->lock);
     while (sem->count == 0) {
-        qemu_cond_wait(&sem->cond, &sem->mutex);
+        rc = pthread_cond_wait(&sem->cond, &sem->lock);
+        if (rc != 0) {
+            error_exit(rc, __func__);
+        }
     }
     --sem->count;
-    qemu_mutex_unlock(&sem->mutex);
+    pthread_mutex_unlock(&sem->lock);
+#else
+    do {
+        rc = sem_wait(&sem->sem);
+    } while (rc == -1 && errno == EINTR);
+    if (rc < 0) {
+        error_exit(errno, __func__);
+    }
+#endif
 }
 
 #ifdef __linux__
@@ -384,8 +414,8 @@ void qemu_event_set(QemuEvent *ev)
      */
     assert(ev->initialized);
     smp_mb();
-    if (qatomic_read(&ev->value) != EV_SET) {
-        if (qatomic_xchg(&ev->value, EV_SET) == EV_BUSY) {
+    if (atomic_read(&ev->value) != EV_SET) {
+        if (atomic_xchg(&ev->value, EV_SET) == EV_BUSY) {
             /* There were waiters, wake them up.  */
             qemu_futex_wake(ev, INT_MAX);
         }
@@ -397,14 +427,14 @@ void qemu_event_reset(QemuEvent *ev)
     unsigned value;
 
     assert(ev->initialized);
-    value = qatomic_read(&ev->value);
+    value = atomic_read(&ev->value);
     smp_mb_acquire();
     if (value == EV_SET) {
         /*
          * If there was a concurrent reset (or even reset+wait),
          * do nothing.  Otherwise change EV_SET->EV_FREE.
          */
-        qatomic_or(&ev->value, EV_FREE);
+        atomic_or(&ev->value, EV_FREE);
     }
 }
 
@@ -413,7 +443,7 @@ void qemu_event_wait(QemuEvent *ev)
     unsigned value;
 
     assert(ev->initialized);
-    value = qatomic_read(&ev->value);
+    value = atomic_read(&ev->value);
     smp_mb_acquire();
     if (value != EV_SET) {
         if (value == EV_FREE) {
@@ -423,7 +453,7 @@ void qemu_event_wait(QemuEvent *ev)
              * a concurrent busy->free transition.  After the CAS, the
              * event will be either set or busy.
              */
-            if (qatomic_cmpxchg(&ev->value, EV_FREE, EV_BUSY) == EV_SET) {
+            if (atomic_cmpxchg(&ev->value, EV_FREE, EV_BUSY) == EV_SET) {
                 return;
             }
         }
@@ -472,6 +502,7 @@ static void *qemu_thread_start(void *args)
     void *arg = qemu_thread_args->arg;
     void *r;
 
+#ifdef CONFIG_THREAD_SETNAME_BYTHREAD
     /* Attempt to set the threads name; note that this is for debug, so
      * we're not going to fail if we can't set it.
      */
@@ -482,31 +513,13 @@ static void *qemu_thread_start(void *args)
         pthread_setname_np(qemu_thread_args->name);
 # endif
     }
+#endif
     QEMU_TSAN_ANNOTATE_THREAD_NAME(qemu_thread_args->name);
     g_free(qemu_thread_args->name);
     g_free(qemu_thread_args);
-
-    /*
-     * GCC 11 with glibc 2.17 on PowerPC reports
-     *
-     * qemu-thread-posix.c:540:5: error: ‘__sigsetjmp’ accessing 656 bytes
-     *   in a region of size 528 [-Werror=stringop-overflow=]
-     * 540 |     pthread_cleanup_push(qemu_thread_atexit_notify, NULL);
-     *     |     ^~~~~~~~~~~~~~~~~~~~
-     *
-     * which is clearly nonsense.
-     */
-#pragma GCC diagnostic push
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
-
     pthread_cleanup_push(qemu_thread_atexit_notify, NULL);
     r = start_routine(arg);
     pthread_cleanup_pop(1);
-
-#pragma GCC diagnostic pop
-
     return r;
 }
 
@@ -551,75 +564,6 @@ void qemu_thread_create(QemuThread *thread, const char *name,
     pthread_sigmask(SIG_SETMASK, &oldset, NULL);
 
     pthread_attr_destroy(&attr);
-}
-
-int qemu_thread_set_affinity(QemuThread *thread, unsigned long *host_cpus,
-                             unsigned long nbits)
-{
-#if defined(CONFIG_PTHREAD_AFFINITY_NP)
-    const size_t setsize = CPU_ALLOC_SIZE(nbits);
-    unsigned long value;
-    cpu_set_t *cpuset;
-    int err;
-
-    cpuset = CPU_ALLOC(nbits);
-    g_assert(cpuset);
-
-    CPU_ZERO_S(setsize, cpuset);
-    value = find_first_bit(host_cpus, nbits);
-    while (value < nbits) {
-        CPU_SET_S(value, setsize, cpuset);
-        value = find_next_bit(host_cpus, nbits, value + 1);
-    }
-
-    err = pthread_setaffinity_np(thread->thread, setsize, cpuset);
-    CPU_FREE(cpuset);
-    return err;
-#else
-    return -ENOSYS;
-#endif
-}
-
-int qemu_thread_get_affinity(QemuThread *thread, unsigned long **host_cpus,
-                             unsigned long *nbits)
-{
-#if defined(CONFIG_PTHREAD_AFFINITY_NP)
-    unsigned long tmpbits;
-    cpu_set_t *cpuset;
-    size_t setsize;
-    int i, err;
-
-    tmpbits = CPU_SETSIZE;
-    while (true) {
-        setsize = CPU_ALLOC_SIZE(tmpbits);
-        cpuset = CPU_ALLOC(tmpbits);
-        g_assert(cpuset);
-
-        err = pthread_getaffinity_np(thread->thread, setsize, cpuset);
-        if (err) {
-            CPU_FREE(cpuset);
-            if (err != -EINVAL) {
-                return err;
-            }
-            tmpbits *= 2;
-        } else {
-            break;
-        }
-    }
-
-    /* Convert the result into a proper bitmap. */
-    *nbits = tmpbits;
-    *host_cpus = bitmap_new(tmpbits);
-    for (i = 0; i < tmpbits; i++) {
-        if (CPU_ISSET(i, cpuset)) {
-            set_bit(i, *host_cpus);
-        }
-    }
-    CPU_FREE(cpuset);
-    return 0;
-#else
-    return -ENOSYS;
-#endif
 }
 
 void qemu_thread_get_self(QemuThread *thread)

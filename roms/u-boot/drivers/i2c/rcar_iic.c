@@ -14,8 +14,6 @@
 #include <dm.h>
 #include <i2c.h>
 #include <asm/io.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
 
 struct rcar_iic_priv {
 	void __iomem		*base;
@@ -60,14 +58,12 @@ static void sh_irq_dte(struct udevice *dev)
 static int sh_irq_dte_with_tack(struct udevice *dev)
 {
 	struct rcar_iic_priv *priv = dev_get_priv(dev);
-	u8 icsr;
 	int i;
 
 	for (i = 0; i < IRQ_WAIT; i++) {
-		icsr = readb(priv->base + RCAR_IIC_ICSR);
-		if (RCAR_IC_DTE & icsr)
+		if (RCAR_IC_DTE & readb(priv->base + RCAR_IIC_ICSR))
 			break;
-		if (RCAR_IC_TACK & icsr)
+		if (RCAR_IC_TACK & readb(priv->base + RCAR_IIC_ICSR))
 			return -ETIMEDOUT;
 		udelay(10);
 	}
@@ -250,7 +246,7 @@ static int rcar_iic_probe(struct udevice *dev)
 
 	rcar_iic_finish(dev);
 
-	return rcar_iic_set_speed(dev, I2C_SPEED_STANDARD_RATE);
+	return rcar_iic_set_speed(dev, 100000);
 }
 
 static const struct dm_i2c_ops rcar_iic_ops = {
@@ -269,6 +265,6 @@ U_BOOT_DRIVER(iic_rcar) = {
 	.id		= UCLASS_I2C,
 	.of_match	= rcar_iic_ids,
 	.probe		= rcar_iic_probe,
-	.priv_auto	= sizeof(struct rcar_iic_priv),
+	.priv_auto_alloc_size = sizeof(struct rcar_iic_priv),
 	.ops		= &rcar_iic_ops,
 };

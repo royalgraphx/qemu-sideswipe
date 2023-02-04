@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # Test valid filenames for blkdebug and blkverify representatively for
 # other protocols (such as NBD) when queried
@@ -21,7 +20,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"

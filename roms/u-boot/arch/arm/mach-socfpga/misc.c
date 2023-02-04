@@ -4,12 +4,6 @@
  */
 
 #include <common.h>
-#include <command.h>
-#include <cpu_func.h>
-#include <hang.h>
-#include <asm/cache.h>
-#include <init.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <errno.h>
 #include <fdtdec.h>
@@ -27,10 +21,6 @@
 #include <asm/pl310.h>
 
 DECLARE_GLOBAL_DATA_PTR;
-
-phys_addr_t socfpga_clkmgr_base __section(".data");
-phys_addr_t socfpga_rstmgr_base __section(".data");
-phys_addr_t socfpga_sysmgr_base __section(".data");
 
 #ifdef CONFIG_SYS_L2_PL310
 static const struct pl310_regs *const pl310 =
@@ -58,10 +48,10 @@ int dram_init(void)
 
 void enable_caches(void)
 {
-#if !CONFIG_IS_ENABLED(SYS_ICACHE_OFF)
+#ifndef CONFIG_SYS_ICACHE_OFF
 	icache_enable();
 #endif
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+#ifndef CONFIG_SYS_DCACHE_OFF
 	dcache_enable();
 #endif
 }
@@ -69,29 +59,8 @@ void enable_caches(void)
 #ifdef CONFIG_SYS_L2_PL310
 void v7_outer_cache_enable(void)
 {
-	struct udevice *dev;
-
-	if (uclass_get_device(UCLASS_CACHE, 0, &dev))
-		pr_err("cache controller driver NOT found!\n");
-}
-
-void v7_outer_cache_disable(void)
-{
 	/* Disable the L2 cache */
 	clrbits_le32(&pl310->pl310_ctrl, L2X0_CTRL_EN);
-}
-
-void socfpga_pl310_clear(void)
-{
-	u32 mask = 0xff, ena = 0;
-
-	icache_enable();
-
-	/* Disable the L2 cache */
-	clrbits_le32(&pl310->pl310_ctrl, L2X0_CTRL_EN);
-
-	writel(0x0, &pl310->pl310_tag_latency_ctrl);
-	writel(0x10, &pl310->pl310_data_latency_ctrl);
 
 	/* enable BRESP, instruction and data prefetch, full line of zeroes */
 	setbits_le32(&pl310->pl310_aux_ctrl,
@@ -100,37 +69,11 @@ void socfpga_pl310_clear(void)
 		     L310_SHARED_ATT_OVERRIDE_ENABLE);
 
 	/* Enable the L2 cache */
-	ena = readl(&pl310->pl310_ctrl);
-	ena |= L2X0_CTRL_EN;
+	setbits_le32(&pl310->pl310_ctrl, L2X0_CTRL_EN);
+}
 
-	/*
-	 * Invalidate the PL310 L2 cache. Keep the invalidation code
-	 * entirely in L1 I-cache to avoid any bus traffic through
-	 * the L2.
-	 */
-	asm volatile(
-		".align	5			\n"
-		"	b	3f		\n"
-		"1:	str	%1,	[%4]	\n"
-		"	dsb			\n"
-		"	isb			\n"
-		"	str	%0,	[%2]	\n"
-		"	dsb			\n"
-		"	isb			\n"
-		"2:	ldr	%0,	[%2]	\n"
-		"	cmp	%0,	#0	\n"
-		"	bne	2b		\n"
-		"	str	%0,	[%3]	\n"
-		"	dsb			\n"
-		"	isb			\n"
-		"	b	4f		\n"
-		"3:	b	1b		\n"
-		"4:	nop			\n"
-	: "+r"(mask), "+r"(ena)
-	: "r"(&pl310->pl310_inv_way),
-	  "r"(&pl310->pl310_cache_sync), "r"(&pl310->pl310_ctrl)
-	: "memory", "cc");
-
+void v7_outer_cache_disable(void)
+{
 	/* Disable the L2 cache */
 	clrbits_le32(&pl310->pl310_ctrl, L2X0_CTRL_EN);
 }
@@ -155,8 +98,6 @@ void socfpga_fpga_add(void *fpga_desc)
 
 int arch_cpu_init(void)
 {
-	socfpga_get_managers_addr();
-
 #ifdef CONFIG_HW_WATCHDOG
 	/*
 	 * In case the watchdog is enabled, make sure to (re-)configure it
@@ -179,26 +120,85 @@ int arch_cpu_init(void)
 	return 0;
 }
 
-#ifndef CONFIG_SPL_BUILD
-static int do_bridge(struct cmd_tbl *cmdtp, int flag, int argc,
-		     char *const argv[])
+#ifdef CONFIG_ETH_DESIGNWARE
+static int dwmac_phymode_to_modereg(const char *phymode, u32 *modereg)
 {
-	unsigned int mask = ~0;
+	if (!phymode)
+		return -EINVAL;
 
-	if (argc < 2 || argc > 3)
+	if (!strcmp(phymode, "mii") || !strcmp(phymode, "gmii")) {
+		*modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_GMII_MII;
+		return 0;
+	}
+
+	if (!strcmp(phymode, "rgmii")) {
+		*modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_RGMII;
+		return 0;
+	}
+
+	if (!strcmp(phymode, "rmii")) {
+		*modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_RMII;
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
+int socfpga_eth_reset_common(void (*resetfn)(const u8 of_reset_id,
+					     const u8 phymode))
+{
+	const void *fdt = gd->fdt_blob;
+	struct fdtdec_phandle_args args;
+	const char *phy_mode;
+	u32 phy_modereg;
+	int nodes[2];	/* Max. two GMACs */
+	int ret, count;
+	int i, node;
+
+	count = fdtdec_find_aliases_for_id(fdt, "ethernet",
+					   COMPAT_ALTERA_SOCFPGA_DWMAC,
+					   nodes, ARRAY_SIZE(nodes));
+	for (i = 0; i < count; i++) {
+		node = nodes[i];
+		if (node <= 0)
+			continue;
+
+		ret = fdtdec_parse_phandle_with_args(fdt, node, "resets",
+						     "#reset-cells", 1, 0,
+						     &args);
+		if (ret || (args.args_count != 1)) {
+			debug("GMAC%i: Failed to parse DT 'resets'!\n", i);
+			continue;
+		}
+
+		phy_mode = fdt_getprop(fdt, node, "phy-mode", NULL);
+		ret = dwmac_phymode_to_modereg(phy_mode, &phy_modereg);
+		if (ret) {
+			debug("GMAC%i: Failed to parse DT 'phy-mode'!\n", i);
+			continue;
+		}
+
+		resetfn(args.args[0], phy_modereg);
+	}
+
+	return 0;
+}
+#endif
+
+#ifndef CONFIG_SPL_BUILD
+static int do_bridge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+{
+	if (argc != 2)
 		return CMD_RET_USAGE;
 
 	argv++;
 
-	if (argc == 3)
-		mask = simple_strtoul(argv[1], NULL, 16);
-
 	switch (*argv[0]) {
 	case 'e':	/* Enable */
-		do_bridge_reset(1, mask);
+		do_bridge_reset(1);
 		break;
 	case 'd':	/* Disable */
-		do_bridge_reset(0, mask);
+		do_bridge_reset(0);
 		break;
 	default:
 		return CMD_RET_USAGE;
@@ -207,71 +207,11 @@ static int do_bridge(struct cmd_tbl *cmdtp, int flag, int argc,
 	return 0;
 }
 
-U_BOOT_CMD(bridge, 3, 1, do_bridge,
+U_BOOT_CMD(bridge, 2, 1, do_bridge,
 	   "SoCFPGA HPS FPGA bridge control",
-	   "enable [mask] - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
-	   "bridge disable [mask] - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
+	   "enable  - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
+	   "bridge disable - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
 	   ""
 );
 
 #endif
-
-static int socfpga_get_base_addr(const char *compat, phys_addr_t *base)
-{
-	const void *blob = gd->fdt_blob;
-	struct fdt_resource r;
-	int node;
-	int ret;
-
-	node = fdt_node_offset_by_compatible(blob, -1, compat);
-	if (node < 0)
-		return node;
-
-	if (!fdtdec_get_is_enabled(blob, node))
-		return -ENODEV;
-
-	ret = fdt_get_resource(blob, node, "reg", 0, &r);
-	if (ret)
-		return ret;
-
-	*base = (phys_addr_t)r.start;
-
-	return 0;
-}
-
-void socfpga_get_managers_addr(void)
-{
-	int ret;
-
-	ret = socfpga_get_base_addr("altr,rst-mgr", &socfpga_rstmgr_base);
-	if (ret)
-		hang();
-
-	ret = socfpga_get_base_addr("altr,sys-mgr", &socfpga_sysmgr_base);
-	if (ret)
-		hang();
-
-#ifdef CONFIG_TARGET_SOCFPGA_AGILEX
-	ret = socfpga_get_base_addr("intel,agilex-clkmgr",
-				    &socfpga_clkmgr_base);
-#else
-	ret = socfpga_get_base_addr("altr,clk-mgr", &socfpga_clkmgr_base);
-#endif
-	if (ret)
-		hang();
-}
-
-phys_addr_t socfpga_get_rstmgr_addr(void)
-{
-	return socfpga_rstmgr_base;
-}
-
-phys_addr_t socfpga_get_sysmgr_addr(void)
-{
-	return socfpga_sysmgr_base;
-}
-
-phys_addr_t socfpga_get_clkmgr_addr(void)
-{
-	return socfpga_clkmgr_base;
-}

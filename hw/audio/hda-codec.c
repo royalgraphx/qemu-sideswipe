@@ -26,7 +26,6 @@
 #include "intel-hda-defs.h"
 #include "audio/audio.h"
 #include "trace.h"
-#include "qom/object.h"
 
 /* -------------------------------------------------------------------------- */
 
@@ -172,7 +171,7 @@ struct HDAAudioStream {
 };
 
 #define TYPE_HDA_AUDIO "hda-audio"
-OBJECT_DECLARE_SIMPLE_TYPE(HDAAudioState, HDA_AUDIO)
+#define HDA_AUDIO(obj) OBJECT_CHECK(HDAAudioState, (obj), TYPE_HDA_AUDIO)
 
 struct HDAAudioState {
     HDACodecDevice hda;
@@ -899,7 +898,6 @@ static void hda_audio_base_class_init(ObjectClass *klass, void *data)
 static const TypeInfo hda_audio_info = {
     .name          = TYPE_HDA_AUDIO,
     .parent        = TYPE_HDA_CODEC_DEVICE,
-    .instance_size = sizeof(HDAAudioState),
     .class_init    = hda_audio_base_class_init,
     .abstract      = true,
 };
@@ -916,6 +914,7 @@ static void hda_audio_output_class_init(ObjectClass *klass, void *data)
 static const TypeInfo hda_audio_output_info = {
     .name          = "hda-output",
     .parent        = TYPE_HDA_AUDIO,
+    .instance_size = sizeof(HDAAudioState),
     .class_init    = hda_audio_output_class_init,
 };
 
@@ -931,6 +930,7 @@ static void hda_audio_duplex_class_init(ObjectClass *klass, void *data)
 static const TypeInfo hda_audio_duplex_info = {
     .name          = "hda-duplex",
     .parent        = TYPE_HDA_AUDIO,
+    .instance_size = sizeof(HDAAudioState),
     .class_init    = hda_audio_duplex_class_init,
 };
 
@@ -946,6 +946,7 @@ static void hda_audio_micro_class_init(ObjectClass *klass, void *data)
 static const TypeInfo hda_audio_micro_info = {
     .name          = "hda-micro",
     .parent        = TYPE_HDA_AUDIO,
+    .instance_size = sizeof(HDAAudioState),
     .class_init    = hda_audio_micro_class_init,
 };
 

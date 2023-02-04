@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw quick
 #
 # Test vmdk backing file correlation
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq=$(basename $0)
 echo "QA output created by $seq"

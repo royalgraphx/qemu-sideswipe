@@ -2,7 +2,6 @@
 # This file is used to be the main entrance of ECC tool
 #
 # Copyright (c) 2009 - 2018, Intel Corporation. All rights reserved.<BR>
-# Copyright (c) Microsoft Corporation.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 
@@ -105,7 +104,7 @@ class Ecc(object):
 
     def InitDefaultConfigIni(self):
         paths = map(lambda p: os.path.join(p, 'Ecc', 'config.ini'), sys.path)
-        paths = (os.path.abspath('config.ini'),) + tuple(paths)
+        paths = (os.path.realpath('config.ini'),) + tuple(paths)
         for path in paths:
             if os.path.exists(path):
                 self.ConfigFile = path
@@ -407,9 +406,9 @@ if __name__ == '__main__':
     EdkLogger.Initialize()
     EdkLogger.IsRaiseError = False
 
-    StartTime = time.perf_counter()
+    StartTime = time.clock()
     Ecc = Ecc()
-    FinishTime = time.perf_counter()
+    FinishTime = time.clock()
 
     BuildDuration = time.strftime("%M:%S", time.gmtime(int(round(FinishTime - StartTime))))
     EdkLogger.quiet("\n%s [%s]" % (time.strftime("%H:%M:%S, %b.%d %Y", time.localtime()), BuildDuration))

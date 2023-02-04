@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 
 #include <common.h>
-#include <env.h>
-#include <part.h>
 #include <spl.h>
 #include <asm/u-boot.h>
 #include <ext4fs.h>
@@ -16,7 +14,7 @@ int spl_load_image_ext(struct spl_image_info *spl_image,
 	s32 err;
 	struct image_header *header;
 	loff_t filelen, actlen;
-	struct disk_partition part_info = {};
+	disk_partition_t part_info = {};
 
 	header = spl_get_load_buffer(-sizeof(*header), sizeof(*header));
 
@@ -32,7 +30,7 @@ int spl_load_image_ext(struct spl_image_info *spl_image,
 #ifdef CONFIG_SPL_LIBCOMMON_SUPPORT
 		printf("%s: ext4fs mount err - %d\n", __func__, err);
 #endif
-		return -1;
+		goto end;
 	}
 
 	err = ext4fs_open(filename, &filelen);
@@ -70,7 +68,7 @@ int spl_load_image_ext_os(struct spl_image_info *spl_image,
 {
 	int err;
 	__maybe_unused loff_t filelen, actlen;
-	struct disk_partition part_info = {};
+	disk_partition_t part_info = {};
 	__maybe_unused char *file;
 
 	if (part_get_info(block_dev, partition, &part_info)) {

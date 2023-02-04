@@ -6,28 +6,16 @@
 #include <common.h>
 #include <cpu.h>
 #include <dm.h>
-#include <init.h>
 #include <log.h>
+#include <asm/csr.h>
 #include <asm/encoding.h>
 #include <dm/uclass-internal.h>
-#include <linux/bitops.h>
 
 /*
- * The variables here must be stored in the data section since they are used
+ * prior_stage_fdt_address must be stored in the data section since it is used
  * before the bss section is available.
  */
-#ifdef CONFIG_OF_PRIOR_STAGE
-phys_addr_t prior_stage_fdt_address __section(".data");
-#endif
-#ifndef CONFIG_XIP
-u32 hart_lottery __section(".data") = 0;
-
-/*
- * The main hart running U-Boot has acquired available_harts_lock until it has
- * finished initialization of global data.
- */
-u32 available_harts_lock = 1;
-#endif
+phys_addr_t prior_stage_fdt_address __attribute__((section(".data")));
 
 static inline bool supports_extension(char ext)
 {
@@ -48,13 +36,13 @@ static inline bool supports_extension(char ext)
 
 	return false;
 #else  /* !CONFIG_CPU */
-#if CONFIG_IS_ENABLED(RISCV_MMODE)
-	return csr_read(CSR_MISA) & (1 << (ext - 'a'));
-#else  /* !CONFIG_IS_ENABLED(RISCV_MMODE) */
+#ifdef CONFIG_RISCV_MMODE
+	return csr_read(misa) & (1 << (ext - 'a'));
+#else  /* !CONFIG_RISCV_MMODE */
 #warning "There is no way to determine the available extensions in S-mode."
 #warning "Please convert your board to use the RISC-V CPU driver."
 	return false;
-#endif /* CONFIG_IS_ENABLED(RISCV_MMODE) */
+#endif /* CONFIG_RISCV_MMODE */
 #endif /* CONFIG_CPU */
 }
 
@@ -72,17 +60,6 @@ static int riscv_cpu_probe(void)
 	return 0;
 }
 
-/*
- * This is called on secondary harts just after the IPI is init'd. Currently
- * there's nothing to do, since we just need to clear any existing IPIs, and
- * that is handled by the sending of an ipi itself.
- */
-#if CONFIG_IS_ENABLED(SMP)
-static void dummy_pending_ipi_clear(ulong hart, ulong arg0, ulong arg1)
-{
-}
-#endif
-
 int arch_cpu_init_dm(void)
 {
 	int ret;
@@ -94,7 +71,7 @@ int arch_cpu_init_dm(void)
 	/* Enable FPU */
 	if (supports_extension('d') || supports_extension('f')) {
 		csr_set(MODE_PREFIX(status), MSTATUS_FS);
-		csr_write(CSR_FCSR, 0);
+		csr_write(fcsr, 0);
 	}
 
 	if (CONFIG_IS_ENABLED(RISCV_MMODE)) {
@@ -102,36 +79,12 @@ int arch_cpu_init_dm(void)
 		 * Enable perf counters for cycle, time,
 		 * and instret counters only
 		 */
-#ifdef CONFIG_RISCV_PRIV_1_9
-		csr_write(CSR_MSCOUNTEREN, GENMASK(2, 0));
-		csr_write(CSR_MUCOUNTEREN, GENMASK(2, 0));
-#else
-		csr_write(CSR_MCOUNTEREN, GENMASK(2, 0));
-#endif
+		csr_write(mcounteren, GENMASK(2, 0));
 
 		/* Disable paging */
 		if (supports_extension('s'))
-#ifdef CONFIG_RISCV_PRIV_1_9
-			csr_read_clear(CSR_MSTATUS, SR_VM);
-#else
-			csr_write(CSR_SATP, 0);
-#endif
+			csr_write(satp, 0);
 	}
-
-#if CONFIG_IS_ENABLED(SMP)
-	ret = riscv_init_ipi();
-	if (ret)
-		return ret;
-
-	/*
-	 * Clear all pending IPIs on secondary harts. We don't do anything on
-	 * the boot hart, since we never send an IPI to ourselves, and no
-	 * interrupts are enabled
-	 */
-	ret = smp_call_function((ulong)dummy_pending_ipi_clear, 0, 0, 0);
-	if (ret)
-		return ret;
-#endif
 
 	return 0;
 }
@@ -139,15 +92,4 @@ int arch_cpu_init_dm(void)
 int arch_early_init_r(void)
 {
 	return riscv_cpu_probe();
-}
-
-/**
- * harts_early_init() - A callback function called by start.S to configure
- * feature settings of each hart.
- *
- * In a multi-core system, memory access shall be careful here, it shall
- * take care of race conditions.
- */
-__weak void harts_early_init(void)
-{
 }

@@ -8,11 +8,6 @@
 
 #include <config.h>
 #include <common.h>
-#include <cpu_func.h>
-#include <hang.h>
-#include <image.h>
-#include <init.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/sections.h>
 #include <mach/jz4780.h>
@@ -23,7 +18,7 @@
 #ifdef CONFIG_SPL_BUILD
 /* Pointer to the global data structure for SPL */
 DECLARE_GLOBAL_DATA_PTR;
-gd_t gdata __section(".bss");
+gd_t gdata __attribute__ ((section(".bss")));
 
 void board_init_f(ulong dummy)
 {

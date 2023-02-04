@@ -26,11 +26,10 @@
 #define SUN4M_IOMMU_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define IOMMU_NREGS         (4 * 4096 / 4)
 
-struct IOMMUState {
+typedef struct IOMMUState {
     SysBusDevice parent_obj;
 
     AddressSpace iommu_as;
@@ -41,12 +40,10 @@ struct IOMMUState {
     hwaddr iostart;
     qemu_irq irq;
     uint32_t version;
-};
-typedef struct IOMMUState IOMMUState;
+} IOMMUState;
 
 #define TYPE_SUN4M_IOMMU "sun4m-iommu"
-DECLARE_INSTANCE_CHECKER(IOMMUState, SUN4M_IOMMU,
-                         TYPE_SUN4M_IOMMU)
+#define SUN4M_IOMMU(obj) OBJECT_CHECK(IOMMUState, (obj), TYPE_SUN4M_IOMMU)
 
 #define TYPE_SUN4M_IOMMU_MEMORY_REGION "sun4m-iommu-memory-region"
 

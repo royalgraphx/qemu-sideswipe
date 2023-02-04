@@ -8,6 +8,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "SecureBootConfigImpl.h"
 
+
 /**
   This function converts an input device structure to a Unicode string.
 
@@ -19,7 +20,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 CHAR16 *
 EFIAPI
 DevicePathToStr (
-  IN EFI_DEVICE_PATH_PROTOCOL  *DevPath
+  IN EFI_DEVICE_PATH_PROTOCOL     *DevPath
   )
 {
   return ConvertDevicePathToText (
@@ -28,3 +29,4 @@ DevicePathToStr (
            TRUE
            );
 }
+

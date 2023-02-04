@@ -4,7 +4,6 @@
  *	Roy Zang <tie-fei.zang@freescale.com>
  */
 #include <common.h>
-#include <env.h>
 #include <phy.h>
 #include <fm_eth.h>
 #include <asm/io.h>

@@ -7,7 +7,6 @@
 #include <common.h>
 #include <errno.h>
 #include <fdtdec.h>
-#include <init.h>
 #include <miiphy.h>
 #include <netdev.h>
 #include <ns16550.h>
@@ -28,6 +27,9 @@
 #define PINMUX_UART1_TX_SHARED_IO_OFFSET_Q1_7	0x18
 #define PINMUX_UART1_TX_SHARED_IO_OFFSET_Q3_7	0x78
 #define PINMUX_UART1_TX_SHARED_IO_OFFSET_Q4_3	0x98
+
+static struct socfpga_system_manager *sysmgr_regs =
+	(struct socfpga_system_manager *)SOCFPGA_SYSMGR_ADDRESS;
 
 /*
  * FPGA programming support for SoC FPGA Arria 10
@@ -79,8 +81,7 @@ void socfpga_init_security_policies(void)
 	writel(~0, SOCFPGA_NOC_FW_H2F_SCR_OFST);
 	writel(~0, SOCFPGA_NOC_FW_H2F_SCR_OFST + 4);
 
-	writel(0x0007FFFF,
-	       socfpga_get_sysmgr_addr() + SYSMGR_A10_ECC_INTMASK_SET);
+	writel(0x0007FFFF, &sysmgr_regs->ecc_intmask_set);
 }
 
 void socfpga_sdram_remap_zero(void)
@@ -104,9 +105,8 @@ int arch_early_init_r(void)
 #if defined(CONFIG_DISPLAY_CPUINFO)
 int print_cpuinfo(void)
 {
-	const u32 bootinfo = readl(socfpga_get_sysmgr_addr() +
-				   SYSMGR_A10_BOOTINFO);
-	const u32 bsel = SYSMGR_GET_BOOTINFO_BSEL(bootinfo);
+	const u32 bsel =
+		SYSMGR_GET_BOOTINFO_BSEL(readl(&sysmgr_regs->bootinfo));
 
 	puts("CPU:   Altera SoCFPGA Arria 10\n");
 
@@ -115,7 +115,7 @@ int print_cpuinfo(void)
 }
 #endif
 
-void do_bridge_reset(int enable, unsigned int mask)
+void do_bridge_reset(int enable)
 {
 	if (enable)
 		socfpga_reset_deassert_bridges_handoff();

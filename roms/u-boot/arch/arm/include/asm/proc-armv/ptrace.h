@@ -86,7 +86,7 @@ struct pt_regs {
 #define user_mode(regs)	\
 	(((regs)->ARM_cpsr & 0xf) == 0)
 
-#if CONFIG_IS_ENABLED(SYS_THUMB_BUILD)
+#ifdef CONFIG_ARM_THUMB
 #define thumb_mode(regs) \
 	(((regs)->ARM_cpsr & T_BIT))
 #else

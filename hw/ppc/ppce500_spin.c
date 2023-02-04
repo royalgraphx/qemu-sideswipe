@@ -8,7 +8,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,7 +34,6 @@
 #include "hw/sysbus.h"
 #include "sysemu/hw_accel.h"
 #include "e500.h"
-#include "qom/object.h"
 
 #define MAX_CPUS 32
 
@@ -47,14 +46,14 @@ typedef struct spin_info {
 } QEMU_PACKED SpinInfo;
 
 #define TYPE_E500_SPIN "e500-spin"
-OBJECT_DECLARE_SIMPLE_TYPE(SpinState, E500_SPIN)
+#define E500_SPIN(obj) OBJECT_CHECK(SpinState, (obj), TYPE_E500_SPIN)
 
-struct SpinState {
+typedef struct SpinState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
     SpinInfo spin[MAX_CPUS];
-};
+} SpinState;
 
 static void spin_reset(DeviceState *dev)
 {

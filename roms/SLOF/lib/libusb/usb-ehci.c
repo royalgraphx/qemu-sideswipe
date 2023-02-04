@@ -22,8 +22,7 @@
 #ifdef EHCI_DEBUG
 #define dprintf(_x ...) do { printf(_x); } while(0)
 #else
-#define dprintf(_x ...) do {} while (0)
-
+#define dprintf(_x ...)
 #endif
 
 #ifdef EHCI_DEBUG

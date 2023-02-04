@@ -7,6 +7,7 @@
 
 **/
 
+
 #include <Base.h>
 
 #include <Library/PciLib.h>
@@ -60,7 +61,7 @@ PciRegisterForRuntimeAccess (
 UINT8
 EFIAPI
 PciRead8 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
   return PciCf8Read8 (Address);
@@ -85,8 +86,8 @@ PciRead8 (
 UINT8
 EFIAPI
 PciWrite8 (
-  IN      UINTN  Address,
-  IN      UINT8  Value
+  IN      UINTN                     Address,
+  IN      UINT8                     Value
   )
 {
   return PciCf8Write8 (Address, Value);
@@ -115,8 +116,8 @@ PciWrite8 (
 UINT8
 EFIAPI
 PciOr8 (
-  IN      UINTN  Address,
-  IN      UINT8  OrData
+  IN      UINTN                     Address,
+  IN      UINT8                     OrData
   )
 {
   return PciCf8Or8 (Address, OrData);
@@ -145,8 +146,8 @@ PciOr8 (
 UINT8
 EFIAPI
 PciAnd8 (
-  IN      UINTN  Address,
-  IN      UINT8  AndData
+  IN      UINTN                     Address,
+  IN      UINT8                     AndData
   )
 {
   return PciCf8And8 (Address, AndData);
@@ -177,9 +178,9 @@ PciAnd8 (
 UINT8
 EFIAPI
 PciAndThenOr8 (
-  IN      UINTN  Address,
-  IN      UINT8  AndData,
-  IN      UINT8  OrData
+  IN      UINTN                     Address,
+  IN      UINT8                     AndData,
+  IN      UINT8                     OrData
   )
 {
   return PciCf8AndThenOr8 (Address, AndData, OrData);
@@ -209,9 +210,9 @@ PciAndThenOr8 (
 UINT8
 EFIAPI
 PciBitFieldRead8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit
   )
 {
   return PciCf8BitFieldRead8 (Address, StartBit, EndBit);
@@ -244,10 +245,10 @@ PciBitFieldRead8 (
 UINT8
 EFIAPI
 PciBitFieldWrite8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit,
-  IN      UINT8  Value
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT8                     Value
   )
 {
   return PciCf8BitFieldWrite8 (Address, StartBit, EndBit, Value);
@@ -283,10 +284,10 @@ PciBitFieldWrite8 (
 UINT8
 EFIAPI
 PciBitFieldOr8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit,
-  IN      UINT8  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT8                     OrData
   )
 {
   return PciCf8BitFieldOr8 (Address, StartBit, EndBit, OrData);
@@ -322,10 +323,10 @@ PciBitFieldOr8 (
 UINT8
 EFIAPI
 PciBitFieldAnd8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit,
-  IN      UINT8  AndData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT8                     AndData
   )
 {
   return PciCf8BitFieldAnd8 (Address, StartBit, EndBit, AndData);
@@ -365,11 +366,11 @@ PciBitFieldAnd8 (
 UINT8
 EFIAPI
 PciBitFieldAndThenOr8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit,
-  IN      UINT8  AndData,
-  IN      UINT8  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT8                     AndData,
+  IN      UINT8                     OrData
   )
 {
   return PciCf8BitFieldAndThenOr8 (Address, StartBit, EndBit, AndData, OrData);
@@ -394,7 +395,7 @@ PciBitFieldAndThenOr8 (
 UINT16
 EFIAPI
 PciRead16 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
   return PciCf8Read16 (Address);
@@ -420,8 +421,8 @@ PciRead16 (
 UINT16
 EFIAPI
 PciWrite16 (
-  IN      UINTN   Address,
-  IN      UINT16  Value
+  IN      UINTN                     Address,
+  IN      UINT16                    Value
   )
 {
   return PciCf8Write16 (Address, Value);
@@ -451,8 +452,8 @@ PciWrite16 (
 UINT16
 EFIAPI
 PciOr16 (
-  IN      UINTN   Address,
-  IN      UINT16  OrData
+  IN      UINTN                     Address,
+  IN      UINT16                    OrData
   )
 {
   return PciCf8Or16 (Address, OrData);
@@ -482,8 +483,8 @@ PciOr16 (
 UINT16
 EFIAPI
 PciAnd16 (
-  IN      UINTN   Address,
-  IN      UINT16  AndData
+  IN      UINTN                     Address,
+  IN      UINT16                    AndData
   )
 {
   return PciCf8And16 (Address, AndData);
@@ -515,9 +516,9 @@ PciAnd16 (
 UINT16
 EFIAPI
 PciAndThenOr16 (
-  IN      UINTN   Address,
-  IN      UINT16  AndData,
-  IN      UINT16  OrData
+  IN      UINTN                     Address,
+  IN      UINT16                    AndData,
+  IN      UINT16                    OrData
   )
 {
   return PciCf8AndThenOr16 (Address, AndData, OrData);
@@ -548,9 +549,9 @@ PciAndThenOr16 (
 UINT16
 EFIAPI
 PciBitFieldRead16 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit
   )
 {
   return PciCf8BitFieldRead16 (Address, StartBit, EndBit);
@@ -584,10 +585,10 @@ PciBitFieldRead16 (
 UINT16
 EFIAPI
 PciBitFieldWrite16 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT16  Value
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT16                    Value
   )
 {
   return PciCf8BitFieldWrite16 (Address, StartBit, EndBit, Value);
@@ -624,10 +625,10 @@ PciBitFieldWrite16 (
 UINT16
 EFIAPI
 PciBitFieldOr16 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT16  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT16                    OrData
   )
 {
   return PciCf8BitFieldOr16 (Address, StartBit, EndBit, OrData);
@@ -664,10 +665,10 @@ PciBitFieldOr16 (
 UINT16
 EFIAPI
 PciBitFieldAnd16 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT16  AndData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT16                    AndData
   )
 {
   return PciCf8BitFieldAnd16 (Address, StartBit, EndBit, AndData);
@@ -708,11 +709,11 @@ PciBitFieldAnd16 (
 UINT16
 EFIAPI
 PciBitFieldAndThenOr16 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT16  AndData,
-  IN      UINT16  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT16                    AndData,
+  IN      UINT16                    OrData
   )
 {
   return PciCf8BitFieldAndThenOr16 (Address, StartBit, EndBit, AndData, OrData);
@@ -737,7 +738,7 @@ PciBitFieldAndThenOr16 (
 UINT32
 EFIAPI
 PciRead32 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
   return PciCf8Read32 (Address);
@@ -763,8 +764,8 @@ PciRead32 (
 UINT32
 EFIAPI
 PciWrite32 (
-  IN      UINTN   Address,
-  IN      UINT32  Value
+  IN      UINTN                     Address,
+  IN      UINT32                    Value
   )
 {
   return PciCf8Write32 (Address, Value);
@@ -794,8 +795,8 @@ PciWrite32 (
 UINT32
 EFIAPI
 PciOr32 (
-  IN      UINTN   Address,
-  IN      UINT32  OrData
+  IN      UINTN                     Address,
+  IN      UINT32                    OrData
   )
 {
   return PciCf8Or32 (Address, OrData);
@@ -825,8 +826,8 @@ PciOr32 (
 UINT32
 EFIAPI
 PciAnd32 (
-  IN      UINTN   Address,
-  IN      UINT32  AndData
+  IN      UINTN                     Address,
+  IN      UINT32                    AndData
   )
 {
   return PciCf8And32 (Address, AndData);
@@ -858,9 +859,9 @@ PciAnd32 (
 UINT32
 EFIAPI
 PciAndThenOr32 (
-  IN      UINTN   Address,
-  IN      UINT32  AndData,
-  IN      UINT32  OrData
+  IN      UINTN                     Address,
+  IN      UINT32                    AndData,
+  IN      UINT32                    OrData
   )
 {
   return PciCf8AndThenOr32 (Address, AndData, OrData);
@@ -891,9 +892,9 @@ PciAndThenOr32 (
 UINT32
 EFIAPI
 PciBitFieldRead32 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit
   )
 {
   return PciCf8BitFieldRead32 (Address, StartBit, EndBit);
@@ -927,10 +928,10 @@ PciBitFieldRead32 (
 UINT32
 EFIAPI
 PciBitFieldWrite32 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  Value
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    Value
   )
 {
   return PciCf8BitFieldWrite32 (Address, StartBit, EndBit, Value);
@@ -967,10 +968,10 @@ PciBitFieldWrite32 (
 UINT32
 EFIAPI
 PciBitFieldOr32 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    OrData
   )
 {
   return PciCf8BitFieldOr32 (Address, StartBit, EndBit, OrData);
@@ -1007,10 +1008,10 @@ PciBitFieldOr32 (
 UINT32
 EFIAPI
 PciBitFieldAnd32 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  AndData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    AndData
   )
 {
   return PciCf8BitFieldAnd32 (Address, StartBit, EndBit, AndData);
@@ -1051,11 +1052,11 @@ PciBitFieldAnd32 (
 UINT32
 EFIAPI
 PciBitFieldAndThenOr32 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  AndData,
-  IN      UINT32  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    AndData,
+  IN      UINT32                    OrData
   )
 {
   return PciCf8BitFieldAndThenOr32 (Address, StartBit, EndBit, AndData, OrData);
@@ -1087,9 +1088,9 @@ PciBitFieldAndThenOr32 (
 UINTN
 EFIAPI
 PciReadBuffer (
-  IN      UINTN  StartAddress,
-  IN      UINTN  Size,
-  OUT     VOID   *Buffer
+  IN      UINTN                     StartAddress,
+  IN      UINTN                     Size,
+  OUT     VOID                      *Buffer
   )
 {
   return PciCf8ReadBuffer (StartAddress, Size, Buffer);
@@ -1122,9 +1123,9 @@ PciReadBuffer (
 UINTN
 EFIAPI
 PciWriteBuffer (
-  IN      UINTN  StartAddress,
-  IN      UINTN  Size,
-  IN      VOID   *Buffer
+  IN      UINTN                     StartAddress,
+  IN      UINTN                     Size,
+  IN      VOID                      *Buffer
   )
 {
   return PciCf8WriteBuffer (StartAddress, Size, Buffer);

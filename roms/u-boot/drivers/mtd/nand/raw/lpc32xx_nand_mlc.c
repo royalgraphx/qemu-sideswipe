@@ -21,7 +21,6 @@
 
 #include <common.h>
 #include <nand.h>
-#include <linux/delay.h>
 #include <linux/errno.h>
 #include <asm/io.h>
 #include <nand.h>

@@ -12,13 +12,10 @@
 
 static int fdt_sw_probe_(void *fdt)
 {
-	if (!can_assume(VALID_INPUT)) {
-		if (fdt_magic(fdt) == FDT_MAGIC)
-			return -FDT_ERR_BADSTATE;
-		else if (fdt_magic(fdt) != FDT_SW_MAGIC)
-			return -FDT_ERR_BADMAGIC;
-	}
-
+	if (fdt_magic(fdt) == FDT_MAGIC)
+		return -FDT_ERR_BADSTATE;
+	else if (fdt_magic(fdt) != FDT_SW_MAGIC)
+		return -FDT_ERR_BADMAGIC;
 	return 0;
 }
 
@@ -32,7 +29,7 @@ static int fdt_sw_probe_(void *fdt)
 /* 'memrsv' state:	Initial state after fdt_create()
  *
  * Allowed functions:
- *	fdt_add_reservemap_entry()
+ *	fdt_add_reservmap_entry()
  *	fdt_finish_reservemap()		[moves to 'struct' state]
  */
 static int fdt_sw_probe_memrsv_(void *fdt)
@@ -41,7 +38,7 @@ static int fdt_sw_probe_memrsv_(void *fdt)
 	if (err)
 		return err;
 
-	if (!can_assume(VALID_INPUT) && fdt_off_dt_strings(fdt) != 0)
+	if (fdt_off_dt_strings(fdt) != 0)
 		return -FDT_ERR_BADSTATE;
 	return 0;
 }
@@ -67,8 +64,7 @@ static int fdt_sw_probe_struct_(void *fdt)
 	if (err)
 		return err;
 
-	if (!can_assume(VALID_INPUT) &&
-	    fdt_off_dt_strings(fdt) != fdt_totalsize(fdt))
+	if (fdt_off_dt_strings(fdt) != fdt_totalsize(fdt))
 		return -FDT_ERR_BADSTATE;
 	return 0;
 }
@@ -93,8 +89,8 @@ static inline uint32_t sw_flags(void *fdt)
 
 static void *fdt_grab_space_(void *fdt, size_t len)
 {
-	unsigned int offset = fdt_size_dt_struct(fdt);
-	unsigned int spaceleft;
+	int offset = fdt_size_dt_struct(fdt);
+	int spaceleft;
 
 	spaceleft = fdt_totalsize(fdt) - fdt_off_dt_struct(fdt)
 		- fdt_size_dt_strings(fdt);
@@ -108,8 +104,8 @@ static void *fdt_grab_space_(void *fdt, size_t len)
 
 int fdt_create_with_flags(void *buf, int bufsize, uint32_t flags)
 {
-	const int hdrsize = FDT_ALIGN(sizeof(struct fdt_header),
-				      sizeof(struct fdt_reserve_entry));
+	const size_t hdrsize = FDT_ALIGN(sizeof(struct fdt_header),
+					 sizeof(struct fdt_reserve_entry));
 	void *fdt = buf;
 
 	if (bufsize < hdrsize)
@@ -152,17 +148,13 @@ int fdt_resize(void *fdt, void *buf, int bufsize)
 
 	FDT_SW_PROBE(fdt);
 
-	if (bufsize < 0)
-		return -FDT_ERR_NOSPACE;
-
 	headsize = fdt_off_dt_struct(fdt) + fdt_size_dt_struct(fdt);
 	tailsize = fdt_size_dt_strings(fdt);
 
-	if (!can_assume(VALID_DTB) &&
-	    headsize + tailsize > fdt_totalsize(fdt))
+	if ((headsize + tailsize) > fdt_totalsize(fdt))
 		return -FDT_ERR_INTERNAL;
 
-	if ((headsize + tailsize) > (unsigned)bufsize)
+	if ((headsize + tailsize) > bufsize)
 		return -FDT_ERR_NOSPACE;
 
 	oldtail = (char *)fdt + fdt_totalsize(fdt) - tailsize;
@@ -250,18 +242,18 @@ int fdt_end_node(void *fdt)
 static int fdt_add_string_(void *fdt, const char *s)
 {
 	char *strtab = (char *)fdt + fdt_totalsize(fdt);
-	unsigned int strtabsize = fdt_size_dt_strings(fdt);
-	unsigned int len = strlen(s) + 1;
-	unsigned int struct_top, offset;
+	int strtabsize = fdt_size_dt_strings(fdt);
+	int len = strlen(s) + 1;
+	int struct_top, offset;
 
-	offset = strtabsize + len;
+	offset = -strtabsize - len;
 	struct_top = fdt_off_dt_struct(fdt) + fdt_size_dt_struct(fdt);
-	if (fdt_totalsize(fdt) - offset < struct_top)
+	if (fdt_totalsize(fdt) + offset < struct_top)
 		return 0; /* no more room :( */
 
-	memcpy(strtab - offset, s, len);
+	memcpy(strtab + offset, s, len);
 	fdt_set_size_dt_strings(fdt, strtabsize + len);
-	return -offset;
+	return offset;
 }
 
 /* Must only be used to roll back in case of error */
@@ -377,7 +369,7 @@ int fdt_finish(void *fdt)
 	fdt_set_totalsize(fdt, newstroffset + fdt_size_dt_strings(fdt));
 
 	/* And fix up fields that were keeping intermediate state. */
-	fdt_set_last_comp_version(fdt, FDT_LAST_COMPATIBLE_VERSION);
+	fdt_set_last_comp_version(fdt, FDT_FIRST_SUPPORTED_VERSION);
 	fdt_set_magic(fdt, FDT_MAGIC);
 
 	return 0;

@@ -2,7 +2,7 @@
   Status Code Handler Driver which produces general handlers and hook them
   onto the DXE status code router.
 
-  Copyright (c) 2006 - 2020, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -10,20 +10,26 @@
 #include "StatusCodeHandlerRuntimeDxe.h"
 
 EFI_EVENT                 mVirtualAddressChangeEvent = NULL;
+static EFI_EVENT          mExitBootServicesEvent     = NULL;
 EFI_RSC_HANDLER_PROTOCOL  *mRscHandlerProtocol       = NULL;
 
 /**
   Unregister status code callback functions only available at boot time from
   report status code router when exiting boot services.
 
+  @param  Event         Event whose notification function is being invoked.
+  @param  Context       Pointer to the notification function's context, which is
+                        always zero in current implementation.
+
 **/
 VOID
 EFIAPI
-UnregisterSerialBootTimeHandlers (
-  VOID
+UnregisterBootTimeHandlers (
+  IN EFI_EVENT        Event,
+  IN VOID             *Context
   )
 {
-  if (PcdGetBool (PcdStatusCodeUseSerial)) {
+  if (FeaturePcdGet (PcdStatusCodeUseSerial)) {
     mRscHandlerProtocol->Unregister (SerialStatusCodeReportWorker);
   }
 }
@@ -40,8 +46,8 @@ UnregisterSerialBootTimeHandlers (
 VOID
 EFIAPI
 VirtualAddressChangeCallBack (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT        Event,
+  IN VOID             *Context
   )
 {
   //
@@ -49,7 +55,7 @@ VirtualAddressChangeCallBack (
   //
   EfiConvertPointer (
     0,
-    (VOID **)&mRtMemoryStatusCodeTable
+    (VOID **) &mRtMemoryStatusCodeTable
     );
 }
 
@@ -63,26 +69,25 @@ InitializationDispatcherWorker (
   VOID
   )
 {
-  EFI_PEI_HOB_POINTERS             Hob;
-  EFI_STATUS                       Status;
-  MEMORY_STATUSCODE_PACKET_HEADER  *PacketHeader;
-  MEMORY_STATUSCODE_RECORD         *Record;
-  UINTN                            Index;
-  UINTN                            MaxRecordNumber;
+  EFI_PEI_HOB_POINTERS              Hob;
+  EFI_STATUS                        Status;
+  MEMORY_STATUSCODE_PACKET_HEADER   *PacketHeader;
+  MEMORY_STATUSCODE_RECORD          *Record;
+  UINTN                             Index;
+  UINTN                             MaxRecordNumber;
 
   //
   // If enable UseSerial, then initialize serial port.
   // if enable UseRuntimeMemory, then initialize runtime memory status code worker.
   //
-  if (PcdGetBool (PcdStatusCodeUseSerial)) {
+  if (FeaturePcdGet (PcdStatusCodeUseSerial)) {
     //
     // Call Serial Port Lib API to initialize serial port.
     //
     Status = SerialPortInitialize ();
     ASSERT_EFI_ERROR (Status);
   }
-
-  if (PcdGetBool (PcdStatusCodeUseMemory)) {
+  if (FeaturePcdGet (PcdStatusCodeUseMemory)) {
     Status = RtMemoryStatusCodeInitializeWorker ();
     ASSERT_EFI_ERROR (Status);
   }
@@ -95,23 +100,22 @@ InitializationDispatcherWorker (
     // Journal GUID'ed HOBs to find all record entry, if found,
     // then output record to support replay device.
     //
-    Hob.Raw = GetFirstGuidHob (&gMemoryStatusCodeRecordGuid);
+    Hob.Raw   = GetFirstGuidHob (&gMemoryStatusCodeRecordGuid);
     if (Hob.Raw != NULL) {
-      PacketHeader    = (MEMORY_STATUSCODE_PACKET_HEADER *)GET_GUID_HOB_DATA (Hob.Guid);
-      Record          = (MEMORY_STATUSCODE_RECORD *)(PacketHeader + 1);
-      MaxRecordNumber = (UINTN)PacketHeader->RecordIndex;
+      PacketHeader = (MEMORY_STATUSCODE_PACKET_HEADER *) GET_GUID_HOB_DATA (Hob.Guid);
+      Record = (MEMORY_STATUSCODE_RECORD *) (PacketHeader + 1);
+      MaxRecordNumber = (UINTN) PacketHeader->RecordIndex;
       if (PacketHeader->PacketIndex > 0) {
         //
         // Record has been wrapped around. So, record number has arrived at max number.
         //
-        MaxRecordNumber = (UINTN)PacketHeader->MaxRecordsNumber;
+        MaxRecordNumber = (UINTN) PacketHeader->MaxRecordsNumber;
       }
-
       for (Index = 0; Index < MaxRecordNumber; Index++) {
         //
         // Dispatch records to devices based on feature flag.
         //
-        if (PcdGetBool (PcdStatusCodeUseSerial)) {
+        if (FeaturePcdGet (PcdStatusCodeUseSerial)) {
           SerialStatusCodeReportWorker (
             Record[Index].CodeType,
             Record[Index].Value,
@@ -120,8 +124,7 @@ InitializationDispatcherWorker (
             NULL
             );
         }
-
-        if (PcdGetBool (PcdStatusCodeUseMemory)) {
+        if (FeaturePcdGet (PcdStatusCodeUseMemory)) {
           RtMemoryStatusCodeReportWorker (
             Record[Index].CodeType,
             Record[Index].Value,
@@ -150,16 +153,16 @@ InitializationDispatcherWorker (
 EFI_STATUS
 EFIAPI
 StatusCodeHandlerRuntimeDxeEntry (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE         ImageHandle,
+  IN EFI_SYSTEM_TABLE   *SystemTable
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                Status;
 
   Status = gBS->LocateProtocol (
                   &gEfiRscHandlerProtocolGuid,
                   NULL,
-                  (VOID **)&mRscHandlerProtocol
+                  (VOID **) &mRscHandlerProtocol
                   );
   ASSERT_EFI_ERROR (Status);
 
@@ -168,13 +171,21 @@ StatusCodeHandlerRuntimeDxeEntry (
   //
   InitializationDispatcherWorker ();
 
-  if (PcdGetBool (PcdStatusCodeUseSerial)) {
+  if (FeaturePcdGet (PcdStatusCodeUseSerial)) {
     mRscHandlerProtocol->Register (SerialStatusCodeReportWorker, TPL_HIGH_LEVEL);
   }
-
-  if (PcdGetBool (PcdStatusCodeUseMemory)) {
+  if (FeaturePcdGet (PcdStatusCodeUseMemory)) {
     mRscHandlerProtocol->Register (RtMemoryStatusCodeReportWorker, TPL_HIGH_LEVEL);
   }
+
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
+                  TPL_NOTIFY,
+                  UnregisterBootTimeHandlers,
+                  NULL,
+                  &gEfiEventExitBootServicesGuid,
+                  &mExitBootServicesEvent
+                  );
 
   Status = gBS->CreateEventEx (
                   EVT_NOTIFY_SIGNAL,

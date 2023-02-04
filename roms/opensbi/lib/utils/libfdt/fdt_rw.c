@@ -24,16 +24,14 @@ static int fdt_blocks_misordered_(const void *fdt,
 
 static int fdt_rw_probe_(void *fdt)
 {
-	if (can_assume(VALID_DTB))
-		return 0;
 	FDT_RO_PROBE(fdt);
 
-	if (!can_assume(LATEST) && fdt_version(fdt) < 17)
+	if (fdt_version(fdt) < 17)
 		return -FDT_ERR_BADVERSION;
 	if (fdt_blocks_misordered_(fdt, sizeof(struct fdt_reserve_entry),
 				   fdt_size_dt_struct(fdt)))
 		return -FDT_ERR_BADLAYOUT;
-	if (!can_assume(LATEST) && fdt_version(fdt) > 17)
+	if (fdt_version(fdt) > 17)
 		fdt_set_version(fdt, 17);
 
 	return 0;
@@ -46,7 +44,7 @@ static int fdt_rw_probe_(void *fdt)
 			return err_; \
 	}
 
-static inline unsigned int fdt_data_size_(void *fdt)
+static inline int fdt_data_size_(void *fdt)
 {
 	return fdt_off_dt_strings(fdt) + fdt_size_dt_strings(fdt);
 }
@@ -54,16 +52,15 @@ static inline unsigned int fdt_data_size_(void *fdt)
 static int fdt_splice_(void *fdt, void *splicepoint, int oldlen, int newlen)
 {
 	char *p = splicepoint;
-	unsigned int dsize = fdt_data_size_(fdt);
-	size_t soff = p - (char *)fdt;
+	char *end = (char *)fdt + fdt_data_size_(fdt);
 
-	if ((oldlen < 0) || (soff + oldlen < soff) || (soff + oldlen > dsize))
+	if (((p + oldlen) < p) || ((p + oldlen) > end))
 		return -FDT_ERR_BADOFFSET;
-	if ((p < (char *)fdt) || (dsize + newlen < (unsigned)oldlen))
+	if ((p < (char *)fdt) || ((end - oldlen + newlen) < (char *)fdt))
 		return -FDT_ERR_BADOFFSET;
-	if (dsize - oldlen + newlen > fdt_totalsize(fdt))
+	if ((end - oldlen + newlen) > ((char *)fdt + fdt_totalsize(fdt)))
 		return -FDT_ERR_NOSPACE;
-	memmove(p + newlen, p + oldlen, ((char *)fdt + dsize) - (p + oldlen));
+	memmove(p + newlen, p + oldlen, end - p - oldlen);
 	return 0;
 }
 
@@ -115,15 +112,6 @@ static int fdt_splice_string_(void *fdt, int newlen)
 	return 0;
 }
 
-/**
- * fdt_find_add_string_() - Find or allocate a string
- *
- * @fdt: pointer to the device tree to check/adjust
- * @s: string to find/add
- * @allocated: Set to 0 if the string was found, 1 if not found and so
- *	allocated. Ignored if can_assume(NO_ROLLBACK)
- * @return offset of string in the string table (whether found or added)
- */
 static int fdt_find_add_string_(void *fdt, const char *s, int *allocated)
 {
 	char *strtab = (char *)fdt + fdt_off_dt_strings(fdt);
@@ -132,8 +120,7 @@ static int fdt_find_add_string_(void *fdt, const char *s, int *allocated)
 	int len = strlen(s) + 1;
 	int err;
 
-	if (!can_assume(NO_ROLLBACK))
-		*allocated = 0;
+	*allocated = 0;
 
 	p = fdt_find_string_(strtab, fdt_size_dt_strings(fdt), s);
 	if (p)
@@ -145,8 +132,7 @@ static int fdt_find_add_string_(void *fdt, const char *s, int *allocated)
 	if (err)
 		return err;
 
-	if (!can_assume(NO_ROLLBACK))
-		*allocated = 1;
+	*allocated = 1;
 
 	memcpy(new, s, len);
 	return (new - strtab);
@@ -220,8 +206,7 @@ static int fdt_add_property_(void *fdt, int nodeoffset, const char *name,
 
 	err = fdt_splice_struct_(fdt, *prop, 0, proplen);
 	if (err) {
-		/* Delete the string if we failed to add it */
-		if (!can_assume(NO_ROLLBACK) && allocated)
+		if (allocated)
 			fdt_del_last_string_(fdt, name);
 		return err;
 	}
@@ -349,10 +334,7 @@ int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 		return offset;
 
 	/* Try to place the new node after the parent's properties */
-	tag = fdt_next_tag(fdt, parentoffset, &nextoffset);
-	/* the fdt_subnode_offset_namelen() should ensure this never hits */
-	if (!can_assume(LIBFDT_FLAWLESS) && (tag != FDT_BEGIN_NODE))
-		return -FDT_ERR_INTERNAL;
+	fdt_next_tag(fdt, parentoffset, &nextoffset); /* skip the BEGIN_NODE */
 	do {
 		offset = nextoffset;
 		tag = fdt_next_tag(fdt, offset, &nextoffset);
@@ -394,9 +376,7 @@ int fdt_del_node(void *fdt, int nodeoffset)
 }
 
 static void fdt_packblocks_(const char *old, char *new,
-			    int mem_rsv_size,
-			    int struct_size,
-			    int strings_size)
+			    int mem_rsv_size, int struct_size)
 {
 	int mem_rsv_off, struct_off, strings_off;
 
@@ -411,7 +391,8 @@ static void fdt_packblocks_(const char *old, char *new,
 	fdt_set_off_dt_struct(new, struct_off);
 	fdt_set_size_dt_struct(new, struct_size);
 
-	memmove(new + strings_off, old + fdt_off_dt_strings(old), strings_size);
+	memmove(new + strings_off, old + fdt_off_dt_strings(old),
+		fdt_size_dt_strings(old));
 	fdt_set_off_dt_strings(new, strings_off);
 	fdt_set_size_dt_strings(new, fdt_size_dt_strings(old));
 }
@@ -430,20 +411,17 @@ int fdt_open_into(const void *fdt, void *buf, int bufsize)
 	mem_rsv_size = (fdt_num_mem_rsv(fdt)+1)
 		* sizeof(struct fdt_reserve_entry);
 
-	if (can_assume(LATEST) || fdt_version(fdt) >= 17) {
+	if (fdt_version(fdt) >= 17) {
 		struct_size = fdt_size_dt_struct(fdt);
-	} else if (fdt_version(fdt) == 16) {
+	} else {
 		struct_size = 0;
 		while (fdt_next_tag(fdt, struct_size, &struct_size) != FDT_END)
 			;
 		if (struct_size < 0)
 			return struct_size;
-	} else {
-		return -FDT_ERR_BADVERSION;
 	}
 
-	if (can_assume(LIBFDT_ORDER) ||
-	    !fdt_blocks_misordered_(fdt, mem_rsv_size, struct_size)) {
+	if (!fdt_blocks_misordered_(fdt, mem_rsv_size, struct_size)) {
 		/* no further work necessary */
 		err = fdt_move(fdt, buf, bufsize);
 		if (err)
@@ -471,8 +449,7 @@ int fdt_open_into(const void *fdt, void *buf, int bufsize)
 			return -FDT_ERR_NOSPACE;
 	}
 
-	fdt_packblocks_(fdt, tmp, mem_rsv_size, struct_size,
-			fdt_size_dt_strings(fdt));
+	fdt_packblocks_(fdt, tmp, mem_rsv_size, struct_size);
 	memmove(buf, tmp, newsize);
 
 	fdt_set_magic(buf, FDT_MAGIC);
@@ -492,8 +469,7 @@ int fdt_pack(void *fdt)
 
 	mem_rsv_size = (fdt_num_mem_rsv(fdt)+1)
 		* sizeof(struct fdt_reserve_entry);
-	fdt_packblocks_(fdt, fdt, mem_rsv_size, fdt_size_dt_struct(fdt),
-			fdt_size_dt_strings(fdt));
+	fdt_packblocks_(fdt, fdt, mem_rsv_size, fdt_size_dt_struct(fdt));
 	fdt_set_totalsize(fdt, fdt_data_size_(fdt));
 
 	return 0;

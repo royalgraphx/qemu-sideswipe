@@ -17,15 +17,14 @@
 #include "hw/gpio/nrf51_gpio.h"
 #include "hw/nvram/nrf51_nvm.h"
 #include "hw/timer/nrf51_timer.h"
-#include "hw/clock.h"
-#include "qom/object.h"
 
 #define TYPE_NRF51_SOC "nrf51-soc"
-OBJECT_DECLARE_SIMPLE_TYPE(NRF51State, NRF51_SOC)
+#define NRF51_SOC(obj) \
+    OBJECT_CHECK(NRF51State, (obj), TYPE_NRF51_SOC)
 
 #define NRF51_NUM_TIMERS 3
 
-struct NRF51State {
+typedef struct NRF51State {
     /*< private >*/
     SysBusDevice parent_obj;
 
@@ -51,7 +50,6 @@ struct NRF51State {
 
     MemoryRegion container;
 
-    Clock *sysclk;
-};
+} NRF51State;
 
 #endif

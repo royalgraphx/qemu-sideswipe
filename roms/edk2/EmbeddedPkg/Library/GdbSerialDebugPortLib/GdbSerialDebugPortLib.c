@@ -1,5 +1,5 @@
 /** @file
-  Basic serial IO abstraction for GDB
+  Basic serial IO abstaction for GDB
 
   Copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
 
@@ -16,8 +16,9 @@
 
 #include <Protocol/DebugPort.h>
 
+
 EFI_DEBUGPORT_PROTOCOL  *gDebugPort = NULL;
-UINTN                   gTimeOut    = 0;
+UINTN                   gTimeOut = 0;
 
 /**
   The constructor function initializes the UART.
@@ -35,7 +36,7 @@ GdbSerialLibDebugPortConstructor (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS    Status;
 
   Status = gBS->LocateProtocol (&gEfiDebugPortProtocolGuid, NULL, (VOID **)&gDebugPort);
   if (!EFI_ERROR (Status)) {
@@ -46,8 +47,10 @@ GdbSerialLibDebugPortConstructor (
   return Status;
 }
 
+
+
 /**
-  Sets the baud rate, receive FIFO depth, transmit/receive time out, parity,
+  Sets the baud rate, receive FIFO depth, transmit/receice time out, parity,
   data buts, and stop bits on a serial device. This call is optional as the serial
   port will be set up with defaults base on PCD values.
 
@@ -56,22 +59,22 @@ GdbSerialLibDebugPortConstructor (
   @param  Parity           The type of parity to use on this serial device. A Parity value of
                            DefaultParity will use the device's default parity value.
   @param  DataBits         The number of data bits to use on the serial device. A DataBits
-                           value of 0 will use the device's default data bit setting.
+                           vaule of 0 will use the device's default data bit setting.
   @param  StopBits         The number of stop bits to use on this serial device. A StopBits
                            value of DefaultStopBits will use the device's default number of
                            stop bits.
 
   @retval EFI_SUCCESS      The device was configured.
-  @retval EFI_DEVICE_ERROR The serial device could not be configured.
+  @retval EFI_DEVICE_ERROR The serial device could not be coonfigured.
 
 **/
 RETURN_STATUS
 EFIAPI
 GdbSerialInit (
-  IN UINT64  BaudRate,
-  IN UINT8   Parity,
-  IN UINT8   DataBits,
-  IN UINT8   StopBits
+  IN UINT64     BaudRate,
+  IN UINT8      Parity,
+  IN UINT8      DataBits,
+  IN UINT8      StopBits
   )
 {
   EFI_STATUS  Status;
@@ -79,6 +82,7 @@ GdbSerialInit (
   Status = gDebugPort->Reset (gDebugPort);
   return Status;
 }
+
 
 /**
   Check to see if a character is available from GDB. Do not read the character as that is
@@ -101,6 +105,7 @@ GdbIsCharAvailable (
   return (Status == EFI_SUCCESS ? TRUE : FALSE);
 }
 
+
 /**
   Get a character from GDB. This function must be able to run in interrupt context.
 
@@ -119,11 +124,12 @@ GdbGetChar (
 
   do {
     BufferSize = sizeof (Char);
-    Status     = gDebugPort->Read (gDebugPort, gTimeOut, &BufferSize, &Char);
+    Status = gDebugPort->Read (gDebugPort, gTimeOut, &BufferSize, &Char);
   } while (EFI_ERROR (Status) || BufferSize != sizeof (Char));
 
   return Char;
 }
+
 
 /**
   Send a character to GDB. This function must be able to run in interrupt context.
@@ -132,10 +138,11 @@ GdbGetChar (
   @param  Char    Send a character to GDB
 
 **/
+
 VOID
 EFIAPI
 GdbPutChar (
-  IN  CHAR8  Char
+  IN  CHAR8   Char
   )
 {
   EFI_STATUS  Status;
@@ -143,7 +150,7 @@ GdbPutChar (
 
   do {
     BufferSize = sizeof (Char);
-    Status     = gDebugPort->Write (gDebugPort, gTimeOut, &BufferSize, &Char);
+    Status = gDebugPort->Write (gDebugPort, gTimeOut, &BufferSize, &Char);
   } while (EFI_ERROR (Status) || BufferSize != sizeof (Char));
 
   return;
@@ -156,14 +163,19 @@ GdbPutChar (
   @param  String    Send a string to GDB
 
 **/
+
 VOID
 GdbPutString (
   IN CHAR8  *String
   )
 {
-  // We could performance enhance this function by calling gDebugPort->Write ()
+ // We could performance enhance this function by calling gDebugPort->Write ()
   while (*String != '\0') {
     GdbPutChar (*String);
     String++;
   }
 }
+
+
+
+

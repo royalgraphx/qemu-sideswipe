@@ -12,48 +12,10 @@
 #include <sbi/sbi_console.h>
 #include <sbi/sbi_const.h>
 #include <sbi/sbi_platform.h>
-#include <sbi/sbi_system.h>
-#include <sbi_utils/fdt/fdt_helper.h>
-#include <sbi_utils/fdt/fdt_fixup.h>
-#include <sbi_utils/ipi/aclint_mswi.h>
 #include <sbi_utils/irqchip/plic.h>
 #include <sbi_utils/serial/sifive-uart.h>
-#include <sbi_utils/timer/aclint_mtimer.h>
+#include <sbi_utils/sys/clint.h>
 #include "platform.h"
-
-extern const char dt_k210_start[];
-
-unsigned long fw_platform_init(unsigned long arg0, unsigned long arg1,
-				unsigned long arg2, unsigned long arg3,
-				unsigned long arg4)
-{
-	return (unsigned long)&dt_k210_start[0];
-}
-
-static struct plic_data plic = {
-	.addr = K210_PLIC_BASE_ADDR,
-	.num_src = K210_PLIC_NUM_SOURCES,
-};
-
-static struct aclint_mswi_data mswi = {
-	.addr = K210_ACLINT_MSWI_ADDR,
-	.size = ACLINT_MSWI_SIZE,
-	.first_hartid = 0,
-	.hart_count = K210_HART_COUNT,
-};
-
-static struct aclint_mtimer_data mtimer = {
-	.mtime_freq = K210_ACLINT_MTIMER_FREQ,
-	.mtime_addr = K210_ACLINT_MTIMER_ADDR +
-		      ACLINT_DEFAULT_MTIME_OFFSET,
-	.mtime_size = ACLINT_DEFAULT_MTIME_SIZE,
-	.mtimecmp_addr = K210_ACLINT_MTIMER_ADDR +
-			 ACLINT_DEFAULT_MTIMECMP_OFFSET,
-	.mtimecmp_size = ACLINT_DEFAULT_MTIMECMP_SIZE,
-	.first_hartid = 0,
-	.hart_count = K210_HART_COUNT,
-	.has_64bit_mmio = TRUE,
-};
 
 static u32 k210_get_clk_freq(void)
 {
@@ -84,51 +46,6 @@ static u32 k210_get_clk_freq(void)
 	return pll0_freq / div;
 }
 
-static int k210_system_reset_check(u32 type, u32 reason)
-{
-	return 1;
-}
-
-static void k210_system_reset(u32 type, u32 reason)
-{
-	u32 val;
-
-	val = k210_read_sysreg(K210_RESET);
-	val |= K210_RESET_MASK;
-	k210_write_sysreg(val, K210_RESET);
-
-	while (1);
-}
-
-static struct sbi_system_reset_device k210_reset = {
-	.name = "kendryte_k210_reset",
-	.system_reset_check = k210_system_reset_check,
-	.system_reset = k210_system_reset
-};
-
-static int k210_early_init(bool cold_boot)
-{
-	if (cold_boot)
-		sbi_system_reset_add_device(&k210_reset);
-
-	return 0;
-}
-
-static int k210_final_init(bool cold_boot)
-{
-	void *fdt;
-
-	if (!cold_boot)
-		return 0;
-
-	fdt = fdt_get_address();
-
-	fdt_cpu_fixup(fdt);
-	fdt_fixups(fdt);
-
-	return 0;
-}
-
 static int k210_console_init(void)
 {
 	return sifive_uart_init(K210_UART_BASE_ADDR, k210_get_clk_freq(),
@@ -141,12 +58,14 @@ static int k210_irqchip_init(bool cold_boot)
 	u32 hartid = current_hartid();
 
 	if (cold_boot) {
-		rc = plic_cold_irqchip_init(&plic);
+		rc = plic_cold_irqchip_init(K210_PLIC_BASE_ADDR,
+					    K210_PLIC_NUM_SOURCES,
+					    K210_HART_COUNT);
 		if (rc)
 			return rc;
 	}
 
-	return plic_warm_irqchip_init(&plic, hartid * 2, hartid * 2 + 1);
+	return plic_warm_irqchip_init(hartid, hartid * 2, hartid * 2 + 1);
 }
 
 static int k210_ipi_init(bool cold_boot)
@@ -154,12 +73,13 @@ static int k210_ipi_init(bool cold_boot)
 	int rc;
 
 	if (cold_boot) {
-		rc = aclint_mswi_cold_init(&mswi);
+		rc = clint_cold_ipi_init(K210_CLINT_BASE_ADDR,
+					 K210_HART_COUNT);
 		if (rc)
 			return rc;
 	}
 
-	return aclint_mswi_warm_init();
+	return clint_warm_ipi_init();
 }
 
 static int k210_timer_init(bool cold_boot)
@@ -167,33 +87,56 @@ static int k210_timer_init(bool cold_boot)
 	int rc;
 
 	if (cold_boot) {
-		rc = aclint_mtimer_cold_init(&mtimer, NULL);
+		rc = clint_cold_timer_init(K210_CLINT_BASE_ADDR,
+					   K210_HART_COUNT, TRUE);
 		if (rc)
 			return rc;
 	}
 
-	return aclint_mtimer_warm_init();
+	return clint_warm_timer_init();
+}
+
+static int k210_system_reboot(u32 type)
+{
+	/* For now nothing to do. */
+	sbi_printf("System reboot\n");
+
+	return 0;
+}
+
+static int k210_system_shutdown(u32 type)
+{
+	/* For now nothing to do. */
+	sbi_printf("System shutdown\n");
+
+	return 0;
 }
 
 const struct sbi_platform_operations platform_ops = {
-	.early_init	= k210_early_init,
-
-	.final_init	= k210_final_init,
-
 	.console_init	= k210_console_init,
+	.console_putc	= sifive_uart_putc,
+	.console_getc	= sifive_uart_getc,
 
 	.irqchip_init = k210_irqchip_init,
 
 	.ipi_init  = k210_ipi_init,
+	.ipi_send  = clint_ipi_send,
+	.ipi_clear = clint_ipi_clear,
 
 	.timer_init	   = k210_timer_init,
+	.timer_value	   = clint_timer_value,
+	.timer_event_stop  = clint_timer_event_stop,
+	.timer_event_start = clint_timer_event_start,
+
+	.system_reboot	 = k210_system_reboot,
+	.system_shutdown = k210_system_shutdown
 };
 
 const struct sbi_platform platform = {
 	.opensbi_version	= OPENSBI_VERSION,
 	.platform_version   	= SBI_PLATFORM_VERSION(0x0, 0x01),
 	.name			= "Kendryte K210",
-	.features		= 0,
+	.features		= SBI_PLATFORM_HAS_TIMER_VALUE,
 	.hart_count		= K210_HART_COUNT,
 	.hart_stack_size	= SBI_PLATFORM_DEFAULT_HART_STACK_SIZE,
 	.platform_ops_addr	= (unsigned long)&platform_ops

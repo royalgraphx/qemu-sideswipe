@@ -16,7 +16,7 @@
   Initialization function for HDiskImage.
 
   @retval EFI_SUCCESS       The operation was successful.
-  @retval EFI_LOAD_ERROR    A load error occurred.
+  @retval EFI_LOAD_ERROR    A load error occured.
 **/
 EFI_STATUS
 HMemImageInit (
@@ -45,8 +45,8 @@ HMemImageBackup (
 **/
 EFI_STATUS
 HMemImageSetMemOffsetSize (
-  IN UINTN  Offset,
-  IN UINTN  Size
+  IN UINTN Offset,
+  IN UINTN Size
   );
 
 /**
@@ -56,15 +56,15 @@ HMemImageSetMemOffsetSize (
   @param[in] Size     The size.
   @param[in] Recover  if is for recover, no information print.
 
-  @retval EFI_LOAD_ERROR        A load error occurred.
+  @retval EFI_LOAD_ERROR        A load error occured.
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
 **/
 EFI_STATUS
 HMemImageRead (
-  IN UINTN    Offset,
-  IN UINTN    Size,
-  IN BOOLEAN  Recover
+  IN UINTN     Offset,
+  IN UINTN     Size,
+  IN BOOLEAN   Recover
   );
 
 /**
@@ -73,14 +73,14 @@ HMemImageRead (
   @param[in] Offset   The offset.
   @param[in] Size     The size.
 
-  @retval EFI_LOAD_ERROR        A load error occurred.
+  @retval EFI_LOAD_ERROR        A load error occured.
   @retval EFI_SUCCESS           The operation was successful.
   @retval EFI_OUT_OF_RESOURCES  A memory allocation failed.
 **/
 EFI_STATUS
 HMemImageSave (
-  IN UINTN  Offset,
-  IN UINTN  Size
+  IN UINTN Offset,
+  IN UINTN Size
   );
 
 #endif

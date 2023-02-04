@@ -12,7 +12,6 @@
 #include "qemu/error-report.h"
 #include "qemu/queue.h"
 #include "qemu/option.h"
-#include "exec/memopidx.h"
 
 /*
  * Events that plugins can subscribe to.
@@ -37,25 +36,6 @@ enum qemu_plugin_event {
 struct qemu_plugin_desc;
 typedef QTAILQ_HEAD(, qemu_plugin_desc) QemuPluginList;
 
-/*
- * Construct a qemu_plugin_meminfo_t.
- */
-static inline qemu_plugin_meminfo_t
-make_plugin_meminfo(MemOpIdx oi, enum qemu_plugin_mem_rw rw)
-{
-    return oi | (rw << 16);
-}
-
-/*
- * Extract the memory operation direction from a qemu_plugin_meminfo_t.
- * Other portions may be extracted via get_memop and get_mmuidx.
- */
-static inline enum qemu_plugin_mem_rw
-get_plugin_meminfo_rw(qemu_plugin_meminfo_t i)
-{
-    return i >> 16;
-}
-
 #ifdef CONFIG_PLUGIN
 extern QemuOptsList qemu_plugin_opts;
 
@@ -65,7 +45,7 @@ static inline void qemu_plugin_add_opts(void)
 }
 
 void qemu_plugin_opt_parse(const char *optarg, QemuPluginList *head);
-int qemu_plugin_load_list(QemuPluginList *head, Error **errp);
+int qemu_plugin_load_list(QemuPluginList *head);
 
 union qemu_plugin_cb_sig {
     qemu_plugin_simple_cb_t          simple;
@@ -99,6 +79,7 @@ enum plugin_dyn_cb_subtype {
 struct qemu_plugin_dyn_cb {
     union qemu_plugin_cb_sig f;
     void *userp;
+    unsigned tcg_flags;
     enum plugin_dyn_cb_subtype type;
     /* @rw applies to mem callbacks only (both regular and inline) */
     enum qemu_plugin_mem_rw rw;
@@ -111,7 +92,6 @@ struct qemu_plugin_dyn_cb {
     };
 };
 
-/* Internal context for instrumenting an instruction */
 struct qemu_plugin_insn {
     GByteArray *data;
     uint64_t vaddr;
@@ -119,7 +99,6 @@ struct qemu_plugin_insn {
     GArray *cbs[PLUGIN_N_CB_TYPES][PLUGIN_N_CB_SUBTYPES];
     bool calls_helpers;
     bool mem_helper;
-    bool mem_only;
 };
 
 /*
@@ -149,7 +128,6 @@ static inline struct qemu_plugin_insn *qemu_plugin_insn_alloc(void)
     return insn;
 }
 
-/* Internal context for this TranslationBlock */
 struct qemu_plugin_tb {
     GPtrArray *insns;
     size_t n;
@@ -157,18 +135,15 @@ struct qemu_plugin_tb {
     uint64_t vaddr2;
     void *haddr1;
     void *haddr2;
-    bool mem_only;
     GArray *cbs[PLUGIN_N_CB_SUBTYPES];
 };
 
 /**
  * qemu_plugin_tb_insn_get(): get next plugin record for translation.
- * @tb: the internal tb context
- * @pc: address of instruction
+ *
  */
 static inline
-struct qemu_plugin_insn *qemu_plugin_tb_insn_get(struct qemu_plugin_tb *tb,
-                                                 uint64_t pc)
+struct qemu_plugin_insn *qemu_plugin_tb_insn_get(struct qemu_plugin_tb *tb)
 {
     struct qemu_plugin_insn *insn;
     int i, j;
@@ -181,7 +156,6 @@ struct qemu_plugin_insn *qemu_plugin_tb_insn_get(struct qemu_plugin_tb *tb,
     g_byte_array_set_size(insn->data, 0);
     insn->calls_helpers = false;
     insn->mem_helper = false;
-    insn->vaddr = pc;
 
     for (i = 0; i < PLUGIN_N_CB_TYPES; i++) {
         for (j = 0; j < PLUGIN_N_CB_SUBTYPES; j++) {
@@ -203,8 +177,7 @@ qemu_plugin_vcpu_syscall(CPUState *cpu, int64_t num, uint64_t a1,
                          uint64_t a6, uint64_t a7, uint64_t a8);
 void qemu_plugin_vcpu_syscall_ret(CPUState *cpu, int64_t num, int64_t ret);
 
-void qemu_plugin_vcpu_mem_cb(CPUState *cpu, uint64_t vaddr,
-                             MemOpIdx oi, enum qemu_plugin_mem_rw rw);
+void qemu_plugin_vcpu_mem_cb(CPUState *cpu, uint64_t vaddr, uint32_t meminfo);
 
 void qemu_plugin_flush_cb(void);
 
@@ -213,33 +186,6 @@ void qemu_plugin_atexit_cb(void);
 void qemu_plugin_add_dyn_cb_arr(GArray *arr);
 
 void qemu_plugin_disable_mem_helpers(CPUState *cpu);
-
-/**
- * qemu_plugin_user_exit(): clean-up callbacks before calling exit callbacks
- *
- * This is a user-mode only helper that ensure we have fully cleared
- * callbacks from all threads before calling the exit callbacks. This
- * is so the plugins themselves don't have to jump through hoops to
- * guard against race conditions.
- */
-void qemu_plugin_user_exit(void);
-
-/**
- * qemu_plugin_user_prefork_lock(): take plugin lock before forking
- *
- * This is a user-mode only helper to take the internal plugin lock
- * before a fork event. This is ensure a consistent lock state
- */
-void qemu_plugin_user_prefork_lock(void);
-
-/**
- * qemu_plugin_user_postfork(): reset the plugin lock
- * @is_child: is this thread the child
- *
- * This user-mode only helper resets the lock state after a fork so we
- * can continue using the plugin interface.
- */
-void qemu_plugin_user_postfork(bool is_child);
 
 #else /* !CONFIG_PLUGIN */
 
@@ -253,7 +199,7 @@ static inline void qemu_plugin_opt_parse(const char *optarg,
     exit(1);
 }
 
-static inline int qemu_plugin_load_list(QemuPluginList *head, Error **errp)
+static inline int qemu_plugin_load_list(QemuPluginList *head)
 {
     return 0;
 }
@@ -285,8 +231,7 @@ void qemu_plugin_vcpu_syscall_ret(CPUState *cpu, int64_t num, int64_t ret)
 { }
 
 static inline void qemu_plugin_vcpu_mem_cb(CPUState *cpu, uint64_t vaddr,
-                                           MemOpIdx oi,
-                                           enum qemu_plugin_mem_rw rw)
+                                           uint32_t meminfo)
 { }
 
 static inline void qemu_plugin_flush_cb(void)
@@ -300,15 +245,6 @@ void qemu_plugin_add_dyn_cb_arr(GArray *arr)
 { }
 
 static inline void qemu_plugin_disable_mem_helpers(CPUState *cpu)
-{ }
-
-static inline void qemu_plugin_user_exit(void)
-{ }
-
-static inline void qemu_plugin_user_prefork_lock(void)
-{ }
-
-static inline void qemu_plugin_user_postfork(bool is_child)
 { }
 
 #endif /* !CONFIG_PLUGIN */

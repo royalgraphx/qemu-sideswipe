@@ -15,6 +15,7 @@
 #include <libgen.h>
 #include "qapi/error.h"
 #include "qemu/module.h"
+#include "hw/sysbus.h"
 #include "hw/s390x/css.h"
 #include "hw/s390x/css-bridge.h"
 #include "hw/s390x/s390-ccw.h"
@@ -57,7 +58,7 @@ IOInstEnding s390_ccw_store(SubchDev *sch)
 
     /*
      * This code is called for both virtual and passthrough devices,
-     * but only applies to the latter.  This ugly check makes that
+     * but only applies to to the latter.  This ugly check makes that
      * distinction for us.
      */
     if (object_dynamic_cast(OBJECT(sch->driver_data), TYPE_S390_CCW)) {
@@ -124,7 +125,6 @@ static void s390_ccw_realize(S390CCWDevice *cdev, char *sysfsdev, Error **errp)
     }
     sch->driver_data = cdev;
     sch->do_subchannel_work = do_subchannel_work_passthrough;
-    sch->irb_cb = build_irb_passthrough;
 
     ccw_dev->sch = sch;
     ret = css_sch_build_schib(sch, &cdev->hostid);
@@ -177,8 +177,10 @@ static void s390_ccw_instance_init(Object *obj)
 
 static void s390_ccw_class_init(ObjectClass *klass, void *data)
 {
+    DeviceClass *dc = DEVICE_CLASS(klass);
     S390CCWDeviceClass *cdc = S390_CCW_DEVICE_CLASS(klass);
 
+    dc->bus_type = TYPE_VIRTUAL_CSS_BUS;
     cdc->realize = s390_ccw_realize;
     cdc->unrealize = s390_ccw_unrealize;
 }

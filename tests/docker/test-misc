@@ -14,7 +14,7 @@
 
 . common.rc
 
-requires_binary sphinx-build-3 sphinx-build
+requires docs
 
 cd "$BUILD_DIR"
 

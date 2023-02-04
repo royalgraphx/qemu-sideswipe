@@ -24,7 +24,7 @@
 
 #include "hw/sysbus.h"
 #include "chardev/char-fe.h"
-#include "qom/object.h"
+#include "hw/hw.h"
 
 /* Offsets of registers. */
 #define USART_DR   0x06
@@ -57,9 +57,10 @@
 #define USART_CSRC_CSZ0   (1 << 1)
 
 #define TYPE_AVR_USART "avr-usart"
-OBJECT_DECLARE_SIMPLE_TYPE(AVRUsartState, AVR_USART)
+#define AVR_USART(obj) \
+    OBJECT_CHECK(AVRUsartState, (obj), TYPE_AVR_USART)
 
-struct AVRUsartState {
+typedef struct {
     /* <private> */
     SysBusDevice parent_obj;
 
@@ -87,6 +88,6 @@ struct AVRUsartState {
     qemu_irq txc_irq;
     /* Data Register Empty */
     qemu_irq dre_irq;
-};
+} AVRUsartState;
 
 #endif /* HW_CHAR_AVR_USART_H */

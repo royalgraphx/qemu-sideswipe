@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # Test for discarding compressed clusters on qcow2 images
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"
@@ -38,7 +37,7 @@ trap "_cleanup; exit \$status" 0 1 2 3 15
 . ./common.filter
 
 _supported_fmt qcow2
-_supported_proto file nfs fuse
+_supported_proto file nfs
 # External data files do not support compressed clusters
 _unsupported_imgopts data_file
 

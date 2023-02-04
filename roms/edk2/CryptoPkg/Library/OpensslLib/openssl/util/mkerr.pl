@@ -1,5 +1,5 @@
 #! /usr/bin/env perl
-# Copyright 1999-2019 The OpenSSL Project Authors. All Rights Reserved.
+# Copyright 1999-2018 The OpenSSL Project Authors. All Rights Reserved.
 #
 # Licensed under the OpenSSL license (the "License").  You may not use
 # this file except in compliance with the License.  You can obtain a copy
@@ -417,7 +417,9 @@ print STDERR "\n" if $debug;
 &phase("Writing files");
 my $newstate = 0;
 foreach my $lib ( keys %errorfile ) {
-    next if ! $fnew{$lib} && ! $rnew{$lib} && ! $rebuild;
+    if ( ! $fnew{$lib} && ! $rnew{$lib} ) {
+        next unless $rebuild;
+    }
     next if scalar keys %modules > 0 && !$modules{$lib};
     next if $nowrite;
     print STDERR "$lib: $fnew{$lib} new functions\n" if $fnew{$lib};
@@ -452,8 +454,6 @@ foreach my $lib ( keys %errorfile ) {
 
 #ifndef HEADER_${lib}ERR_H
 # define HEADER_${lib}ERR_H
-
-# include <openssl/symhacks.h>
 
 EOF
     if ( $internal ) {

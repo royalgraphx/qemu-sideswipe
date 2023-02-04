@@ -11,7 +11,6 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-#include <u-boot/crc.h>
 #include <unistd.h>
 #include <limits.h>
 

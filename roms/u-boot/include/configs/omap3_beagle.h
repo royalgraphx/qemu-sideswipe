@@ -17,6 +17,8 @@
  * We are only ever GP parts and will utilize all of the "downloaded image"
  * area in SRAM which starts at 0x40200000 and ends at 0x4020FFFF (64KB).
  */
+#undef CONFIG_SPL_TEXT_BASE
+#define CONFIG_SPL_TEXT_BASE            0x40200000
 
 #define CONFIG_CMDLINE_TAG
 #define CONFIG_SETUP_MEMORY_TAGS
@@ -24,7 +26,7 @@
 #define CONFIG_REVISION_TAG
 
 /* NAND */
-#if defined(CONFIG_MTD_RAW_NAND)
+#if defined(CONFIG_NAND)
 #define CONFIG_SYS_FLASH_BASE		NAND_BASE
 #define CONFIG_SYS_MAX_NAND_DEVICE      1
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
@@ -37,14 +39,17 @@
                                          10, 11, 12, 13}
 #define CONFIG_SYS_NAND_ECCSIZE         512
 #define CONFIG_SYS_NAND_ECCBYTES        3
-#define CONFIG_NAND_OMAP_ECCSCHEME      OMAP_ECC_HAM1_CODE_HW
+#define CONFIG_NAND_OMAP_ECCSCHEME      OMAP_ECC_BCH8_CODE_HW_DETECTION_SW
 #define CONFIG_SYS_NAND_U_BOOT_OFFS     0x80000
 #define CONFIG_SYS_ENV_SECT_SIZE        SZ_128K
+#define CONFIG_ENV_OFFSET               0x260000
+#define CONFIG_ENV_ADDR                 0x260000
+#define CONFIG_ENV_OVERWRITE
 /* NAND: SPL falcon mode configs */
 #if defined(CONFIG_SPL_OS_BOOT)
 #define CONFIG_SYS_NAND_SPL_KERNEL_OFFS 0x2a0000
 #endif /* CONFIG_SPL_OS_BOOT */
-#endif /* CONFIG_MTD_RAW_NAND */
+#endif /* CONFIG_NAND */
 
 /* USB EHCI */
 #define CONFIG_OMAP_EHCI_PHY1_RESET_GPIO	147
@@ -56,6 +61,11 @@
 
 /* TWL4030 LED Support */
 
+/* Environment */
+#define CONFIG_ENV_SIZE                 SZ_128K
+
+#define CONFIG_PREBOOT                  "usb start"
+
 #define MEM_LAYOUT_ENV_SETTINGS \
 	DEFAULT_LINUX_BOOT_ENV
 
@@ -66,7 +76,7 @@
 #define BOOTENV_DEV_NAME_LEGACY_MMC(devtypeu, devtypel, instance) \
 	#devtypel #instance " "
 
-#if defined(CONFIG_MTD_RAW_NAND)
+#if defined(CONFIG_NAND)
 
 #define BOOTENV_DEV_NAND(devtypeu, devtypel, instance) \
 	"bootcmd_" #devtypel #instance "=" \
@@ -84,13 +94,13 @@
 	func(UBIFS, ubifs, 0) \
 	func(NAND, nand, 0)
 
-#else /* !CONFIG_MTD_RAW_NAND */
+#else /* !CONFIG_NAND */
 
 #define BOOT_TARGET_DEVICES(func) \
 	func(MMC, mmc, 0) \
 	func(LEGACY_MMC, legacy_mmc, 0)
 
-#endif /* CONFIG_MTD_RAW_NAND */
+#endif /* CONFIG_NAND */
 
 #include <config_distro_bootcmd.h>
 

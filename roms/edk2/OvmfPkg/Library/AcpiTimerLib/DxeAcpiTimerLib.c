@@ -15,7 +15,7 @@
 //
 // Cached ACPI Timer IO Address
 //
-STATIC UINT32  mAcpiTimerIoAddr;
+STATIC UINT32 mAcpiTimerIoAddr;
 
 /**
   The constructor function caches the ACPI tick counter address
@@ -36,8 +36,8 @@ AcpiTimerLibConstructor (
   VOID
   )
 {
-  UINT16  HostBridgeDevId;
-  UINTN   Pmba;
+  UINT16 HostBridgeDevId;
+  UINTN Pmba;
 
   //
   // Query Host Bridge DID to determine platform type
@@ -50,16 +50,9 @@ AcpiTimerLibConstructor (
     case INTEL_Q35_MCH_DEVICE_ID:
       Pmba = POWER_MGMT_REGISTER_Q35 (ICH9_PMBASE);
       break;
-    case CLOUDHV_DEVICE_ID:
-      mAcpiTimerIoAddr = CLOUDHV_ACPI_TIMER_IO_ADDRESS;
-      return RETURN_SUCCESS;
     default:
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: Unknown Host Bridge Device ID: 0x%04x\n",
-        __FUNCTION__,
-        HostBridgeDevId
-        ));
+      DEBUG ((EFI_D_ERROR, "%a: Unknown Host Bridge Device ID: 0x%04x\n",
+        __FUNCTION__, HostBridgeDevId));
       ASSERT (FALSE);
       return RETURN_UNSUPPORTED;
   }

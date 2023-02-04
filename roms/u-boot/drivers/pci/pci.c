@@ -15,13 +15,8 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <log.h>
-#include <asm/global_data.h>
-#include <linux/delay.h>
 
 #include <command.h>
-#include <env.h>
 #include <errno.h>
 #include <asm/processor.h>
 #include <asm/io.h>
@@ -189,8 +184,11 @@ pci_dev_t pci_find_devices(struct pci_device_id *ids, int index)
 	return -1;
 }
 
-static int pci_hose_config_device(struct pci_controller *hose, pci_dev_t dev,
-				  ulong io, pci_addr_t mem, ulong command)
+int pci_hose_config_device(struct pci_controller *hose,
+			   pci_dev_t dev,
+			   unsigned long io,
+			   pci_addr_t mem,
+			   unsigned long command)
 {
 	u32 bar_response;
 	unsigned int old_command;
@@ -455,18 +453,16 @@ int pci_hose_scan(struct pci_controller *hose)
 	return pci_hose_scan_bus(hose, hose->current_busno);
 }
 
-int pci_init(void)
+void pci_init(void)
 {
 	hose_head = NULL;
 
 	/* allow env to disable pci init/enum */
 	if (env_get("pcidisable") != NULL)
-		return 0;
+		return;
 
 	/* now call board specific pci_init()... */
 	pci_init_board();
-
-	return 0;
 }
 
 /* Returns the address of the requested capability structure within the

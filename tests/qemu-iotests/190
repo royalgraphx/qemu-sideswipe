@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # qemu-img measure sub-command tests on huge qcow2 files
 #

@@ -5,18 +5,6 @@
 #include "biosvar.h" // GET_GLOBAL
 #include "romfile.h" // struct romfile_s
 
-// kvmclock
-struct pvclock_vcpu_time_info {
-	u32   version;
-	u32   pad0;
-	u64   tsc_timestamp;
-	u64   system_time;
-	u32   tsc_to_system_mul;
-	s8    tsc_shift;
-	u8    flags;
-	u8    pad[2];
-} __attribute__((__packed__)); /* 32 bytes */
-
 // Types of paravirtualized platforms.
 #define PF_QEMU     (1<<0)
 #define PF_XEN      (1<<1)
@@ -46,17 +34,10 @@ static inline int runningOnKVM(void) {
 // Common paravirt ports.
 #define PORT_SMI_CMD                0x00b2
 #define PORT_SMI_STATUS             0x00b3
-#if CONFIG_PARISC
-extern unsigned long PORT_QEMU_CFG_CTL;
-#define PORT_QEMU_CFG_DATA          (PORT_QEMU_CFG_CTL + 4)
-#define PORT_QEMU_CFG_DMA_ADDR_HIGH (PORT_QEMU_CFG_CTL + 8)
-#define PORT_QEMU_CFG_DMA_ADDR_LOW  (PORT_QEMU_CFG_CTL + 12)
-#else
 #define PORT_QEMU_CFG_CTL           0x0510
 #define PORT_QEMU_CFG_DATA          0x0511
 #define PORT_QEMU_CFG_DMA_ADDR_HIGH 0x0514
 #define PORT_QEMU_CFG_DMA_ADDR_LOW  0x0518
-#endif
 
 // QEMU_CFG_DMA_CONTROL bits
 #define QEMU_CFG_DMA_CTL_ERROR   0x01

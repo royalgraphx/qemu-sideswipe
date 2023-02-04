@@ -21,9 +21,8 @@
 #include "hw/timer/hpet.h"
 #include "hw/nvram/fw_cfg.h"
 #include "e820_memory_layout.h"
-#include "kvm/kvm_i386.h"
-#include "qapi/error.h"
-#include CONFIG_DEVICES
+#include "kvm_i386.h"
+#include "config-devices.h"
 
 struct hpet_fw_config hpet_cfg = {.count = UINT8_MAX};
 
@@ -36,6 +35,7 @@ const char *fw_cfg_arch_key_name(uint16_t key)
         {FW_CFG_ACPI_TABLES, "acpi_tables"},
         {FW_CFG_SMBIOS_ENTRIES, "smbios_entries"},
         {FW_CFG_IRQ0_OVERRIDE, "irq0_override"},
+        {FW_CFG_E820_TABLE, "e820_table"},
         {FW_CFG_HPET, "hpet"},
     };
 
@@ -78,8 +78,7 @@ void fw_cfg_build_smbios(MachineState *ms, FWCfgState *fw_cfg)
     }
     smbios_get_tables(ms, mem_array, array_count,
                       &smbios_tables, &smbios_tables_len,
-                      &smbios_anchor, &smbios_anchor_len,
-                      &error_fatal);
+                      &smbios_anchor, &smbios_anchor_len);
     g_free(mem_array);
 
     if (smbios_anchor) {
@@ -119,13 +118,15 @@ FWCfgState *fw_cfg_arch_create(MachineState *ms,
      * "etc/max-cpus" actually being apic_id_limit
      */
     fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, apic_id_limit);
-    fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, ms->ram_size);
+    fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
 #ifdef CONFIG_ACPI
     fw_cfg_add_bytes(fw_cfg, FW_CFG_ACPI_TABLES,
                      acpi_tables, acpi_tables_len);
 #endif
-    fw_cfg_add_i32(fw_cfg, FW_CFG_IRQ0_OVERRIDE, 1);
+    fw_cfg_add_i32(fw_cfg, FW_CFG_IRQ0_OVERRIDE, kvm_allows_irq0_override());
 
+    fw_cfg_add_bytes(fw_cfg, FW_CFG_E820_TABLE,
+                     &e820_reserve, sizeof(e820_reserve));
     fw_cfg_add_file(fw_cfg, "etc/e820", e820_table,
                     sizeof(struct e820_entry) * e820_get_num_entries());
 
@@ -156,7 +157,7 @@ void fw_cfg_build_feature_control(MachineState *ms, FWCfgState *fw_cfg)
 {
     X86CPU *cpu = X86_CPU(ms->possible_cpus->cpus[0].cpu);
     CPUX86State *env = &cpu->env;
-    uint32_t unused, ebx, ecx, edx;
+    uint32_t unused, ecx, edx;
     uint64_t feature_control_bits = 0;
     uint64_t *val;
 
@@ -169,16 +170,6 @@ void fw_cfg_build_feature_control(MachineState *ms, FWCfgState *fw_cfg)
         (CPUID_EXT2_MCE | CPUID_EXT2_MCA) &&
         (env->mcg_cap & MCG_LMCE_P)) {
         feature_control_bits |= FEATURE_CONTROL_LMCE;
-    }
-
-    if (env->cpuid_level >= 7) {
-        cpu_x86_cpuid(env, 0x7, 0, &unused, &ebx, &ecx, &unused);
-        if (ebx & CPUID_7_0_EBX_SGX) {
-            feature_control_bits |= FEATURE_CONTROL_SGX;
-        }
-        if (ecx & CPUID_7_0_ECX_SGX_LC) {
-            feature_control_bits |= FEATURE_CONTROL_SGX_LC;
-        }
     }
 
     if (!feature_control_bits) {

@@ -12,28 +12,12 @@
 
 #include <sbi/sbi_types.h>
 
-struct plic_data {
-	unsigned long addr;
-	unsigned long num_src;
-};
+int plic_warm_irqchip_init(u32 target_hart, int m_cntx_id, int s_cntx_id);
 
-/* So far, priorities on all consumers of these functions fit in 8 bits. */
-void plic_priority_save(const struct plic_data *plic, u8 *priority);
+int plic_cold_irqchip_init(unsigned long base, u32 num_sources, u32 hart_count);
 
-void plic_priority_restore(const struct plic_data *plic, const u8 *priority);
+void plic_set_thresh(u32 cntxid, u32 val);
 
-void plic_context_save(const struct plic_data *plic, int context_id,
-		       u32 *enable, u32 *threshold);
-
-void plic_context_restore(const struct plic_data *plic, int context_id,
-			  const u32 *enable, u32 threshold);
-
-int plic_context_init(const struct plic_data *plic, int context_id,
-		      bool enable, u32 threshold);
-
-int plic_warm_irqchip_init(const struct plic_data *plic,
-			   int m_cntx_id, int s_cntx_id);
-
-int plic_cold_irqchip_init(const struct plic_data *plic);
+void plic_set_ie(u32 cntxid, u32 word_index, u32 val);
 
 #endif

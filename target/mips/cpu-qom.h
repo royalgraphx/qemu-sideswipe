@@ -21,7 +21,6 @@
 #define QEMU_MIPS_CPU_QOM_H
 
 #include "hw/core/cpu.h"
-#include "qom/object.h"
 
 #ifdef TARGET_MIPS64
 #define TYPE_MIPS_CPU "mips64-cpu"
@@ -29,7 +28,12 @@
 #define TYPE_MIPS_CPU "mips-cpu"
 #endif
 
-OBJECT_DECLARE_CPU_TYPE(MIPSCPU, MIPSCPUClass, MIPS_CPU)
+#define MIPS_CPU_CLASS(klass) \
+    OBJECT_CLASS_CHECK(MIPSCPUClass, (klass), TYPE_MIPS_CPU)
+#define MIPS_CPU(obj) \
+    OBJECT_CHECK(MIPSCPU, (obj), TYPE_MIPS_CPU)
+#define MIPS_CPU_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(MIPSCPUClass, (obj), TYPE_MIPS_CPU)
 
 /**
  * MIPSCPUClass:
@@ -38,7 +42,7 @@ OBJECT_DECLARE_CPU_TYPE(MIPSCPU, MIPSCPUClass, MIPS_CPU)
  *
  * A MIPS CPU model.
  */
-struct MIPSCPUClass {
+typedef struct MIPSCPUClass {
     /*< private >*/
     CPUClass parent_class;
     /*< public >*/
@@ -46,10 +50,8 @@ struct MIPSCPUClass {
     DeviceRealize parent_realize;
     DeviceReset parent_reset;
     const struct mips_def_t *cpu_def;
+} MIPSCPUClass;
 
-    /* Used for the jazz board to modify mips_cpu_do_transaction_failed. */
-    bool no_data_aborts;
-};
-
+typedef struct MIPSCPU MIPSCPU;
 
 #endif

@@ -13,8 +13,8 @@
 #include <sbi/sbi_types.h>
 #include <sbi/sbi_list.h>
 
-#define SBI_ECALL_VERSION_MAJOR		1
-#define SBI_ECALL_VERSION_MINOR		0
+#define SBI_ECALL_VERSION_MAJOR		0
+#define SBI_ECALL_VERSION_MINOR		2
 #define SBI_OPENSBI_IMPID		1
 
 struct sbi_trap_regs;
@@ -26,8 +26,7 @@ struct sbi_ecall_extension {
 	unsigned long extid_end;
 	int (* probe)(unsigned long extid, unsigned long *out_val);
 	int (* handle)(unsigned long extid, unsigned long funcid,
-		       const struct sbi_trap_regs *regs,
-		       unsigned long *out_val,
+		       unsigned long *args, unsigned long *out_val,
 		       struct sbi_trap_info *out_trap);
 };
 
@@ -38,8 +37,6 @@ extern struct sbi_ecall_extension ecall_rfence;
 extern struct sbi_ecall_extension ecall_ipi;
 extern struct sbi_ecall_extension ecall_vendor;
 extern struct sbi_ecall_extension ecall_hsm;
-extern struct sbi_ecall_extension ecall_srst;
-extern struct sbi_ecall_extension ecall_pmu;
 
 u16 sbi_ecall_version_major(void);
 

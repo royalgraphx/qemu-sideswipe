@@ -6,6 +6,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 #include "Dhcp4Impl.h"
 
 /**
@@ -24,8 +25,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 EFI_STATUS
 EFIAPI
 EfiDhcp4GetModeData (
-  IN  EFI_DHCP4_PROTOCOL   *This,
-  OUT EFI_DHCP4_MODE_DATA  *Dhcp4ModeData
+  IN  EFI_DHCP4_PROTOCOL    *This,
+  OUT EFI_DHCP4_MODE_DATA   *Dhcp4ModeData
   );
 
 /**
@@ -63,7 +64,7 @@ EfiDhcp4GetModeData (
                                 not NULL. Otherwise, the state was left unchanged.
   @retval EFI_ACCESS_DENIED     This instance of the EFI DHCPv4 Protocol driver was not in the
                                 Dhcp4Stopped, Dhcp4Init, Dhcp4InitReboot, or Dhcp4Bound state;
-                                Or another instance of this EFI DHCPv4 Protocol driver is already
+                                Or onother instance of this EFI DHCPv4 Protocol driver is already
                                 in a valid configured state.
   @retval EFI_INVALID_PARAMETER Some parameter is NULL.
   @retval EFI_OUT_OF_RESOURCES  Required system resources could not be allocated.
@@ -120,8 +121,8 @@ EfiDhcp4Configure (
 EFI_STATUS
 EFIAPI
 EfiDhcp4Start (
-  IN EFI_DHCP4_PROTOCOL  *This,
-  IN EFI_EVENT           CompletionEvent   OPTIONAL
+  IN EFI_DHCP4_PROTOCOL     *This,
+  IN EFI_EVENT              CompletionEvent   OPTIONAL
   );
 
 /**
@@ -165,9 +166,9 @@ EfiDhcp4Start (
 EFI_STATUS
 EFIAPI
 EfiDhcp4RenewRebind (
-  IN EFI_DHCP4_PROTOCOL  *This,
-  IN BOOLEAN             RebindRequest,
-  IN EFI_EVENT           CompletionEvent   OPTIONAL
+  IN EFI_DHCP4_PROTOCOL     *This,
+  IN BOOLEAN                RebindRequest,
+  IN EFI_EVENT              CompletionEvent   OPTIONAL
   );
 
 /**
@@ -194,7 +195,7 @@ EfiDhcp4RenewRebind (
 EFI_STATUS
 EFIAPI
 EfiDhcp4Release (
-  IN EFI_DHCP4_PROTOCOL  *This
+  IN EFI_DHCP4_PROTOCOL     *This
   );
 
 /**
@@ -215,7 +216,7 @@ EfiDhcp4Release (
 EFI_STATUS
 EFIAPI
 EfiDhcp4Stop (
-  IN EFI_DHCP4_PROTOCOL  *This
+  IN EFI_DHCP4_PROTOCOL     *This
   );
 
 /**
@@ -313,10 +314,10 @@ EfiDhcp4TransmitReceive (
 EFI_STATUS
 EFIAPI
 EfiDhcp4Parse (
-  IN EFI_DHCP4_PROTOCOL        *This,
-  IN EFI_DHCP4_PACKET          *Packet,
-  IN OUT UINT32                *OptionCount,
-  OUT EFI_DHCP4_PACKET_OPTION  *PacketOptionList[] OPTIONAL
+  IN EFI_DHCP4_PROTOCOL       *This,
+  IN EFI_DHCP4_PACKET         *Packet,
+  IN OUT UINT32               *OptionCount,
+  OUT EFI_DHCP4_PACKET_OPTION *PacketOptionList[] OPTIONAL
   );
 
 EFI_DHCP4_PROTOCOL  mDhcp4ProtocolTemplate = {
@@ -347,15 +348,15 @@ EFI_DHCP4_PROTOCOL  mDhcp4ProtocolTemplate = {
 EFI_STATUS
 EFIAPI
 EfiDhcp4GetModeData (
-  IN  EFI_DHCP4_PROTOCOL   *This,
-  OUT EFI_DHCP4_MODE_DATA  *Dhcp4ModeData
+  IN  EFI_DHCP4_PROTOCOL    *This,
+  OUT EFI_DHCP4_MODE_DATA   *Dhcp4ModeData
   )
 {
-  DHCP_PROTOCOL   *Instance;
-  DHCP_SERVICE    *DhcpSb;
-  DHCP_PARAMETER  *Para;
-  EFI_TPL         OldTpl;
-  IP4_ADDR        Ip;
+  DHCP_PROTOCOL             *Instance;
+  DHCP_SERVICE              *DhcpSb;
+  DHCP_PARAMETER            *Para;
+  EFI_TPL                   OldTpl;
+  IP4_ADDR                  Ip;
 
   //
   // First validate the parameters.
@@ -366,14 +367,14 @@ EfiDhcp4GetModeData (
 
   Instance = DHCP_INSTANCE_FROM_THIS (This);
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
-  DhcpSb = Instance->Service;
+  OldTpl  = gBS->RaiseTPL (TPL_CALLBACK);
+  DhcpSb  = Instance->Service;
 
   //
   // Caller can use GetModeData to retrieve current DHCP states
   // no matter whether it is the active child or not.
   //
-  Dhcp4ModeData->State = (EFI_DHCP4_STATE)DhcpSb->DhcpState;
+  Dhcp4ModeData->State = (EFI_DHCP4_STATE) DhcpSb->DhcpState;
   CopyMem (&Dhcp4ModeData->ConfigData, &DhcpSb->ActiveConfig, sizeof (Dhcp4ModeData->ConfigData));
   CopyMem (&Dhcp4ModeData->ClientMacAddress, &DhcpSb->Mac, sizeof (Dhcp4ModeData->ClientMacAddress));
 
@@ -403,6 +404,7 @@ EfiDhcp4GetModeData (
   return EFI_SUCCESS;
 }
 
+
 /**
   Free the resource related to the configure parameters.
   DHCP driver will make a copy of the user's configure
@@ -416,7 +418,7 @@ DhcpCleanConfigure (
   IN OUT EFI_DHCP4_CONFIG_DATA  *Config
   )
 {
-  UINT32  Index;
+  UINT32                    Index;
 
   if (Config->DiscoverTimeout != NULL) {
     FreePool (Config->DiscoverTimeout);
@@ -439,6 +441,7 @@ DhcpCleanConfigure (
   ZeroMem (Config, sizeof (EFI_DHCP4_CONFIG_DATA));
 }
 
+
 /**
   Allocate memory for configure parameter such as timeout value for Dst,
   then copy the configure parameter from Src to Dst.
@@ -456,22 +459,22 @@ DhcpCopyConfigure (
   IN  EFI_DHCP4_CONFIG_DATA  *Src
   )
 {
-  EFI_DHCP4_PACKET_OPTION  **DstOptions;
-  EFI_DHCP4_PACKET_OPTION  **SrcOptions;
-  UINTN                    Len;
-  UINT32                   Index;
+  EFI_DHCP4_PACKET_OPTION   **DstOptions;
+  EFI_DHCP4_PACKET_OPTION   **SrcOptions;
+  UINTN                     Len;
+  UINT32                    Index;
 
   CopyMem (Dst, Src, sizeof (*Dst));
-  Dst->DiscoverTimeout = NULL;
-  Dst->RequestTimeout  = NULL;
-  Dst->OptionList      = NULL;
+  Dst->DiscoverTimeout  = NULL;
+  Dst->RequestTimeout   = NULL;
+  Dst->OptionList       = NULL;
 
   //
   // Allocate a memory then copy DiscoverTimeout to it
   //
   if (Src->DiscoverTimeout != NULL) {
-    Len                  = Src->DiscoverTryCount * sizeof (UINT32);
-    Dst->DiscoverTimeout = AllocatePool (Len);
+    Len                   = Src->DiscoverTryCount * sizeof (UINT32);
+    Dst->DiscoverTimeout  = AllocatePool (Len);
 
     if (Dst->DiscoverTimeout == NULL) {
       return EFI_OUT_OF_RESOURCES;
@@ -510,8 +513,8 @@ DhcpCopyConfigure (
       goto ON_ERROR;
     }
 
-    DstOptions = Dst->OptionList;
-    SrcOptions = Src->OptionList;
+    DstOptions  = Dst->OptionList;
+    SrcOptions  = Src->OptionList;
 
     for (Index = 0; Index < Src->OptionCount; Index++) {
       Len = sizeof (EFI_DHCP4_PACKET_OPTION) + MAX (SrcOptions[Index]->Length - 1, 0);
@@ -533,6 +536,7 @@ ON_ERROR:
   return EFI_OUT_OF_RESOURCES;
 }
 
+
 /**
   Give up the control of the DHCP service to let other child
   resume. Don't change the service's DHCP state and the Client
@@ -543,21 +547,21 @@ ON_ERROR:
 **/
 VOID
 DhcpYieldControl (
-  IN DHCP_SERVICE  *DhcpSb
+  IN DHCP_SERVICE           *DhcpSb
   )
 {
-  EFI_DHCP4_CONFIG_DATA  *Config;
+  EFI_DHCP4_CONFIG_DATA     *Config;
 
-  Config = &DhcpSb->ActiveConfig;
+  Config    = &DhcpSb->ActiveConfig;
 
-  DhcpSb->ServiceState = DHCP_UNCONFIGED;
-  DhcpSb->ActiveChild  = NULL;
+  DhcpSb->ServiceState  = DHCP_UNCONFIGED;
+  DhcpSb->ActiveChild   = NULL;
 
   if (Config->DiscoverTimeout != NULL) {
     FreePool (Config->DiscoverTimeout);
 
-    Config->DiscoverTryCount = 0;
-    Config->DiscoverTimeout  = NULL;
+    Config->DiscoverTryCount  = 0;
+    Config->DiscoverTimeout   = NULL;
   }
 
   if (Config->RequestTimeout != NULL) {
@@ -570,6 +574,7 @@ DhcpYieldControl (
   Config->Dhcp4Callback   = NULL;
   Config->CallbackContext = NULL;
 }
+
 
 /**
   Initializes, changes, or resets the operational settings for the EFI DHCPv4 Protocol driver.
@@ -606,7 +611,7 @@ DhcpYieldControl (
                                 not NULL. Otherwise, the state was left unchanged.
   @retval EFI_ACCESS_DENIED     This instance of the EFI DHCPv4 Protocol driver was not in the
                                 Dhcp4Stopped, Dhcp4Init, Dhcp4InitReboot, or Dhcp4Bound state;
-                                Or another instance of this EFI DHCPv4 Protocol driver is already
+                                Or onother instance of this EFI DHCPv4 Protocol driver is already
                                 in a valid configured state.
   @retval EFI_INVALID_PARAMETER Some parameter is NULL.
   @retval EFI_OUT_OF_RESOURCES  Required system resources could not be allocated.
@@ -620,13 +625,13 @@ EfiDhcp4Configure (
   IN EFI_DHCP4_CONFIG_DATA  *Dhcp4CfgData       OPTIONAL
   )
 {
-  EFI_DHCP4_CONFIG_DATA  *Config;
-  DHCP_PROTOCOL          *Instance;
-  DHCP_SERVICE           *DhcpSb;
-  EFI_STATUS             Status;
-  EFI_TPL                OldTpl;
-  UINT32                 Index;
-  IP4_ADDR               Ip;
+  EFI_DHCP4_CONFIG_DATA     *Config;
+  DHCP_PROTOCOL             *Instance;
+  DHCP_SERVICE              *DhcpSb;
+  EFI_STATUS                Status;
+  EFI_TPL                   OldTpl;
+  UINT32                    Index;
+  IP4_ADDR                  Ip;
 
   //
   // First validate the parameters
@@ -649,7 +654,7 @@ EfiDhcp4Configure (
     }
 
     CopyMem (&Ip, &Dhcp4CfgData->ClientAddress, sizeof (IP4_ADDR));
-    if (IP4_IS_LOCAL_BROADCAST (NTOHL (Ip))) {
+    if (IP4_IS_LOCAL_BROADCAST(NTOHL (Ip))) {
       return EFI_INVALID_PARAMETER;
     }
   }
@@ -660,18 +665,18 @@ EfiDhcp4Configure (
     return EFI_INVALID_PARAMETER;
   }
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
+  OldTpl  = gBS->RaiseTPL (TPL_CALLBACK);
 
-  DhcpSb = Instance->Service;
-  Config = &DhcpSb->ActiveConfig;
+  DhcpSb  = Instance->Service;
+  Config  = &DhcpSb->ActiveConfig;
 
-  Status = EFI_ACCESS_DENIED;
+  Status  = EFI_ACCESS_DENIED;
 
   if ((DhcpSb->DhcpState != Dhcp4Stopped) &&
       (DhcpSb->DhcpState != Dhcp4Init) &&
       (DhcpSb->DhcpState != Dhcp4InitReboot) &&
-      (DhcpSb->DhcpState != Dhcp4Bound))
-  {
+      (DhcpSb->DhcpState != Dhcp4Bound)) {
+
     goto ON_EXIT;
   }
 
@@ -705,8 +710,9 @@ EfiDhcp4Configure (
       }
     }
 
-    DhcpSb->ServiceState = DHCP_CONFIGED;
-    Status               = EFI_SUCCESS;
+    DhcpSb->ServiceState  = DHCP_CONFIGED;
+    Status                = EFI_SUCCESS;
+
   } else if (DhcpSb->ActiveChild == Instance) {
     Status = EFI_SUCCESS;
     DhcpYieldControl (DhcpSb);
@@ -716,6 +722,7 @@ ON_EXIT:
   gBS->RestoreTPL (OldTpl);
   return Status;
 }
+
 
 /**
   Starts the DHCP configuration process.
@@ -761,15 +768,15 @@ ON_EXIT:
 EFI_STATUS
 EFIAPI
 EfiDhcp4Start (
-  IN EFI_DHCP4_PROTOCOL  *This,
-  IN EFI_EVENT           CompletionEvent   OPTIONAL
+  IN EFI_DHCP4_PROTOCOL     *This,
+  IN EFI_EVENT              CompletionEvent   OPTIONAL
   )
 {
-  DHCP_PROTOCOL  *Instance;
-  DHCP_SERVICE   *DhcpSb;
-  EFI_STATUS     Status;
-  EFI_TPL        OldTpl;
-  EFI_STATUS     MediaStatus;
+  DHCP_PROTOCOL             *Instance;
+  DHCP_SERVICE              *DhcpSb;
+  EFI_STATUS                Status;
+  EFI_TPL                   OldTpl;
+  EFI_STATUS                MediaStatus;
 
   //
   // First validate the parameters
@@ -784,8 +791,8 @@ EfiDhcp4Start (
     return EFI_INVALID_PARAMETER;
   }
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
-  DhcpSb = Instance->Service;
+  OldTpl  = gBS->RaiseTPL (TPL_CALLBACK);
+  DhcpSb  = Instance->Service;
 
   if (DhcpSb->DhcpState == Dhcp4Stopped) {
     Status = EFI_NOT_STARTED;
@@ -798,7 +805,7 @@ EfiDhcp4Start (
   }
 
   //
-  // Check Media Status.
+  // Check Media Satus.
   //
   MediaStatus = EFI_SUCCESS;
   NetLibDetectMediaWaitTimeout (DhcpSb->Controller, DHCP_CHECK_MEDIA_WAITING_TIME, &MediaStatus);
@@ -812,6 +819,7 @@ EfiDhcp4Start (
   if (EFI_ERROR (Status = DhcpInitRequest (DhcpSb))) {
     goto ON_ERROR;
   }
+
 
   Instance->CompletionEvent = CompletionEvent;
 
@@ -834,6 +842,7 @@ ON_ERROR:
   gBS->RestoreTPL (OldTpl);
   return Status;
 }
+
 
 /**
   Extends the lease time by sending a request packet.
@@ -876,15 +885,15 @@ ON_ERROR:
 EFI_STATUS
 EFIAPI
 EfiDhcp4RenewRebind (
-  IN EFI_DHCP4_PROTOCOL  *This,
-  IN BOOLEAN             RebindRequest,
-  IN EFI_EVENT           CompletionEvent   OPTIONAL
+  IN EFI_DHCP4_PROTOCOL     *This,
+  IN BOOLEAN                RebindRequest,
+  IN EFI_EVENT              CompletionEvent   OPTIONAL
   )
 {
-  DHCP_PROTOCOL  *Instance;
-  DHCP_SERVICE   *DhcpSb;
-  EFI_STATUS     Status;
-  EFI_TPL        OldTpl;
+  DHCP_PROTOCOL             *Instance;
+  DHCP_SERVICE              *DhcpSb;
+  EFI_STATUS                Status;
+  EFI_TPL                   OldTpl;
 
   //
   // First validate the parameters
@@ -899,8 +908,8 @@ EfiDhcp4RenewRebind (
     return EFI_INVALID_PARAMETER;
   }
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
-  DhcpSb = Instance->Service;
+  OldTpl  = gBS->RaiseTPL (TPL_CALLBACK);
+  DhcpSb  = Instance->Service;
 
   if (DhcpSb->DhcpState == Dhcp4Stopped) {
     Status = EFI_NOT_STARTED;
@@ -937,7 +946,7 @@ EfiDhcp4RenewRebind (
              DhcpSb->Selected,
              DhcpSb->Para,
              DHCP_MSG_REQUEST,
-             (UINT8 *)"Extra renew/rebind by the application"
+             (UINT8 *) "Extra renew/rebind by the application"
              );
 
   if (EFI_ERROR (Status)) {
@@ -945,15 +954,16 @@ EfiDhcp4RenewRebind (
     goto ON_EXIT;
   }
 
-  DhcpSb->ExtraRefresh       = TRUE;
-  DhcpSb->IoStatus           = EFI_ALREADY_STARTED;
-  Instance->RenewRebindEvent = CompletionEvent;
+  DhcpSb->ExtraRefresh        = TRUE;
+  DhcpSb->IoStatus            = EFI_ALREADY_STARTED;
+  Instance->RenewRebindEvent  = CompletionEvent;
 
   gBS->RestoreTPL (OldTpl);
 
   if (CompletionEvent == NULL) {
     while (DhcpSb->IoStatus == EFI_ALREADY_STARTED) {
       DhcpSb->UdpIo->Protocol.Udp4->Poll (DhcpSb->UdpIo->Protocol.Udp4);
+
     }
 
     return DhcpSb->IoStatus;
@@ -965,6 +975,7 @@ ON_EXIT:
   gBS->RestoreTPL (OldTpl);
   return Status;
 }
+
 
 /**
   Releases the current address configuration.
@@ -990,13 +1001,13 @@ ON_EXIT:
 EFI_STATUS
 EFIAPI
 EfiDhcp4Release (
-  IN EFI_DHCP4_PROTOCOL  *This
+  IN EFI_DHCP4_PROTOCOL     *This
   )
 {
-  DHCP_PROTOCOL  *Instance;
-  DHCP_SERVICE   *DhcpSb;
-  EFI_STATUS     Status;
-  EFI_TPL        OldTpl;
+  DHCP_PROTOCOL             *Instance;
+  DHCP_SERVICE              *DhcpSb;
+  EFI_STATUS                Status;
+  EFI_TPL                   OldTpl;
 
   //
   // First validate the parameters
@@ -1011,9 +1022,9 @@ EfiDhcp4Release (
     return EFI_INVALID_PARAMETER;
   }
 
-  Status = EFI_SUCCESS;
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
-  DhcpSb = Instance->Service;
+  Status  = EFI_SUCCESS;
+  OldTpl  = gBS->RaiseTPL (TPL_CALLBACK);
+  DhcpSb  = Instance->Service;
 
   if ((DhcpSb->DhcpState != Dhcp4InitReboot) && (DhcpSb->DhcpState != Dhcp4Bound)) {
     Status = EFI_ACCESS_DENIED;
@@ -1042,6 +1053,7 @@ ON_EXIT:
   return Status;
 }
 
+
 /**
   Stops the current address configuration.
 
@@ -1060,12 +1072,12 @@ ON_EXIT:
 EFI_STATUS
 EFIAPI
 EfiDhcp4Stop (
-  IN EFI_DHCP4_PROTOCOL  *This
+  IN EFI_DHCP4_PROTOCOL     *This
   )
 {
-  DHCP_PROTOCOL  *Instance;
-  DHCP_SERVICE   *DhcpSb;
-  EFI_TPL        OldTpl;
+  DHCP_PROTOCOL             *Instance;
+  DHCP_SERVICE              *DhcpSb;
+  EFI_TPL                   OldTpl;
 
   //
   // First validate the parameters
@@ -1080,17 +1092,18 @@ EfiDhcp4Stop (
     return EFI_INVALID_PARAMETER;
   }
 
-  OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
-  DhcpSb = Instance->Service;
+  OldTpl  = gBS->RaiseTPL (TPL_CALLBACK);
+  DhcpSb  = Instance->Service;
 
   DhcpCleanLease (DhcpSb);
 
-  DhcpSb->DhcpState    = Dhcp4Stopped;
-  DhcpSb->ServiceState = DHCP_UNCONFIGED;
+  DhcpSb->DhcpState     = Dhcp4Stopped;
+  DhcpSb->ServiceState  = DHCP_UNCONFIGED;
 
   gBS->RestoreTPL (OldTpl);
   return EFI_SUCCESS;
 }
+
 
 /**
   Builds a DHCP packet, given the options to be appended or deleted or replaced.
@@ -1139,15 +1152,15 @@ EfiDhcp4Build (
   }
 
   if ((SeedPacket == NULL) || (SeedPacket->Dhcp4.Magik != DHCP_OPTION_MAGIC) ||
-      EFI_ERROR (DhcpValidateOptions (SeedPacket, NULL)))
-  {
+      EFI_ERROR (DhcpValidateOptions (SeedPacket, NULL))) {
+
     return EFI_INVALID_PARAMETER;
   }
 
   if (((DeleteCount == 0) && (AppendCount == 0)) ||
       ((DeleteCount != 0) && (DeleteList == NULL)) ||
-      ((AppendCount != 0) && (AppendList == NULL)))
-  {
+      ((AppendCount != 0) && (AppendList == NULL))) {
+
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1175,8 +1188,8 @@ EfiDhcp4Build (
 EFI_STATUS
 EFIAPI
 Dhcp4InstanceConfigUdpIo (
-  IN UDP_IO  *UdpIo,
-  IN VOID    *Context
+  IN UDP_IO       *UdpIo,
+  IN VOID         *Context
   )
 {
   DHCP_PROTOCOL                     *Instance;
@@ -1188,7 +1201,7 @@ Dhcp4InstanceConfigUdpIo (
   INTN                              Class;
   IP4_ADDR                          SubnetMask;
 
-  Instance = (DHCP_PROTOCOL *)Context;
+  Instance = (DHCP_PROTOCOL *) Context;
   DhcpSb   = Instance->Service;
   Token    = Instance->Token;
 
@@ -1200,7 +1213,7 @@ Dhcp4InstanceConfigUdpIo (
   UdpConfigData.DoNotFragment      = TRUE;
 
   ClientAddr = EFI_NTOHL (Token->Packet->Dhcp4.Header.ClientAddr);
-  Ip         = HTONL (ClientAddr);
+  Ip = HTONL (ClientAddr);
   CopyMem (&UdpConfigData.StationAddress, &Ip, sizeof (EFI_IPv4_ADDRESS));
 
   if (DhcpSb->Netmask == 0) {
@@ -1271,7 +1284,7 @@ Dhcp4InstanceCreateUdpIo (
     Status = gBS->OpenProtocol (
                     Instance->UdpIo->UdpHandle,
                     &gEfiUdp4ProtocolGuid,
-                    (VOID **)&Udp4,
+                    (VOID **) &Udp4,
                     Instance->Service->Image,
                     Instance->Handle,
                     EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -1280,7 +1293,6 @@ Dhcp4InstanceCreateUdpIo (
       UdpIoFreeIo (Instance->UdpIo);
       Instance->UdpIo = NULL;
     }
-
     return Status;
   }
 }
@@ -1294,7 +1306,7 @@ Dhcp4InstanceCreateUdpIo (
 VOID
 EFIAPI
 DhcpDummyExtFree (
-  IN VOID  *Arg
+  IN VOID                   *Arg
   )
 {
 }
@@ -1314,10 +1326,10 @@ DhcpDummyExtFree (
 VOID
 EFIAPI
 PxeDhcpInput (
-  NET_BUF        *UdpPacket,
-  UDP_END_POINT  *EndPoint,
-  EFI_STATUS     IoStatus,
-  VOID           *Context
+  NET_BUF                   *UdpPacket,
+  UDP_END_POINT             *EndPoint,
+  EFI_STATUS                IoStatus,
+  VOID                      *Context
   )
 {
   DHCP_PROTOCOL                     *Instance;
@@ -1329,14 +1341,14 @@ PxeDhcpInput (
   EFI_STATUS                        Status;
 
   Wrap     = NULL;
-  Instance = (DHCP_PROTOCOL *)Context;
+  Instance = (DHCP_PROTOCOL *) Context;
   Token    = Instance->Token;
 
   //
   // Don't restart receive if error occurs or DHCP is destroyed.
   //
   if (EFI_ERROR (IoStatus)) {
-    return;
+    return ;
   }
 
   ASSERT (UdpPacket != NULL);
@@ -1358,12 +1370,12 @@ PxeDhcpInput (
     goto RESTART;
   }
 
-  Packet = (EFI_DHCP4_PACKET *)NetbufAllocSpace (Wrap, Len, NET_BUF_TAIL);
+  Packet         = (EFI_DHCP4_PACKET *) NetbufAllocSpace (Wrap, Len, NET_BUF_TAIL);
   ASSERT (Packet != NULL);
 
   Packet->Size   = Len;
   Head           = &Packet->Dhcp4.Header;
-  Packet->Length = NetbufCopy (UdpPacket, 0, UdpPacket->TotalSize, (UINT8 *)Head);
+  Packet->Length = NetbufCopy (UdpPacket, 0, UdpPacket->TotalSize, (UINT8 *) Head);
 
   if (Packet->Length != UdpPacket->TotalSize) {
     goto RESTART;
@@ -1374,8 +1386,7 @@ PxeDhcpInput (
   //
   if ((Head->OpCode != BOOTP_REPLY) ||
       (Head->Xid != Token->Packet->Dhcp4.Header.Xid) ||
-      (CompareMem (&Token->Packet->Dhcp4.Header.ClientHwAddr[0], Head->ClientHwAddr, Head->HwAddrLen) != 0))
-  {
+      (CompareMem (&Token->Packet->Dhcp4.Header.ClientHwAddr[0], Head->ClientHwAddr, Head->HwAddrLen) != 0)) {
     goto RESTART;
   }
 
@@ -1384,8 +1395,8 @@ PxeDhcpInput (
   //
   if ((Packet->Length > sizeof (EFI_DHCP4_HEADER) + sizeof (UINT32)) &&
       (Packet->Dhcp4.Magik == DHCP_OPTION_MAGIC) &&
-      EFI_ERROR (DhcpValidateOptions (Packet, NULL)))
-  {
+      EFI_ERROR (DhcpValidateOptions (Packet, NULL))) {
+
     goto RESTART;
   }
 
@@ -1426,7 +1437,7 @@ PxeDhcpDone (
 
   Token->ResponseCount = Instance->ResponseQueue.BufNum;
   if (Token->ResponseCount != 0) {
-    Token->ResponseList = (EFI_DHCP4_PACKET *)AllocatePool (Instance->ResponseQueue.BufSize);
+    Token->ResponseList = (EFI_DHCP4_PACKET *) AllocatePool (Instance->ResponseQueue.BufSize);
     if (Token->ResponseList == NULL) {
       Token->Status = EFI_OUT_OF_RESOURCES;
       goto SIGNAL_USER;
@@ -1435,7 +1446,7 @@ PxeDhcpDone (
     //
     // Copy the received DHCP responses.
     //
-    NetbufQueCopy (&Instance->ResponseQueue, 0, Instance->ResponseQueue.BufSize, (UINT8 *)Token->ResponseList);
+    NetbufQueCopy (&Instance->ResponseQueue, 0, Instance->ResponseQueue.BufSize, (UINT8 *) Token->ResponseList);
     Token->Status = EFI_SUCCESS;
   } else {
     Token->ResponseList = NULL;
@@ -1463,6 +1474,7 @@ SIGNAL_USER:
   }
 }
 
+
 /**
   Transmits a DHCP formatted packet and optionally waits for responses.
 
@@ -1489,16 +1501,16 @@ EfiDhcp4TransmitReceive (
   IN EFI_DHCP4_TRANSMIT_RECEIVE_TOKEN  *Token
   )
 {
-  DHCP_PROTOCOL   *Instance;
-  EFI_TPL         OldTpl;
-  EFI_STATUS      Status;
-  NET_FRAGMENT    Frag;
-  NET_BUF         *Wrap;
-  UDP_END_POINT   EndPoint;
-  IP4_ADDR        Ip;
-  DHCP_SERVICE    *DhcpSb;
-  EFI_IP_ADDRESS  Gateway;
-  IP4_ADDR        ClientAddr;
+  DHCP_PROTOCOL  *Instance;
+  EFI_TPL        OldTpl;
+  EFI_STATUS     Status;
+  NET_FRAGMENT   Frag;
+  NET_BUF        *Wrap;
+  UDP_END_POINT  EndPoint;
+  IP4_ADDR       Ip;
+  DHCP_SERVICE   *DhcpSb;
+  EFI_IP_ADDRESS Gateway;
+  IP4_ADDR       ClientAddr;
 
   if ((This == NULL) || (Token == NULL) || (Token->Packet == NULL)) {
     return EFI_INVALID_PARAMETER;
@@ -1520,8 +1532,7 @@ EfiDhcp4TransmitReceive (
       ((Token->ListenPointCount != 0) && (Token->ListenPoints == NULL))   ||
       EFI_ERROR (DhcpValidateOptions (Token->Packet, NULL))               ||
       EFI_IP4_EQUAL (&Token->RemoteAddress, &mZeroIp4Addr)
-      )
-  {
+      ) {
     //
     // The DHCP packet isn't well-formed, the Transaction ID is already used,
     // the timeout value is zero, the ListenPoint is invalid, or the
@@ -1564,7 +1575,7 @@ EfiDhcp4TransmitReceive (
   //
   // Wrap the DHCP packet into a net buffer.
   //
-  Frag.Bulk = (UINT8 *)&Token->Packet->Dhcp4;
+  Frag.Bulk = (UINT8 *) &Token->Packet->Dhcp4;
   Frag.Len  = Token->Packet->Length;
   Wrap      = NetbufFromExt (&Frag, 1, 0, 0, DhcpDummyExtFree, NULL);
   if (Wrap == NULL) {
@@ -1656,6 +1667,7 @@ ON_ERROR:
   return Status;
 }
 
+
 /**
   Callback function for DhcpIterateOptions. This callback sets the
   EFI_DHCP4_PACKET_OPTION array in the DHCP_PARSE_CONTEXT to point
@@ -1671,15 +1683,15 @@ ON_ERROR:
 **/
 EFI_STATUS
 Dhcp4ParseCheckOption (
-  IN UINT8  Tag,
-  IN UINT8  Len,
-  IN UINT8  *Data,
-  IN VOID   *Context
+  IN UINT8                  Tag,
+  IN UINT8                  Len,
+  IN UINT8                  *Data,
+  IN VOID                   *Context
   )
 {
-  DHCP_PARSE_CONTEXT  *Parse;
+  DHCP_PARSE_CONTEXT        *Parse;
 
-  Parse = (DHCP_PARSE_CONTEXT *)Context;
+  Parse = (DHCP_PARSE_CONTEXT *) Context;
   Parse->Index++;
 
   if (Parse->Index <= Parse->OptionCount) {
@@ -1693,6 +1705,7 @@ Dhcp4ParseCheckOption (
 
   return EFI_SUCCESS;
 }
+
 
 /**
   Parses the packed DHCP option data.
@@ -1724,14 +1737,14 @@ Dhcp4ParseCheckOption (
 EFI_STATUS
 EFIAPI
 EfiDhcp4Parse (
-  IN EFI_DHCP4_PROTOCOL        *This,
-  IN EFI_DHCP4_PACKET          *Packet,
-  IN OUT UINT32                *OptionCount,
-  OUT EFI_DHCP4_PACKET_OPTION  *PacketOptionList[] OPTIONAL
+  IN EFI_DHCP4_PROTOCOL       *This,
+  IN EFI_DHCP4_PACKET         *Packet,
+  IN OUT UINT32               *OptionCount,
+  OUT EFI_DHCP4_PACKET_OPTION *PacketOptionList[] OPTIONAL
   )
 {
-  DHCP_PARSE_CONTEXT  Context;
-  EFI_STATUS          Status;
+  DHCP_PARSE_CONTEXT        Context;
+  EFI_STATUS                Status;
 
   //
   // First validate the parameters
@@ -1742,8 +1755,8 @@ EfiDhcp4Parse (
 
   if ((Packet->Size < Packet->Length + 2 * sizeof (UINT32)) ||
       (Packet->Dhcp4.Magik != DHCP_OPTION_MAGIC) ||
-      EFI_ERROR (DhcpValidateOptions (Packet, NULL)))
-  {
+      EFI_ERROR (DhcpValidateOptions (Packet, NULL))) {
+
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1757,7 +1770,7 @@ EfiDhcp4Parse (
   Context.OptionCount = *OptionCount;
   Context.Index       = 0;
 
-  Status = DhcpIterateOptions (Packet, Dhcp4ParseCheckOption, &Context);
+  Status              = DhcpIterateOptions (Packet, Dhcp4ParseCheckOption, &Context);
 
   if (EFI_ERROR (Status)) {
     return Status;
@@ -1781,9 +1794,9 @@ EfiDhcp4Parse (
 **/
 VOID
 SetElapsedTime (
-  IN     UINT16         *Elapsed,
-  IN     DHCP_PROTOCOL  *Instance
+  IN     UINT16                 *Elapsed,
+  IN     DHCP_PROTOCOL          *Instance
   )
 {
-  WriteUnaligned16 (Elapsed, HTONS (Instance->ElaspedTime));
+  WriteUnaligned16 (Elapsed, HTONS(Instance->ElaspedTime));
 }

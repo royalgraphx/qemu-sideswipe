@@ -25,6 +25,7 @@
 
 **/
 
+
 /**
   Unpacks the next variable from the buffer
 
@@ -48,55 +49,55 @@
 STATIC
 EFI_STATUS
 UnpackVariableFromBuffer (
-  IN  VOID      *Buffer,
-  IN  UINTN     MaxSize,
-  OUT CHAR16    **Name,
-  OUT UINT32    *NameSize,
-  OUT EFI_GUID  **Guid,
-  OUT UINT32    *Attributes,
-  OUT UINT32    *DataSize,
-  OUT VOID      **Data,
-  OUT UINTN     *SizeUsed
+  IN  VOID     *Buffer,
+  IN  UINTN    MaxSize,
+  OUT CHAR16   **Name,
+  OUT UINT32   *NameSize,
+  OUT EFI_GUID **Guid,
+  OUT UINT32   *Attributes,
+  OUT UINT32   *DataSize,
+  OUT VOID     **Data,
+  OUT UINTN    *SizeUsed
   )
 {
   UINT8  *BytePtr;
   UINTN  Offset;
 
-  BytePtr = (UINT8 *)Buffer;
-  Offset  = 0;
+  BytePtr = (UINT8*)Buffer;
+  Offset = 0;
 
-  *NameSize = *(UINT32 *)(BytePtr + Offset);
-  Offset    = Offset + sizeof (UINT32);
+  *NameSize = *(UINT32*) (BytePtr + Offset);
+  Offset = Offset + sizeof (UINT32);
 
   if (Offset > MaxSize) {
     return EFI_INVALID_PARAMETER;
   }
 
-  *Name  = (CHAR16 *)(BytePtr + Offset);
-  Offset = Offset + *(UINT32 *)BytePtr;
+  *Name = (CHAR16*) (BytePtr + Offset);
+  Offset = Offset + *(UINT32*)BytePtr;
   if (Offset > MaxSize) {
     return EFI_INVALID_PARAMETER;
   }
 
-  *Guid  = (EFI_GUID *)(BytePtr + Offset);
+  *Guid = (EFI_GUID*) (BytePtr + Offset);
   Offset = Offset + sizeof (EFI_GUID);
   if (Offset > MaxSize) {
     return EFI_INVALID_PARAMETER;
   }
 
-  *Attributes = *(UINT32 *)(BytePtr + Offset);
-  Offset      = Offset + sizeof (UINT32);
+  *Attributes = *(UINT32*) (BytePtr + Offset);
+  Offset = Offset + sizeof (UINT32);
   if (Offset > MaxSize) {
     return EFI_INVALID_PARAMETER;
   }
 
-  *DataSize = *(UINT32 *)(BytePtr + Offset);
-  Offset    = Offset + sizeof (UINT32);
+  *DataSize = *(UINT32*) (BytePtr + Offset);
+  Offset = Offset + sizeof (UINT32);
   if (Offset > MaxSize) {
     return EFI_INVALID_PARAMETER;
   }
 
-  *Data  = (VOID *)(BytePtr + Offset);
+  *Data = (VOID*) (BytePtr + Offset);
   Offset = Offset + *DataSize;
   if (Offset > MaxSize) {
     return EFI_INVALID_PARAMETER;
@@ -106,6 +107,7 @@ UnpackVariableFromBuffer (
 
   return EFI_SUCCESS;
 }
+
 
 /**
   Iterates through the variables in the buffer, and calls a callback
@@ -128,35 +130,34 @@ IterateVariablesInBuffer (
   IN UINTN                                      MaxSize
   )
 {
-  RETURN_STATUS  Status;
-  UINTN          TotalSizeUsed;
-  UINTN          SizeUsed;
+  RETURN_STATUS Status;
+  UINTN         TotalSizeUsed;
+  UINTN         SizeUsed;
 
-  CHAR16    *Name;
-  UINT32    NameSize;
-  CHAR16    *AlignedName;
-  UINT32    AlignedNameMaxSize;
-  EFI_GUID  *Guid;
-  UINT32    Attributes;
-  UINT32    DataSize;
-  VOID      *Data;
+  CHAR16        *Name;
+  UINT32        NameSize;
+  CHAR16        *AlignedName;
+  UINT32        AlignedNameMaxSize;
+  EFI_GUID      *Guid;
+  UINT32        Attributes;
+  UINT32        DataSize;
+  VOID          *Data;
 
-  SizeUsed           = 0;
-  AlignedName        = NULL;
+  SizeUsed = 0;
+  AlignedName = NULL;
   AlignedNameMaxSize = 0;
-  Name               = NULL;
-  Guid               = NULL;
-  Attributes         = 0;
-  DataSize           = 0;
-  Data               = NULL;
+  Name = NULL;
+  Guid = NULL;
+  Attributes = 0;
+  DataSize = 0;
+  Data = NULL;
 
   for (
-       Status = EFI_SUCCESS, TotalSizeUsed = 0;
-       !EFI_ERROR (Status) && (TotalSizeUsed < MaxSize);
-       )
-  {
+    Status = EFI_SUCCESS, TotalSizeUsed = 0;
+    !EFI_ERROR (Status) && (TotalSizeUsed < MaxSize);
+    ) {
     Status = UnpackVariableFromBuffer (
-               (VOID *)((UINT8 *)Buffer + TotalSizeUsed),
+               (VOID*) ((UINT8*) Buffer + TotalSizeUsed),
                (MaxSize - TotalSizeUsed),
                &Name,
                &NameSize,
@@ -178,14 +179,11 @@ IterateVariablesInBuffer (
       if (AlignedName != NULL) {
         FreePool (AlignedName);
       }
-
       AlignedName = AllocatePool (NameSize);
     }
-
     if (AlignedName == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
-
     CopyMem (AlignedName, Name, NameSize);
 
     TotalSizeUsed = TotalSizeUsed + SizeUsed;
@@ -193,14 +191,15 @@ IterateVariablesInBuffer (
     //
     // Run the callback function
     //
-    Status = (*CallbackFunction)(
-  CallbackContext,
-  AlignedName,
-  Guid,
-  Attributes,
-  DataSize,
-  Data
-  );
+    Status = (*CallbackFunction) (
+               CallbackContext,
+               AlignedName,
+               Guid,
+               Attributes,
+               DataSize,
+               Data
+               );
+
   }
 
   if (AlignedName != NULL) {
@@ -212,7 +211,7 @@ IterateVariablesInBuffer (
   //
   if (TotalSizeUsed != MaxSize) {
     DEBUG ((
-      DEBUG_ERROR,
+      EFI_D_ERROR,
       "Deserialize variables error: TotalSizeUsed(%Lu) != MaxSize(%Lu)\n",
       (UINT64)TotalSizeUsed,
       (UINT64)MaxSize
@@ -223,36 +222,38 @@ IterateVariablesInBuffer (
   return EFI_SUCCESS;
 }
 
+
 STATIC
 RETURN_STATUS
 EFIAPI
 IterateVariablesCallbackNop (
-  IN  VOID      *Context,
-  IN  CHAR16    *VariableName,
-  IN  EFI_GUID  *VendorGuid,
-  IN  UINT32    Attributes,
-  IN  UINTN     DataSize,
-  IN  VOID      *Data
+  IN  VOID                         *Context,
+  IN  CHAR16                       *VariableName,
+  IN  EFI_GUID                     *VendorGuid,
+  IN  UINT32                       Attributes,
+  IN  UINTN                        DataSize,
+  IN  VOID                         *Data
   )
 {
   return RETURN_SUCCESS;
 }
 
+
 STATIC
 RETURN_STATUS
 EFIAPI
 IterateVariablesCallbackSetInInstance (
-  IN  VOID      *Context,
-  IN  CHAR16    *VariableName,
-  IN  EFI_GUID  *VendorGuid,
-  IN  UINT32    Attributes,
-  IN  UINTN     DataSize,
-  IN  VOID      *Data
+  IN  VOID                         *Context,
+  IN  CHAR16                       *VariableName,
+  IN  EFI_GUID                     *VendorGuid,
+  IN  UINT32                       Attributes,
+  IN  UINTN                        DataSize,
+  IN  VOID                         *Data
   )
 {
   EFI_HANDLE  Instance;
 
-  Instance = (EFI_HANDLE)Context;
+  Instance = (EFI_HANDLE) Context;
 
   return SerializeVariablesAddVariable (
            Instance,
@@ -264,53 +265,46 @@ IterateVariablesCallbackSetInInstance (
            );
 }
 
+
 STATIC
 RETURN_STATUS
 EFIAPI
 IterateVariablesCallbackSetSystemVariable (
-  IN  VOID      *Context,
-  IN  CHAR16    *VariableName,
-  IN  EFI_GUID  *VendorGuid,
-  IN  UINT32    Attributes,
-  IN  UINTN     DataSize,
-  IN  VOID      *Data
+  IN  VOID                         *Context,
+  IN  CHAR16                       *VariableName,
+  IN  EFI_GUID                     *VendorGuid,
+  IN  UINT32                       Attributes,
+  IN  UINTN                        DataSize,
+  IN  VOID                         *Data
   )
 {
-  EFI_STATUS           Status;
-  STATIC CONST UINT32  AuthMask =
-    EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS |
-    EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
+  EFI_STATUS          Status;
+  STATIC CONST UINT32 AuthMask =
+                        EFI_VARIABLE_AUTHENTICATED_WRITE_ACCESS |
+                        EFI_VARIABLE_TIME_BASED_AUTHENTICATED_WRITE_ACCESS;
 
   Status = gRT->SetVariable (
-                  VariableName,
-                  VendorGuid,
-                  Attributes,
-                  DataSize,
-                  Data
-                  );
+             VariableName,
+             VendorGuid,
+             Attributes,
+             DataSize,
+             Data
+             );
 
-  if ((Status == EFI_SECURITY_VIOLATION) && ((Attributes & AuthMask) != 0)) {
-    DEBUG ((
-      DEBUG_WARN,
-      "%a: setting authenticated variable \"%s\" "
-      "failed with EFI_SECURITY_VIOLATION, ignoring\n",
-      __FUNCTION__,
-      VariableName
-      ));
+  if (Status == EFI_SECURITY_VIOLATION && (Attributes & AuthMask) != 0) {
+    DEBUG ((DEBUG_WARN, "%a: setting authenticated variable \"%s\" "
+            "failed with EFI_SECURITY_VIOLATION, ignoring\n", __FUNCTION__,
+            VariableName));
     Status = EFI_SUCCESS;
   } else if (Status == EFI_WRITE_PROTECTED) {
-    DEBUG ((
-      DEBUG_WARN,
-      "%a: setting ReadOnly variable \"%s\" "
-      "failed with EFI_WRITE_PROTECTED, ignoring\n",
-      __FUNCTION__,
-      VariableName
-      ));
+    DEBUG ((DEBUG_WARN, "%a: setting ReadOnly variable \"%s\" "
+            "failed with EFI_WRITE_PROTECTED, ignoring\n", __FUNCTION__,
+            VariableName));
     Status = EFI_SUCCESS;
   }
-
   return Status;
 }
+
 
 STATIC
 RETURN_STATUS
@@ -319,8 +313,8 @@ EnsureExtraBufferSpace (
   IN  UINTN        Size
   )
 {
-  VOID   *NewBuffer;
-  UINTN  NewSize;
+  VOID *NewBuffer;
+  UINTN NewSize;
 
   NewSize = Instance->DataSize + Size;
   if (NewSize <= Instance->BufferSize) {
@@ -342,11 +336,12 @@ EnsureExtraBufferSpace (
     FreePool (Instance->BufferPtr);
   }
 
-  Instance->BufferPtr  = NewBuffer;
+  Instance->BufferPtr = NewBuffer;
   Instance->BufferSize = NewSize;
 
   return RETURN_SUCCESS;
 }
+
 
 STATIC
 VOID
@@ -356,7 +351,7 @@ AppendToBuffer (
   IN  UINTN        Size
   )
 {
-  UINTN  NewSize;
+  UINTN NewSize;
 
   ASSERT (Instance != NULL);
   ASSERT (Data != NULL);
@@ -365,13 +360,14 @@ AppendToBuffer (
   ASSERT ((Instance->DataSize + Size) <= Instance->BufferSize);
 
   CopyMem (
-    (VOID *)(((UINT8 *)(Instance->BufferPtr)) + Instance->DataSize),
+    (VOID*) (((UINT8*) (Instance->BufferPtr)) + Instance->DataSize),
     Data,
     Size
     );
 
   Instance->DataSize = NewSize;
 }
+
 
 /**
   Creates a new variable serialization instance
@@ -387,7 +383,7 @@ AppendToBuffer (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesNewInstance (
-  OUT EFI_HANDLE  *Handle
+  OUT EFI_HANDLE                      *Handle
   )
 {
   SV_INSTANCE  *New;
@@ -399,9 +395,10 @@ SerializeVariablesNewInstance (
 
   New->Signature = SV_SIGNATURE;
 
-  *Handle = (EFI_HANDLE)New;
+  *Handle = (EFI_HANDLE) New;
   return RETURN_SUCCESS;
 }
+
 
 /**
   Free memory associated with a variable serialization instance
@@ -417,10 +414,10 @@ SerializeVariablesNewInstance (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesFreeInstance (
-  IN EFI_HANDLE  Handle
+  IN EFI_HANDLE Handle
   )
 {
-  SV_INSTANCE  *Instance;
+  SV_INSTANCE    *Instance;
 
   Instance = SV_FROM_HANDLE (Handle);
 
@@ -438,6 +435,7 @@ SerializeVariablesFreeInstance (
 
   return RETURN_SUCCESS;
 }
+
 
 /**
   Creates a new variable serialization instance using the given
@@ -459,12 +457,12 @@ SerializeVariablesFreeInstance (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesNewInstanceFromBuffer (
-  OUT EFI_HANDLE  *Handle,
-  IN  VOID        *Buffer,
-  IN  UINTN       Size
+  OUT EFI_HANDLE                          *Handle,
+  IN  VOID                                *Buffer,
+  IN  UINTN                               Size
   )
 {
-  RETURN_STATUS  Status;
+  RETURN_STATUS Status;
 
   Status = SerializeVariablesNewInstance (Handle);
   if (RETURN_ERROR (Status)) {
@@ -484,7 +482,7 @@ SerializeVariablesNewInstanceFromBuffer (
 
   Status = IterateVariablesInBuffer (
              IterateVariablesCallbackSetInInstance,
-             (VOID *)*Handle,
+             (VOID*) *Handle,
              Buffer,
              Size
              );
@@ -495,6 +493,7 @@ SerializeVariablesNewInstanceFromBuffer (
 
   return Status;
 }
+
 
 /**
   Iterates all variables found with RuntimeServices GetNextVariableName
@@ -513,40 +512,40 @@ SerializeVariablesNewInstanceFromBuffer (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesIterateSystemVariables (
-  IN VARIABLE_SERIALIZATION_ITERATION_CALLBACK  CallbackFunction,
-  IN VOID                                       *Context
+  IN VARIABLE_SERIALIZATION_ITERATION_CALLBACK CallbackFunction,
+  IN VOID                                      *Context
   )
 {
-  RETURN_STATUS  Status;
-  UINTN          VariableNameBufferSize;
-  UINTN          VariableNameSize;
-  CHAR16         *VariableName;
-  EFI_GUID       VendorGuid;
-  UINTN          VariableDataBufferSize;
-  UINTN          VariableDataSize;
-  VOID           *VariableData;
-  UINT32         VariableAttributes;
-  VOID           *NewBuffer;
+  RETURN_STATUS               Status;
+  UINTN                       VariableNameBufferSize;
+  UINTN                       VariableNameSize;
+  CHAR16                      *VariableName;
+  EFI_GUID                    VendorGuid;
+  UINTN                       VariableDataBufferSize;
+  UINTN                       VariableDataSize;
+  VOID                        *VariableData;
+  UINT32                      VariableAttributes;
+  VOID                        *NewBuffer;
 
   //
   // Initialize the variable name and data buffer variables.
   //
   VariableNameBufferSize = sizeof (CHAR16);
-  VariableName           = AllocateZeroPool (VariableNameBufferSize);
+  VariableName = AllocateZeroPool (VariableNameBufferSize);
 
   VariableDataBufferSize = 0;
-  VariableData           = NULL;
+  VariableData = NULL;
 
-  for ( ; ;) {
+  for (;;) {
     //
     // Get the next variable name and guid
     //
     VariableNameSize = VariableNameBufferSize;
-    Status           = gRT->GetNextVariableName (
-                              &VariableNameSize,
-                              VariableName,
-                              &VendorGuid
-                              );
+    Status = gRT->GetNextVariableName (
+                    &VariableNameSize,
+                    VariableName,
+                    &VendorGuid
+                    );
     if (Status == EFI_BUFFER_TOO_SMALL) {
       //
       // The currently allocated VariableName buffer is too small,
@@ -558,13 +557,11 @@ SerializeVariablesIterateSystemVariables (
         Status = EFI_OUT_OF_RESOURCES;
         break;
       }
-
       CopyMem (NewBuffer, VariableName, VariableNameBufferSize);
       if (VariableName != NULL) {
         FreePool (VariableName);
       }
-
-      VariableName           = NewBuffer;
+      VariableName = NewBuffer;
       VariableNameBufferSize = VariableNameSize;
 
       //
@@ -581,7 +578,6 @@ SerializeVariablesIterateSystemVariables (
       if (Status == EFI_NOT_FOUND) {
         Status = EFI_SUCCESS;
       }
-
       break;
     }
 
@@ -589,13 +585,13 @@ SerializeVariablesIterateSystemVariables (
     // Get the variable data and attributes
     //
     VariableDataSize = VariableDataBufferSize;
-    Status           = gRT->GetVariable (
-                              VariableName,
-                              &VendorGuid,
-                              &VariableAttributes,
-                              &VariableDataSize,
-                              VariableData
-                              );
+    Status = gRT->GetVariable (
+                    VariableName,
+                    &VendorGuid,
+                    &VariableAttributes,
+                    &VariableDataSize,
+                    VariableData
+                    );
     if (Status == EFI_BUFFER_TOO_SMALL) {
       //
       // The currently allocated VariableData buffer is too small,
@@ -603,16 +599,14 @@ SerializeVariablesIterateSystemVariables (
       //
       if (VariableDataBufferSize != 0) {
         FreePool (VariableData);
-        VariableData           = NULL;
+        VariableData = NULL;
         VariableDataBufferSize = 0;
       }
-
       VariableData = AllocatePool (VariableDataSize);
       if (VariableData == NULL) {
         Status = EFI_OUT_OF_RESOURCES;
         break;
       }
-
       VariableDataBufferSize = VariableDataSize;
 
       //
@@ -626,7 +620,6 @@ SerializeVariablesIterateSystemVariables (
                       VariableData
                       );
     }
-
     if (EFI_ERROR (Status)) {
       break;
     }
@@ -634,17 +627,18 @@ SerializeVariablesIterateSystemVariables (
     //
     // Run the callback function
     //
-    Status = (*CallbackFunction)(
-  Context,
-  VariableName,
-  &VendorGuid,
-  VariableAttributes,
-  VariableDataSize,
-  VariableData
-  );
+    Status = (*CallbackFunction) (
+               Context,
+               VariableName,
+               &VendorGuid,
+               VariableAttributes,
+               VariableDataSize,
+               VariableData
+               );
     if (EFI_ERROR (Status)) {
       break;
     }
+
   }
 
   if (VariableName != NULL) {
@@ -657,6 +651,7 @@ SerializeVariablesIterateSystemVariables (
 
   return Status;
 }
+
 
 /**
   Iterates all variables found in the variable serialization instance
@@ -676,12 +671,12 @@ SerializeVariablesIterateSystemVariables (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesIterateInstanceVariables (
-  IN EFI_HANDLE                                 Handle,
-  IN VARIABLE_SERIALIZATION_ITERATION_CALLBACK  CallbackFunction,
-  IN VOID                                       *Context
+  IN EFI_HANDLE                                Handle,
+  IN VARIABLE_SERIALIZATION_ITERATION_CALLBACK CallbackFunction,
+  IN VOID                                      *Context
   )
 {
-  SV_INSTANCE  *Instance;
+  SV_INSTANCE    *Instance;
 
   Instance = SV_FROM_HANDLE (Handle);
 
@@ -696,6 +691,7 @@ SerializeVariablesIterateInstanceVariables (
     return RETURN_SUCCESS;
   }
 }
+
 
 /**
   Sets all variables found in the variable serialization instance
@@ -712,7 +708,7 @@ SerializeVariablesIterateInstanceVariables (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesSetSerializedVariables (
-  IN EFI_HANDLE  Handle
+  IN EFI_HANDLE                       Handle
   )
 {
   return SerializeVariablesIterateInstanceVariables (
@@ -721,6 +717,7 @@ SerializeVariablesSetSerializedVariables (
            NULL
            );
 }
+
 
 /**
   Adds a variable to the variable serialization instance
@@ -743,12 +740,12 @@ SerializeVariablesSetSerializedVariables (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesAddVariable (
-  IN EFI_HANDLE  Handle,
-  IN CHAR16      *VariableName,
-  IN EFI_GUID    *VendorGuid,
-  IN UINT32      Attributes,
-  IN UINTN       DataSize,
-  IN VOID        *Data
+  IN EFI_HANDLE                   Handle,
+  IN CHAR16                       *VariableName,
+  IN EFI_GUID                     *VendorGuid,
+  IN UINT32                       Attributes,
+  IN UINTN                        DataSize,
+  IN VOID                         *Data
   )
 {
   RETURN_STATUS  Status;
@@ -760,11 +757,10 @@ SerializeVariablesAddVariable (
   Instance = SV_FROM_HANDLE (Handle);
 
   if ((Instance->Signature != SV_SIGNATURE) ||
-      (VariableName == NULL) || (VendorGuid == NULL) || (Data == NULL))
-  {
+      (VariableName == NULL) || (VendorGuid == NULL) || (Data == NULL)) {
   }
 
-  SerializedNameSize = (UINT32)StrSize (VariableName);
+  SerializedNameSize = (UINT32) StrSize (VariableName);
 
   SerializedSize =
     sizeof (SerializedNameSize) +
@@ -785,28 +781,28 @@ SerializeVariablesAddVariable (
   //
   // Add name size (UINT32)
   //
-  AppendToBuffer (Instance, (VOID *)&SerializedNameSize, sizeof (SerializedNameSize));
+  AppendToBuffer (Instance, (VOID*) &SerializedNameSize, sizeof (SerializedNameSize));
 
   //
   // Add variable unicode name string
   //
-  AppendToBuffer (Instance, (VOID *)VariableName, SerializedNameSize);
+  AppendToBuffer (Instance, (VOID*) VariableName, SerializedNameSize);
 
   //
   // Add variable GUID
   //
-  AppendToBuffer (Instance, (VOID *)VendorGuid, sizeof (*VendorGuid));
+  AppendToBuffer (Instance, (VOID*) VendorGuid, sizeof (*VendorGuid));
 
   //
   // Add variable attributes
   //
-  AppendToBuffer (Instance, (VOID *)&Attributes, sizeof (Attributes));
+  AppendToBuffer (Instance, (VOID*) &Attributes, sizeof (Attributes));
 
   //
   // Add variable data size (UINT32)
   //
-  SerializedDataSize = (UINT32)DataSize;
-  AppendToBuffer (Instance, (VOID *)&SerializedDataSize, sizeof (SerializedDataSize));
+  SerializedDataSize = (UINT32) DataSize;
+  AppendToBuffer (Instance, (VOID*) &SerializedDataSize, sizeof (SerializedDataSize));
 
   //
   // Add variable data
@@ -815,6 +811,7 @@ SerializeVariablesAddVariable (
 
   return RETURN_SUCCESS;
 }
+
 
 /**
   Serializes the variables known to this instance into the
@@ -842,12 +839,12 @@ SerializeVariablesAddVariable (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesToBuffer (
-  IN     EFI_HANDLE  Handle,
-  OUT    VOID        *Buffer,
-  IN OUT UINTN       *Size
+  IN     EFI_HANDLE                       Handle,
+  OUT    VOID                             *Buffer,
+  IN OUT UINTN                            *Size
   )
 {
-  SV_INSTANCE  *Instance;
+  SV_INSTANCE    *Instance;
 
   Instance = SV_FROM_HANDLE (Handle);
 
@@ -869,3 +866,4 @@ SerializeVariablesToBuffer (
 
   return RETURN_SUCCESS;
 }
+

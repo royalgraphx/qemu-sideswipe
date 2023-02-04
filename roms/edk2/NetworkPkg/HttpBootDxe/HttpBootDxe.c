@@ -11,7 +11,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 ///
 /// Driver Binding Protocol instance
 ///
-EFI_DRIVER_BINDING_PROTOCOL  gHttpBootIp4DxeDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL gHttpBootIp4DxeDriverBinding = {
   HttpBootIp4DxeDriverBindingSupported,
   HttpBootIp4DxeDriverBindingStart,
   HttpBootIp4DxeDriverBindingStop,
@@ -20,7 +20,7 @@ EFI_DRIVER_BINDING_PROTOCOL  gHttpBootIp4DxeDriverBinding = {
   NULL
 };
 
-EFI_DRIVER_BINDING_PROTOCOL  gHttpBootIp6DxeDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL gHttpBootIp6DxeDriverBinding = {
   HttpBootIp6DxeDriverBindingSupported,
   HttpBootIp6DxeDriverBindingStart,
   HttpBootIp6DxeDriverBindingStop,
@@ -28,6 +28,8 @@ EFI_DRIVER_BINDING_PROTOCOL  gHttpBootIp6DxeDriverBinding = {
   NULL,
   NULL
 };
+
+
 
 /**
   Check whether UNDI protocol supports IPv6.
@@ -41,19 +43,19 @@ EFI_DRIVER_BINDING_PROTOCOL  gHttpBootIp6DxeDriverBinding = {
 **/
 EFI_STATUS
 HttpBootCheckIpv6Support (
-  IN  HTTP_BOOT_PRIVATE_DATA  *Private,
-  OUT BOOLEAN                 *Ipv6Support
+  IN  HTTP_BOOT_PRIVATE_DATA       *Private,
+  OUT BOOLEAN                      *Ipv6Support
   )
 {
-  EFI_HANDLE                        Handle;
-  EFI_ADAPTER_INFORMATION_PROTOCOL  *Aip;
-  EFI_STATUS                        Status;
-  EFI_GUID                          *InfoTypesBuffer;
-  UINTN                             InfoTypeBufferCount;
-  UINTN                             TypeIndex;
-  BOOLEAN                           Supported;
-  VOID                              *InfoBlock;
-  UINTN                             InfoBlockSize;
+  EFI_HANDLE                       Handle;
+  EFI_ADAPTER_INFORMATION_PROTOCOL *Aip;
+  EFI_STATUS                       Status;
+  EFI_GUID                         *InfoTypesBuffer;
+  UINTN                            InfoTypeBufferCount;
+  UINTN                            TypeIndex;
+  BOOLEAN                          Supported;
+  VOID                             *InfoBlock;
+  UINTN                            InfoBlockSize;
 
   ASSERT (Private != NULL && Ipv6Support != NULL);
 
@@ -77,16 +79,16 @@ HttpBootCheckIpv6Support (
   Status = gBS->HandleProtocol (
                   Handle,
                   &gEfiAdapterInformationProtocolGuid,
-                  (VOID *)&Aip
+                  (VOID *) &Aip
                   );
-  if (EFI_ERROR (Status) || (Aip == NULL)) {
+  if (EFI_ERROR (Status) || Aip == NULL) {
     return EFI_NOT_FOUND;
   }
 
   InfoTypesBuffer     = NULL;
   InfoTypeBufferCount = 0;
-  Status              = Aip->GetSupportedTypes (Aip, &InfoTypesBuffer, &InfoTypeBufferCount);
-  if (EFI_ERROR (Status) || (InfoTypesBuffer == NULL)) {
+  Status = Aip->GetSupportedTypes (Aip, &InfoTypesBuffer, &InfoTypeBufferCount);
+  if (EFI_ERROR (Status) || InfoTypesBuffer == NULL) {
     FreePool (InfoTypesBuffer);
     return EFI_NOT_FOUND;
   }
@@ -109,13 +111,13 @@ HttpBootCheckIpv6Support (
   //
   InfoBlock     = NULL;
   InfoBlockSize = 0;
-  Status        = Aip->GetInformation (Aip, &gEfiAdapterInfoUndiIpv6SupportGuid, &InfoBlock, &InfoBlockSize);
-  if (EFI_ERROR (Status) || (InfoBlock == NULL)) {
+  Status = Aip->GetInformation (Aip, &gEfiAdapterInfoUndiIpv6SupportGuid, &InfoBlock, &InfoBlockSize);
+  if (EFI_ERROR (Status) || InfoBlock == NULL) {
     FreePool (InfoBlock);
     return EFI_NOT_FOUND;
   }
 
-  *Ipv6Support = ((EFI_ADAPTER_INFO_UNDI_IPV6_SUPPORT *)InfoBlock)->Ipv6Support;
+  *Ipv6Support = ((EFI_ADAPTER_INFO_UNDI_IPV6_SUPPORT *) InfoBlock)->Ipv6Support;
   FreePool (InfoBlock);
 
   return EFI_SUCCESS;
@@ -153,12 +155,13 @@ HttpBootDestroyIp4Children (
       );
   }
 
-  if ((Private->Ip6Nic == NULL) && Private->HttpCreated) {
+  if (Private->Ip6Nic == NULL && Private->HttpCreated) {
     HttpIoDestroyIo (&Private->HttpIo);
     Private->HttpCreated = FALSE;
   }
 
   if (Private->Ip4Nic != NULL) {
+
     gBS->CloseProtocol (
            Private->Controller,
            &gEfiCallerIdGuid,
@@ -177,6 +180,7 @@ HttpBootDestroyIp4Children (
     FreePool (Private->Ip4Nic);
     Private->Ip4Nic = NULL;
   }
+
 }
 
 /**
@@ -227,12 +231,13 @@ HttpBootDestroyIp6Children (
       );
   }
 
-  if ((Private->Ip4Nic == NULL) && Private->HttpCreated) {
-    HttpIoDestroyIo (&Private->HttpIo);
+  if (Private->Ip4Nic == NULL && Private->HttpCreated) {
+    HttpIoDestroyIo(&Private->HttpIo);
     Private->HttpCreated = FALSE;
   }
 
   if (Private->Ip6Nic != NULL) {
+
     gBS->CloseProtocol (
            Private->Controller,
            &gEfiCallerIdGuid,
@@ -303,7 +308,7 @@ HttpBootIp4DxeDriverBindingSupported (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                    Status;
 
   //
   // Try to open the DHCP4, HTTP4 and Device Path protocol.
@@ -344,6 +349,7 @@ HttpBootIp4DxeDriverBindingSupported (
   return Status;
 }
 
+
 /**
   Starts a device controller or a bus controller.
 
@@ -376,7 +382,7 @@ HttpBootIp4DxeDriverBindingSupported (
   @retval EFI_SUCCESS              The device was started.
   @retval EFI_DEVICE_ERROR         The device could not be started due to a device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a lack of resources.
-  @retval Others                   The driver failed to start the device.
+  @retval Others                   The driver failded to start the device.
 
 **/
 EFI_STATUS
@@ -387,26 +393,26 @@ HttpBootIp4DxeDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS                Status;
-  HTTP_BOOT_PRIVATE_DATA    *Private;
-  EFI_DEV_PATH              *Node;
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
-  UINT32                    *Id;
-  BOOLEAN                   FirstStart;
+  EFI_STATUS                 Status;
+  HTTP_BOOT_PRIVATE_DATA     *Private;
+  EFI_DEV_PATH               *Node;
+  EFI_DEVICE_PATH_PROTOCOL   *DevicePath;
+  UINT32                     *Id;
+  BOOLEAN                    FirstStart;
 
   FirstStart = FALSE;
 
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&Id,
+                  (VOID **) &Id,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
 
   if (!EFI_ERROR (Status)) {
-    Private = HTTP_BOOT_PRIVATE_DATA_FROM_ID (Id);
+    Private = HTTP_BOOT_PRIVATE_DATA_FROM_ID(Id);
   } else {
     FirstStart = TRUE;
 
@@ -417,8 +423,7 @@ HttpBootIp4DxeDriverBindingStart (
     if (Private == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
-
-    Private->Signature  = HTTP_BOOT_PRIVATE_DATA_SIGNATURE;
+    Private->Signature = HTTP_BOOT_PRIVATE_DATA_SIGNATURE;
     Private->Controller = ControllerHandle;
     InitializeListHead (&Private->CacheList);
     //
@@ -427,7 +432,7 @@ HttpBootIp4DxeDriverBindingStart (
     Status = gBS->OpenProtocol (
                     ControllerHandle,
                     &gEfiNetworkInterfaceIdentifierProtocolGuid_31,
-                    (VOID **)&Private->Nii,
+                    (VOID **) &Private->Nii,
                     This->DriverBindingHandle,
                     ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -442,7 +447,7 @@ HttpBootIp4DxeDriverBindingStart (
     Status = gBS->OpenProtocol (
                     ControllerHandle,
                     &gEfiDevicePathProtocolGuid,
-                    (VOID **)&Private->ParentDevicePath,
+                    (VOID **) &Private->ParentDevicePath,
                     This->DriverBindingHandle,
                     ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -472,6 +477,7 @@ HttpBootIp4DxeDriverBindingStart (
     if (EFI_ERROR (Status)) {
       goto ON_ERROR;
     }
+
   }
 
   if (Private->Ip4Nic != NULL) {
@@ -486,7 +492,6 @@ HttpBootIp4DxeDriverBindingStart (
     Status = EFI_OUT_OF_RESOURCES;
     goto ON_ERROR;
   }
-
   Private->Ip4Nic->Private     = Private;
   Private->Ip4Nic->ImageHandle = This->DriverBindingHandle;
   Private->Ip4Nic->Signature   = HTTP_BOOT_VIRTUAL_NIC_SIGNATURE;
@@ -507,7 +512,7 @@ HttpBootIp4DxeDriverBindingStart (
   Status = gBS->OpenProtocol (
                   Private->Dhcp4Child,
                   &gEfiDhcp4ProtocolGuid,
-                  (VOID **)&Private->Dhcp4,
+                  (VOID **) &Private->Dhcp4,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -522,7 +527,7 @@ HttpBootIp4DxeDriverBindingStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiIp4Config2ProtocolGuid,
-                  (VOID **)&Private->Ip4Config2,
+                  (VOID **) &Private->Ip4Config2,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -539,12 +544,11 @@ HttpBootIp4DxeDriverBindingStart (
     Status = EFI_OUT_OF_RESOURCES;
     goto ON_ERROR;
   }
-
-  Node->Ipv4.Header.Type    = MESSAGING_DEVICE_PATH;
+  Node->Ipv4.Header.Type = MESSAGING_DEVICE_PATH;
   Node->Ipv4.Header.SubType = MSG_IPv4_DP;
   SetDevicePathNodeLength (Node, sizeof (IPv4_DEVICE_PATH));
   Node->Ipv4.StaticIpAddress = FALSE;
-  DevicePath                 = AppendDevicePathNode (Private->ParentDevicePath, (EFI_DEVICE_PATH_PROTOCOL *)Node);
+  DevicePath = AppendDevicePathNode (Private->ParentDevicePath, (EFI_DEVICE_PATH_PROTOCOL*) Node);
   FreePool (Node);
   if (DevicePath == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
@@ -559,11 +563,10 @@ HttpBootIp4DxeDriverBindingStart (
     Status = EFI_OUT_OF_RESOURCES;
     goto ON_ERROR;
   }
-
-  Node->DevPath.Type    = MESSAGING_DEVICE_PATH;
+  Node->DevPath.Type = MESSAGING_DEVICE_PATH;
   Node->DevPath.SubType = MSG_URI_DP;
   SetDevicePathNodeLength (Node, sizeof (EFI_DEVICE_PATH_PROTOCOL));
-  Private->Ip4Nic->DevicePath = AppendDevicePathNode (DevicePath, (EFI_DEVICE_PATH_PROTOCOL *)Node);
+  Private->Ip4Nic->DevicePath = AppendDevicePathNode (DevicePath, (EFI_DEVICE_PATH_PROTOCOL*) Node);
   FreePool (Node);
   FreePool (DevicePath);
   if (Private->Ip4Nic->DevicePath == NULL) {
@@ -594,7 +597,7 @@ HttpBootIp4DxeDriverBindingStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&Id,
+                  (VOID **) &Id,
                   This->DriverBindingHandle,
                   Private->Ip4Nic->Controller,
                   EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -625,6 +628,7 @@ ON_ERROR:
 
   return Status;
 }
+
 
 /**
   Stops a device controller or a bus controller.
@@ -661,11 +665,11 @@ HttpBootIp4DxeDriverBindingStop (
   IN EFI_HANDLE                   *ChildHandleBuffer OPTIONAL
   )
 {
-  EFI_STATUS              Status;
-  EFI_LOAD_FILE_PROTOCOL  *LoadFile;
-  HTTP_BOOT_PRIVATE_DATA  *Private;
-  EFI_HANDLE              NicHandle;
-  UINT32                  *Id;
+  EFI_STATUS                      Status;
+  EFI_LOAD_FILE_PROTOCOL          *LoadFile;
+  HTTP_BOOT_PRIVATE_DATA          *Private;
+  EFI_HANDLE                      NicHandle;
+  UINT32                          *Id;
 
   //
   // Try to get the Load File Protocol from the controller handle.
@@ -673,7 +677,7 @@ HttpBootIp4DxeDriverBindingStop (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiLoadFileProtocolGuid,
-                  (VOID **)&LoadFile,
+                  (VOID **) &LoadFile,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -693,7 +697,7 @@ HttpBootIp4DxeDriverBindingStop (
     Status = gBS->OpenProtocol (
                     NicHandle,
                     &gEfiCallerIdGuid,
-                    (VOID **)&Id,
+                    (VOID **) &Id,
                     This->DriverBindingHandle,
                     ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -701,10 +705,9 @@ HttpBootIp4DxeDriverBindingStop (
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
     Private = HTTP_BOOT_PRIVATE_DATA_FROM_ID (Id);
   } else {
-    Private   = HTTP_BOOT_PRIVATE_DATA_FROM_LOADFILE (LoadFile);
+    Private = HTTP_BOOT_PRIVATE_DATA_FROM_LOADFILE (LoadFile);
     NicHandle = Private->Controller;
   }
 
@@ -712,16 +715,16 @@ HttpBootIp4DxeDriverBindingStop (
   // Disable the HTTP boot function.
   //
   Status = HttpBootStop (Private);
-  if ((Status != EFI_SUCCESS) && (Status != EFI_NOT_STARTED)) {
+  if (Status != EFI_SUCCESS && Status != EFI_NOT_STARTED) {
     return Status;
   }
 
   //
-  // Destroy all child instance and uninstall protocol interface.
+  // Destory all child instance and uninstall protocol interface.
   //
   HttpBootDestroyIp4Children (This, Private);
 
-  if ((Private->Ip4Nic == NULL) && (Private->Ip6Nic == NULL)) {
+  if (Private->Ip4Nic == NULL && Private->Ip6Nic == NULL) {
     //
     // Release the cached data.
     //
@@ -738,6 +741,7 @@ HttpBootIp4DxeDriverBindingStop (
            &Private->Id
            );
     FreePool (Private);
+
   }
 
   return EFI_SUCCESS;
@@ -793,7 +797,7 @@ HttpBootIp6DxeDriverBindingSupported (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS                    Status;
 
   //
   // Try to open the DHCP6, HTTP and Device Path protocol.
@@ -832,6 +836,7 @@ HttpBootIp6DxeDriverBindingSupported (
                   );
 
   return Status;
+
 }
 
 /**
@@ -866,7 +871,7 @@ HttpBootIp6DxeDriverBindingSupported (
   @retval EFI_SUCCESS              The device was started.
   @retval EFI_DEVICE_ERROR         The device could not be started due to a device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a lack of resources.
-  @retval Others                   The driver failed to start the device.
+  @retval Others                   The driver failded to start the device.
 
 **/
 EFI_STATUS
@@ -877,27 +882,27 @@ HttpBootIp6DxeDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS                Status;
-  HTTP_BOOT_PRIVATE_DATA    *Private;
-  EFI_DEV_PATH              *Node;
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePath;
-  UINT32                    *Id;
-  BOOLEAN                   Ipv6Available;
-  BOOLEAN                   FirstStart;
+  EFI_STATUS                 Status;
+  HTTP_BOOT_PRIVATE_DATA     *Private;
+  EFI_DEV_PATH               *Node;
+  EFI_DEVICE_PATH_PROTOCOL   *DevicePath;
+  UINT32                     *Id;
+  BOOLEAN                    Ipv6Available;
+  BOOLEAN                    FirstStart;
 
   FirstStart = FALSE;
 
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&Id,
+                  (VOID **) &Id,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
 
   if (!EFI_ERROR (Status)) {
-    Private = HTTP_BOOT_PRIVATE_DATA_FROM_ID (Id);
+    Private = HTTP_BOOT_PRIVATE_DATA_FROM_ID(Id);
   } else {
     FirstStart = TRUE;
 
@@ -908,8 +913,7 @@ HttpBootIp6DxeDriverBindingStart (
     if (Private == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
-
-    Private->Signature  = HTTP_BOOT_PRIVATE_DATA_SIGNATURE;
+    Private->Signature = HTTP_BOOT_PRIVATE_DATA_SIGNATURE;
     Private->Controller = ControllerHandle;
     InitializeListHead (&Private->CacheList);
     //
@@ -918,7 +922,7 @@ HttpBootIp6DxeDriverBindingStart (
     Status = gBS->OpenProtocol (
                     ControllerHandle,
                     &gEfiNetworkInterfaceIdentifierProtocolGuid_31,
-                    (VOID **)&Private->Nii,
+                    (VOID **) &Private->Nii,
                     This->DriverBindingHandle,
                     ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -933,7 +937,7 @@ HttpBootIp6DxeDriverBindingStart (
     Status = gBS->OpenProtocol (
                     ControllerHandle,
                     &gEfiDevicePathProtocolGuid,
-                    (VOID **)&Private->ParentDevicePath,
+                    (VOID **) &Private->ParentDevicePath,
                     This->DriverBindingHandle,
                     ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -963,6 +967,7 @@ HttpBootIp6DxeDriverBindingStart (
     if (EFI_ERROR (Status)) {
       goto ON_ERROR;
     }
+
   }
 
   //
@@ -994,7 +999,6 @@ HttpBootIp6DxeDriverBindingStart (
     Status = EFI_OUT_OF_RESOURCES;
     goto ON_ERROR;
   }
-
   Private->Ip6Nic->Private     = Private;
   Private->Ip6Nic->ImageHandle = This->DriverBindingHandle;
   Private->Ip6Nic->Signature   = HTTP_BOOT_VIRTUAL_NIC_SIGNATURE;
@@ -1014,7 +1018,7 @@ HttpBootIp6DxeDriverBindingStart (
   Status = gBS->OpenProtocol (
                   Private->Dhcp6Child,
                   &gEfiDhcp6ProtocolGuid,
-                  (VOID **)&Private->Dhcp6,
+                  (VOID **) &Private->Dhcp6,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -1027,11 +1031,11 @@ HttpBootIp6DxeDriverBindingStart (
   // Create Ip6 child and open Ip6 protocol for background ICMP packets.
   //
   Status = NetLibCreateServiceChild (
-             ControllerHandle,
-             This->DriverBindingHandle,
-             &gEfiIp6ServiceBindingProtocolGuid,
-             &Private->Ip6Child
-             );
+              ControllerHandle,
+              This->DriverBindingHandle,
+              &gEfiIp6ServiceBindingProtocolGuid,
+              &Private->Ip6Child
+              );
   if (EFI_ERROR (Status)) {
     goto ON_ERROR;
   }
@@ -1039,7 +1043,7 @@ HttpBootIp6DxeDriverBindingStart (
   Status = gBS->OpenProtocol (
                   Private->Ip6Child,
                   &gEfiIp6ProtocolGuid,
-                  (VOID **)&Private->Ip6,
+                  (VOID **) &Private->Ip6,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -1054,7 +1058,7 @@ HttpBootIp6DxeDriverBindingStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiIp6ConfigProtocolGuid,
-                  (VOID **)&Private->Ip6Config,
+                  (VOID **) &Private->Ip6Config,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -1071,13 +1075,12 @@ HttpBootIp6DxeDriverBindingStart (
     Status = EFI_OUT_OF_RESOURCES;
     goto ON_ERROR;
   }
-
-  Node->Ipv6.Header.Type    = MESSAGING_DEVICE_PATH;
+  Node->Ipv6.Header.Type = MESSAGING_DEVICE_PATH;
   Node->Ipv6.Header.SubType = MSG_IPv6_DP;
-  Node->Ipv6.PrefixLength   = IP6_PREFIX_LENGTH;
+  Node->Ipv6.PrefixLength = IP6_PREFIX_LENGTH;
   SetDevicePathNodeLength (Node, sizeof (IPv6_DEVICE_PATH));
-  DevicePath = AppendDevicePathNode (Private->ParentDevicePath, (EFI_DEVICE_PATH *)Node);
-  FreePool (Node);
+  DevicePath = AppendDevicePathNode(Private->ParentDevicePath, (EFI_DEVICE_PATH*) Node);
+  FreePool(Node);
   if (DevicePath == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto ON_ERROR;
@@ -1091,11 +1094,10 @@ HttpBootIp6DxeDriverBindingStart (
     Status = EFI_OUT_OF_RESOURCES;
     goto ON_ERROR;
   }
-
-  Node->DevPath.Type    = MESSAGING_DEVICE_PATH;
+  Node->DevPath.Type = MESSAGING_DEVICE_PATH;
   Node->DevPath.SubType = MSG_URI_DP;
   SetDevicePathNodeLength (Node, sizeof (EFI_DEVICE_PATH_PROTOCOL));
-  Private->Ip6Nic->DevicePath = AppendDevicePathNode (DevicePath, (EFI_DEVICE_PATH_PROTOCOL *)Node);
+  Private->Ip6Nic->DevicePath = AppendDevicePathNode (DevicePath, (EFI_DEVICE_PATH_PROTOCOL*) Node);
   FreePool (Node);
   FreePool (DevicePath);
   if (Private->Ip6Nic->DevicePath == NULL) {
@@ -1126,7 +1128,7 @@ HttpBootIp6DxeDriverBindingStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&Id,
+                  (VOID **) &Id,
                   This->DriverBindingHandle,
                   Private->Ip6Nic->Controller,
                   EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -1147,7 +1149,7 @@ ON_ERROR:
              );
     }
 
-    HttpBootDestroyIp6Children (This, Private);
+    HttpBootDestroyIp6Children(This, Private);
     HttpBootConfigFormUnload (Private);
 
     if (FirstStart) {
@@ -1193,11 +1195,11 @@ HttpBootIp6DxeDriverBindingStop (
   IN EFI_HANDLE                   *ChildHandleBuffer OPTIONAL
   )
 {
-  EFI_STATUS              Status;
-  EFI_LOAD_FILE_PROTOCOL  *LoadFile;
-  HTTP_BOOT_PRIVATE_DATA  *Private;
-  EFI_HANDLE              NicHandle;
-  UINT32                  *Id;
+  EFI_STATUS                      Status;
+  EFI_LOAD_FILE_PROTOCOL          *LoadFile;
+  HTTP_BOOT_PRIVATE_DATA          *Private;
+  EFI_HANDLE                      NicHandle;
+  UINT32                          *Id;
 
   //
   // Try to get the Load File Protocol from the controller handle.
@@ -1205,7 +1207,7 @@ HttpBootIp6DxeDriverBindingStop (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiLoadFileProtocolGuid,
-                  (VOID **)&LoadFile,
+                  (VOID **) &LoadFile,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -1225,7 +1227,7 @@ HttpBootIp6DxeDriverBindingStop (
     Status = gBS->OpenProtocol (
                     NicHandle,
                     &gEfiCallerIdGuid,
-                    (VOID **)&Id,
+                    (VOID **) &Id,
                     This->DriverBindingHandle,
                     ControllerHandle,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -1233,10 +1235,9 @@ HttpBootIp6DxeDriverBindingStop (
     if (EFI_ERROR (Status)) {
       return Status;
     }
-
     Private = HTTP_BOOT_PRIVATE_DATA_FROM_ID (Id);
   } else {
-    Private   = HTTP_BOOT_PRIVATE_DATA_FROM_LOADFILE (LoadFile);
+    Private = HTTP_BOOT_PRIVATE_DATA_FROM_LOADFILE (LoadFile);
     NicHandle = Private->Controller;
   }
 
@@ -1244,16 +1245,16 @@ HttpBootIp6DxeDriverBindingStop (
   // Disable the HTTP boot function.
   //
   Status = HttpBootStop (Private);
-  if ((Status != EFI_SUCCESS) && (Status != EFI_NOT_STARTED)) {
+  if (Status != EFI_SUCCESS && Status != EFI_NOT_STARTED) {
     return Status;
   }
 
   //
-  // Destroy all child instance and uninstall protocol interface.
+  // Destory all child instance and uninstall protocol interface.
   //
   HttpBootDestroyIp6Children (This, Private);
 
-  if ((Private->Ip4Nic == NULL) && (Private->Ip6Nic == NULL)) {
+  if (Private->Ip4Nic == NULL && Private->Ip6Nic == NULL) {
     //
     // Release the cached data.
     //
@@ -1270,11 +1271,11 @@ HttpBootIp6DxeDriverBindingStop (
            &Private->Id
            );
     FreePool (Private);
+
   }
 
   return EFI_SUCCESS;
 }
-
 /**
   This is the declaration of an EFI image entry point. This entry point is
   the same for UEFI Applications, UEFI OS Loaders, and UEFI Drivers including
@@ -1294,7 +1295,7 @@ HttpBootDxeDriverEntryPoint (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS   Status;
 
   //
   // Install UEFI Driver Model protocol(s).
@@ -1320,12 +1321,12 @@ HttpBootDxeDriverEntryPoint (
              &gHttpBootDxeComponentName2
              );
   if (EFI_ERROR (Status)) {
-    EfiLibUninstallDriverBindingComponentName2 (
+    EfiLibUninstallDriverBindingComponentName2(
       &gHttpBootIp4DxeDriverBinding,
       &gHttpBootDxeComponentName,
       &gHttpBootDxeComponentName2
       );
   }
-
   return Status;
 }
+

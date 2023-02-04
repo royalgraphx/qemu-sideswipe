@@ -22,10 +22,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 EFI_DEBUG_STATUS
 DebuggerExtIoIB (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   EDBPrint (L"Unsupported\n");
@@ -34,6 +34,7 @@ DebuggerExtIoIB (
   //
   return EFI_DEBUG_CONTINUE;
 }
+
 
 /**
 
@@ -50,10 +51,10 @@ DebuggerExtIoIB (
 **/
 EFI_DEBUG_STATUS
 DebuggerExtIoIW (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   EDBPrint (L"Unsupported\n");
@@ -78,10 +79,10 @@ DebuggerExtIoIW (
 **/
 EFI_DEBUG_STATUS
 DebuggerExtIoID (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   EDBPrint (L"Unsupported\n");
@@ -105,10 +106,10 @@ DebuggerExtIoID (
 **/
 EFI_DEBUG_STATUS
 DebuggerExtIoOB (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   EDBPrint (L"Unsupported\n");
@@ -117,6 +118,7 @@ DebuggerExtIoOB (
   //
   return EFI_DEBUG_CONTINUE;
 }
+
 
 /**
 
@@ -132,10 +134,10 @@ DebuggerExtIoOB (
 **/
 EFI_DEBUG_STATUS
 DebuggerExtIoOW (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   EDBPrint (L"Unsupported\n");
@@ -144,6 +146,7 @@ DebuggerExtIoOW (
   //
   return EFI_DEBUG_CONTINUE;
 }
+
 
 /**
 
@@ -159,10 +162,10 @@ DebuggerExtIoOW (
 **/
 EFI_DEBUG_STATUS
 DebuggerExtIoOD (
-  IN     CHAR16                     *CommandArg,
-  IN     EFI_DEBUGGER_PRIVATE_DATA  *DebuggerPrivate,
-  IN     EFI_EXCEPTION_TYPE         ExceptionType,
-  IN OUT EFI_SYSTEM_CONTEXT         SystemContext
+  IN     CHAR16                    *CommandArg,
+  IN     EFI_DEBUGGER_PRIVATE_DATA *DebuggerPrivate,
+  IN     EFI_EXCEPTION_TYPE        ExceptionType,
+  IN OUT EFI_SYSTEM_CONTEXT        SystemContext
   )
 {
   EDBPrint (L"Unsupported\n");

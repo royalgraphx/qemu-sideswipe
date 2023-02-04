@@ -8,7 +8,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "VlanConfigImpl.h"
 
-EFI_DRIVER_BINDING_PROTOCOL  gVlanConfigDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL gVlanConfigDriverBinding = {
   VlanConfigDriverBindingSupported,
   VlanConfigDriverBindingStart,
   VlanConfigDriverBindingStop,
@@ -24,15 +24,15 @@ EFI_DRIVER_BINDING_PROTOCOL  gVlanConfigDriverBinding = {
   @param[in]  ImageHandle        The image handle of the driver.
   @param[in]  SystemTable        The system table.
 
-  @retval EFI_SUCCESS            All the related protocols are installed on the driver.
+  @retval EFI_SUCCES             All the related protocols are installed on the driver.
   @retval Others                 Failed to install protocols.
 
 **/
 EFI_STATUS
 EFIAPI
 VlanConfigDriverEntryPoint (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE          ImageHandle,
+  IN EFI_SYSTEM_TABLE    *SystemTable
   )
 {
   return EfiLibInstallDriverBindingComponentName2 (
@@ -45,6 +45,7 @@ VlanConfigDriverEntryPoint (
            );
 }
 
+
 /**
   Test to see if this driver supports ControllerHandle.
 
@@ -53,7 +54,7 @@ VlanConfigDriverEntryPoint (
   @param[in]  RemainingDevicePath  Optional parameter use to pick a specific child
                                    device to start.
 
-  @retval EFI_SUCCESS          This driver supports this device
+  @retval EFI_SUCCES           This driver supports this device
   @retval EFI_ALREADY_STARTED  This driver is already running on this device
   @retval other                This driver does not support this device
 
@@ -61,9 +62,9 @@ VlanConfigDriverEntryPoint (
 EFI_STATUS
 EFIAPI
 VlanConfigDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   ControllerHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
+  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
+  IN EFI_HANDLE                      ControllerHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL        *RemainingDevicePath OPTIONAL
   )
 {
   EFI_STATUS                Status;
@@ -72,7 +73,7 @@ VlanConfigDriverBindingSupported (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiVlanConfigProtocolGuid,
-                  (VOID **)&VlanConfig,
+                  (VOID **) &VlanConfig,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -94,6 +95,7 @@ VlanConfigDriverBindingSupported (
   return Status;
 }
 
+
 /**
   Start this driver on ControllerHandle.
 
@@ -102,7 +104,7 @@ VlanConfigDriverBindingSupported (
   @param[in]  RemainingDevicePath  Optional parameter use to pick a specific child
                                    device to start.
 
-  @retval EFI_SUCCESS          This driver is added to ControllerHandle
+  @retval EFI_SUCCES           This driver is added to ControllerHandle
   @retval EFI_ALREADY_STARTED  This driver is already running on ControllerHandle
   @retval other                This driver does not support this device
 
@@ -110,9 +112,9 @@ VlanConfigDriverBindingSupported (
 EFI_STATUS
 EFIAPI
 VlanConfigDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   ControllerHandle,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
+  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
+  IN EFI_HANDLE                      ControllerHandle,
+  IN EFI_DEVICE_PATH_PROTOCOL        *RemainingDevicePath OPTIONAL
   )
 {
   EFI_STATUS                Status;
@@ -126,7 +128,7 @@ VlanConfigDriverBindingStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&PrivateData,
+                  (VOID **) &PrivateData,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -141,7 +143,7 @@ VlanConfigDriverBindingStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiVlanConfigProtocolGuid,
-                  (VOID **)&VlanConfig,
+                  (VOID **) &VlanConfig,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -156,7 +158,7 @@ VlanConfigDriverBindingStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID **)&DevicePath,
+                  (VOID **) &DevicePath,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -174,9 +176,9 @@ VlanConfigDriverBindingStart (
     goto ErrorExit;
   }
 
-  PrivateData->ImageHandle      = This->DriverBindingHandle;
+  PrivateData->ImageHandle = This->DriverBindingHandle;
   PrivateData->ControllerHandle = ControllerHandle;
-  PrivateData->VlanConfig       = VlanConfig;
+  PrivateData->VlanConfig = VlanConfig;
   PrivateData->ParentDevicePath = DevicePath;
 
   //
@@ -199,7 +201,6 @@ VlanConfigDriverBindingStart (
   if (EFI_ERROR (Status)) {
     goto ErrorExit;
   }
-
   return Status;
 
 ErrorExit:
@@ -225,6 +226,7 @@ ErrorExit:
   return Status;
 }
 
+
 /**
   Stop this driver on ControllerHandle.
 
@@ -234,17 +236,17 @@ ErrorExit:
                                    of children is zero stop the entire bus driver.
   @param[in]  ChildHandleBuffer    List of Child Handles to Stop.
 
-  @retval EFI_SUCCESS          This driver is removed ControllerHandle
+  @retval EFI_SUCCES           This driver is removed ControllerHandle
   @retval other                This driver was not removed from this device
 
 **/
 EFI_STATUS
 EFIAPI
 VlanConfigDriverBindingStop (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   ControllerHandle,
-  IN UINTN                        NumberOfChildren,
-  IN EFI_HANDLE                   *ChildHandleBuffer
+  IN EFI_DRIVER_BINDING_PROTOCOL     *This,
+  IN EFI_HANDLE                      ControllerHandle,
+  IN UINTN                           NumberOfChildren,
+  IN EFI_HANDLE                      *ChildHandleBuffer
   )
 {
   EFI_STATUS                Status;
@@ -256,7 +258,7 @@ VlanConfigDriverBindingStop (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiCallerIdGuid,
-                  (VOID **)&PrivateData,
+                  (VOID **) &PrivateData,
                   This->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -264,11 +266,10 @@ VlanConfigDriverBindingStop (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   ASSERT (PrivateData->Signature == VLAN_CONFIG_PRIVATE_DATA_SIGNATURE);
 
   if (NumberOfChildren != 0) {
-    if ((NumberOfChildren != 1) || (ChildHandleBuffer[0] != PrivateData->DriverHandle)) {
+    if (NumberOfChildren != 1 || ChildHandleBuffer[0] != PrivateData->DriverHandle) {
       return EFI_DEVICE_ERROR;
     }
 

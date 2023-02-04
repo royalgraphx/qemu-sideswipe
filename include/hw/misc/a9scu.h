@@ -11,11 +11,10 @@
 #define HW_MISC_A9SCU_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 /* A9MP private memory region.  */
 
-struct A9SCUState {
+typedef struct A9SCUState {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
@@ -24,9 +23,9 @@ struct A9SCUState {
     uint32_t control;
     uint32_t status;
     uint32_t num_cpu;
-};
+} A9SCUState;
 
 #define TYPE_A9_SCU "a9-scu"
-OBJECT_DECLARE_SIMPLE_TYPE(A9SCUState, A9_SCU)
+#define A9_SCU(obj) OBJECT_CHECK(A9SCUState, (obj), TYPE_A9_SCU)
 
 #endif

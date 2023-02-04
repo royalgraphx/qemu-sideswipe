@@ -24,10 +24,5 @@
 			text-label = "test-id4";
 			test-id4 = "some text";
 		};
-		/* Put text directly in the node */
-		text5 {
-			type = "text";
-			text = "more text";
-		};
 	};
 };

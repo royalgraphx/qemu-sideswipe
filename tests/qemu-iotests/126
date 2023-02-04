@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto backing
 #
 # Tests handling of colons in filenames (which may be confused with protocol
 # prefixes)
@@ -21,7 +20,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"

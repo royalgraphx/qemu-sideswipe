@@ -10,56 +10,52 @@
 # See the COPYING file in the top-level directory.
 
 import copy
-from typing import List, Optional, TypeVar
+import sys
 
 
 class QAPISchemaPragma:
-    # Replace with @dataclass in Python 3.7+
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self) -> None:
+    def __init__(self):
         # Are documentation comments required?
         self.doc_required = False
-        # Commands whose names may use '_'
-        self.command_name_exceptions: List[str] = []
-        # Commands allowed to return a non-dictionary
-        self.command_returns_exceptions: List[str] = []
-        # Types whose member names may violate case conventions
-        self.member_name_exceptions: List[str] = []
+        # Whitelist of commands allowed to return a non-dictionary
+        self.returns_whitelist = []
+        # Whitelist of entities allowed to violate case conventions
+        self.name_case_whitelist = []
 
 
 class QAPISourceInfo:
-    T = TypeVar('T', bound='QAPISourceInfo')
-
-    def __init__(self, fname: str, parent: Optional['QAPISourceInfo']):
+    def __init__(self, fname, line, parent):
         self.fname = fname
-        self.line = 1
+        self.line = line
         self.parent = parent
-        self.pragma: QAPISchemaPragma = (
-            parent.pragma if parent else QAPISchemaPragma()
-        )
-        self.defn_meta: Optional[str] = None
-        self.defn_name: Optional[str] = None
+        self.pragma = parent.pragma if parent else QAPISchemaPragma()
+        self.defn_meta = None
+        self.defn_name = None
 
-    def set_defn(self, meta: str, name: str) -> None:
+    def set_defn(self, meta, name):
         self.defn_meta = meta
         self.defn_name = name
 
-    def next_line(self: T) -> T:
+    def next_line(self):
         info = copy.copy(self)
         info.line += 1
         return info
 
-    def loc(self) -> str:
-        return f"{self.fname}:{self.line}"
+    def loc(self):
+        if self.fname is None:
+            return sys.argv[0]
+        ret = self.fname
+        if self.line is not None:
+            ret += ':%d' % self.line
+        return ret
 
-    def in_defn(self) -> str:
+    def in_defn(self):
         if self.defn_name:
             return "%s: In %s '%s':\n" % (self.fname,
                                           self.defn_meta, self.defn_name)
         return ''
 
-    def include_path(self) -> str:
+    def include_path(self):
         ret = ''
         parent = self.parent
         while parent:
@@ -67,5 +63,5 @@ class QAPISourceInfo:
             parent = parent.parent
         return ret
 
-    def __str__(self) -> str:
+    def __str__(self):
         return self.include_path() + self.in_defn() + self.loc()

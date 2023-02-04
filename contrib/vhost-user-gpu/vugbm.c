@@ -7,7 +7,6 @@
  * See the COPYING file in the top-level directory.
  */
 
-#include "qemu/osdep.h"
 #include "vugbm.h"
 
 static bool
@@ -53,7 +52,7 @@ struct udmabuf_create {
 static size_t
 udmabuf_get_size(struct vugbm_buffer *buf)
 {
-    return ROUND_UP(buf->width * buf->height * 4, qemu_real_host_page_size());
+    return ROUND_UP(buf->width * buf->height * 4, qemu_real_host_page_size);
 }
 
 static bool
@@ -199,51 +198,55 @@ vugbm_device_destroy(struct vugbm_device *dev)
     dev->device_destroy(dev);
 }
 
-void
+bool
 vugbm_device_init(struct vugbm_device *dev, int fd)
 {
-    assert(!dev->inited);
+    dev->fd = fd;
 
 #ifdef CONFIG_GBM
-    if (fd >= 0) {
-        dev->dev = gbm_create_device(fd);
+    dev->dev = gbm_create_device(fd);
+#endif
+
+    if (0) {
+        /* nothing */
     }
-    if (dev->dev != NULL) {
-        dev->fd = fd;
+#ifdef CONFIG_GBM
+    else if (dev->dev != NULL) {
         dev->alloc_bo = alloc_bo;
         dev->free_bo = free_bo;
         dev->get_fd = get_fd;
         dev->map_bo = map_bo;
         dev->unmap_bo = unmap_bo;
         dev->device_destroy = device_destroy;
-        dev->inited = true;
     }
 #endif
 #ifdef CONFIG_MEMFD
-    if (!dev->inited && g_file_test("/dev/udmabuf", G_FILE_TEST_EXISTS)) {
+    else if (g_file_test("/dev/udmabuf", G_FILE_TEST_EXISTS)) {
         dev->fd = open("/dev/udmabuf", O_RDWR);
-        if (dev->fd >= 0) {
-            g_debug("Using experimental udmabuf backend");
-            dev->alloc_bo = udmabuf_alloc_bo;
-            dev->free_bo = udmabuf_free_bo;
-            dev->get_fd = udmabuf_get_fd;
-            dev->map_bo = udmabuf_map_bo;
-            dev->unmap_bo = udmabuf_unmap_bo;
-            dev->device_destroy = udmabuf_device_destroy;
-            dev->inited = true;
+        if (dev->fd < 0) {
+            return false;
         }
+        g_debug("Using experimental udmabuf backend");
+        dev->alloc_bo = udmabuf_alloc_bo;
+        dev->free_bo = udmabuf_free_bo;
+        dev->get_fd = udmabuf_get_fd;
+        dev->map_bo = udmabuf_map_bo;
+        dev->unmap_bo = udmabuf_unmap_bo;
+        dev->device_destroy = udmabuf_device_destroy;
     }
 #endif
-    if (!dev->inited) {
+    else {
         g_debug("Using mem fallback");
         dev->alloc_bo = mem_alloc_bo;
         dev->free_bo = mem_free_bo;
         dev->map_bo = mem_map_bo;
         dev->unmap_bo = mem_unmap_bo;
         dev->device_destroy = mem_device_destroy;
-        dev->inited = true;
+        return false;
     }
-    assert(dev->inited);
+
+    dev->inited = true;
+    return true;
 }
 
 static bool

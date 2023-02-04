@@ -18,8 +18,6 @@
 
 #define CONFIG_REMAKE_ELF
 
-#define CONFIG_SYS_BOOTM_LEN		SZ_64M
-
 /* Physical Memory Map */
 
 /* CONFIG_SYS_TEXT_BASE needs to align with where ATF loads bl33.bin */
@@ -47,11 +45,18 @@
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(CONFIG_ENV_SIZE + SZ_8M)
 
-#ifdef CONFIG_USB_DWC2
+#ifdef CONFIG_CMD_USB
+#define CONFIG_USB_DWC2_REG_ADDR 0xF72C0000
+/*#define CONFIG_DWC2_DFLT_SPEED_FULL*/
 #define CONFIG_DWC2_ENABLE_DYNAMIC_FIFO
 #endif
 
 #define CONFIG_HIKEY_GPIO
+
+/* SD/MMC configuration */
+#define CONFIG_BOUNCE_BUFFER
+
+/* Command line configuration */
 
 /* BOOTP options */
 #define CONFIG_BOOTP_BOOTFILESIZE
@@ -77,7 +82,8 @@
 				"initrd_high=0xffffffffffffffff\0" \
 				BOOTENV
 
-/* Preserve environment on eMMC */
+/* Preserve environment on sd card */
+#define CONFIG_ENV_SIZE			0x1000
 
 /* Monitor Command Prompt */
 #define CONFIG_SYS_CBSIZE		512	/* Console I/O Buffer Size */

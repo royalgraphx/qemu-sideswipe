@@ -27,23 +27,22 @@
 #include "qapi/error.h"
 #include "qemu/module.h"
 #include "sysemu/sysemu.h"
-#include "hw/acpi/acpi_aml_interface.h"
+#include "hw/acpi/aml-build.h"
 #include "hw/char/serial.h"
 #include "hw/isa/isa.h"
 #include "hw/qdev-properties.h"
 #include "migration/vmstate.h"
-#include "qom/object.h"
 
-OBJECT_DECLARE_SIMPLE_TYPE(ISASerialState, ISA_SERIAL)
+#define ISA_SERIAL(obj) OBJECT_CHECK(ISASerialState, (obj), TYPE_ISA_SERIAL)
 
-struct ISASerialState {
+typedef struct ISASerialState {
     ISADevice parent_obj;
 
     uint32_t index;
     uint32_t iobase;
     uint32_t isairq;
     SerialState state;
-};
+} ISASerialState;
 
 static const int isa_serial_io[MAX_ISA_SERIAL_PORTS] = {
     0x3f8, 0x2f8, 0x3e8, 0x2e8
@@ -75,7 +74,7 @@ static void serial_isa_realizefn(DeviceState *dev, Error **errp)
     }
     index++;
 
-    s->irq = isa_get_irq(isadev, isa->isairq);
+    isa_init_irq(isadev, &s->irq, isa->isairq);
     qdev_realize(DEVICE(s), NULL, errp);
     qdev_set_legacy_instance_id(dev, isa->iobase, 3);
 
@@ -83,9 +82,9 @@ static void serial_isa_realizefn(DeviceState *dev, Error **errp)
     isa_register_ioport(isadev, &s->io, isa->iobase);
 }
 
-static void serial_isa_build_aml(AcpiDevAmlIf *adev, Aml *scope)
+static void serial_isa_build_aml(ISADevice *isadev, Aml *scope)
 {
-    ISASerialState *isa = ISA_SERIAL(adev);
+    ISASerialState *isa = ISA_SERIAL(isadev);
     Aml *dev;
     Aml *crs;
 
@@ -116,17 +115,19 @@ static Property serial_isa_properties[] = {
     DEFINE_PROP_UINT32("index",  ISASerialState, index,   -1),
     DEFINE_PROP_UINT32("iobase",  ISASerialState, iobase,  -1),
     DEFINE_PROP_UINT32("irq",    ISASerialState, isairq,  -1),
+    DEFINE_PROP_CHR("chardev",   ISASerialState, state.chr),
+    DEFINE_PROP_UINT32("wakeup", ISASerialState, state.wakeup, 0),
     DEFINE_PROP_END_OF_LIST(),
 };
 
 static void serial_isa_class_initfn(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    AcpiDevAmlIfClass *adevc = ACPI_DEV_AML_IF_CLASS(klass);
+    ISADeviceClass *isa = ISA_DEVICE_CLASS(klass);
 
     dc->realize = serial_isa_realizefn;
     dc->vmsd = &vmstate_isa_serial;
-    adevc->build_dev_aml = serial_isa_build_aml;
+    isa->build_aml = serial_isa_build_aml;
     device_class_set_props(dc, serial_isa_properties);
     set_bit(DEVICE_CATEGORY_INPUT, dc->categories);
 }
@@ -136,8 +137,6 @@ static void serial_isa_initfn(Object *o)
     ISASerialState *self = ISA_SERIAL(o);
 
     object_initialize_child(o, "serial", &self->state, TYPE_SERIAL);
-
-    qdev_alias_all_properties(DEVICE(&self->state), o);
 }
 
 static const TypeInfo serial_isa_info = {
@@ -146,10 +145,6 @@ static const TypeInfo serial_isa_info = {
     .instance_size = sizeof(ISASerialState),
     .instance_init = serial_isa_initfn,
     .class_init    = serial_isa_class_initfn,
-    .interfaces = (InterfaceInfo[]) {
-        { TYPE_ACPI_DEV_AML_IF },
-        { },
-    },
 };
 
 static void serial_register_types(void)

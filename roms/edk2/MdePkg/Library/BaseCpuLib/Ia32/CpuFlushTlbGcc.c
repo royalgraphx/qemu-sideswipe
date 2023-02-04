@@ -23,3 +23,4 @@ CpuFlushTlb (
 {
   AsmWriteCr3 (AsmReadCr3 ());
 }
+

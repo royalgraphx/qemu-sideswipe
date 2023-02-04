@@ -33,7 +33,7 @@ ASM_PFX(InternalMemZeroMem):
     xor     ecx, ecx
     sub     ecx, edi
     xor     eax, eax
-    and     ecx, 63
+    and     ecx, 15
     jz      .0
     cmp     ecx, edx
     cmova   ecx, edx
@@ -41,16 +41,13 @@ ASM_PFX(InternalMemZeroMem):
     rep     stosb
 .0:
     mov     ecx, edx
-    and     edx, 63
-    shr     ecx, 6
+    and     edx, 15
+    shr     ecx, 4
     jz      @ZeroBytes
     pxor    xmm0, xmm0
 .1:
     movntdq [edi], xmm0
-    movntdq [edi + 16], xmm0
-    movntdq [edi + 32], xmm0
-    movntdq [edi + 48], xmm0
-    add     edi, 64
+    add     edi, 16
     loop    .1
     mfence
 @ZeroBytes:

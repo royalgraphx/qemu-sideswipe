@@ -10,6 +10,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef _EFI_UHCI_DEBUG_H_
 #define _EFI_UHCI_DEBUG_H_
 
+
 /**
   Dump the content of QH structure.
 
@@ -20,8 +21,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 VOID
 UhciDumpQh (
-  IN UHCI_QH_SW  *QhSw
+  IN UHCI_QH_SW         *QhSw
   );
+
 
 /**
   Dump the content of TD structure.
@@ -33,7 +35,7 @@ UhciDumpQh (
 **/
 VOID
 UhciDumpTds (
-  IN UHCI_TD_SW  *TdSw
+  IN UHCI_TD_SW           *TdSw
   );
 
 #endif

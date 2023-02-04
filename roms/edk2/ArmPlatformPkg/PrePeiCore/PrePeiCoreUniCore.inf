@@ -15,7 +15,6 @@
   VERSION_STRING                 = 1.0
 
 [Sources.common]
-  PrePeiCore.h
   PrePeiCore.c
   MainUniCore.c
 
@@ -44,7 +43,6 @@
 [LibraryClasses]
   ArmLib
   ArmPlatformLib
-  CacheMaintenanceLib
   BaseLib
   DebugLib
   DebugAgentLib
@@ -61,7 +59,6 @@
 [FixedPcd]
   gArmTokenSpaceGuid.PcdFvBaseAddress
   gArmTokenSpaceGuid.PcdFvSize
-  gArmTokenSpaceGuid.PcdVFPEnabled
 
   gArmPlatformTokenSpaceGuid.PcdCPUCoresStackBase
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize

@@ -2,7 +2,6 @@
   EFI_REGULAR_EXPRESSION_PROTOCOL Header File.
 
   (C) Copyright 2015 Hewlett Packard Enterprise Development LP<BR>
-  Copyright (c) 2020, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -11,7 +10,7 @@
 #ifndef __REGULAR_EXPRESSIONDXE_H__
 #define __REGULAR_EXPRESSIONDXE_H__
 
-#include "oniguruma/src/oniguruma.h"
+#include "Oniguruma/oniguruma.h"
 
 #include <Uefi.h>
 #include <Protocol/RegularExpressionProtocol.h>
@@ -73,13 +72,13 @@
 EFI_STATUS
 EFIAPI
 RegularExpressionMatch (
-  IN  EFI_REGULAR_EXPRESSION_PROTOCOL  *This,
-  IN  CHAR16                           *String,
-  IN  CHAR16                           *Pattern,
-  IN  EFI_REGEX_SYNTAX_TYPE            *SyntaxType  OPTIONAL,
-  OUT BOOLEAN                          *Result,
-  OUT EFI_REGEX_CAPTURE                **Captures  OPTIONAL,
-  OUT UINTN                            *CapturesCount
+  IN  EFI_REGULAR_EXPRESSION_PROTOCOL *This,
+  IN  CHAR16                          *String,
+  IN  CHAR16                          *Pattern,
+  IN  EFI_REGEX_SYNTAX_TYPE           *SyntaxType, OPTIONAL
+  OUT BOOLEAN                         *Result,
+  OUT EFI_REGEX_CAPTURE               **Captures, OPTIONAL
+  OUT UINTN                           *CapturesCount
   );
 
 /**
@@ -117,9 +116,9 @@ RegularExpressionMatch (
 EFI_STATUS
 EFIAPI
 RegularExpressionGetInfo (
-  IN     EFI_REGULAR_EXPRESSION_PROTOCOL  *This,
-  IN OUT UINTN                            *RegExSyntaxTypeListSize,
-  OUT    EFI_REGEX_SYNTAX_TYPE            *RegExSyntaxTypeList
+  IN     EFI_REGULAR_EXPRESSION_PROTOCOL *This,
+  IN OUT UINTN                           *RegExSyntaxTypeListSize,
+  OUT    EFI_REGEX_SYNTAX_TYPE           *RegExSyntaxTypeList
   );
 
 #endif

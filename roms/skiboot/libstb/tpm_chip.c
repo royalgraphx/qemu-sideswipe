@@ -1,5 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2018 IBM Corp. */
+/* Copyright 2013-2016 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef pr_fmt
 #define pr_fmt(fmt) "STB: " fmt
@@ -11,40 +24,15 @@
 #include "container.h"
 #include "tpm_chip.h"
 #include "drivers/tpm_i2c_nuvoton.h"
-#include <eventlog.h>
+#include "tss/trustedbootCmds.H"
 
 /* For debugging only */
 //#define STB_DEBUG
 
 static struct list_head tpm_list = LIST_HEAD_INIT(tpm_list);
 
-static struct tpm_dev *tpm_device = NULL;
-static struct tpm_driver *tpm_driver = NULL;
-
-void tss_tpm_register(struct tpm_dev *dev, struct tpm_driver *driver)
-{
-	tpm_device = dev;
-	tpm_driver = driver;
-}
-
-void tss_tpm_unregister(void)
-{
-	tpm_device = NULL;
-	tpm_driver = NULL;
-}
-
-struct tpm_dev* tpm_get_device(void)
-{
-	return tpm_device;
-}
-
-struct tpm_driver* tpm_get_driver(void)
-{
-	return tpm_driver;
-}
-
 #ifdef STB_DEBUG
-static void tpm_print_pcr(TPMI_DH_PCR pcr, TPM_ALG_ID alg,
+static void tpm_print_pcr(struct tpm_chip *tpm, TPM_Pcr pcr, TPM_Alg_Id alg,
 			  size_t size)
 {
 	int rc;
@@ -52,7 +40,7 @@ static void tpm_print_pcr(TPMI_DH_PCR pcr, TPM_ALG_ID alg,
 
 	memset(digest, 0, size);
 
-	rc = tss_pcr_read(pcr, &alg, 1);
+	rc = tpmCmdPcrRead(tpm, pcr, alg, digest, size);
 	if (rc) {
 		/**
 		 * @fwts-label STBPCRReadFailed
@@ -145,7 +133,8 @@ int tpm_register_chip(struct dt_node *node, struct tpm_dev *dev,
 	 * Initialize the event log manager by walking through the log to identify
 	 * what is the next free position in the log
 	 */
-	rc = load_eventlog(&tpm->logmgr, (int8_t*) sml_base, sml_size);
+	rc = TpmLogMgr_initializeUsingExistingLog(&tpm->logmgr,
+					 (uint8_t*) sml_base, sml_size);
 
 	if (rc) {
 		/**
@@ -212,7 +201,6 @@ void tpm_cleanup(void)
 		tpm = list_pop(&tpm_list, struct tpm_chip, link);
 	}
 
-	tss_tpm_unregister();
 	list_head_init(&tpm_list);
 }
 
@@ -223,18 +211,14 @@ static void tpm_disable(struct tpm_chip *tpm)
 	prlog(PR_NOTICE, "tpm%d disabled\n", tpm->id);
 }
 
-int tpm_extendl(TPMI_DH_PCR pcr,
-		TPMI_ALG_HASH alg1, uint8_t *digest1,
-		TPMI_ALG_HASH alg2, uint8_t *digest2,
-		uint32_t event_type, const char *event_msg,
-		uint32_t event_msg_len)
+int tpm_extendl(TPM_Pcr pcr,
+		TPM_Alg_Id alg1, uint8_t* digest1, size_t size1,
+		TPM_Alg_Id alg2, uint8_t* digest2, size_t size2,
+		uint32_t event_type, const char* event_msg)
 {
 	int rc, failed;
-	TCG_PCR_EVENT2 *event = calloc(1, sizeof(TCG_PCR_EVENT2));
+	TCG_PCR_EVENT2 event;
 	struct tpm_chip *tpm = NULL;
-	uint8_t hashes_len = 2;
-	TPMI_ALG_HASH hashes[2] = {alg1, alg2};
-	const uint8_t *digests[] = {digest1, digest2};
 
 	failed = 0;
 
@@ -249,13 +233,11 @@ int tpm_extendl(TPMI_DH_PCR pcr,
 	list_for_each(&tpm_list, tpm, link) {
 		if (!tpm->enabled)
 			continue;
-		/* instantiate eventlog */
-		rc = build_event(event, pcr, hashes, hashes_len, digests,
-				 event_type, event_msg, event_msg_len);
-
-		if (rc == 0)
-			/* eventlog recording */
-			rc = add_to_eventlog(&tpm->logmgr, event);
+		event = TpmLogMgr_genLogEventPcrExtend(pcr, alg1, digest1, size1,
+						       alg2, digest2, size2,
+						       event_type, event_msg);
+		/* eventlog recording */
+		rc = TpmLogMgr_addEvent(&tpm->logmgr, &event);
 		if (rc) {
 			/**
 			 * @fwts-label STBAddEventFailed
@@ -285,7 +267,9 @@ int tpm_extendl(TPMI_DH_PCR pcr,
 		tpm_print_pcr(tpm, pcr, alg2, size2);
 #endif
 		/* extend the pcr number in both sha1 and sha256 banks*/
-		rc = tss_pcr_extend(pcr, hashes, hashes_len, digests);
+		rc = tpmCmdPcrExtend2Hash(tpm, pcr,
+					  alg1, digest1, size1,
+					  alg2, digest2, size2);
 		if (rc) {
 			/**
 			 * @fwts-label STBPCRExtendFailed

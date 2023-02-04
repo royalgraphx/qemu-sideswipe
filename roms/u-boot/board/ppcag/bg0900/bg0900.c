@@ -6,16 +6,12 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <net.h>
-#include <asm/global_data.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/iomux-mx28.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
-#include <linux/delay.h>
 #include <linux/mii.h>
 #include <miiphy.h>
 #include <netdev.h>
@@ -53,7 +49,7 @@ int board_init(void)
 }
 
 #ifdef CONFIG_CMD_NET
-int board_eth_init(struct bd_info *bis)
+int board_eth_init(bd_t *bis)
 {
 	struct mxs_clkctrl_regs *clkctrl_regs =
 		(struct mxs_clkctrl_regs *)MXS_CLKCTRL_BASE;

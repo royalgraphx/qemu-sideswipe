@@ -4,9 +4,8 @@
  * Scott McNutt <smcnutt@psyent.com>
  */
 
-#include <common.h>
-#include <hang.h>
 #include <asm/ptrace.h>
+#include <common.h>
 
 void trap_handler (struct pt_regs *regs)
 {
@@ -22,5 +21,5 @@ void soft_emulation (struct pt_regs *regs)
 	 */
 	printf ("\n\n*** ERROR: unimplemented instruction @ %08x\n",
 			regs->reg[29] - 4);
-	hang();
+	hang ();
 }

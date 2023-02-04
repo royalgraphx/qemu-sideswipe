@@ -30,6 +30,7 @@
 #include "libqos/ahci.h"
 #include "libqos/pci-pc.h"
 
+#include "qemu-common.h"
 #include "qapi/qmp/qdict.h"
 #include "qemu/host-utils.h"
 
@@ -44,9 +45,9 @@
 #define TEST_IMAGE_SIZE_MB_SMALL 64
 
 /*** Globals ***/
-static char *tmp_path;
-static char *debug_path;
-static char *mig_socket;
+static char tmp_path[] = "/tmp/qtest.XXXXXX";
+static char debug_path[] = "/tmp/qtest-blkdebug.XXXXXX";
+static char mig_socket[] = "/tmp/qtest-migration.XXXXXX";
 static bool ahci_pedantic;
 static const char *imgfmt;
 static unsigned test_image_size_mb;
@@ -1437,12 +1438,11 @@ static void test_ncq_simple(void)
 
 static int prepare_iso(size_t size, unsigned char **buf, char **name)
 {
-    g_autofree char *cdrom_path = NULL;
+    char cdrom_path[] = "/tmp/qtest.iso.XXXXXX";
     unsigned char *patt;
     ssize_t ret;
-    int fd = g_file_open_tmp("qtest.iso.XXXXXX", &cdrom_path, NULL);
+    int fd = mkstemp(cdrom_path);
 
-    g_assert(fd != -1);
     g_assert(buf);
     g_assert(name);
     patt = g_malloc(size);
@@ -1490,14 +1490,14 @@ static void ahci_test_cdrom(int nsectors, bool dma, uint8_t cmd,
     char *iso;
     int fd;
     AHCIOpts opts = {
-        .size = ((uint64_t)ATAPI_SECTOR_SIZE * nsectors),
+        .size = (ATAPI_SECTOR_SIZE * nsectors),
         .atapi = true,
         .atapi_dma = dma,
         .post_cb = ahci_cb_cmp_buff,
         .set_bcl = override_bcl,
         .bcl = bcl,
     };
-    uint64_t iso_size = (uint64_t)ATAPI_SECTOR_SIZE * (nsectors + 1);
+    uint64_t iso_size = ATAPI_SECTOR_SIZE * (nsectors + 1);
 
     /* Prepare ISO and fill 'tx' buffer */
     fd = prepare_iso(iso_size, &tx, &iso);
@@ -1833,7 +1833,7 @@ static void create_ahci_io_test(enum IOMode type, enum AddrMode addr,
 
 int main(int argc, char **argv)
 {
-    const char *arch, *base;
+    const char *arch;
     int ret;
     int fd;
     int c;
@@ -1871,22 +1871,8 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    /*
-     * "base" stores the starting point where we create temporary files.
-     *
-     * On Windows, this is set to the relative path of current working
-     * directory, because the absolute path causes the blkdebug filename
-     * parser fail to parse "blkdebug:path/to/config:path/to/image".
-     */
-#ifndef _WIN32
-    base = g_get_tmp_dir();
-#else
-    base = ".";
-#endif
-
     /* Create a temporary image */
-    tmp_path = g_strdup_printf("%s/qtest.XXXXXX", base);
-    fd = g_mkstemp(tmp_path);
+    fd = mkstemp(tmp_path);
     g_assert(fd >= 0);
     if (have_qemu_img()) {
         imgfmt = "qcow2";
@@ -1903,13 +1889,12 @@ int main(int argc, char **argv)
     close(fd);
 
     /* Create temporary blkdebug instructions */
-    debug_path = g_strdup_printf("%s/qtest-blkdebug.XXXXXX", base);
-    fd = g_mkstemp(debug_path);
+    fd = mkstemp(debug_path);
     g_assert(fd >= 0);
     close(fd);
 
     /* Reserve a hollow file to use as a socket for migration tests */
-    fd = g_file_open_tmp("qtest-migration.XXXXXX", &mig_socket, NULL);
+    fd = mkstemp(mig_socket);
     g_assert(fd >= 0);
     close(fd);
 
@@ -1962,11 +1947,8 @@ int main(int argc, char **argv)
 
     /* Cleanup */
     unlink(tmp_path);
-    g_free(tmp_path);
     unlink(debug_path);
-    g_free(debug_path);
     unlink(mig_socket);
-    g_free(mig_socket);
 
     return ret;
 }

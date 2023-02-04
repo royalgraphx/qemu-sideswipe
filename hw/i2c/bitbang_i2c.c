@@ -15,7 +15,6 @@
 #include "hw/i2c/bitbang_i2c.h"
 #include "hw/sysbus.h"
 #include "qemu/module.h"
-#include "qom/object.h"
 
 //#define DEBUG_BITBANG_I2C
 
@@ -163,16 +162,16 @@ void bitbang_i2c_init(bitbang_i2c_interface *s, I2CBus *bus)
 /* GPIO interface.  */
 
 #define TYPE_GPIO_I2C "gpio_i2c"
-OBJECT_DECLARE_SIMPLE_TYPE(GPIOI2CState, GPIO_I2C)
+#define GPIO_I2C(obj) OBJECT_CHECK(GPIOI2CState, (obj), TYPE_GPIO_I2C)
 
-struct GPIOI2CState {
+typedef struct GPIOI2CState {
     SysBusDevice parent_obj;
 
     MemoryRegion dummy_iomem;
     bitbang_i2c_interface bitbang;
     int last_level;
     qemu_irq out;
-};
+} GPIOI2CState;
 
 static void bitbang_i2c_gpio_set(void *opaque, int irq, int level)
 {

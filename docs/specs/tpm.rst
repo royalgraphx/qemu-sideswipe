@@ -250,25 +250,24 @@ hardware TPM ``/dev/tpm0``:
 
 The following commands should result in similar output inside the VM
 with a Linux kernel that either has the TPM TIS driver built-in or
-available as a module (assuming a TPM 2 is passed through):
+available as a module:
 
 .. code-block:: console
 
   # dmesg | grep -i tpm
-  [    0.012560] ACPI: TPM2 0x000000000BFFD1900 00004C (v04 BOCHS  \
-      BXPC     0000001 BXPC 00000001)
+  [    0.711310] tpm_tis 00:06: 1.2 TPM (device=id 0x1, rev-id 1)
+
+  # dmesg | grep TCPA
+  [    0.000000] ACPI: TCPA 0x0000000003FFD191C 000032 (v02 BOCHS  \
+      BXPCTCPA 0000001 BXPC 00000001)
 
   # ls -l /dev/tpm*
-  crw-rw----. 1 tss root  10,   224 Sep  6 12:36 /dev/tpm0
-  crw-rw----. 1 tss rss  253, 65536 Sep  6 12:36 /dev/tpmrm0
+  crw-------. 1 root root 10, 224 Jul 11 10:11 /dev/tpm0
 
-  Starting with Linux 5.12 there are PCR entries for TPM 2 in sysfs:
-  # find /sys/devices/ -type f | grep pcr-sha
+  # find /sys/devices/ | grep pcrs$ | xargs cat
+  PCR-00: 35 4E 3B CE 23 9F 38 59 ...
   ...
-  /sys/devices/LNXSYSTEM:00/LNXSYBUS:00/MSFT0101:00/tpm/tpm0/pcr-sha256/1
-  ...
-  /sys/devices/LNXSYSTEM:00/LNXSYBUS:00/MSFT0101:00/tpm/tpm0/pcr-sha256/9
-  ...
+  PCR-23: 00 00 00 00 00 00 00 00 ...
 
 The QEMU TPM emulator device
 ----------------------------
@@ -305,7 +304,6 @@ a socket interface. They do not need to be run as root.
   mkdir /tmp/mytpm1
   swtpm socket --tpmstate dir=/tmp/mytpm1 \
     --ctrl type=unixio,path=/tmp/mytpm1/swtpm-sock \
-    --tpm2 \
     --log level=20
 
 Command line to start QEMU with the TPM emulator device communicating
@@ -345,7 +343,7 @@ In case an Arm virt machine is emulated, use the following command line:
     -device tpm-tis-device,tpmdev=tpm0 \
     -device virtio-blk-pci,drive=drv0 \
     -drive format=qcow2,file=hda.qcow2,if=none,id=drv0 \
-    -drive if=pflash,format=raw,file=flash0.img,readonly=on \
+    -drive if=pflash,format=raw,file=flash0.img,readonly \
     -drive if=pflash,format=raw,file=flash1.img
 
 In case SeaBIOS is used as firmware, it should show the TPM menu item
@@ -367,20 +365,19 @@ available as a module:
 .. code-block:: console
 
   # dmesg | grep -i tpm
-  [    0.012560] ACPI: TPM2 0x000000000BFFD1900 00004C (v04 BOCHS  \
-      BXPC     0000001 BXPC 00000001)
+  [    0.711310] tpm_tis 00:06: 1.2 TPM (device=id 0x1, rev-id 1)
+
+  # dmesg | grep TCPA
+  [    0.000000] ACPI: TCPA 0x0000000003FFD191C 000032 (v02 BOCHS  \
+      BXPCTCPA 0000001 BXPC 00000001)
 
   # ls -l /dev/tpm*
-  crw-rw----. 1 tss root  10,   224 Sep  6 12:36 /dev/tpm0
-  crw-rw----. 1 tss rss  253, 65536 Sep  6 12:36 /dev/tpmrm0
+  crw-------. 1 root root 10, 224 Jul 11 10:11 /dev/tpm0
 
-  Starting with Linux 5.12 there are PCR entries for TPM 2 in sysfs:
-  # find /sys/devices/ -type f | grep pcr-sha
+  # find /sys/devices/ | grep pcrs$ | xargs cat
+  PCR-00: 35 4E 3B CE 23 9F 38 59 ...
   ...
-  /sys/devices/LNXSYSTEM:00/LNXSYBUS:00/MSFT0101:00/tpm/tpm0/pcr-sha256/1
-  ...
-  /sys/devices/LNXSYSTEM:00/LNXSYBUS:00/MSFT0101:00/tpm/tpm0/pcr-sha256/9
-  ...
+  PCR-23: 00 00 00 00 00 00 00 00 ...
 
 Migration with the TPM emulator
 ===============================
@@ -401,8 +398,7 @@ In a 1st terminal start an instance of a swtpm using the following command:
   mkdir /tmp/mytpm1
   swtpm socket --tpmstate dir=/tmp/mytpm1 \
     --ctrl type=unixio,path=/tmp/mytpm1/swtpm-sock \
-    --tpm2 \
-    --log level=20
+    --log level=20 --tpm2
 
 In a 2nd terminal start the VM:
 

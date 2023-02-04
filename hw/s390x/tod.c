@@ -14,8 +14,6 @@
 #include "qemu/error-report.h"
 #include "qemu/module.h"
 #include "sysemu/kvm.h"
-#include "sysemu/tcg.h"
-#include "sysemu/qtest.h"
 #include "migration/qemu-file-types.h"
 #include "migration/register.h"
 
@@ -25,13 +23,8 @@ void s390_init_tod(void)
 
     if (kvm_enabled()) {
         obj = object_new(TYPE_KVM_S390_TOD);
-    } else if (tcg_enabled()) {
-        obj = object_new(TYPE_QEMU_S390_TOD);
-    } else if (qtest_enabled()) {
-        return;
     } else {
-        error_report("current accelerator not handled in s390_init_tod!");
-        abort();
+        obj = object_new(TYPE_QEMU_S390_TOD);
     }
     object_property_add_child(qdev_get_machine(), TYPE_S390_TOD, obj);
     object_unref(obj);
@@ -123,7 +116,7 @@ static void s390_tod_class_init(ObjectClass *oc, void *data)
     dc->user_creatable = false;
 }
 
-static const TypeInfo s390_tod_info = {
+static TypeInfo s390_tod_info = {
     .name = TYPE_S390_TOD,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(S390TODState),

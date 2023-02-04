@@ -57,6 +57,7 @@ UhciComponentNameGetDriverName (
   OUT CHAR16                       **DriverName
   );
 
+
 /**
   Retrieves a Unicode string that is the user readable name of the controller
   that is being managed by a driver.
@@ -128,11 +129,11 @@ UhciComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 UhciComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   );
 
 #endif

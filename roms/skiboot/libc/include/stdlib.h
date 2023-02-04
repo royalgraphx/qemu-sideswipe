@@ -26,6 +26,11 @@ long int strtol(const char *nptr, char **endptr, int base);
 
 int rand(void);
 long int __attribute__((const)) labs(long int n);
-#define abort() assert(0)
+void __attribute__((noreturn)) _abort(const char *msg);
+#define abort() do {					\
+               _abort("abort():" __FILE__		\
+		      ":" stringify(__LINE__));		\
+       } while(0)
+
 
 #endif

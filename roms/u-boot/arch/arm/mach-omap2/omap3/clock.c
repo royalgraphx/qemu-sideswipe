@@ -17,6 +17,7 @@
 #include <asm/arch/clocks_omap3.h>
 #include <asm/arch/mem.h>
 #include <asm/arch/sys_proto.h>
+#include <environment.h>
 #include <command.h>
 
 /******************************************************************************

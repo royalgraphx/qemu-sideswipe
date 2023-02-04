@@ -23,14 +23,14 @@
 **/
 EFI_STATUS
 SdCardReset (
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -65,16 +65,16 @@ SdCardReset (
 **/
 EFI_STATUS
 SdCardVoltageCheck (
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot,
-  IN UINT8                          SupplyVoltage,
-  IN UINT8                          CheckPattern
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot,
+  IN UINT8                              SupplyVoltage,
+  IN UINT8                              CheckPattern
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -84,9 +84,9 @@ SdCardVoltageCheck (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = SD_MMC_HC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = SD_SEND_IF_COND;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeBcr;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR7;
+  SdMmcCmdBlk.CommandIndex = SD_SEND_IF_COND;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeBcr;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR7;
   SdMmcCmdBlk.CommandArgument = (SupplyVoltage << 8) | CheckPattern;
 
   Status = SdMmcPassThruPassThru (PassThru, Slot, &Packet, NULL);
@@ -116,17 +116,17 @@ SdCardVoltageCheck (
 **/
 EFI_STATUS
 SdioSendOpCond (
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot,
-  IN UINT32                         VoltageWindow,
-  IN BOOLEAN                        S18R
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot,
+  IN UINT32                             VoltageWindow,
+  IN BOOLEAN                            S18R
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
-  UINT32                               Switch;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
+  UINT32                                Switch;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -176,16 +176,16 @@ SdCardSendOpCond (
   IN     BOOLEAN                        S18R,
   IN     BOOLEAN                        Xpc,
   IN     BOOLEAN                        Hcs,
-  OUT UINT32                            *Ocr
+     OUT UINT32                         *Ocr
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
-  UINT32                               Switch;
-  UINT32                               MaxPower;
-  UINT32                               HostCapacity;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
+  UINT32                                Switch;
+  UINT32                                MaxPower;
+  UINT32                                HostCapacity;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -195,9 +195,9 @@ SdCardSendOpCond (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = SD_MMC_HC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = SD_APP_CMD;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SdMmcCmdBlk.CommandIndex = SD_APP_CMD;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
 
   Status = SdMmcPassThruPassThru (PassThru, Slot, &Packet, NULL);
@@ -241,14 +241,14 @@ SdCardSendOpCond (
 **/
 EFI_STATUS
 SdCardAllSendCid (
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -285,13 +285,13 @@ EFI_STATUS
 SdCardSetRca (
   IN     EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
   IN     UINT8                          Slot,
-  OUT UINT16                            *Rca
+     OUT UINT16                         *Rca
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -313,6 +313,10 @@ SdCardSetRca (
   return Status;
 }
 
+
+
+
+
 /**
   Send command SELECT_DESELECT_CARD to the SD device to select/deselect it.
 
@@ -328,15 +332,15 @@ SdCardSetRca (
 **/
 EFI_STATUS
 SdCardSelect (
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot,
-  IN UINT16                         Rca
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot,
+  IN UINT16                             Rca
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -351,7 +355,6 @@ SdCardSelect (
   if (Rca != 0) {
     SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1b;
   }
-
   SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
 
   Status = SdMmcPassThruPassThru (PassThru, Slot, &Packet, NULL);
@@ -373,14 +376,14 @@ SdCardSelect (
 **/
 EFI_STATUS
 SdCardVoltageSwitch (
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -390,9 +393,9 @@ SdCardVoltageSwitch (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = SD_MMC_HC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = SD_VOLTAGE_SWITCH;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SdMmcCmdBlk.CommandIndex = SD_VOLTAGE_SWITCH;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SdMmcCmdBlk.CommandArgument = 0;
 
   Status = SdMmcPassThruPassThru (PassThru, Slot, &Packet, NULL);
@@ -416,17 +419,17 @@ SdCardVoltageSwitch (
 **/
 EFI_STATUS
 SdCardSetBusWidth (
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot,
-  IN UINT16                         Rca,
-  IN UINT8                          BusWidth
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot,
+  IN UINT16                             Rca,
+  IN UINT8                              BusWidth
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
-  UINT8                                Value;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
+  UINT8                                 Value;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -436,9 +439,9 @@ SdCardSetBusWidth (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = SD_MMC_HC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = SD_APP_CMD;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SdMmcCmdBlk.CommandIndex = SD_APP_CMD;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
 
   Status = SdMmcPassThruPassThru (PassThru, Slot, &Packet, NULL);
@@ -469,14 +472,14 @@ SdCardSetBusWidth (
 
   Refer to SD Physical Layer Simplified Spec 4.1 Section 4.7 for details.
 
-  @param[in]  PassThru       A pointer to the EFI_SD_MMC_PASS_THRU_PROTOCOL instance.
-  @param[in]  Slot           The slot number of the SD card to send the command to.
-  @param[in]  BusTiming      Target bus timing based on which access group value will be set.
-  @param[in]  CommandSystem  The value for command set group.
-  @param[in]  DriverStrength The value for driver strength group.
-  @param[in]  PowerLimit     The value for power limit group.
-  @param[in]  Mode           Switch or check function.
-  @param[out] SwitchResp     The return switch function status.
+  @param[in]  PassThru      A pointer to the EFI_SD_MMC_PASS_THRU_PROTOCOL instance.
+  @param[in]  Slot          The slot number of the SD card to send the command to.
+  @param[in]  AccessMode    The value for access mode group.
+  @param[in]  CommandSystem The value for command set group.
+  @param[in]  DriveStrength The value for drive length group.
+  @param[in]  PowerLimit    The value for power limit group.
+  @param[in]  Mode          Switch or check function.
+  @param[out] SwitchResp    The return switch function status.
 
   @retval EFI_SUCCESS       The operation is done correctly.
   @retval Others            The operation fails.
@@ -486,20 +489,19 @@ EFI_STATUS
 SdCardSwitch (
   IN     EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
   IN     UINT8                          Slot,
-  IN     SD_MMC_BUS_MODE                BusTiming,
+  IN     UINT8                          AccessMode,
   IN     UINT8                          CommandSystem,
-  IN     SD_DRIVER_STRENGTH_TYPE        DriverStrength,
+  IN     UINT8                          DriveStrength,
   IN     UINT8                          PowerLimit,
   IN     BOOLEAN                        Mode,
-  OUT UINT8                             *SwitchResp
+     OUT UINT8                          *SwitchResp
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
-  UINT32                               ModeValue;
-  UINT8                                AccessMode;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
+  UINT32                                ModeValue;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -514,50 +516,14 @@ SdCardSwitch (
   SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
 
   ModeValue = Mode ? BIT31 : 0;
-
-  switch (BusTiming) {
-    case SdMmcUhsDdr50:
-      AccessMode = 0x4;
-      break;
-    case SdMmcUhsSdr104:
-      AccessMode = 0x3;
-      break;
-    case SdMmcUhsSdr50:
-      AccessMode = 0x2;
-      break;
-    case SdMmcUhsSdr25:
-    case SdMmcSdHs:
-      AccessMode = 0x1;
-      break;
-    case SdMmcUhsSdr12:
-    case SdMmcSdDs:
-      AccessMode = 0;
-      break;
-    default:
-      AccessMode = 0xF;
-  }
-
-  SdMmcCmdBlk.CommandArgument = (AccessMode & 0xF) | ((CommandSystem & 0xF) << 4) | \
-                                ((DriverStrength & 0xF) << 8) | ((PowerLimit & 0xF) << 12) | \
+  SdMmcCmdBlk.CommandArgument = (AccessMode & 0xF) | ((PowerLimit & 0xF) << 4) | \
+                                ((DriveStrength & 0xF) << 8) | ((DriveStrength & 0xF) << 12) | \
                                 ModeValue;
 
   Packet.InDataBuffer     = SwitchResp;
   Packet.InTransferLength = 64;
 
   Status = SdMmcPassThruPassThru (PassThru, Slot, &Packet, NULL);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  if (Mode) {
-    if ((((AccessMode & 0xF) != 0xF) && ((SwitchResp[16] & 0xF) != AccessMode)) ||
-        (((CommandSystem & 0xF) != 0xF) && (((SwitchResp[16] >> 4) & 0xF) != CommandSystem)) ||
-        (((DriverStrength & 0xF) != 0xF) && ((SwitchResp[15] & 0xF) != DriverStrength)) ||
-        (((PowerLimit & 0xF) != 0xF) && (((SwitchResp[15] >> 4) & 0xF) != PowerLimit)))
-    {
-      return EFI_DEVICE_ERROR;
-    }
-  }
 
   return Status;
 }
@@ -581,13 +547,13 @@ SdCardSendStatus (
   IN     EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
   IN     UINT8                          Slot,
   IN     UINT16                         Rca,
-  OUT UINT32                            *DevStatus
+     OUT UINT32                         *DevStatus
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -597,9 +563,9 @@ SdCardSendStatus (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = SD_MMC_HC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = SD_SEND_STATUS;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SdMmcCmdBlk.CommandIndex = SD_SEND_STATUS;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SdMmcCmdBlk.CommandArgument = (UINT32)Rca << 16;
 
   Status = SdMmcPassThruPassThru (PassThru, Slot, &Packet, NULL);
@@ -627,15 +593,15 @@ SdCardSendStatus (
 **/
 EFI_STATUS
 SdCardSendTuningBlk (
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot
   )
 {
-  EFI_SD_MMC_COMMAND_BLOCK             SdMmcCmdBlk;
-  EFI_SD_MMC_STATUS_BLOCK              SdMmcStatusBlk;
-  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET  Packet;
-  EFI_STATUS                           Status;
-  UINT8                                TuningBlock[64];
+  EFI_SD_MMC_COMMAND_BLOCK              SdMmcCmdBlk;
+  EFI_SD_MMC_STATUS_BLOCK               SdMmcStatusBlk;
+  EFI_SD_MMC_PASS_THRU_COMMAND_PACKET   Packet;
+  EFI_STATUS                            Status;
+  UINT8                                 TuningBlock[64];
 
   ZeroMem (&SdMmcCmdBlk, sizeof (SdMmcCmdBlk));
   ZeroMem (&SdMmcStatusBlk, sizeof (SdMmcStatusBlk));
@@ -645,9 +611,9 @@ SdCardSendTuningBlk (
   Packet.SdMmcStatusBlk = &SdMmcStatusBlk;
   Packet.Timeout        = SD_MMC_HC_GENERIC_TIMEOUT;
 
-  SdMmcCmdBlk.CommandIndex    = SD_SEND_TUNING_BLOCK;
-  SdMmcCmdBlk.CommandType     = SdMmcCommandTypeAdtc;
-  SdMmcCmdBlk.ResponseType    = SdMmcResponseTypeR1;
+  SdMmcCmdBlk.CommandIndex = SD_SEND_TUNING_BLOCK;
+  SdMmcCmdBlk.CommandType  = SdMmcCommandTypeAdtc;
+  SdMmcCmdBlk.ResponseType = SdMmcResponseTypeR1;
   SdMmcCmdBlk.CommandArgument = 0;
 
   Packet.InDataBuffer     = TuningBlock;
@@ -677,24 +643,23 @@ SdCardSendTuningBlk (
 **/
 EFI_STATUS
 SdCardTuningClock (
-  IN EFI_PCI_IO_PROTOCOL            *PciIo,
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot
+  IN EFI_PCI_IO_PROTOCOL                *PciIo,
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot
   )
 {
-  EFI_STATUS  Status;
-  UINT8       HostCtrl2;
-  UINT8       Retry;
+  EFI_STATUS          Status;
+  UINT8               HostCtrl2;
+  UINT8               Retry;
 
   //
   // Notify the host that the sampling clock tuning procedure starts.
   //
   HostCtrl2 = BIT6;
-  Status    = SdMmcHcOrMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  Status = SdMmcHcOrMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   //
   // Ask the device to send a sequence of tuning blocks till the tuning procedure is done.
   //
@@ -714,7 +679,6 @@ SdCardTuningClock (
     if ((HostCtrl2 & (BIT6 | BIT7)) == 0) {
       break;
     }
-
     if ((HostCtrl2 & (BIT6 | BIT7)) == BIT7) {
       return EFI_SUCCESS;
     }
@@ -724,12 +688,11 @@ SdCardTuningClock (
   //
   // Abort the tuning procedure and reset the tuning circuit.
   //
-  HostCtrl2 = (UINT8) ~(BIT6 | BIT7);
-  Status    = SdMmcHcAndMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
+  HostCtrl2 = (UINT8)~(BIT6 | BIT7);
+  Status = SdMmcHcAndMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   return EFI_DEVICE_ERROR;
 }
 
@@ -751,15 +714,15 @@ SdCardTuningClock (
 **/
 EFI_STATUS
 SdCardSwitchBusWidth (
-  IN EFI_PCI_IO_PROTOCOL            *PciIo,
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot,
-  IN UINT16                         Rca,
-  IN UINT8                          BusWidth
+  IN EFI_PCI_IO_PROTOCOL                *PciIo,
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot,
+  IN UINT16                             Rca,
+  IN UINT8                              BusWidth
   )
 {
-  EFI_STATUS  Status;
-  UINT32      DevStatus;
+  EFI_STATUS          Status;
+  UINT32              DevStatus;
 
   Status = SdCardSetBusWidth (PassThru, Slot, Rca, BusWidth);
   if (EFI_ERROR (Status)) {
@@ -772,7 +735,6 @@ SdCardSwitchBusWidth (
     DEBUG ((DEBUG_ERROR, "SdCardSwitchBusWidth: Send status fails with %r\n", Status));
     return Status;
   }
-
   //
   // Check the switch operation is really successful or not.
   //
@@ -784,283 +746,6 @@ SdCardSwitchBusWidth (
   Status = SdMmcHcSetBusWidth (PciIo, Slot, BusWidth);
 
   return Status;
-}
-
-/**
-  Check if passed BusTiming is supported in both controller and card.
-
-  @param[in] Private                  Pointer to controller private data
-  @param[in] SlotIndex                Index of the slot in the controller
-  @param[in] CardSupportedBusTimings  Bitmask indicating which bus timings are supported by card
-  @param[in] IsInUhsI                 Flag indicating if link is in UHS-I
-
-  @retval TRUE  Both card and controller support given BusTiming
-  @retval FALSE Card or controller doesn't support given BusTiming
-**/
-BOOLEAN
-SdIsBusTimingSupported (
-  IN SD_MMC_HC_PRIVATE_DATA  *Private,
-  IN UINT8                   SlotIndex,
-  IN UINT8                   CardSupportedBusTimings,
-  IN BOOLEAN                 IsInUhsI,
-  IN SD_MMC_BUS_MODE         BusTiming
-  )
-{
-  SD_MMC_HC_SLOT_CAP  *Capability;
-
-  Capability = &Private->Capability[SlotIndex];
-
-  if (IsInUhsI) {
-    switch (BusTiming) {
-      case SdMmcUhsSdr104:
-        if ((Capability->Sdr104 != 0) && ((CardSupportedBusTimings & BIT3) != 0)) {
-          return TRUE;
-        }
-
-        break;
-      case SdMmcUhsDdr50:
-        if ((Capability->Ddr50 != 0) && ((CardSupportedBusTimings & BIT4) != 0)) {
-          return TRUE;
-        }
-
-        break;
-      case SdMmcUhsSdr50:
-        if ((Capability->Sdr50 != 0) && ((CardSupportedBusTimings & BIT2) != 0)) {
-          return TRUE;
-        }
-
-        break;
-      case SdMmcUhsSdr25:
-        if ((CardSupportedBusTimings & BIT1) != 0) {
-          return TRUE;
-        }
-
-        break;
-      case SdMmcUhsSdr12:
-        if ((CardSupportedBusTimings & BIT0) != 0) {
-          return TRUE;
-        }
-
-        break;
-      default:
-        break;
-    }
-  } else {
-    switch (BusTiming) {
-      case SdMmcSdHs:
-        if ((Capability->HighSpeed != 0) && ((CardSupportedBusTimings & BIT1) != 0)) {
-          return TRUE;
-        }
-
-        break;
-      case SdMmcSdDs:
-        if ((CardSupportedBusTimings & BIT0) != 0) {
-          return TRUE;
-        }
-
-        break;
-      default:
-        break;
-    }
-  }
-
-  return FALSE;
-}
-
-/**
-  Get the target bus timing to set on the link. This function
-  will try to select highest bus timing supported by card, controller
-  and the driver.
-
-  @param[in] Private                  Pointer to controller private data
-  @param[in] SlotIndex                Index of the slot in the controller
-  @param[in] CardSupportedBusTimings  Bitmask indicating which bus timings are supported by card
-  @param[in] IsInUhsI                 Flag indicating if link is in UHS-I
-
-  @return  Bus timing value that should be set on link
-**/
-SD_MMC_BUS_MODE
-SdGetTargetBusTiming (
-  IN SD_MMC_HC_PRIVATE_DATA  *Private,
-  IN UINT8                   SlotIndex,
-  IN UINT8                   CardSupportedBusTimings,
-  IN BOOLEAN                 IsInUhsI
-  )
-{
-  SD_MMC_BUS_MODE  BusTiming;
-
-  if (IsInUhsI) {
-    BusTiming = SdMmcUhsSdr104;
-  } else {
-    BusTiming = SdMmcSdHs;
-  }
-
-  while (BusTiming > SdMmcSdDs) {
-    if (SdIsBusTimingSupported (Private, SlotIndex, CardSupportedBusTimings, IsInUhsI, BusTiming)) {
-      break;
-    }
-
-    BusTiming--;
-  }
-
-  return BusTiming;
-}
-
-/**
-  Get the target bus width to be set on the bus.
-
-  @param[in] Private    Pointer to controller private data
-  @param[in] SlotIndex  Index of the slot in the controller
-  @param[in] BusTiming  Bus timing set on the bus
-
-  @return Bus width to be set on the bus
-**/
-UINT8
-SdGetTargetBusWidth (
-  IN SD_MMC_HC_PRIVATE_DATA  *Private,
-  IN UINT8                   SlotIndex,
-  IN SD_MMC_BUS_MODE         BusTiming
-  )
-{
-  UINT8  BusWidth;
-  UINT8  PreferredBusWidth;
-
-  PreferredBusWidth = Private->Slot[SlotIndex].OperatingParameters.BusWidth;
-
-  if ((BusTiming == SdMmcSdDs) || (BusTiming == SdMmcSdHs)) {
-    if ((PreferredBusWidth != EDKII_SD_MMC_BUS_WIDTH_IGNORE) &&
-        ((PreferredBusWidth == 1) || (PreferredBusWidth == 4)))
-    {
-      BusWidth = PreferredBusWidth;
-    } else {
-      BusWidth = 4;
-    }
-  } else {
-    //
-    // UHS-I modes support only 4-bit width.
-    // Switch to 4-bit has been done before calling this function anyway so
-    // this is purely informational.
-    //
-    BusWidth = 4;
-  }
-
-  return BusWidth;
-}
-
-/**
-  Get the target clock frequency to be set on the bus.
-
-  @param[in] Private    Pointer to controller private data
-  @param[in] SlotIndex  Index of the slot in the controller
-  @param[in] BusTiming  Bus timing to be set on the bus
-
-  @return Value of the clock frequency to be set on bus in MHz
-**/
-UINT32
-SdGetTargetBusClockFreq (
-  IN SD_MMC_HC_PRIVATE_DATA  *Private,
-  IN UINT8                   SlotIndex,
-  IN SD_MMC_BUS_MODE         BusTiming
-  )
-{
-  UINT32  PreferredClockFreq;
-  UINT32  MaxClockFreq;
-
-  PreferredClockFreq = Private->Slot[SlotIndex].OperatingParameters.ClockFreq;
-
-  switch (BusTiming) {
-    case SdMmcUhsSdr104:
-      MaxClockFreq = 208;
-      break;
-    case SdMmcUhsSdr50:
-      MaxClockFreq = 100;
-      break;
-    case SdMmcUhsDdr50:
-    case SdMmcUhsSdr25:
-    case SdMmcSdHs:
-      MaxClockFreq = 50;
-      break;
-    case SdMmcUhsSdr12:
-    case SdMmcSdDs:
-    default:
-      MaxClockFreq = 25;
-  }
-
-  if ((PreferredClockFreq != EDKII_SD_MMC_CLOCK_FREQ_IGNORE) && (PreferredClockFreq < MaxClockFreq)) {
-    return PreferredClockFreq;
-  } else {
-    return MaxClockFreq;
-  }
-}
-
-/**
-  Get the driver strength to be set on bus.
-
-  @param[in] Private                       Pointer to controller private data
-  @param[in] SlotIndex                     Index of the slot in the controller
-  @param[in] CardSupportedDriverStrengths  Bitmask indicating which driver strengths are supported on the card
-  @param[in] BusTiming                     Bus timing set on the bus
-
-  @return Value of the driver strength to be set on the bus
-**/
-EDKII_SD_MMC_DRIVER_STRENGTH
-SdGetTargetDriverStrength (
-  IN SD_MMC_HC_PRIVATE_DATA  *Private,
-  IN UINT8                   SlotIndex,
-  IN UINT8                   CardSupportedDriverStrengths,
-  IN SD_MMC_BUS_MODE         BusTiming
-  )
-{
-  EDKII_SD_MMC_DRIVER_STRENGTH  PreferredDriverStrength;
-  EDKII_SD_MMC_DRIVER_STRENGTH  DriverStrength;
-
-  if ((BusTiming == SdMmcSdDs) || (BusTiming == SdMmcSdHs)) {
-    DriverStrength.Sd = SdDriverStrengthIgnore;
-    return DriverStrength;
-  }
-
-  PreferredDriverStrength = Private->Slot[SlotIndex].OperatingParameters.DriverStrength;
-  DriverStrength.Sd       = SdDriverStrengthTypeB;
-
-  if ((PreferredDriverStrength.Sd != EDKII_SD_MMC_DRIVER_STRENGTH_IGNORE) &&
-      (CardSupportedDriverStrengths & (BIT0 << PreferredDriverStrength.Sd)))
-  {
-    if (((PreferredDriverStrength.Sd == SdDriverStrengthTypeA) &&
-         (Private->Capability[SlotIndex].DriverTypeA != 0)) ||
-        ((PreferredDriverStrength.Sd == SdDriverStrengthTypeC) &&
-         (Private->Capability[SlotIndex].DriverTypeC != 0)) ||
-        ((PreferredDriverStrength.Sd == SdDriverStrengthTypeD) &&
-         (Private->Capability[SlotIndex].DriverTypeD != 0)))
-    {
-      DriverStrength.Sd = PreferredDriverStrength.Sd;
-    }
-  }
-
-  return DriverStrength;
-}
-
-/**
-  Get the target settings for the bus mode.
-
-  @param[in]  Private          Pointer to controller private data
-  @param[in]  SlotIndex        Index of the slot in the controller
-  @param[in]  SwitchQueryResp  Pointer to switch query response
-  @param[in]  IsInUhsI         Flag indicating if link is in UHS-I mode
-  @param[out] BusMode          Target configuration of the bus
-**/
-VOID
-SdGetTargetBusMode (
-  IN SD_MMC_HC_PRIVATE_DATA  *Private,
-  IN UINT8                   SlotIndex,
-  IN UINT8                   *SwitchQueryResp,
-  IN BOOLEAN                 IsInUhsI,
-  OUT SD_MMC_BUS_SETTINGS    *BusMode
-  )
-{
-  BusMode->BusTiming      = SdGetTargetBusTiming (Private, SlotIndex, SwitchQueryResp[13], IsInUhsI);
-  BusMode->BusWidth       = SdGetTargetBusWidth (Private, SlotIndex, BusMode->BusTiming);
-  BusMode->ClockFreq      = SdGetTargetBusClockFreq (Private, SlotIndex, BusMode->BusTiming);
-  BusMode->DriverStrength = SdGetTargetDriverStrength (Private, SlotIndex, SwitchQueryResp[9], BusMode->BusTiming);
 }
 
 /**
@@ -1081,19 +766,22 @@ SdGetTargetBusMode (
 **/
 EFI_STATUS
 SdCardSetBusMode (
-  IN EFI_PCI_IO_PROTOCOL            *PciIo,
-  IN EFI_SD_MMC_PASS_THRU_PROTOCOL  *PassThru,
-  IN UINT8                          Slot,
-  IN UINT16                         Rca,
-  IN BOOLEAN                        S18A
+  IN EFI_PCI_IO_PROTOCOL                *PciIo,
+  IN EFI_SD_MMC_PASS_THRU_PROTOCOL      *PassThru,
+  IN UINT8                              Slot,
+  IN UINT16                             Rca,
+  IN BOOLEAN                            S18A
   )
 {
-  EFI_STATUS              Status;
-  SD_MMC_HC_SLOT_CAP      *Capability;
-  UINT8                   HostCtrl1;
-  UINT8                   SwitchResp[64];
-  SD_MMC_HC_PRIVATE_DATA  *Private;
-  SD_MMC_BUS_SETTINGS     BusMode;
+  EFI_STATUS                   Status;
+  SD_MMC_HC_SLOT_CAP           *Capability;
+  UINT32                       ClockFreq;
+  UINT8                        BusWidth;
+  UINT8                        AccessMode;
+  UINT8                        HostCtrl1;
+  UINT8                        SwitchResp[64];
+  SD_MMC_BUS_MODE              Timing;
+  SD_MMC_HC_PRIVATE_DATA       *Private;
 
   Private = SD_MMC_HC_PRIVATE_FROM_THIS (PassThru);
 
@@ -1104,75 +792,97 @@ SdCardSetBusMode (
     return Status;
   }
 
-  if (S18A) {
-    //
-    // For UHS-I speed modes 4-bit data bus is requiered so we
-    // switch here irrespective of platform preference.
-    //
-    Status = SdCardSwitchBusWidth (PciIo, PassThru, Slot, Rca, 4);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
-  }
+  BusWidth = 4;
 
+  Status = SdCardSwitchBusWidth (PciIo, PassThru, Slot, Rca, BusWidth);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
   //
   // Get the supported bus speed from SWITCH cmd return data group #1.
   //
-  Status = SdCardSwitch (PassThru, Slot, 0xFF, 0xF, SdDriverStrengthIgnore, 0xF, FALSE, SwitchResp);
+  Status = SdCardSwitch (PassThru, Slot, 0xF, 0xF, 0xF, 0xF, FALSE, SwitchResp);
+  if (EFI_ERROR (Status)) {
+    return Status;
+  }
+  //
+  // Calculate supported bus speed/bus width/clock frequency by host and device capability.
+  //
+  ClockFreq = 0;
+  if (S18A && (Capability->Sdr104 != 0) && ((SwitchResp[13] & BIT3) != 0)) {
+    ClockFreq = 208;
+    AccessMode = 3;
+    Timing = SdMmcUhsSdr104;
+  } else if (S18A && (Capability->Sdr50 != 0) && ((SwitchResp[13] & BIT2) != 0)) {
+    ClockFreq = 100;
+    AccessMode = 2;
+    Timing = SdMmcUhsSdr50;
+  } else if (S18A && (Capability->Ddr50 != 0) && ((SwitchResp[13] & BIT4) != 0)) {
+    ClockFreq = 50;
+    AccessMode = 4;
+    Timing = SdMmcUhsDdr50;
+  } else if ((SwitchResp[13] & BIT1) != 0) {
+    ClockFreq = 50;
+    AccessMode = 1;
+    Timing = SdMmcUhsSdr25;
+  } else {
+    ClockFreq = 25;
+    AccessMode = 0;
+    Timing = SdMmcUhsSdr12;
+  }
+
+  Status = SdCardSwitch (PassThru, Slot, AccessMode, 0xF, 0xF, 0xF, TRUE, SwitchResp);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  SdGetTargetBusMode (Private, Slot, SwitchResp, S18A, &BusMode);
-
-  DEBUG ((
-    DEBUG_INFO,
-    "SdCardSetBusMode: Target bus mode: bus timing = %d, bus width = %d, clock freq[MHz] = %d, driver strength = %d\n",
-    BusMode.BusTiming,
-    BusMode.BusWidth,
-    BusMode.ClockFreq,
-    BusMode.DriverStrength.Sd
-    ));
-
-  if (!S18A) {
-    Status = SdCardSwitchBusWidth (PciIo, PassThru, Slot, Rca, BusMode.BusWidth);
-    if (EFI_ERROR (Status)) {
-      return Status;
-    }
+  if ((SwitchResp[16] & 0xF) != AccessMode) {
+    DEBUG ((DEBUG_ERROR, "SdCardSetBusMode: Switch to AccessMode %d ClockFreq %d BusWidth %d fails! The Switch response is 0x%1x\n", AccessMode, ClockFreq, BusWidth, SwitchResp[16] & 0xF));
+    return EFI_DEVICE_ERROR;
   }
 
-  Status = SdCardSwitch (PassThru, Slot, BusMode.BusTiming, 0xF, BusMode.DriverStrength.Sd, 0xF, TRUE, SwitchResp);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
-
-  Status = SdMmcSetDriverStrength (Private->PciIo, Slot, BusMode.DriverStrength.Sd);
-  if (EFI_ERROR (Status)) {
-    return Status;
-  }
+  DEBUG ((DEBUG_INFO, "SdCardSetBusMode: Switch to AccessMode %d ClockFreq %d BusWidth %d\n", AccessMode, ClockFreq, BusWidth));
 
   //
-  // Set to High Speed timing
+  // Set to Hight Speed timing
   //
-  if (BusMode.BusTiming == SdMmcSdHs) {
+  if (AccessMode == 1) {
     HostCtrl1 = BIT2;
-    Status    = SdMmcHcOrMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
+    Status = SdMmcHcOrMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL1, sizeof (HostCtrl1), &HostCtrl1);
     if (EFI_ERROR (Status)) {
       return Status;
     }
   }
 
-  Status = SdMmcHcUhsSignaling (Private->ControllerHandle, PciIo, Slot, BusMode.BusTiming);
+  Status = SdMmcHcUhsSignaling (Private->ControllerHandle, PciIo, Slot, Timing);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  Status = SdMmcHcClockSupply (Private, Slot, BusMode.BusTiming, FALSE, BusMode.ClockFreq * 1000);
+  Status = SdMmcHcClockSupply (PciIo, Slot, ClockFreq * 1000, Private->BaseClkFreq[Slot], Private->ControllerVersion[Slot]);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  if ((BusMode.BusTiming == SdMmcUhsSdr104) || ((BusMode.BusTiming == SdMmcUhsSdr50) && (Capability->TuningSDR50 != 0))) {
+  if (mOverride != NULL && mOverride->NotifyPhase != NULL) {
+    Status = mOverride->NotifyPhase (
+                          Private->ControllerHandle,
+                          Slot,
+                          EdkiiSdMmcSwitchClockFreqPost,
+                          &Timing
+                          );
+    if (EFI_ERROR (Status)) {
+      DEBUG ((
+        DEBUG_ERROR,
+        "%a: SD/MMC switch clock freq post notifier callback failed - %r\n",
+        __FUNCTION__,
+        Status
+        ));
+      return Status;
+    }
+  }
+
+  if ((AccessMode == 3) || ((AccessMode == 2) && (Capability->TuningSDR50 != 0))) {
     Status = SdCardTuningClock (PciIo, PassThru, Slot);
     if (EFI_ERROR (Status)) {
       return Status;
@@ -1196,8 +906,8 @@ SdCardSetBusMode (
 **/
 EFI_STATUS
 SdCardIdentification (
-  IN SD_MMC_HC_PRIVATE_DATA  *Private,
-  IN UINT8                   Slot
+  IN SD_MMC_HC_PRIVATE_DATA             *Private,
+  IN UINT8                              Slot
   )
 {
   EFI_STATUS                     Status;
@@ -1213,14 +923,9 @@ SdCardIdentification (
   UINT32                         PresentState;
   UINT8                          HostCtrl2;
   UINTN                          Retry;
-  BOOLEAN                        ForceVoltage33;
-
-  ForceVoltage33 = FALSE;
 
   PciIo    = Private->PciIo;
   PassThru = &Private->PassThru;
-
-Voltage33Retry:
   //
   // 1. Send Cmd0 to the device
   //
@@ -1229,7 +934,6 @@ Voltage33Retry:
     DEBUG ((DEBUG_INFO, "SdCardIdentification: Executing Cmd0 fails with %r\n", Status));
     return Status;
   }
-
   //
   // 2. Send Cmd8 to the device
   //
@@ -1238,7 +942,6 @@ Voltage33Retry:
     DEBUG ((DEBUG_INFO, "SdCardIdentification: Executing Cmd8 fails with %r\n", Status));
     return Status;
   }
-
   //
   // 3. Send SDIO Cmd5 to the device to the SDIO device OCR register.
   //
@@ -1247,7 +950,6 @@ Voltage33Retry:
     DEBUG ((DEBUG_INFO, "SdCardIdentification: Found SDIO device, ignore it as we don't support\n"));
     return EFI_DEVICE_ERROR;
   }
-
   //
   // 4. Send Acmd41 with voltage window 0 to the device
   //
@@ -1289,8 +991,7 @@ Voltage33Retry:
   }
 
   if (((ControllerVer & 0xFF) >= SD_MMC_HC_CTRL_VER_300) &&
-      ((ControllerVer & 0xFF) <= SD_MMC_HC_CTRL_VER_420))
-  {
+      ((ControllerVer & 0xFF) <= SD_MMC_HC_CTRL_VER_420)) {
     S18r = TRUE;
   } else if (((ControllerVer & 0xFF) == SD_MMC_HC_CTRL_VER_100) || ((ControllerVer & 0xFF) == SD_MMC_HC_CTRL_VER_200)) {
     S18r = FALSE;
@@ -1298,14 +999,6 @@ Voltage33Retry:
     ASSERT (FALSE);
     return EFI_UNSUPPORTED;
   }
-
-  //
-  // 1.8V had failed in the previous run, forcing a retry with 3.3V instead
-  //
-  if (ForceVoltage33 == TRUE) {
-    S18r = FALSE;
-  }
-
   //
   // 5. Repeatly send Acmd41 with supply voltage window to the device.
   //    Note here we only support the cards complied with SD physical
@@ -1324,8 +1017,7 @@ Voltage33Retry:
       DEBUG ((DEBUG_ERROR, "SdCardIdentification: SdCardSendOpCond fails too many times\n"));
       return EFI_DEVICE_ERROR;
     }
-
-    gBS->Stall (10 * 1000);
+    gBS->Stall(10 * 1000);
   } while ((Ocr & BIT31) == 0);
 
   //
@@ -1333,11 +1025,10 @@ Voltage33Retry:
   //    (One of support bits is set to 1: SDR50, SDR104 or DDR50 in the
   //    Capabilities register), switch its voltage to 1.8V.
   //
-  if (((Private->Capability[Slot].Sdr50 != 0) ||
-       (Private->Capability[Slot].Sdr104 != 0) ||
-       (Private->Capability[Slot].Ddr50 != 0)) &&
-      ((Ocr & BIT24) != 0))
-  {
+  if ((Private->Capability[Slot].Sdr50 != 0 ||
+       Private->Capability[Slot].Sdr104 != 0 ||
+       Private->Capability[Slot].Ddr50 != 0) &&
+       ((Ocr & BIT24) != 0)) {
     Status = SdCardVoltageSwitch (PassThru, Slot);
     if (EFI_ERROR (Status)) {
       DEBUG ((DEBUG_ERROR, "SdCardIdentification: Executing SdCardVoltageSwitch fails with %r\n", Status));
@@ -1356,8 +1047,7 @@ Voltage33Retry:
         Status = EFI_DEVICE_ERROR;
         goto Error;
       }
-
-      HostCtrl2 = BIT3;
+      HostCtrl2  = BIT3;
       SdMmcHcOrMmio (PciIo, Slot, SD_MMC_HC_HOST_CTRL2, sizeof (HostCtrl2), &HostCtrl2);
 
       gBS->Stall (5000);
@@ -1369,42 +1059,17 @@ Voltage33Retry:
         goto Error;
       }
 
-      Status = SdMmcHcStartSdClock (PciIo, Slot);
-      if (EFI_ERROR (Status)) {
-        goto Error;
-      }
+      SdMmcHcInitClockFreq (PciIo, Slot, Private->BaseClkFreq[Slot], Private->ControllerVersion[Slot]);
 
       gBS->Stall (1000);
 
       SdMmcHcRwMmio (PciIo, Slot, SD_MMC_HC_PRESENT_STATE, TRUE, sizeof (PresentState), &PresentState);
       if (((PresentState >> 20) & 0xF) != 0xF) {
-        //
-        // Delay 50 milliseconds in order for clock to stabilize, retry reading the SD_MMC_HC_PRESENT_STATE
-        //
-        gBS->Stall (50000);
-        SdMmcHcRwMmio (PciIo, Slot, SD_MMC_HC_PRESENT_STATE, TRUE, sizeof (PresentState), &PresentState);
-        if (((PresentState >> 20) & 0xF) != 0xF) {
-          DEBUG ((DEBUG_ERROR, "SdCardIdentification: SwitchVoltage fails with PresentState = 0x%x, It should be 0xF\n", PresentState));
-          //
-          // Reset and reinitialize the slot before the 3.3V retry.
-          //
-          Status = SdMmcHcReset (Private, Slot);
-          if (EFI_ERROR (Status)) {
-            goto Error;
-          }
-
-          Status = SdMmcHcInitHost (Private, Slot);
-          if (EFI_ERROR (Status)) {
-            goto Error;
-          }
-
-          DEBUG ((DEBUG_ERROR, "SdCardIdentification: Switching to 1.8V failed, forcing a retry with 3.3V instead\n"));
-          ForceVoltage33 = TRUE;
-          goto Voltage33Retry;
-        }
+        DEBUG ((DEBUG_ERROR, "SdCardIdentification: SwitchVoltage fails with PresentState = 0x%x, It should be 0xF\n", PresentState));
+        Status = EFI_DEVICE_ERROR;
+        goto Error;
       }
     }
-
     DEBUG ((DEBUG_INFO, "SdCardIdentification: Switch to 1.8v signal voltage success\n"));
   }
 
@@ -1419,7 +1084,6 @@ Voltage33Retry:
     DEBUG ((DEBUG_ERROR, "SdCardIdentification: Executing SdCardSetRca fails with %r\n", Status));
     return Status;
   }
-
   //
   // Enter Data Tranfer Mode.
   //
@@ -1434,7 +1098,8 @@ Error:
   //
   // Set SD Bus Power = 0
   //
-  PowerCtrl = (UINT8) ~BIT0;
-  Status    = SdMmcHcAndMmio (PciIo, Slot, SD_MMC_HC_POWER_CTRL, sizeof (PowerCtrl), &PowerCtrl);
+  PowerCtrl = (UINT8)~BIT0;
+  Status = SdMmcHcAndMmio (PciIo, Slot, SD_MMC_HC_POWER_CTRL, sizeof (PowerCtrl), &PowerCtrl);
   return EFI_DEVICE_ERROR;
 }
+

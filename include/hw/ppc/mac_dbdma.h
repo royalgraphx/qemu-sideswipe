@@ -27,7 +27,6 @@
 #include "qemu/iov.h"
 #include "sysemu/dma.h"
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 typedef struct DBDMA_io DBDMA_io;
 
@@ -161,14 +160,13 @@ typedef struct DBDMA_channel {
     dbdma_cmd current;
 } DBDMA_channel;
 
-struct DBDMAState {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion mem;
     DBDMA_channel channels[DBDMA_CHANNELS];
     QEMUBH *bh;
-};
-typedef struct DBDMAState DBDMAState;
+} DBDMAState;
 
 /* Externally callable functions */
 
@@ -178,6 +176,6 @@ void DBDMA_register_channel(void *dbdma, int nchan, qemu_irq irq,
 void DBDMA_kick(DBDMAState *dbdma);
 
 #define TYPE_MAC_DBDMA "mac-dbdma"
-OBJECT_DECLARE_SIMPLE_TYPE(DBDMAState, MAC_DBDMA)
+#define MAC_DBDMA(obj) OBJECT_CHECK(DBDMAState, (obj), TYPE_MAC_DBDMA)
 
 #endif

@@ -27,11 +27,9 @@
 #include "qapi/error.h"
 #include "qemu/error-report.h"
 #include "hw/ipmi/ipmi.h"
-#include "qom/object.h"
-#include "hw/acpi/ipmi.h"
 
 #define TYPE_SMBUS_IPMI "smbus-ipmi"
-OBJECT_DECLARE_SIMPLE_TYPE(SMBusIPMIDevice, SMBUS_IPMI)
+#define SMBUS_IPMI(obj) OBJECT_CHECK(SMBusIPMIDevice, (obj), TYPE_SMBUS_IPMI)
 
 #define SSIF_IPMI_REQUEST                       2
 #define SSIF_IPMI_MULTI_PART_REQUEST_START      6
@@ -46,7 +44,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(SMBusIPMIDevice, SMBUS_IPMI)
 
 #define IPMI_GET_SYS_INTF_CAP_CMD 0x57
 
-struct SMBusIPMIDevice {
+typedef struct SMBusIPMIDevice {
     SMBusDevice parent;
 
     IPMIBmc *bmc;
@@ -69,7 +67,7 @@ struct SMBusIPMIDevice {
     uint8_t waiting_rsp;
 
     uint32_t uuid;
-};
+} SMBusIPMIDevice;
 
 static void smbus_ipmi_handle_event(IPMIInterface *ii)
 {
@@ -281,9 +279,7 @@ static int ipmi_write_data(SMBusDevice *dev, uint8_t *buf, uint8_t len)
              */
             send = true;
         }
-        if (len > 0) {
-            memcpy(sid->inmsg + sid->inlen, buf, len);
-        }
+        memcpy(sid->inmsg + sid->inlen, buf, len);
         sid->inlen += len;
         break;
     }
@@ -356,7 +352,6 @@ static void smbus_ipmi_class_init(ObjectClass *oc, void *data)
     DeviceClass *dc = DEVICE_CLASS(oc);
     IPMIInterfaceClass *iic = IPMI_INTERFACE_CLASS(oc);
     SMBusDeviceClass *sc = SMBUS_DEVICE_CLASS(oc);
-    AcpiDevAmlIfClass *adevc = ACPI_DEV_AML_IF_CLASS(oc);
 
     sc->receive_byte = ipmi_receive_byte;
     sc->write_data = ipmi_write_data;
@@ -367,7 +362,6 @@ static void smbus_ipmi_class_init(ObjectClass *oc, void *data)
     iic->handle_if_event = smbus_ipmi_handle_event;
     iic->set_irq_enable = smbus_ipmi_set_irq_enable;
     iic->get_fwinfo = smbus_ipmi_get_fwinfo;
-    adevc->build_dev_aml = build_ipmi_dev_aml;
 }
 
 static const TypeInfo smbus_ipmi_info = {
@@ -378,7 +372,6 @@ static const TypeInfo smbus_ipmi_info = {
     .class_init    = smbus_ipmi_class_init,
     .interfaces = (InterfaceInfo[]) {
         { TYPE_IPMI_INTERFACE },
-        { TYPE_ACPI_DEV_AML_IF },
         { }
     }
 };

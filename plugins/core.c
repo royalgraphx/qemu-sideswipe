@@ -23,12 +23,14 @@
 #include "hw/core/cpu.h"
 #include "exec/cpu-common.h"
 
+#include "cpu.h"
 #include "exec/exec-all.h"
 #include "exec/helper-proto.h"
+#include "sysemu/sysemu.h"
 #include "tcg/tcg.h"
 #include "tcg/tcg-op.h"
+#include "trace/mem-internal.h" /* mem_info macros */
 #include "plugin.h"
-#include "qemu/compiler.h"
 
 struct qemu_plugin_cb {
     struct qemu_plugin_ctx *ctx;
@@ -56,7 +58,7 @@ struct qemu_plugin_ctx *plugin_id_to_ctx_locked(qemu_plugin_id_t id)
 static void plugin_cpu_update__async(CPUState *cpu, run_on_cpu_data data)
 {
     bitmap_copy(cpu->plugin_mask, &data.host_ulong, QEMU_PLUGIN_EV_MAX);
-    tcg_flush_jmp_cache(cpu);
+    cpu_tb_jmp_cache_clear(cpu);
 }
 
 static void plugin_cpu_update__locked(gpointer k, gpointer v, gpointer udata)
@@ -88,12 +90,6 @@ void plugin_unregister_cb__locked(struct qemu_plugin_ctx *ctx,
     }
 }
 
-/*
- * Disable CFI checks.
- * The callback function has been loaded from an external library so we do not
- * have type information
- */
-QEMU_DISABLE_CFI
 static void plugin_vcpu_cb__simple(CPUState *cpu, enum qemu_plugin_event ev)
 {
     struct qemu_plugin_cb *cb, *next;
@@ -115,12 +111,6 @@ static void plugin_vcpu_cb__simple(CPUState *cpu, enum qemu_plugin_event ev)
     }
 }
 
-/*
- * Disable CFI checks.
- * The callback function has been loaded from an external library so we do not
- * have type information
- */
-QEMU_DISABLE_CFI
 static void plugin_cb__simple(enum qemu_plugin_event ev)
 {
     struct qemu_plugin_cb *cb, *next;
@@ -138,12 +128,6 @@ static void plugin_cb__simple(enum qemu_plugin_event ev)
     }
 }
 
-/*
- * Disable CFI checks.
- * The callback function has been loaded from an external library so we do not
- * have type information
- */
-QEMU_DISABLE_CFI
 static void plugin_cb__udata(enum qemu_plugin_event ev)
 {
     struct qemu_plugin_cb *cb, *next;
@@ -294,15 +278,33 @@ void plugin_register_inline_op(GArray **arr,
     dyn_cb->inline_insn.imm = imm;
 }
 
-void plugin_register_dyn_cb__udata(GArray **arr,
-                                   qemu_plugin_vcpu_udata_cb_t cb,
-                                   enum qemu_plugin_cb_flags flags,
-                                   void *udata)
+static inline uint32_t cb_to_tcg_flags(enum qemu_plugin_cb_flags flags)
+{
+    uint32_t ret;
+
+    switch (flags) {
+    case QEMU_PLUGIN_CB_RW_REGS:
+        ret = 0;
+        break;
+    case QEMU_PLUGIN_CB_R_REGS:
+        ret = TCG_CALL_NO_WG;
+        break;
+    case QEMU_PLUGIN_CB_NO_REGS:
+    default:
+        ret = TCG_CALL_NO_RWG;
+    }
+    return ret;
+}
+
+inline void
+plugin_register_dyn_cb__udata(GArray **arr,
+                              qemu_plugin_vcpu_udata_cb_t cb,
+                              enum qemu_plugin_cb_flags flags, void *udata)
 {
     struct qemu_plugin_dyn_cb *dyn_cb = plugin_get_dyn_cb(arr);
 
     dyn_cb->userp = udata;
-    /* Note flags are discarded as unused. */
+    dyn_cb->tcg_flags = cb_to_tcg_flags(flags);
     dyn_cb->f.vcpu_udata = cb;
     dyn_cb->type = PLUGIN_CB_REGULAR;
 }
@@ -317,18 +319,12 @@ void plugin_register_vcpu_mem_cb(GArray **arr,
 
     dyn_cb = plugin_get_dyn_cb(arr);
     dyn_cb->userp = udata;
-    /* Note flags are discarded as unused. */
+    dyn_cb->tcg_flags = cb_to_tcg_flags(flags);
     dyn_cb->type = PLUGIN_CB_REGULAR;
     dyn_cb->rw = rw;
     dyn_cb->f.generic = cb;
 }
 
-/*
- * Disable CFI checks.
- * The callback function has been loaded from an external library so we do not
- * have type information
- */
-QEMU_DISABLE_CFI
 void qemu_plugin_tb_trans_cb(CPUState *cpu, struct qemu_plugin_tb *tb)
 {
     struct qemu_plugin_cb *cb, *next;
@@ -343,12 +339,6 @@ void qemu_plugin_tb_trans_cb(CPUState *cpu, struct qemu_plugin_tb *tb)
     }
 }
 
-/*
- * Disable CFI checks.
- * The callback function has been loaded from an external library so we do not
- * have type information
- */
-QEMU_DISABLE_CFI
 void
 qemu_plugin_vcpu_syscall(CPUState *cpu, int64_t num, uint64_t a1, uint64_t a2,
                          uint64_t a3, uint64_t a4, uint64_t a5,
@@ -368,12 +358,6 @@ qemu_plugin_vcpu_syscall(CPUState *cpu, int64_t num, uint64_t a1, uint64_t a2,
     }
 }
 
-/*
- * Disable CFI checks.
- * The callback function has been loaded from an external library so we do not
- * have type information
- */
-QEMU_DISABLE_CFI
 void qemu_plugin_vcpu_syscall_ret(CPUState *cpu, int64_t num, int64_t ret)
 {
     struct qemu_plugin_cb *cb, *next;
@@ -445,8 +429,7 @@ void exec_inline_op(struct qemu_plugin_dyn_cb *cb)
     }
 }
 
-void qemu_plugin_vcpu_mem_cb(CPUState *cpu, uint64_t vaddr,
-                             MemOpIdx oi, enum qemu_plugin_mem_rw rw)
+void qemu_plugin_vcpu_mem_cb(CPUState *cpu, uint64_t vaddr, uint32_t info)
 {
     GArray *arr = cpu->plugin_mem_cbs;
     size_t i;
@@ -457,14 +440,14 @@ void qemu_plugin_vcpu_mem_cb(CPUState *cpu, uint64_t vaddr,
     for (i = 0; i < arr->len; i++) {
         struct qemu_plugin_dyn_cb *cb =
             &g_array_index(arr, struct qemu_plugin_dyn_cb, i);
+        int w = !!(info & TRACE_MEM_ST) + 1;
 
-        if (!(rw & cb->rw)) {
+        if (!(w & cb->rw)) {
                 break;
         }
         switch (cb->type) {
         case PLUGIN_CB_REGULAR:
-            cb->f.vcpu_mem(cpu->cpu_index, make_plugin_meminfo(oi, rw),
-                           vaddr, cb->userp);
+            cb->f.vcpu_mem(cpu->cpu_index, info, vaddr, cb->userp);
             break;
         case PLUGIN_CB_INLINE:
             exec_inline_op(cb);
@@ -486,65 +469,6 @@ void qemu_plugin_register_atexit_cb(qemu_plugin_id_t id,
 {
     plugin_register_cb_udata(id, QEMU_PLUGIN_EV_ATEXIT, cb, udata);
 }
-
-/*
- * Handle exit from linux-user. Unlike the normal atexit() mechanism
- * we need to handle the clean-up manually as it's possible threads
- * are still running. We need to remove all callbacks from code
- * generation, flush the current translations and then we can safely
- * trigger the exit callbacks.
- */
-
-void qemu_plugin_user_exit(void)
-{
-    enum qemu_plugin_event ev;
-    CPUState *cpu;
-
-    QEMU_LOCK_GUARD(&plugin.lock);
-
-    start_exclusive();
-
-    /* un-register all callbacks except the final AT_EXIT one */
-    for (ev = 0; ev < QEMU_PLUGIN_EV_MAX; ev++) {
-        if (ev != QEMU_PLUGIN_EV_ATEXIT) {
-            struct qemu_plugin_ctx *ctx;
-            QTAILQ_FOREACH(ctx, &plugin.ctxs, entry) {
-                plugin_unregister_cb__locked(ctx, ev);
-            }
-        }
-    }
-
-    tb_flush(current_cpu);
-
-    CPU_FOREACH(cpu) {
-        qemu_plugin_disable_mem_helpers(cpu);
-    }
-
-    end_exclusive();
-
-    /* now it's safe to handle the exit case */
-    qemu_plugin_atexit_cb();
-}
-
-/*
- * Helpers for *-user to ensure locks are sane across fork() events.
- */
-
-void qemu_plugin_user_prefork_lock(void)
-{
-    qemu_rec_mutex_lock(&plugin.lock);
-}
-
-void qemu_plugin_user_postfork(bool is_child)
-{
-    if (is_child) {
-        /* should we just reset via plugin_init? */
-        qemu_rec_mutex_init(&plugin.lock);
-    } else {
-        qemu_rec_mutex_unlock(&plugin.lock);
-    }
-}
-
 
 /*
  * Call this function after longjmp'ing to the main loop. It's possible that the

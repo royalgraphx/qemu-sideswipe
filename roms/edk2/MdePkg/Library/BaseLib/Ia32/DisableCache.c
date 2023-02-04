@@ -27,3 +27,4 @@ AsmDisableCache (
     wbinvd
   }
 }
+

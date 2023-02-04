@@ -1,7 +1,7 @@
 ## @file
 # parse FDF file
 #
-#  Copyright (c) 2007 - 2021, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2007 - 2018, Intel Corporation. All rights reserved.<BR>
 #  Copyright (c) 2015, Hewlett Packard Enterprise Development, L.P.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -18,7 +18,7 @@ from uuid import UUID
 
 from Common.BuildToolError import *
 from Common import EdkLogger
-from Common.Misc import PathClass, tdict, ProcessDuplicatedInf, GuidStructureStringToGuidString
+from Common.Misc import PathClass, tdict, ProcessDuplicatedInf
 from Common.StringUtils import NormPath, ReplaceMacro
 from Common import GlobalData
 from Common.Expression import *
@@ -1086,8 +1086,6 @@ class FdfParser:
         if not self._GetNextToken():
             return False
         if GlobalData.gGuidPattern.match(self._Token) is not None:
-            return True
-        elif self._Token in GlobalData.gGuidDict:
             return True
         else:
             self._UndoToken()
@@ -2250,8 +2248,6 @@ class FdfParser:
 
         if not self._GetNextGuid():
             raise Warning.Expected("GUID value", self.FileName, self.CurrentLineNumber)
-        if self._Token in GlobalData.gGuidDict:
-            self._Token = GuidStructureStringToGuidString(GlobalData.gGuidDict[self._Token]).upper()
 
         FvObj.FvNameGuid = self._Token
 
@@ -2463,8 +2459,6 @@ class FdfParser:
                 raise Warning.ExpectedEquals(self.FileName, self.CurrentLineNumber)
             if not self._GetNextGuid():
                 raise Warning.Expected("GUID value", self.FileName, self.CurrentLineNumber)
-            if self._Token in GlobalData.gGuidDict:
-                self._Token = GuidStructureStringToGuidString(GlobalData.gGuidDict[self._Token]).upper()
             FfsInfObj.OverrideGuid = self._Token
 
         if self._IsKeyword("RuleOverride"):
@@ -2556,8 +2550,6 @@ class FdfParser:
                     raise Warning.Expected("')'", self.FileName, self.CurrentLineNumber)
                 self._Token = 'PCD('+PcdPair[1]+TAB_SPLIT+PcdPair[0]+')'
 
-        if self._Token in GlobalData.gGuidDict:
-            self._Token = GuidStructureStringToGuidString(GlobalData.gGuidDict[self._Token]).upper()
         FfsFileObj.NameGuid = self._Token
 
         self._GetFilePart(FfsFileObj)
@@ -2988,8 +2980,6 @@ class FdfParser:
         elif self._IsKeyword("GUIDED"):
             GuidValue = None
             if self._GetNextGuid():
-                if self._Token in GlobalData.gGuidDict:
-                    self._Token = GuidStructureStringToGuidString(GlobalData.gGuidDict[self._Token]).upper()
                 GuidValue = self._Token
 
             AttribDict = self._GetGuidAttrib()
@@ -3504,6 +3494,8 @@ class FdfParser:
             raise Warning.Expected("'.'", self.FileName, self.CurrentLineNumber)
 
         Arch = self._SkippedChars.rstrip(TAB_SPLIT)
+        if Arch.upper() not in ARCH_SET_FULL:
+            raise Warning("Unknown Arch '%s'" % Arch, self.FileName, self.CurrentLineNumber)
 
         ModuleType = self._GetModuleType()
 
@@ -3551,7 +3543,7 @@ class FdfParser:
                 SUP_MODULE_DXE_CORE, SUP_MODULE_DXE_DRIVER,
                 SUP_MODULE_DXE_SAL_DRIVER, SUP_MODULE_DXE_SMM_DRIVER,
                 SUP_MODULE_DXE_RUNTIME_DRIVER, SUP_MODULE_UEFI_DRIVER,
-                SUP_MODULE_UEFI_APPLICATION, SUP_MODULE_USER_DEFINED, SUP_MODULE_HOST_APPLICATION,
+                SUP_MODULE_UEFI_APPLICATION, SUP_MODULE_USER_DEFINED,
                 TAB_DEFAULT, SUP_MODULE_BASE,
                 EDK_COMPONENT_TYPE_SECURITY_CORE,
                 EDK_COMPONENT_TYPE_COMBINED_PEIM_DRIVER,
@@ -3757,19 +3749,8 @@ class FdfParser:
     #
     def _GetEfiSection(self, Obj):
         OldPos = self.GetFileBufferPos()
-        EfiSectionObj = EfiSection()
         if not self._GetNextWord():
-            CurrentLine = self._CurrentLine()[self.CurrentOffsetWithinLine:].split()[0].strip()
-            if self._Token == '{' and Obj.FvFileType == "RAW" and TAB_SPLIT in CurrentLine:
-                if self._IsToken(TAB_VALUE_SPLIT):
-                    EfiSectionObj.FileExtension = self._GetFileExtension()
-                elif self._GetNextToken():
-                    EfiSectionObj.FileName = self._Token
-                EfiSectionObj.SectionType = BINARY_FILE_TYPE_RAW
-                Obj.SectionList.append(EfiSectionObj)
-                return True
-            else:
-                return False
+            return False
         SectionName = self._Token
 
         if SectionName not in {
@@ -3835,6 +3816,7 @@ class FdfParser:
             Obj.SectionList.append(FvImageSectionObj)
             return True
 
+        EfiSectionObj = EfiSection()
         EfiSectionObj.SectionType = SectionName
 
         if not self._GetNextToken():
@@ -4057,8 +4039,6 @@ class FdfParser:
         elif self._IsKeyword("GUIDED"):
             GuidValue = None
             if self._GetNextGuid():
-                if self._Token in GlobalData.gGuidDict:
-                    self._Token = GuidStructureStringToGuidString(GlobalData.gGuidDict[self._Token]).upper()
                 GuidValue = self._Token
 
             if self._IsKeyword("$(NAMED_GUID)"):

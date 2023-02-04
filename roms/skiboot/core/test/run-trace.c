@@ -1,6 +1,17 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * Copyright 2013-2019 IBM Corp.
+/* Copyright 2013-2014 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <config.h>
@@ -101,11 +112,6 @@ struct dt_node *opal_node;
 struct debug_descriptor debug_descriptor = {
 	.trace_mask = -1
 };
-
-const char *nvram_query_safe(const char *key __unused)
-{
-	return NULL;
-}
 
 void lock_caller(struct lock *l, const char *caller)
 {
@@ -268,7 +274,6 @@ int main(void)
 	dt_new(dt_new(opal_node, "firmware"), "exports");
 	for (i = 0; i < CPUS; i++) {
 		fake_cpus[i].server_no = i;
-		fake_cpus[i].pir = i;
 		fake_cpus[i].is_secondary = (i & 0x1);
 		fake_cpus[i].primary = &fake_cpus[i & ~0x1];
 	}

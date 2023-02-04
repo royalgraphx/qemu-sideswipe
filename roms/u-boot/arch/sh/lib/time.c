@@ -11,10 +11,13 @@
  */
 
 #include <common.h>
-#include <init.h>
 #include <asm/processor.h>
 #include <asm/io.h>
-#include <linux/bitops.h>
+
+#if defined(CONFIG_CPU_SH3)
+#define TSTR	0x2
+#define TCR0	0xc
+#endif /* CONFIG_CPU_SH3 */
 
 #if defined(CONFIG_CPU_SH4) || defined(CONFIG_ARCH_RMOBILE)
 #define TSTR	0x4

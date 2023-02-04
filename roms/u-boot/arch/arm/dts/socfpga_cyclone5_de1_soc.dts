@@ -4,7 +4,6 @@
  */
 
 #include "socfpga_cyclone5.dtsi"
-#include "socfpga-common-u-boot.dtsi"
 
 / {
 	model = "Terasic DE1-SoC";
@@ -24,6 +23,10 @@
 		name = "memory";
 		device_type = "memory";
 		reg = <0x0 0x40000000>; /* 1GB */
+	};
+
+	soc {
+		u-boot,dm-pre-reloc;
 	};
 };
 

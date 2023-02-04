@@ -25,19 +25,44 @@
 
 
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "libqtest-single.h"
+#include "qemu-common.h"
 #include "libqos/pci-pc.h"
 #include "qemu/sockets.h"
 #include "qemu/iov.h"
 #include "qemu/module.h"
 #include "qemu/bitops.h"
-#include "libqos/libqos-malloc.h"
+#include "libqos/malloc.h"
 #include "libqos/e1000e.h"
-#include "hw/net/e1000_regs.h"
 
 static void e1000e_send_verify(QE1000E *d, int *test_sockets, QGuestAllocator *alloc)
 {
-    struct e1000_tx_desc descr;
+    struct {
+        uint64_t buffer_addr;
+        union {
+            uint32_t data;
+            struct {
+                uint16_t length;
+                uint8_t cso;
+                uint8_t cmd;
+            } flags;
+        } lower;
+        union {
+            uint32_t data;
+            struct {
+                uint8_t status;
+                uint8_t css;
+                uint16_t special;
+            } fields;
+        } upper;
+    } descr;
+
+    static const uint32_t dtyp_data = BIT(20);
+    static const uint32_t dtyp_ext  = BIT(29);
+    static const uint32_t dcmd_rs   = BIT(27);
+    static const uint32_t dcmd_eop  = BIT(24);
+    static const uint32_t dsta_dd   = BIT(0);
     static const int data_len = 64;
     char buffer[64];
     int ret;
@@ -50,10 +75,10 @@ static void e1000e_send_verify(QE1000E *d, int *test_sockets, QGuestAllocator *a
     /* Prepare TX descriptor */
     memset(&descr, 0, sizeof(descr));
     descr.buffer_addr = cpu_to_le64(data);
-    descr.lower.data = cpu_to_le32(E1000_TXD_CMD_RS   |
-                                   E1000_TXD_CMD_EOP  |
-                                   E1000_TXD_CMD_DEXT |
-                                   E1000_TXD_DTYP_D   |
+    descr.lower.data = cpu_to_le32(dcmd_rs   |
+                                   dcmd_eop  |
+                                   dtyp_ext  |
+                                   dtyp_data |
                                    data_len);
 
     /* Put descriptor to the ring */
@@ -63,14 +88,12 @@ static void e1000e_send_verify(QE1000E *d, int *test_sockets, QGuestAllocator *a
     e1000e_wait_isr(d, E1000E_TX0_MSG_ID);
 
     /* Check DD bit */
-    g_assert_cmphex(le32_to_cpu(descr.upper.data) & E1000_TXD_STAT_DD, ==,
-                    E1000_TXD_STAT_DD);
+    g_assert_cmphex(le32_to_cpu(descr.upper.data) & dsta_dd, ==, dsta_dd);
 
     /* Check data sent to the backend */
-    ret = recv(test_sockets[0], &recv_len, sizeof(recv_len), 0);
+    ret = qemu_recv(test_sockets[0], &recv_len, sizeof(recv_len), 0);
     g_assert_cmpint(ret, == , sizeof(recv_len));
-    ret = recv(test_sockets[0], buffer, 64, 0);
-    g_assert_cmpint(ret, >=, 5);
+    qemu_recv(test_sockets[0], buffer, 64, 0);
     g_assert_cmpstr(buffer, == , "TEST");
 
     /* Free test data buffer */
@@ -79,7 +102,31 @@ static void e1000e_send_verify(QE1000E *d, int *test_sockets, QGuestAllocator *a
 
 static void e1000e_receive_verify(QE1000E *d, int *test_sockets, QGuestAllocator *alloc)
 {
-    union e1000_rx_desc_extended descr;
+    union {
+        struct {
+            uint64_t buffer_addr;
+            uint64_t reserved;
+        } read;
+        struct {
+            struct {
+                uint32_t mrq;
+                union {
+                    uint32_t rss;
+                    struct {
+                        uint16_t ip_id;
+                        uint16_t csum;
+                    } csum_ip;
+                } hi_dword;
+            } lower;
+            struct {
+                uint32_t status_error;
+                uint16_t length;
+                uint16_t vlan;
+            } upper;
+        } wb;
+    } descr;
+
+    static const uint32_t esta_dd = BIT(0);
 
     char test[] = "TEST";
     int len = htonl(sizeof(test));
@@ -116,7 +163,7 @@ static void e1000e_receive_verify(QE1000E *d, int *test_sockets, QGuestAllocator
 
     /* Check DD bit */
     g_assert_cmphex(le32_to_cpu(descr.wb.upper.status_error) &
-        E1000_RXD_STAT_DD, ==, E1000_RXD_STAT_DD);
+        esta_dd, ==, esta_dd);
 
     /* Check data sent to the backend */
     memread(data, buffer, sizeof(buffer));
@@ -187,12 +234,6 @@ static void test_e1000e_multiple_transfers(void *obj, void *data,
 static void test_e1000e_hotplug(void *obj, void *data, QGuestAllocator * alloc)
 {
     QTestState *qts = global_qtest;  /* TODO: get rid of global_qtest here */
-    QE1000E_PCI *dev = obj;
-
-    if (dev->pci_dev.bus->not_hotpluggable) {
-        g_test_skip("pci bus does not support hotplug");
-        return;
-    }
 
     qtest_qmp_device_add(qts, "e1000e", "e1000e_net", "{'addr': '0x06'}");
     qpci_unplug_acpi_device_test(qts, "e1000e_net", 0x06);

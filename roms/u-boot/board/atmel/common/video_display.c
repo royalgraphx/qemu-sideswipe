@@ -7,13 +7,10 @@
 #include <common.h>
 #include <atmel_lcd.h>
 #include <dm.h>
-#include <init.h>
 #include <nand.h>
 #include <version.h>
 #include <video.h>
 #include <video_console.h>
-#include <vsprintf.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/clk.h>
 
@@ -26,7 +23,7 @@ int at91_video_show_board_info(void)
 	int i;
 	u32 len = 0;
 	char buf[255];
-	char *corp = "Microchip Technology Inc.\n";
+	char *corp = "2017 Microchip Technology Inc.\n";
 	char temp[32];
 	struct udevice *dev, *con;
 	const char *s;

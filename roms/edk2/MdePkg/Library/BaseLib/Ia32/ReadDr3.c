@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Reads the current value of Debug Register 3 (DR3).
 
@@ -26,3 +29,4 @@ AsmReadDr3 (
     mov     eax, dr3
   }
 }
+

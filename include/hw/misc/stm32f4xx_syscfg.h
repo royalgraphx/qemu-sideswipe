@@ -22,11 +22,11 @@
  * THE SOFTWARE.
  */
 
-#ifndef HW_STM32F4XX_SYSCFG_H
-#define HW_STM32F4XX_SYSCFG_H
+#ifndef HW_STM_SYSCFG_H
+#define HW_STM_SYSCFG_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
+#include "hw/hw.h"
 
 #define SYSCFG_MEMRMP  0x00
 #define SYSCFG_PMC     0x04
@@ -37,11 +37,12 @@
 #define SYSCFG_CMPCR   0x20
 
 #define TYPE_STM32F4XX_SYSCFG "stm32f4xx-syscfg"
-OBJECT_DECLARE_SIMPLE_TYPE(STM32F4xxSyscfgState, STM32F4XX_SYSCFG)
+#define STM32F4XX_SYSCFG(obj) \
+    OBJECT_CHECK(STM32F4xxSyscfgState, (obj), TYPE_STM32F4XX_SYSCFG)
 
 #define SYSCFG_NUM_EXTICR 4
 
-struct STM32F4xxSyscfgState {
+typedef struct {
     /* <private> */
     SysBusDevice parent_obj;
 
@@ -55,6 +56,6 @@ struct STM32F4xxSyscfgState {
 
     qemu_irq irq;
     qemu_irq gpio_out[16];
-};
+} STM32F4xxSyscfgState;
 
 #endif

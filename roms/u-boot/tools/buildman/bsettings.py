@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0+
 # Copyright (c) 2012 The Chromium OS Authors.
 
-import configparser
+import ConfigParser
 import os
-import io
+import StringIO
 
 
 def Setup(fname=''):
@@ -15,20 +15,20 @@ def Setup(fname=''):
     global settings
     global config_fname
 
-    settings = configparser.SafeConfigParser()
+    settings = ConfigParser.SafeConfigParser()
     if fname is not None:
         config_fname = fname
         if config_fname == '':
             config_fname = '%s/.buildman' % os.getenv('HOME')
         if not os.path.exists(config_fname):
-            print('No config file found ~/.buildman\nCreating one...\n')
+            print 'No config file found ~/.buildman\nCreating one...\n'
             CreateBuildmanConfigFile(config_fname)
-            print('To install tool chains, please use the --fetch-arch option')
+            print 'To install tool chains, please use the --fetch-arch option'
         if config_fname:
             settings.read(config_fname)
 
 def AddFile(data):
-    settings.readfp(io.StringIO(data))
+    settings.readfp(StringIO.StringIO(data))
 
 def GetItems(section):
     """Get the items from a section of the config.
@@ -41,7 +41,7 @@ def GetItems(section):
     """
     try:
         return settings.items(section)
-    except configparser.NoSectionError as e:
+    except ConfigParser.NoSectionError as e:
         return []
     except:
         raise
@@ -68,10 +68,10 @@ def CreateBuildmanConfigFile(config_fname):
     try:
         f = open(config_fname, 'w')
     except IOError:
-        print("Couldn't create buildman config file '%s'\n" % config_fname)
+        print "Couldn't create buildman config file '%s'\n" % config_fname
         raise
 
-    print('''[toolchain]
+    print >>f, '''[toolchain]
 # name = path
 # e.g. x86 = /opt/gcc-4.6.3-nolibc/x86_64-linux
 
@@ -93,5 +93,5 @@ openrisc = or1k
 # snapper-boards=ENABLE_AT91_TEST=1
 # snapper9260=${snapper-boards} BUILD_TAG=442
 # snapper9g45=${snapper-boards} BUILD_TAG=443
-''', file=f)
+'''
     f.close();

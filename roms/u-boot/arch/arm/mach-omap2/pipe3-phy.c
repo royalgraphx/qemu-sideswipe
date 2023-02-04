@@ -11,8 +11,6 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/io.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
 #include <linux/errno.h>
 #include "pipe3-phy.h"
 

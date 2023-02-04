@@ -6,11 +6,11 @@
 # Licensed to PSF under a Contributor Agreement.
 # See http://www.python.org/2.4/license for licensing details.
 
-"""Subprocess execution
+"""Subprocress execution
 
 This module holds a subclass of subprocess.Popen with our own required
 features, mainly that we get access to the subprocess output while it
-is running rather than just at the end. This makes it easier to show
+is running rather than just at the end. This makes it easiler to show
 progress information and filter output in real time.
 """
 
@@ -100,19 +100,6 @@ class Popen(subprocess.Popen):
         if kwargs:
             raise ValueError("Unit tests do not test extra args - please add tests")
 
-    def ConvertData(self, data):
-        """Convert stdout/stderr data to the correct format for output
-
-        Args:
-            data: Data to convert, or None for ''
-
-        Returns:
-            Converted data, as bytes
-        """
-        if data is None:
-            return b''
-        return data
-
     def CommunicateFilter(self, output):
         """Interact with process: Read data from stdout and stderr.
 
@@ -169,11 +156,11 @@ class Popen(subprocess.Popen):
                 self.stdin.close()
         if self.stdout:
             read_set.append(self.stdout)
-            stdout = b''
+            stdout = []
         if self.stderr and self.stderr != self.stdout:
             read_set.append(self.stderr)
-            stderr = b''
-        combined = b''
+            stderr = []
+        combined = []
 
         input_offset = 0
         while read_set or write_set:
@@ -199,40 +186,46 @@ class Popen(subprocess.Popen):
                     write_set.remove(self.stdin)
 
             if self.stdout in rlist:
-                data = b''
+                data = ""
                 # We will get an error on read if the pty is closed
                 try:
                     data = os.read(self.stdout.fileno(), 1024)
                 except OSError:
                     pass
-                if not len(data):
+                if data == "":
                     self.stdout.close()
                     read_set.remove(self.stdout)
                 else:
-                    stdout += data
-                    combined += data
+                    stdout.append(data)
+                    combined.append(data)
                     if output:
                         output(sys.stdout, data)
             if self.stderr in rlist:
-                data = b''
+                data = ""
                 # We will get an error on read if the pty is closed
                 try:
                     data = os.read(self.stderr.fileno(), 1024)
                 except OSError:
                     pass
-                if not len(data):
+                if data == "":
                     self.stderr.close()
                     read_set.remove(self.stderr)
                 else:
-                    stderr += data
-                    combined += data
+                    stderr.append(data)
+                    combined.append(data)
                     if output:
                         output(sys.stderr, data)
 
         # All data exchanged.    Translate lists into strings.
-        stdout = self.ConvertData(stdout)
-        stderr = self.ConvertData(stderr)
-        combined = self.ConvertData(combined)
+        if stdout is not None:
+            stdout = ''.join(stdout)
+        else:
+            stdout = ''
+        if stderr is not None:
+            stderr = ''.join(stderr)
+        else:
+            stderr = ''
+        combined = ''.join(combined)
 
         # Translate newlines, if requested.    We cannot let the file
         # object do the translation: It is based on stdio, which is

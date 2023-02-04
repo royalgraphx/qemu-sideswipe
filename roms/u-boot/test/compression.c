@@ -6,10 +6,6 @@
 #include <common.h>
 #include <bootm.h>
 #include <command.h>
-#include <gzip.h>
-#include <image.h>
-#include <log.h>
-#include <lz4.h>
 #include <malloc.h>
 #include <mapmem.h>
 #include <asm/io.h>
@@ -164,7 +160,7 @@ static int compress_using_bzip2(struct unit_test_state *uts,
 {
 	/* There is no bzip2 compression in u-boot, so fake it. */
 	ut_asserteq(in_size, strlen(plain));
-	ut_asserteq_mem(plain, in, in_size);
+	ut_asserteq(0, memcmp(plain, in, in_size));
 
 	if (bzip2_compressed_size > out_max)
 		return -1;
@@ -199,7 +195,7 @@ static int compress_using_lzma(struct unit_test_state *uts,
 {
 	/* There is no lzma compression in u-boot, so fake it. */
 	ut_asserteq(in_size,  strlen(plain));
-	ut_asserteq_mem(plain, in, in_size);
+	ut_asserteq(0, memcmp(plain, in, in_size));
 
 	if (lzma_compressed_size > out_max)
 		return -1;
@@ -233,7 +229,7 @@ static int compress_using_lzo(struct unit_test_state *uts,
 {
 	/* There is no lzo compression in u-boot, so fake it. */
 	ut_asserteq(in_size,  strlen(plain));
-	ut_asserteq_mem(plain, in, in_size);
+	ut_asserteq(0, memcmp(plain, in, in_size));
 
 	if (lzo_compressed_size > out_max)
 		return -1;
@@ -268,7 +264,7 @@ static int compress_using_lz4(struct unit_test_state *uts,
 {
 	/* There is no lz4 compression in u-boot, so fake it. */
 	ut_asserteq(in_size,  strlen(plain));
-	ut_asserteq_mem(plain, in, in_size);
+	ut_asserteq(0, memcmp(plain, in, in_size));
 
 	if (lz4_compressed_size > out_max)
 		return -1;
@@ -453,7 +449,7 @@ static int compress_using_none(struct unit_test_state *uts,
 }
 
 /**
- * run_bootm_test() - Run tests on the bootm decompression function
+ * run_bootm_test() - Run tests on the bootm decopmression function
  *
  * @comp_type:	Compression type to test
  * @compress:	Our function to compress data
@@ -475,15 +471,15 @@ static int run_bootm_test(struct unit_test_state *uts, int comp_type,
 	unc_len = strlen(plain);
 	compress(uts, (void *)plain, unc_len, compress_buff, compress_size,
 		 &compress_size);
-	err = image_decomp(comp_type, load_addr, image_start,
-			   IH_TYPE_KERNEL, map_sysmem(load_addr, 0),
-			   compress_buff, compress_size, unc_len,
-			   &load_end);
+	err = bootm_decomp_image(comp_type, load_addr, image_start,
+				 IH_TYPE_KERNEL, map_sysmem(load_addr, 0),
+				 compress_buff, compress_size, unc_len,
+				 &load_end);
 	ut_assertok(err);
-	err = image_decomp(comp_type, load_addr, image_start,
-			   IH_TYPE_KERNEL, map_sysmem(load_addr, 0),
-			   compress_buff, compress_size, unc_len - 1,
-			   &load_end);
+	err = bootm_decomp_image(comp_type, load_addr, image_start,
+				 IH_TYPE_KERNEL, map_sysmem(load_addr, 0),
+				 compress_buff, compress_size, unc_len - 1,
+				 &load_end);
 	ut_assert(err);
 
 	/* We can't detect corruption when not decompressing */
@@ -491,10 +487,10 @@ static int run_bootm_test(struct unit_test_state *uts, int comp_type,
 		return 0;
 	memset(compress_buff + compress_size / 2, '\x49',
 	       compress_size / 2);
-	err = image_decomp(comp_type, load_addr, image_start,
-			   IH_TYPE_KERNEL, map_sysmem(load_addr, 0),
-			   compress_buff, compress_size, 0x10000,
-			   &load_end);
+	err = bootm_decomp_image(comp_type, load_addr, image_start,
+				 IH_TYPE_KERNEL, map_sysmem(load_addr, 0),
+				 compress_buff, compress_size, 0x10000,
+				 &load_end);
 	ut_assert(err);
 
 	return 0;
@@ -536,12 +532,11 @@ static int compression_test_bootm_none(struct unit_test_state *uts)
 }
 COMPRESSION_TEST(compression_test_bootm_none, 0);
 
-int do_ut_compression(struct cmd_tbl *cmdtp, int flag, int argc,
-		      char *const argv[])
+int do_ut_compression(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	struct unit_test *tests = UNIT_TEST_SUITE_START(compression_test);
-	const int n_ents = UNIT_TEST_SUITE_COUNT(compression_test);
+	struct unit_test *tests = ll_entry_start(struct unit_test,
+						 compression_test);
+	const int n_ents = ll_entry_count(struct unit_test, compression_test);
 
-	return cmd_ut_category("compression", "compression_test_",
-			       tests, n_ents, argc, argv);
+	return cmd_ut_category("compression", tests, n_ents, argc, argv);
 }

@@ -8,13 +8,11 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
+
 /*
  * Shifts a 64-bit unsigned value right by a certain number of bits.
  */
-__declspec(naked) void __cdecl
-_aullshr (
-  void
-  )
+__declspec(naked) void __cdecl _aullshr (void)
 {
   _asm {
     ;
@@ -43,9 +41,8 @@ More32:
     ret
 
     ;
-    ; Invalid number (less  then 32bits), return 0
+    ; Invalid number (less then 32bits), return 0
     ;
-
 _Exit:
     xor     eax, eax
     xor     edx, edx

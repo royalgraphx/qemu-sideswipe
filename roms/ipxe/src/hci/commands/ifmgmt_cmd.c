@@ -193,8 +193,6 @@ static int ifstat_exec ( int argc, char **argv ) {
 
 /** "ifconf" options */
 struct ifconf_options {
-	/** Configuration timeout */
-	unsigned long timeout;
 	/** Configurator */
 	struct net_device_configurator *configurator;
 };
@@ -204,9 +202,6 @@ static struct option_descriptor ifconf_opts[] = {
 	OPTION_DESC ( "configurator", 'c', required_argument,
 		      struct ifconf_options, configurator,
 		      parse_netdev_configurator ),
-	OPTION_DESC ( "timeout", 't', required_argument,
-		      struct ifconf_options, timeout,
-		      parse_timeout ),
 };
 
 /**
@@ -221,8 +216,7 @@ static int ifconf_payload ( struct net_device *netdev,
 	int rc;
 
 	/* Attempt configuration */
-	if ( ( rc = ifconf ( netdev, opts->configurator,
-			     opts->timeout ) ) != 0 ) {
+	if ( ( rc = ifconf ( netdev, opts->configurator ) ) != 0 ) {
 
 		/* Close device on failure, to avoid memory exhaustion */
 		netdev_close ( netdev );

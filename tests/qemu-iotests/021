@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: io auto quick
 #
 # Test handling of invalid patterns arguments to qemu-io
 #

@@ -15,10 +15,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <IndustryStandard/SmBios.h>
 #include <Protocol/Smbios.h>
 
+
 ///
 /// Cache copy of the SMBIOS Protocol pointer
 ///
-extern EFI_SMBIOS_PROTOCOL  *gSmbios;
+extern EFI_SMBIOS_PROTOCOL *gSmbios;
+
 
 ///
 /// Template for SMBIOS table initialization.
@@ -36,6 +38,7 @@ typedef struct {
   CHAR8               **StringArray;
 } SMBIOS_TEMPLATE_ENTRY;
 
+
 /**
   Create an initial SMBIOS Table from an array of SMBIOS_TEMPLATE_ENTRY
   entries. SMBIOS_TEMPLATE_ENTRY.NULL indicates the end of the table.
@@ -48,8 +51,10 @@ typedef struct {
 EFI_STATUS
 EFIAPI
 SmbiosLibInitializeFromTemplate (
-  IN  SMBIOS_TEMPLATE_ENTRY  *Template
+  IN  SMBIOS_TEMPLATE_ENTRY   *Template
   );
+
+
 
 /**
   Create SMBIOS record.
@@ -83,9 +88,10 @@ SmbiosLibInitializeFromTemplate (
 EFI_STATUS
 EFIAPI
 SmbiosLibCreateEntry (
-  IN  SMBIOS_STRUCTURE  *SmbiosEntry,
-  IN  CHAR8             **StringArray
+  IN  SMBIOS_STRUCTURE *SmbiosEntry,
+  IN  CHAR8            **StringArray
   );
+
 
 /**
   Update the string associated with an existing SMBIOS record.
@@ -105,9 +111,9 @@ SmbiosLibCreateEntry (
 EFI_STATUS
 EFIAPI
 SmbiosLibUpdateString (
-  IN  EFI_SMBIOS_HANDLE    SmbiosHandle,
-  IN  SMBIOS_TABLE_STRING  StringNumber,
-  IN  CHAR8                *String
+  IN  EFI_SMBIOS_HANDLE     SmbiosHandle,
+  IN  SMBIOS_TABLE_STRING   StringNumber,
+  IN  CHAR8                 *String
   );
 
 /**
@@ -128,9 +134,9 @@ SmbiosLibUpdateString (
 EFI_STATUS
 EFIAPI
 SmbiosLibUpdateUnicodeString (
-  IN  EFI_SMBIOS_HANDLE    SmbiosHandle,
-  IN  SMBIOS_TABLE_STRING  StringNumber,
-  IN  CHAR16               *String
+  IN  EFI_SMBIOS_HANDLE     SmbiosHandle,
+  IN  SMBIOS_TABLE_STRING   StringNumber,
+  IN  CHAR16                *String
   );
 
 /**
@@ -149,6 +155,7 @@ SmbiosLibReadString (
   IN EFI_SMBIOS_STRING  StringNumber
   );
 
+
 /**
   Allow the caller to discover a specific SMBIOS entry, and patch it if necissary.
 
@@ -162,9 +169,9 @@ SmbiosLibReadString (
 SMBIOS_STRUCTURE *
 EFIAPI
 SmbiosLibGetRecord (
-  IN  EFI_SMBIOS_TYPE    Type,
-  IN  UINTN              Instance,
-  OUT EFI_SMBIOS_HANDLE  *SmbiosHandle
+  IN  EFI_SMBIOS_TYPE   Type,
+  IN  UINTN             Instance,
+  OUT EFI_SMBIOS_HANDLE *SmbiosHandle
   );
 
 /**
@@ -180,7 +187,10 @@ SmbiosLibGetRecord (
 EFI_STATUS
 EFIAPI
 SmbiosLibRemove (
-  OUT EFI_SMBIOS_HANDLE  SmbiosHandle
+  OUT EFI_SMBIOS_HANDLE SmbiosHandle
   );
+
+
+
 
 #endif

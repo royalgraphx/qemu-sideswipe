@@ -30,23 +30,20 @@
 #include "qemu/option.h"
 
 #include "chardev/char-io.h"
-#include "qom/object.h"
 
 /***********************************************************/
 /* UDP Net console */
 
-struct UdpChardev {
+typedef struct {
     Chardev parent;
     QIOChannel *ioc;
     uint8_t buf[CHR_READ_BUF_LEN];
     int bufcnt;
     int bufptr;
     int max_size;
-};
-typedef struct UdpChardev UdpChardev;
+} UdpChardev;
 
-DECLARE_INSTANCE_CHECKER(UdpChardev, UDP_CHARDEV,
-                         TYPE_CHARDEV_UDP)
+#define UDP_CHARDEV(obj) OBJECT_CHECK(UdpChardev, (obj), TYPE_CHARDEV_UDP)
 
 /* Called with chr_write_lock held.  */
 static int udp_chr_write(Chardev *chr, const uint8_t *buf, int len)
@@ -165,7 +162,7 @@ static void qemu_chr_parse_udp(QemuOpts *opts, ChardevBackend *backend,
     qemu_chr_parse_common(opts, qapi_ChardevUdp_base(udp));
 
     addr = g_new0(SocketAddressLegacy, 1);
-    addr->type = SOCKET_ADDRESS_TYPE_INET;
+    addr->type = SOCKET_ADDRESS_LEGACY_KIND_INET;
     addr->u.inet.data = g_new(InetSocketAddress, 1);
     *addr->u.inet.data = (InetSocketAddress) {
         .host = g_strdup(host),
@@ -180,7 +177,7 @@ static void qemu_chr_parse_udp(QemuOpts *opts, ChardevBackend *backend,
     if (has_local) {
         udp->has_local = true;
         addr = g_new0(SocketAddressLegacy, 1);
-        addr->type = SOCKET_ADDRESS_TYPE_INET;
+        addr->type = SOCKET_ADDRESS_LEGACY_KIND_INET;
         addr->u.inet.data = g_new(InetSocketAddress, 1);
         *addr->u.inet.data = (InetSocketAddress) {
             .host = g_strdup(localaddr),

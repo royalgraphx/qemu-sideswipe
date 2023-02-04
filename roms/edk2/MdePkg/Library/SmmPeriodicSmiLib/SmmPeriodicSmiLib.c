@@ -38,104 +38,104 @@ typedef struct {
   ///
   /// Signature value that must be set to PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT_SIGNATURE
   ///
-  UINT32                                     Signature;
+  UINT32                                   Signature;
   ///
   /// The link entry to be inserted to the list of periodic SMI handlers.
   ///
-  LIST_ENTRY                                 Link;
+  LIST_ENTRY                               Link;
   ///
   /// The dispatch function to called to invoke an enabled periodic SMI handler.
   ///
-  PERIODIC_SMI_LIBRARY_HANDLER               DispatchFunction;
+  PERIODIC_SMI_LIBRARY_HANDLER             DispatchFunction;
   ///
   /// The context to pass into DispatchFunction
   ///
-  VOID                                       *Context;
+  VOID                                     *Context;
   ///
   /// The tick period in 100 ns units that DispatchFunction should be called.
   ///
-  UINT64                                     TickPeriod;
+  UINT64                                   TickPeriod;
   ///
   /// The Cpu number that is required to execute DispatchFunction.  If Cpu is
   /// set to PERIODIC_SMI_LIBRARY_ANY_CPU, then DispatchFunction may be executed
   /// on any CPU.
   ///
-  UINTN                                      Cpu;
+  UINTN                                    Cpu;
   ///
   /// The size, in bytes, of the stack allocated for a periodic SMI handler.
   /// This value must be a multiple of EFI_PAGE_SIZE.
   ///
-  UINTN                                      StackSize;
+  UINTN                                    StackSize;
   ///
   /// A pointer to the stack allocated using AllocatePages().  This field will
   /// be NULL if StackSize is 0.
   ///
-  VOID                                       *Stack;
+  VOID                                     *Stack;
   ///
   /// Spin lock used to wait for an AP to complete the execution of a periodic SMI handler
   ///
-  SPIN_LOCK                                  DispatchLock;
+  SPIN_LOCK                                DispatchLock;
   ///
   /// The rate in Hz of the performance counter that is used to measure the
   /// amount of time that a periodic SMI handler executes.
   ///
-  UINT64                                     PerfomanceCounterRate;
+  UINT64                                   PerfomanceCounterRate;
   ///
   /// The start count value of the performance counter that is used to measure
   /// the amount of time that a periodic SMI handler executes.
   ///
-  UINT64                                     PerfomanceCounterStartValue;
+  UINT64                                   PerfomanceCounterStartValue;
   ///
   /// The end count value of the performance counter that is used to measure
   /// the amount of time that a periodic SMI handler executes.
   ///
-  UINT64                                     PerfomanceCounterEndValue;
+  UINT64                                   PerfomanceCounterEndValue;
   ///
   /// The context record passed into the Register() function of the SMM Periodic
   /// Timer Dispatch Protocol when a periodic SMI handler is enabled.
   ///
-  EFI_SMM_PERIODIC_TIMER_REGISTER_CONTEXT    RegisterContext;
+  EFI_SMM_PERIODIC_TIMER_REGISTER_CONTEXT  RegisterContext;
   ///
   /// The handle returned from the Register() function of the SMM Periodic
   /// Timer Dispatch Protocol when a periodic SMI handler is enabled.
   ///
-  EFI_HANDLE                                 DispatchHandle;
+  EFI_HANDLE                               DispatchHandle;
   ///
   /// The total number of performance counter ticks that the periodic SMI handler
   /// has been executing in its current invocation.
   ///
-  UINT64                                     DispatchTotalTime;
+  UINT64                                   DispatchTotalTime;
   ///
   /// The performance counter value that was captured the last time that the
-  /// periodic SMI handler called PeriodicSmiExecutionTime().  This allows the
-  /// time value returned by PeriodicSmiExecutionTime() to be accurate even when
+  /// periodic SMI handler called PeriodcSmiExecutionTime().  This allows the
+  /// time value returned by PeriodcSmiExecutionTime() to be accurate even when
   /// the performance counter rolls over.
   ///
-  UINT64                                     DispatchCheckPointTime;
+  UINT64                                   DispatchCheckPointTime;
   ///
   /// Buffer used to save the context when control is transfer from this library
   /// to an enabled periodic SMI handler.  This saved context is used when the
   /// periodic SMI handler exits or yields.
   ///
-  BASE_LIBRARY_JUMP_BUFFER                   DispatchJumpBuffer;
+  BASE_LIBRARY_JUMP_BUFFER                 DispatchJumpBuffer;
   ///
   /// Flag that is set to TRUE when a periodic SMI handler requests to yield
   /// using PeriodicSmiYield().  When this flag IS TRUE, YieldJumpBuffer is
   /// valid.  When this flag is FALSE, YieldJumpBuffer is not valid.
   ///
-  BOOLEAN                                    YieldFlag;
+  BOOLEAN                                  YieldFlag;
   ///
   /// Buffer used to save the context when a periodic SMI handler requests to
   /// yield using PeriodicSmiYield().  This context is used to resume the
-  /// execution of a periodic SMI handler the next time control is transferred
+  /// execution of a periodic SMI handler the next time control is transferd
   /// to the periodic SMI handler that yielded.
   ///
-  BASE_LIBRARY_JUMP_BUFFER                   YieldJumpBuffer;
+  BASE_LIBRARY_JUMP_BUFFER                 YieldJumpBuffer;
   ///
   /// The amount of time, in 100 ns units, that have elapsed since the last
   /// time the periodic SMI handler was invoked.
   ///
-  UINT64                                     ElapsedTime;
+  UINT64                                   ElapsedTime;
 } PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT;
 
 /**
@@ -152,9 +152,9 @@ typedef struct {
     )
 
 ///
-/// Pointer to the SMM Periodic Timer Dispatch Protocol that was located in the constructor.
+/// Pointer to the SMM Periodic Timer Disatch Protocol that was located in the constuctor.
 ///
-EFI_SMM_PERIODIC_TIMER_DISPATCH2_PROTOCOL  *gSmmPeriodicTimerDispatch2 = NULL;
+EFI_SMM_PERIODIC_TIMER_DISPATCH2_PROTOCOL  *gSmmPeriodicTimerDispatch2           = NULL;
 
 ///
 /// Pointer to a table of supported periodic SMI tick periods in 100 ns units
@@ -163,25 +163,25 @@ EFI_SMM_PERIODIC_TIMER_DISPATCH2_PROTOCOL  *gSmmPeriodicTimerDispatch2 = NULL;
 /// in based on the values returned from the SMM Periodic Timer Dispatch 2 Protocol
 /// function GetNextShorterInterval().
 ///
-UINT64  *gSmiTickPeriodTable = NULL;
+UINT64                                     *gSmiTickPeriodTable                  = NULL;
 
 ///
 /// Linked list of free periodic SMI handlers that this library can use.
 ///
-LIST_ENTRY  gFreePeriodicSmiLibraryHandlers =
-  INITIALIZE_LIST_HEAD_VARIABLE (gFreePeriodicSmiLibraryHandlers);
+LIST_ENTRY                                 gFreePeriodicSmiLibraryHandlers       =
+                                           INITIALIZE_LIST_HEAD_VARIABLE (gFreePeriodicSmiLibraryHandlers);
 
 ///
 /// Linked list of periodic SMI handlers that this library is currently managing.
 ///
-LIST_ENTRY  gPeriodicSmiLibraryHandlers =
-  INITIALIZE_LIST_HEAD_VARIABLE (gPeriodicSmiLibraryHandlers);
+LIST_ENTRY                                 gPeriodicSmiLibraryHandlers           =
+                                           INITIALIZE_LIST_HEAD_VARIABLE (gPeriodicSmiLibraryHandlers);
 
 ///
 /// Pointer to the periodic SMI handler that is currently being executed.
 /// Is set to NULL if no periodic SMI handler is currently being executed.
 ///
-PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT  *gActivePeriodicSmiLibraryHandler = NULL;
+PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT       *gActivePeriodicSmiLibraryHandler     = NULL;
 
 /**
   Internal worker function that returns a pointer to the
@@ -226,7 +226,7 @@ GetActivePeriodicSmiLibraryHandler (
 **/
 PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT *
 LookupPeriodicSmiLibraryHandler (
-  IN EFI_HANDLE  DispatchHandle    OPTIONAL
+  IN EFI_HANDLE                         DispatchHandle    OPTIONAL
   )
 {
   LIST_ENTRY                            *Link;
@@ -243,10 +243,9 @@ LookupPeriodicSmiLibraryHandler (
   // Search the periodic SMI handler entries for a a matching DispatchHandle
   //
   for ( Link = GetFirstNode (&gPeriodicSmiLibraryHandlers)
-        ; !IsNull (&gPeriodicSmiLibraryHandlers, Link)
-        ; Link = GetNextNode (&gPeriodicSmiLibraryHandlers, Link)
-        )
-  {
+      ; !IsNull (&gPeriodicSmiLibraryHandlers, Link)
+      ; Link = GetNextNode (&gPeriodicSmiLibraryHandlers, Link)
+      ) {
     PeriodicSmiLibraryHandler = PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT_FROM_LINK (Link);
 
     if (PeriodicSmiLibraryHandler->DispatchHandle == DispatchHandle) {
@@ -280,7 +279,7 @@ LookupPeriodicSmiLibraryHandler (
 **/
 PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT *
 SetActivePeriodicSmiLibraryHandler (
-  IN EFI_HANDLE  DispatchHandle    OPTIONAL
+  IN EFI_HANDLE                         DispatchHandle    OPTIONAL
   )
 {
   if (DispatchHandle == NULL) {
@@ -288,7 +287,6 @@ SetActivePeriodicSmiLibraryHandler (
   } else {
     gActivePeriodicSmiLibraryHandler = LookupPeriodicSmiLibraryHandler (DispatchHandle);
   }
-
   return gActivePeriodicSmiLibraryHandler;
 }
 
@@ -300,7 +298,7 @@ SetActivePeriodicSmiLibraryHandler (
 **/
 VOID
 ReclaimPeriodicSmiLibraryHandler (
-  PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT  *PeriodicSmiLibraryHandler
+  PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT     *PeriodicSmiLibraryHandler
   )
 {
   ASSERT (PeriodicSmiLibraryHandler->DispatchHandle == NULL);
@@ -311,7 +309,6 @@ ReclaimPeriodicSmiLibraryHandler (
       );
     PeriodicSmiLibraryHandler->Stack = NULL;
   }
-
   RemoveEntryList (&PeriodicSmiLibraryHandler->Link);
   InsertHeadList (&gFreePeriodicSmiLibraryHandlers, &PeriodicSmiLibraryHandler->Link);
 }
@@ -340,12 +337,11 @@ EnlargeFreePeriodicSmiLibraryHandlerList (
     if (PeriodicSmiLibraryHandler == NULL) {
       break;
     }
-
     PeriodicSmiLibraryHandler->Signature = PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT_SIGNATURE;
     InsertHeadList (&gFreePeriodicSmiLibraryHandlers, &PeriodicSmiLibraryHandler->Link);
   }
 
-  return (BOOLEAN)(Index > 0);
+  return (BOOLEAN) (Index > 0);
 }
 
 /**
@@ -519,14 +515,14 @@ PeriodicSmiExit (
   // Must never return
   //
   ASSERT (FALSE);
-  CpuDeadLoop ();
+  CpuDeadLoop();
 }
 
 /**
   This function yields control back to the SMM Foundation.  When the next
   periodic SMI for the currently executing handler is triggered, the periodic
   SMI handler will be resumed and this function will return.  Use of this
-  function requires a separate stack for the periodic SMI handler.  A non zero
+  function requires a seperate stack for the periodic SMI handler.  A non zero
   stack size must be specified in PeriodicSmiEnable() for this function to be
   used.
 
@@ -576,7 +572,7 @@ PeriodicSmiYield (
   SetJumpFlag = SetJump (&PeriodicSmiLibraryHandler->YieldJumpBuffer);
   if (SetJumpFlag == 0) {
     //
-    // The initial call to SetJump() always returns 0.
+    // The intial call to SetJump() always returns 0.
     // If this is the initial call, then exit the current periodic SMI handler
     //
     PeriodicSmiExit ();
@@ -592,7 +588,7 @@ PeriodicSmiYield (
   PeriodicSmiLibraryHandler->YieldFlag = FALSE;
 
   //
-  // Return the amount elapsed time that occurred while yielded
+  // Return the amount elapsed time that occured while yielded
   //
   return PeriodicSmiLibraryHandler->ElapsedTime;
 }
@@ -610,7 +606,7 @@ PeriodicSmiYield (
 VOID
 EFIAPI
 PeriodicSmiDispatchFunctionSwitchStack (
-  IN VOID  *Context1   OPTIONAL,
+  IN VOID  *Context1,  OPTIONAL
   IN VOID  *Context2   OPTIONAL
   )
 {
@@ -624,24 +620,24 @@ PeriodicSmiDispatchFunctionSwitchStack (
   //
   // Dispatch the registered handler passing in the context that was registered
   // and the amount of time that has elapsed since the previous time this
-  // periodic SMI handler was dispatched.
+  // periodic SMI handler was dispacthed.
   //
   PeriodicSmiLibraryHandler->DispatchFunction (
-                               PeriodicSmiLibraryHandler->Context,
-                               PeriodicSmiLibraryHandler->ElapsedTime
-                               );
+    PeriodicSmiLibraryHandler->Context,
+    PeriodicSmiLibraryHandler->ElapsedTime
+    );
 
   //
-  // If this DispatchFunction() returns, then unconditionally call PeriodicSmiExit()
+  // If this DispatchFunction() returns, then unconditially call PeriodicSmiExit()
   // to perform a LongJump() back to PeriodicSmiDispatchFunctionOnCpu(). The
-  // LongJump() will resume execution on the original stack.
+  // LongJump() will resume exection on the original stack.
   //
   PeriodicSmiExit ();
 }
 
 /**
   Internal worker function that transfers control to an enabled periodic SMI
-  handler on the specified logical CPU.  This function determines if the periodic
+  handler on the specified logial CPU.  This function determines if the periodic
   SMI handler yielded and needs to be resumed.  It also and switches to an
   allocated stack if one was allocated in PeriodicSmiEnable().
 
@@ -656,9 +652,9 @@ PeriodicSmiDispatchFunctionOnCpu (
   )
 {
   //
-  // Save context in DispatchJumpBuffer.  The initial call to SetJump() always
+  // Save context in DispatchJumpBuffer.  The intial call to SetJump() always
   // returns 0.  If this is the initial call, then either resume from a prior
-  // call to PeriodicSmiYield() or call the DispatchFunction registered in
+  // call to PeriodicSmiYield() or call the DispatchFunction registerd in
   // PeriodicSmiEnable() using an allocated stack if one was specified.
   //
   if (SetJump (&PeriodicSmiLibraryHandler->DispatchJumpBuffer) != 0) {
@@ -671,7 +667,7 @@ PeriodicSmiDispatchFunctionOnCpu (
   // calculated.
   //
   PeriodicSmiLibraryHandler->DispatchTotalTime      = 0;
-  PeriodicSmiLibraryHandler->DispatchCheckPointTime = GetPerformanceCounter ();
+  PeriodicSmiLibraryHandler->DispatchCheckPointTime = GetPerformanceCounter();
 
   if (PeriodicSmiLibraryHandler->YieldFlag) {
     //
@@ -683,15 +679,15 @@ PeriodicSmiDispatchFunctionOnCpu (
     //
     // If Stack is NULL then call DispatchFunction using current stack passing
     // in the context that was registered and the amount of time that has
-    // elapsed since the previous time this periodic SMI handler was dispatched.
+    // elapsed since the previous time this periodic SMI handler was dispacthed.
     //
     PeriodicSmiLibraryHandler->DispatchFunction (
-                                 PeriodicSmiLibraryHandler->Context,
-                                 PeriodicSmiLibraryHandler->ElapsedTime
-                                 );
+      PeriodicSmiLibraryHandler->Context,
+      PeriodicSmiLibraryHandler->ElapsedTime
+      );
 
     //
-    // If this DispatchFunction() returns, then unconditionally call PeriodicSmiExit()
+    // If this DispatchFunction() returns, then unconditially call PeriodicSmiExit()
     // to perform a LongJump() back to this function.
     //
     PeriodicSmiExit ();
@@ -711,12 +707,12 @@ PeriodicSmiDispatchFunctionOnCpu (
   // Must never return
   //
   ASSERT (FALSE);
-  CpuDeadLoop ();
+  CpuDeadLoop();
 }
 
 /**
   Internal worker function that transfers control to an enabled periodic SMI
-  handler on the specified logical CPU.  This worker function is only called
+  handler on the specified logial CPU.  This worker function is only called
   using the SMM Services Table function SmmStartupThisAp() to execute the
   periodic SMI handler on a logical CPU that is different than the one that is
   running the SMM Foundation.  When the periodic SMI handler returns, a lock is
@@ -740,7 +736,7 @@ PeriodicSmiDispatchFunctionWithLock (
   PeriodicSmiLibraryHandler = (PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT  *)Buffer;
 
   //
-  // Execute dispatch function on the currently executing logical CPU
+  // Execute dispatch function on the currently excuting logical CPU
   //
   PeriodicSmiDispatchFunctionOnCpu (PeriodicSmiLibraryHandler);
 
@@ -798,7 +794,7 @@ PeriodicSmiDispatchFunction (
   //
   PeriodicSmiLibraryHandler->ElapsedTime = 0;
   if (CommBuffer != NULL) {
-    TimerContext                           = (EFI_SMM_PERIODIC_TIMER_CONTEXT  *)CommBuffer;
+    TimerContext = (EFI_SMM_PERIODIC_TIMER_CONTEXT  *)CommBuffer;
     PeriodicSmiLibraryHandler->ElapsedTime = TimerContext->ElapsedTime;
   }
 
@@ -806,11 +802,10 @@ PeriodicSmiDispatchFunction (
   // Dispatch the periodic SMI handler
   //
   if ((PeriodicSmiLibraryHandler->Cpu == PERIODIC_SMI_LIBRARY_ANY_CPU) ||
-      (PeriodicSmiLibraryHandler->Cpu == gSmst->CurrentlyExecutingCpu))
-  {
+      (PeriodicSmiLibraryHandler->Cpu == gSmst->CurrentlyExecutingCpu)    ) {
     //
     // Dispatch on the currently execution CPU if the CPU specified in PeriodicSmiEnable()
-    // was PERIODIC_SMI_LIBRARY_ANY_CPU or the currently executing CPU matches the CPU
+    // was PERIODIC_SMI_LIBARRY_ANY_CPU or the currently executing CPU matches the CPU
     // that was specified in PeriodicSmiEnable().
     //
     PeriodicSmiDispatchFunctionOnCpu (PeriodicSmiLibraryHandler);
@@ -872,7 +867,7 @@ PeriodicSmiDispatchFunction (
   @param[in]     DispatchFunction  A pointer to a periodic SMI handler function.
   @param[in]     Context           Optional content to pass into DispatchFunction.
   @param[in]     TickPeriod        The requested tick period in 100ns units that
-                                   control should be given to the periodic SMI
+                                   control should be givien to the periodic SMI
                                    handler.  Must be one of the supported values
                                    returned by PeriodicSmiSupportedPickPeriod().
   @param[in]     Cpu               Specifies the CPU that is required to execute
@@ -896,16 +891,16 @@ PeriodicSmiDispatchFunction (
   @retval EFI_OUT_OF_RESOURCES   There are not enough resources to enable the
                                  periodic SMI handler.
   @retval EFI_OUT_OF_RESOURCES   There are not enough resources to allocate the
-                                 stack specified by StackSize.
+                                 stack speficied by StackSize.
   @retval EFI_SUCCESS            The periodic SMI handler was enabled.
 
 **/
 EFI_STATUS
 EFIAPI
 PeriodicSmiEnable (
-  IN OUT EFI_HANDLE                    *DispatchHandle     OPTIONAL,
+  IN OUT EFI_HANDLE                    *DispatchHandle,    OPTIONAL
   IN     PERIODIC_SMI_LIBRARY_HANDLER  DispatchFunction,
-  IN     CONST VOID                    *Context            OPTIONAL,
+  IN     CONST VOID                    *Context,           OPTIONAL
   IN     UINT64                        TickPeriod,
   IN     UINTN                         Cpu,
   IN     UINTN                         StackSize
@@ -927,19 +922,18 @@ PeriodicSmiEnable (
       break;
     }
   }
-
   if (gSmiTickPeriodTable[Index] == 0) {
     return EFI_UNSUPPORTED;
   }
 
-  if ((Cpu != PERIODIC_SMI_LIBRARY_ANY_CPU) && (Cpu >= gSmst->NumberOfCpus)) {
+  if (Cpu != PERIODIC_SMI_LIBRARY_ANY_CPU && Cpu >= gSmst->NumberOfCpus) {
     return EFI_INVALID_PARAMETER;
   }
 
   //
   // Find a free periodic SMI handler entry
   //
-  PeriodicSmiLibraryHandler = FindFreePeriodicSmiLibraryHandler ();
+  PeriodicSmiLibraryHandler = FindFreePeriodicSmiLibraryHandler();
   if (PeriodicSmiLibraryHandler == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -958,12 +952,10 @@ PeriodicSmiEnable (
     if (PeriodicSmiLibraryHandler->Stack == NULL) {
       return EFI_OUT_OF_RESOURCES;
     }
-
     ZeroMem (PeriodicSmiLibraryHandler->Stack, PeriodicSmiLibraryHandler->StackSize);
   } else {
     PeriodicSmiLibraryHandler->Stack = NULL;
   }
-
   InitializeSpinLock (&PeriodicSmiLibraryHandler->DispatchLock);
   PeriodicSmiLibraryHandler->PerfomanceCounterRate = GetPerformanceCounterProperties (
                                                        &PeriodicSmiLibraryHandler->PerfomanceCounterStartValue,
@@ -971,12 +963,12 @@ PeriodicSmiEnable (
                                                        );
   PeriodicSmiLibraryHandler->RegisterContext.Period          = TickPeriod;
   PeriodicSmiLibraryHandler->RegisterContext.SmiTickInterval = TickPeriod;
-  Status                                                     = gSmmPeriodicTimerDispatch2->Register (
-                                                                                             gSmmPeriodicTimerDispatch2,
-                                                                                             PeriodicSmiDispatchFunction,
-                                                                                             &PeriodicSmiLibraryHandler->RegisterContext,
-                                                                                             &PeriodicSmiLibraryHandler->DispatchHandle
-                                                                                             );
+  Status = gSmmPeriodicTimerDispatch2->Register (
+                                         gSmmPeriodicTimerDispatch2,
+                                         PeriodicSmiDispatchFunction,
+                                         &PeriodicSmiLibraryHandler->RegisterContext,
+                                         &PeriodicSmiLibraryHandler->DispatchHandle
+                                         );
   if (EFI_ERROR (Status)) {
     PeriodicSmiLibraryHandler->DispatchHandle = NULL;
     ReclaimPeriodicSmiLibraryHandler (PeriodicSmiLibraryHandler);
@@ -989,7 +981,6 @@ PeriodicSmiEnable (
   if (DispatchHandle != NULL) {
     *DispatchHandle = PeriodicSmiLibraryHandler->DispatchHandle;
   }
-
   return EFI_SUCCESS;
 }
 
@@ -1086,10 +1077,10 @@ SmmPeriodicSmiLibConstructor (
 
   //
   // Count the number of periodic SMI tick intervals that the SMM Periodic Timer
-  // Dispatch 2 Protocol supports.
+  // Dipatch 2 Protocol supports.
   //
   SmiTickInterval = NULL;
-  Count           = 0;
+  Count = 0;
   do {
     Status = gSmmPeriodicTimerDispatch2->GetNextShorterInterval (
                                            gSmmPeriodicTimerDispatch2,
@@ -1108,17 +1099,16 @@ SmmPeriodicSmiLibConstructor (
   // Fill in the table of supported periodic SMI tick periods.
   //
   SmiTickInterval = NULL;
-  Count           = 0;
+  Count = 0;
   do {
     gSmiTickPeriodTable[Count] = 0;
-    Status                     = gSmmPeriodicTimerDispatch2->GetNextShorterInterval (
-                                                               gSmmPeriodicTimerDispatch2,
-                                                               &SmiTickInterval
-                                                               );
+    Status = gSmmPeriodicTimerDispatch2->GetNextShorterInterval (
+                                           gSmmPeriodicTimerDispatch2,
+                                           &SmiTickInterval
+                                           );
     if (SmiTickInterval != NULL) {
       gSmiTickPeriodTable[Count] = *SmiTickInterval;
     }
-
     Count++;
   } while (SmiTickInterval != NULL);
 
@@ -1162,7 +1152,7 @@ SmmPeriodicSmiLibDestructor (
   //
   for (Link = GetFirstNode (&gPeriodicSmiLibraryHandlers); !IsNull (&gPeriodicSmiLibraryHandlers, Link);) {
     PeriodicSmiLibraryHandler = PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT_FROM_LINK (Link);
-    Link                      = GetNextNode (&gPeriodicSmiLibraryHandlers, Link);
+    Link = GetNextNode (&gPeriodicSmiLibraryHandlers, Link);
     PeriodicSmiDisable (PeriodicSmiLibraryHandler->DispatchHandle);
   }
 
@@ -1171,7 +1161,7 @@ SmmPeriodicSmiLibDestructor (
   //
   for (Link = GetFirstNode (&gFreePeriodicSmiLibraryHandlers); !IsNull (&gFreePeriodicSmiLibraryHandlers, Link);) {
     PeriodicSmiLibraryHandler = PERIODIC_SMI_LIBRARY_HANDLER_CONTEXT_FROM_LINK (Link);
-    Link                      = RemoveEntryList (Link);
+    Link = RemoveEntryList (Link);
     FreePool (PeriodicSmiLibraryHandler);
   }
 

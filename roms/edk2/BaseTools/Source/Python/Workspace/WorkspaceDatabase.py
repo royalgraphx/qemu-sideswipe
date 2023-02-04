@@ -62,8 +62,6 @@ class WorkspaceDatabase(object):
         }
 
         _CACHE_ = {}    # (FilePath, Arch)  : <object>
-        def GetCache(self):
-            return self._CACHE_
 
         # constructor
         def __init__(self, WorkspaceDb):
@@ -158,6 +156,12 @@ class WorkspaceDatabase(object):
         self.BuildObject = WorkspaceDatabase.BuildObjectFactory(self)
         self.TransformObject = WorkspaceDatabase.TransformObjectFactory(self)
 
+    def SetFileTimeStamp(self,FileId,TimeStamp):
+        self.TblFile[FileId-1][6] = TimeStamp
+
+    def GetFileTimeStamp(self,FileId):
+        return self.TblFile[FileId-1][6]
+
 
     ## Summarize all packages in the database
     def GetPackageList(self, Platform, Arch, TargetName, ToolChainTag):
@@ -180,12 +184,18 @@ class WorkspaceDatabase(object):
             for Package in LibObj.Packages:
                 if Package not in PackageList:
                     PackageList.append(Package)
-        for Package in Pa.Packages:
-            if Package in PackageList:
-                continue
-            PackageList.append(Package)
 
         return PackageList
+
+    ## Summarize all platforms in the database
+    def PlatformList(self):
+        RetVal = []
+        for PlatformFile in [item[3] for item in self.TblFile if item[5] == MODEL_FILE_DSC]:
+            try:
+                RetVal.append(self.BuildObject[PathClass(PlatformFile), TAB_COMMON])
+            except:
+                pass
+        return RetVal
 
     def MapPlatform(self, Dscfile):
         Platform = self.BuildObject[PathClass(Dscfile), TAB_COMMON]
@@ -193,7 +203,6 @@ class WorkspaceDatabase(object):
             EdkLogger.error('build', PARSER_ERROR, "Failed to parser DSC file: %s" % Dscfile)
         return Platform
 
-BuildDB = WorkspaceDatabase()
 ##
 #
 # This acts like the main() function for the script, unless it is 'import'ed into another

@@ -8,11 +8,7 @@
 
 #include <common.h>
 #include <adc.h>
-#include <dm.h>
 #include <asm/io.h>
-#include <dm/device_compat.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
 #include <linux/iopoll.h>
 #include "stm32-adc-core.h"
 
@@ -80,7 +76,7 @@ static int stm32_adc_stop(struct udevice *dev)
 
 static int stm32_adc_start_channel(struct udevice *dev, int channel)
 {
-	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
+	struct adc_uclass_platdata *uc_pdata = dev_get_uclass_platdata(dev);
 	struct stm32_adc_common *common = dev_get_priv(dev_get_parent(dev));
 	struct stm32_adc *adc = dev_get_priv(dev);
 	int ret;
@@ -164,19 +160,18 @@ static int stm32_adc_channel_data(struct udevice *dev, int channel,
 
 static int stm32_adc_chan_of_init(struct udevice *dev)
 {
-	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
+	struct adc_uclass_platdata *uc_pdata = dev_get_uclass_platdata(dev);
 	struct stm32_adc *adc = dev_get_priv(dev);
 	u32 chans[STM32_ADC_CH_MAX];
-	unsigned int i, num_channels;
-	int ret;
+	int i, num_channels, ret;
 
 	/* Retrieve single ended channels listed in device tree */
-	ret = dev_read_size(dev, "st,adc-channels");
-	if (ret < 0) {
-		dev_err(dev, "can't get st,adc-channels: %d\n", ret);
-		return ret;
+	num_channels = dev_read_size(dev, "st,adc-channels");
+	if (num_channels < 0) {
+		dev_err(dev, "can't get st,adc-channels: %d\n", num_channels);
+		return num_channels;
 	}
-	num_channels = ret / sizeof(u32);
+	num_channels /= sizeof(u32);
 
 	if (num_channels > adc->cfg->max_channels) {
 		dev_err(dev, "too many st,adc-channels: %d\n", num_channels);
@@ -206,7 +201,7 @@ static int stm32_adc_chan_of_init(struct udevice *dev)
 
 static int stm32_adc_probe(struct udevice *dev)
 {
-	struct adc_uclass_plat *uc_pdata = dev_get_uclass_plat(dev);
+	struct adc_uclass_platdata *uc_pdata = dev_get_uclass_platdata(dev);
 	struct stm32_adc_common *common = dev_get_priv(dev_get_parent(dev));
 	struct stm32_adc *adc = dev_get_priv(dev);
 	int offset;
@@ -258,5 +253,5 @@ U_BOOT_DRIVER(stm32_adc) = {
 	.of_match = stm32_adc_ids,
 	.probe = stm32_adc_probe,
 	.ops = &stm32_adc_ops,
-	.priv_auto	= sizeof(struct stm32_adc),
+	.priv_auto_alloc_size = sizeof(struct stm32_adc),
 };

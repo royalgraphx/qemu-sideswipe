@@ -5,18 +5,16 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <syscon.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
-#include <asm/arch-rockchip/clock.h>
-#include <asm/arch-rockchip/grf_rv1108.h>
-#include <asm/arch-rockchip/hardware.h>
+#include <fdtdec.h>
+#include <asm/arch/grf_rv1108.h>
+#include <asm/arch/hardware.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-int board_early_init_f(void)
+int mach_cpu_init(void)
 {
+	int node;
 	struct rv1108_grf *grf;
 	enum {
 		GPIO3C3_SHIFT           = 6,
@@ -36,7 +34,8 @@ int board_early_init_f(void)
 		GPIO2D1_UART2_SIN_M0,
 	};
 
-	grf = syscon_get_first_range(ROCKCHIP_SYSCON_GRF);
+	node = fdt_node_offset_by_compatible(gd->fdt_blob, -1, "rockchip,rv1108-grf");
+	grf = (struct rv1108_grf *)fdtdec_get_addr(gd->fdt_blob, node, "reg");
 
 	/*evb board use UART2 m0 for debug*/
 	rk_clrsetreg(&grf->gpio2d_iomux,
@@ -48,9 +47,23 @@ int board_early_init_f(void)
 	return 0;
 }
 
+
+int board_init(void)
+{
+	return 0;
+}
+
 int dram_init(void)
 {
 	gd->ram_size = 0x8000000;
+
+	return 0;
+}
+
+int dram_init_banksize(void)
+{
+	gd->bd->bi_dram[0].start = 0x60000000;
+	gd->bd->bi_dram[0].size = 0x8000000;
 
 	return 0;
 }

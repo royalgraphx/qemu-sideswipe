@@ -187,7 +187,6 @@ AS={- $config{AS} -}
 ASFLAGS={- join(' ', @{$config{ASFLAGS}}) -}
 
 RC={- $config{RC} -}
-RCFLAGS={- join(' ', @{$config{RCFLAGS}}) -}
 
 ECHO="$(PERL)" "$(SRCDIR)\util\echo.pl"
 
@@ -211,8 +210,8 @@ CNF_CPPFLAGS={- our $cppfags2 =
                     join(' ', $target{cppflags} || (),
                               (map { '-D'.quotify1($_) } @{$target{defines}},
                                                          @{$config{defines}}),
-                              (map { '-I'.'"'.$_.'"' } @{$target{includes}},
-                                                       @{$config{includes}}),
+                              (map { '-I'.quotify1($_) } @{$target{includes}},
+                                                         @{$config{includes}}),
                               @{$config{cppflags}}) -}
 CNF_CFLAGS={- join(' ', $target{cflags} || (),
                         @{$config{cflags}}) -}
@@ -587,7 +586,7 @@ EOF
      if ($srcs[0] =~ /\.rc$/) {
          return <<"EOF";
 $args{obj}: $deps
-	\$(RC) \$(RCFLAGS) \$(RCOUTFLAG)\$\@ $srcs
+	\$(RC) \$(RCOUTFLAG)\$\@ $srcs
 EOF
      }
      (my $obj = $args{obj}) =~ s|\.o$||;

@@ -38,11 +38,9 @@
 
 #include <common.h>
 #include <dm.h>
-#include <log.h>
 #include <malloc.h>
 #include <memalign.h>
 #include <sdhci.h>
-#include <time.h>
 #include <asm/arch/msg.h>
 #include <asm/arch/mbox.h>
 #include <mach/sdhci.h>
@@ -166,7 +164,7 @@ static const struct sdhci_ops bcm2835_ops = {
 
 static int bcm2835_sdhci_bind(struct udevice *dev)
 {
-	struct bcm2835_sdhci_plat *plat = dev_get_plat(dev);
+	struct bcm2835_sdhci_plat *plat = dev_get_platdata(dev);
 
 	return sdhci_bind(dev, &plat->mmc, &plat->cfg);
 }
@@ -174,19 +172,18 @@ static int bcm2835_sdhci_bind(struct udevice *dev)
 static int bcm2835_sdhci_probe(struct udevice *dev)
 {
 	struct mmc_uclass_priv *upriv = dev_get_uclass_priv(dev);
-	struct bcm2835_sdhci_plat *plat = dev_get_plat(dev);
+	struct bcm2835_sdhci_plat *plat = dev_get_platdata(dev);
 	struct bcm2835_sdhci_host *priv = dev_get_priv(dev);
 	struct sdhci_host *host = &priv->host;
 	fdt_addr_t base;
 	int emmc_freq;
 	int ret;
-	int clock_id = (int)dev_get_driver_data(dev);
 
-	base = dev_read_addr(dev);
+	base = devfdt_get_addr(dev);
 	if (base == FDT_ADDR_T_NONE)
 		return -EINVAL;
 
-	ret = bcm2835_get_mmc_clock(clock_id);
+	ret = bcm2835_get_mmc_clock(BCM2835_MBOX_CLOCK_ID_EMMC);
 	if (ret < 0) {
 		debug("%s: Failed to set MMC clock (err=%d)\n", __func__, ret);
 		return ret;
@@ -210,15 +207,12 @@ static int bcm2835_sdhci_probe(struct udevice *dev)
 	priv->last_write = 0;
 
 	host->name = dev->name;
-	host->ioaddr = (void *)(uintptr_t)base;
+	host->ioaddr = (void *)base;
 	host->quirks = SDHCI_QUIRK_BROKEN_VOLTAGE | SDHCI_QUIRK_BROKEN_R1B |
 		SDHCI_QUIRK_WAIT_SEND_CMD | SDHCI_QUIRK_NO_HISPD_BIT;
 	host->max_clk = emmc_freq;
 	host->voltages = MMC_VDD_32_33 | MMC_VDD_33_34 | MMC_VDD_165_195;
 	host->ops = &bcm2835_ops;
-
-	host->mmc = &plat->mmc;
-	host->mmc->dev = dev;
 
 	ret = sdhci_setup_cfg(&plat->cfg, host, emmc_freq, MIN_FREQ);
 	if (ret) {
@@ -227,20 +221,14 @@ static int bcm2835_sdhci_probe(struct udevice *dev)
 	}
 
 	upriv->mmc = &plat->mmc;
+	host->mmc = &plat->mmc;
 	host->mmc->priv = host;
 
 	return sdhci_probe(dev);
 }
 
 static const struct udevice_id bcm2835_sdhci_match[] = {
-	{
-		.compatible = "brcm,bcm2835-sdhci",
-		.data = BCM2835_MBOX_CLOCK_ID_EMMC
-	},
-	{
-		.compatible = "brcm,bcm2711-emmc2",
-		.data = BCM2835_MBOX_CLOCK_ID_EMMC2
-	},
+	{ .compatible = "brcm,bcm2835-sdhci" },
 	{ /* sentinel */ }
 };
 
@@ -250,7 +238,7 @@ U_BOOT_DRIVER(sdhci_cdns) = {
 	.of_match = bcm2835_sdhci_match,
 	.bind = bcm2835_sdhci_bind,
 	.probe = bcm2835_sdhci_probe,
-	.priv_auto	= sizeof(struct bcm2835_sdhci_host),
-	.plat_auto	= sizeof(struct bcm2835_sdhci_plat),
+	.priv_auto_alloc_size = sizeof(struct bcm2835_sdhci_host),
+	.platdata_auto_alloc_size = sizeof(struct bcm2835_sdhci_plat),
 	.ops = &sdhci_ops,
 };

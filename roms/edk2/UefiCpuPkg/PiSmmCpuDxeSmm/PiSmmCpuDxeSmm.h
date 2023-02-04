@@ -1,7 +1,7 @@
 /** @file
 Agent Module to load other modules to deploy SMM Entry Vector for X86 CPU.
 
-Copyright (c) 2009 - 2020, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2009 - 2019, Intel Corporation. All rights reserved.<BR>
 Copyright (c) 2017, AMD Incorporated. All rights reserved.<BR>
 
 SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -20,7 +20,6 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Protocol/SmmReadyToLock.h>
 #include <Protocol/SmmCpuService.h>
 #include <Protocol/SmmMemoryAttribute.h>
-#include <Protocol/MmMp.h>
 
 #include <Guid/AcpiS3Context.h>
 #include <Guid/MemoryAttributesTable.h>
@@ -53,8 +52,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <AcpiCpuData.h>
 #include <CpuHotPlugData.h>
 
-#include <Register/Intel/Cpuid.h>
-#include <Register/Intel/Msr.h>
+#include <Register/Cpuid.h>
+#include <Register/Msr.h>
 
 #include "CpuService.h"
 #include "SmmProfile.h"
@@ -74,69 +73,69 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 typedef union {
   struct {
     // enable shadow stacks
-    UINT32    SH_STK_ENP              : 1;
+    UINT32  SH_STK_ENP:1;
     // enable the WRSS{D,Q}W instructions.
-    UINT32    WR_SHSTK_EN             : 1;
+    UINT32  WR_SHSTK_EN:1;
     // enable tracking of indirect call/jmp targets to be ENDBRANCH instruction.
-    UINT32    ENDBR_EN                : 1;
+    UINT32  ENDBR_EN:1;
     // enable legacy compatibility treatment for indirect call/jmp tracking.
-    UINT32    LEG_IW_EN               : 1;
+    UINT32  LEG_IW_EN:1;
     // enable use of no-track prefix on indirect call/jmp.
-    UINT32    NO_TRACK_EN             : 1;
+    UINT32  NO_TRACK_EN:1;
     // disable suppression of CET indirect branch tracking on legacy compatibility.
-    UINT32    SUPPRESS_DIS            : 1;
-    UINT32    RSVD                    : 4;
+    UINT32  SUPPRESS_DIS:1;
+    UINT32  RSVD:4;
     // indirect branch tracking is suppressed.
     // This bit can be written to 1 only if TRACKER is written as IDLE.
-    UINT32    SUPPRESS                : 1;
+    UINT32  SUPPRESS:1;
     // Value of the endbranch state machine
     // Values: IDLE (0), WAIT_FOR_ENDBRANCH(1).
-    UINT32    TRACKER                 : 1;
+    UINT32  TRACKER:1;
     // linear address of a bitmap in memory indicating valid
     // pages as target of CALL/JMP_indirect that do not land on ENDBRANCH when CET is enabled
     // and not suppressed. Valid when ENDBR_EN is 1. Must be machine canonical when written on
     // parts that support 64 bit mode. On parts that do not support 64 bit mode, the bits 63:32 are
     // reserved and must be 0. This value is extended by 12 bits at the low end to form the base address
     // (this automatically aligns the address on a 4-Kbyte boundary).
-    UINT32    EB_LEG_BITMAP_BASE_low  : 12;
-    UINT32    EB_LEG_BITMAP_BASE_high : 32;
+    UINT32  EB_LEG_BITMAP_BASE_low:12;
+    UINT32  EB_LEG_BITMAP_BASE_high:32;
   } Bits;
-  UINT64    Uint64;
+  UINT64   Uint64;
 } MSR_IA32_CET;
 
 //
 // MSRs required for configuration of SMM Code Access Check
 //
-#define EFI_MSR_SMM_MCA_CAP       0x17D
-#define  SMM_CODE_ACCESS_CHK_BIT  BIT58
+#define EFI_MSR_SMM_MCA_CAP                    0x17D
+#define  SMM_CODE_ACCESS_CHK_BIT               BIT58
 
-#define  SMM_FEATURE_CONTROL_LOCK_BIT  BIT0
-#define  SMM_CODE_CHK_EN_BIT           BIT2
+#define  SMM_FEATURE_CONTROL_LOCK_BIT          BIT0
+#define  SMM_CODE_CHK_EN_BIT                   BIT2
 
 ///
 /// Page Table Entry
 ///
-#define IA32_PG_P       BIT0
-#define IA32_PG_RW      BIT1
-#define IA32_PG_U       BIT2
-#define IA32_PG_WT      BIT3
-#define IA32_PG_CD      BIT4
-#define IA32_PG_A       BIT5
-#define IA32_PG_D       BIT6
-#define IA32_PG_PS      BIT7
-#define IA32_PG_PAT_2M  BIT12
-#define IA32_PG_PAT_4K  IA32_PG_PS
-#define IA32_PG_PMNT    BIT62
-#define IA32_PG_NX      BIT63
+#define IA32_PG_P                   BIT0
+#define IA32_PG_RW                  BIT1
+#define IA32_PG_U                   BIT2
+#define IA32_PG_WT                  BIT3
+#define IA32_PG_CD                  BIT4
+#define IA32_PG_A                   BIT5
+#define IA32_PG_D                   BIT6
+#define IA32_PG_PS                  BIT7
+#define IA32_PG_PAT_2M              BIT12
+#define IA32_PG_PAT_4K              IA32_PG_PS
+#define IA32_PG_PMNT                BIT62
+#define IA32_PG_NX                  BIT63
 
-#define PAGE_ATTRIBUTE_BITS  (IA32_PG_D | IA32_PG_A | IA32_PG_U | IA32_PG_RW | IA32_PG_P)
+#define PAGE_ATTRIBUTE_BITS         (IA32_PG_D | IA32_PG_A | IA32_PG_U | IA32_PG_RW | IA32_PG_P)
 //
 // Bits 1, 2, 5, 6 are reserved in the IA32 PAE PDPTE
 // X64 PAE PDPTE does not have such restriction
 //
-#define IA32_PAE_PDPTE_ATTRIBUTE_BITS  (IA32_PG_P)
+#define IA32_PAE_PDPTE_ATTRIBUTE_BITS    (IA32_PG_P)
 
-#define PAGE_PROGATE_BITS  (IA32_PG_NX | PAGE_ATTRIBUTE_BITS)
+#define PAGE_PROGATE_BITS           (IA32_PG_NX | PAGE_ATTRIBUTE_BITS)
 
 #define PAGING_4K_MASK  0xFFF
 #define PAGING_2M_MASK  0x1FFFFF
@@ -144,11 +143,11 @@ typedef union {
 
 #define PAGING_PAE_INDEX_MASK  0x1FF
 
-#define PAGING_4K_ADDRESS_MASK_64  0x000FFFFFFFFFF000ull
-#define PAGING_2M_ADDRESS_MASK_64  0x000FFFFFFFE00000ull
-#define PAGING_1G_ADDRESS_MASK_64  0x000FFFFFC0000000ull
+#define PAGING_4K_ADDRESS_MASK_64 0x000FFFFFFFFFF000ull
+#define PAGING_2M_ADDRESS_MASK_64 0x000FFFFFFFE00000ull
+#define PAGING_1G_ADDRESS_MASK_64 0x000FFFFFC0000000ull
 
-#define SMRR_MAX_ADDRESS  BASE_4GB
+#define SMRR_MAX_ADDRESS       BASE_4GB
 
 typedef enum {
   PageNone,
@@ -158,28 +157,28 @@ typedef enum {
 } PAGE_ATTRIBUTE;
 
 typedef struct {
-  PAGE_ATTRIBUTE    Attribute;
-  UINT64            Length;
-  UINT64            AddressMask;
+  PAGE_ATTRIBUTE   Attribute;
+  UINT64           Length;
+  UINT64           AddressMask;
 } PAGE_ATTRIBUTE_TABLE;
 
 //
 // Size of Task-State Segment defined in IA32 Manual
 //
-#define TSS_SIZE             104
-#define EXCEPTION_TSS_SIZE   (TSS_SIZE + 4)  // Add 4 bytes SSP
-#define TSS_X64_IST1_OFFSET  36
-#define TSS_IA32_CR3_OFFSET  28
-#define TSS_IA32_ESP_OFFSET  56
-#define TSS_IA32_SSP_OFFSET  104
+#define TSS_SIZE              104
+#define EXCEPTION_TSS_SIZE    (TSS_SIZE + 4) // Add 4 bytes SSP
+#define TSS_X64_IST1_OFFSET   36
+#define TSS_IA32_CR3_OFFSET   28
+#define TSS_IA32_ESP_OFFSET   56
+#define TSS_IA32_SSP_OFFSET   104
 
-#define CR0_WP  BIT16
+#define CR0_WP                BIT16
 
 //
 // Code select value
 //
-#define PROTECT_MODE_CODE_SEGMENT  0x08
-#define LONG_MODE_CODE_SEGMENT     0x38
+#define PROTECT_MODE_CODE_SEGMENT          0x08
+#define LONG_MODE_CODE_SEGMENT             0x38
 
 //
 // The size 0x20 must be bigger than
@@ -189,45 +188,14 @@ typedef struct {
 //
 #define BACK_BUF_SIZE  0x20
 
-#define EXCEPTION_VECTOR_NUMBER  0x20
+#define EXCEPTION_VECTOR_NUMBER     0x20
 
-#define INVALID_APIC_ID  0xFFFFFFFFFFFFFFFFULL
+#define INVALID_APIC_ID 0xFFFFFFFFFFFFFFFFULL
 
-typedef UINT32 SMM_CPU_ARRIVAL_EXCEPTIONS;
-#define ARRIVAL_EXCEPTION_BLOCKED       0x1
-#define ARRIVAL_EXCEPTION_DELAYED       0x2
-#define ARRIVAL_EXCEPTION_SMI_DISABLED  0x4
-
-//
-// Wrapper used to convert EFI_AP_PROCEDURE2 and EFI_AP_PROCEDURE.
-//
-typedef struct {
-  EFI_AP_PROCEDURE    Procedure;
-  VOID                *ProcedureArgument;
-} PROCEDURE_WRAPPER;
-
-#define PROCEDURE_TOKEN_SIGNATURE  SIGNATURE_32 ('P', 'R', 'T', 'S')
-
-typedef struct {
-  UINTN              Signature;
-  LIST_ENTRY         Link;
-
-  SPIN_LOCK          *SpinLock;
-  volatile UINT32    RunningApCount;
-} PROCEDURE_TOKEN;
-
-#define PROCEDURE_TOKEN_FROM_LINK(a)  CR (a, PROCEDURE_TOKEN, Link, PROCEDURE_TOKEN_SIGNATURE)
-
-#define TOKEN_BUFFER_SIGNATURE  SIGNATURE_32 ('T', 'K', 'B', 'S')
-
-typedef struct {
-  UINTN         Signature;
-  LIST_ENTRY    Link;
-
-  UINT8         *Buffer;
-} TOKEN_BUFFER;
-
-#define TOKEN_BUFFER_FROM_LINK(a)  CR (a, TOKEN_BUFFER, Link, TOKEN_BUFFER_SIGNATURE)
+typedef UINT32                              SMM_CPU_ARRIVAL_EXCEPTIONS;
+#define ARRIVAL_EXCEPTION_BLOCKED           0x1
+#define ARRIVAL_EXCEPTION_DELAYED           0x2
+#define ARRIVAL_EXCEPTION_SMI_DISABLED      0x4
 
 //
 // Private structure for the SMM CPU module that is stored in DXE Runtime memory
@@ -237,33 +205,27 @@ typedef struct {
 #define SMM_CPU_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('s', 'c', 'p', 'u')
 
 typedef struct {
-  UINTN                             Signature;
+  UINTN                           Signature;
 
-  EFI_HANDLE                        SmmCpuHandle;
+  EFI_HANDLE                      SmmCpuHandle;
 
-  EFI_PROCESSOR_INFORMATION         *ProcessorInfo;
-  SMM_CPU_OPERATION                 *Operation;
-  UINTN                             *CpuSaveStateSize;
-  VOID                              **CpuSaveState;
+  EFI_PROCESSOR_INFORMATION       *ProcessorInfo;
+  SMM_CPU_OPERATION               *Operation;
+  UINTN                           *CpuSaveStateSize;
+  VOID                            **CpuSaveState;
 
-  EFI_SMM_RESERVED_SMRAM_REGION     SmmReservedSmramRegion[1];
-  EFI_SMM_ENTRY_CONTEXT             SmmCoreEntryContext;
-  EFI_SMM_ENTRY_POINT               SmmCoreEntry;
+  EFI_SMM_RESERVED_SMRAM_REGION   SmmReservedSmramRegion[1];
+  EFI_SMM_ENTRY_CONTEXT           SmmCoreEntryContext;
+  EFI_SMM_ENTRY_POINT             SmmCoreEntry;
 
-  EFI_SMM_CONFIGURATION_PROTOCOL    SmmConfiguration;
-
-  PROCEDURE_WRAPPER                 *ApWrapperFunc;
-  LIST_ENTRY                        TokenList;
-  LIST_ENTRY                        *FirstFreeToken;
+  EFI_SMM_CONFIGURATION_PROTOCOL  SmmConfiguration;
 } SMM_CPU_PRIVATE_DATA;
 
 extern SMM_CPU_PRIVATE_DATA  *gSmmCpuPrivate;
-extern CPU_HOT_PLUG_DATA     mCpuHotPlugData;
-extern UINTN                 mMaxNumberOfCpus;
-extern UINTN                 mNumberOfCpus;
-extern EFI_SMM_CPU_PROTOCOL  mSmmCpu;
-extern EFI_MM_MP_PROTOCOL    mSmmMp;
-extern UINTN                 mInternalCr3;
+extern CPU_HOT_PLUG_DATA      mCpuHotPlugData;
+extern UINTN                  mMaxNumberOfCpus;
+extern UINTN                  mNumberOfCpus;
+extern EFI_SMM_CPU_PROTOCOL   mSmmCpu;
 
 ///
 /// The mode of the CPU at the time an SMI occurs
@@ -285,17 +247,17 @@ extern UINT8  mSmmSaveStateRegisterLma;
 
   @retval EFI_SUCCESS   The register was read from Save State
   @retval EFI_NOT_FOUND The register is not defined for the Save State of Processor
-  @retval EFI_INVALID_PARAMETER   This or Buffer is NULL.
+  @retval EFI_INVALID_PARAMTER   This or Buffer is NULL.
 
 **/
 EFI_STATUS
 EFIAPI
 SmmReadSaveState (
-  IN CONST EFI_SMM_CPU_PROTOCOL   *This,
-  IN UINTN                        Width,
-  IN EFI_SMM_SAVE_STATE_REGISTER  Register,
-  IN UINTN                        CpuIndex,
-  OUT VOID                        *Buffer
+  IN CONST EFI_SMM_CPU_PROTOCOL         *This,
+  IN UINTN                              Width,
+  IN EFI_SMM_SAVE_STATE_REGISTER        Register,
+  IN UINTN                              CpuIndex,
+  OUT VOID                              *Buffer
   );
 
 /**
@@ -309,17 +271,17 @@ SmmReadSaveState (
 
   @retval EFI_SUCCESS   The register was written from Save State
   @retval EFI_NOT_FOUND The register is not defined for the Save State of Processor
-  @retval EFI_INVALID_PARAMETER   ProcessorIndex or Width is not correct
+  @retval EFI_INVALID_PARAMTER   ProcessorIndex or Width is not correct
 
 **/
 EFI_STATUS
 EFIAPI
 SmmWriteSaveState (
-  IN CONST EFI_SMM_CPU_PROTOCOL   *This,
-  IN UINTN                        Width,
-  IN EFI_SMM_SAVE_STATE_REGISTER  Register,
-  IN UINTN                        CpuIndex,
-  IN CONST VOID                   *Buffer
+  IN CONST EFI_SMM_CPU_PROTOCOL         *This,
+  IN UINTN                              Width,
+  IN EFI_SMM_SAVE_STATE_REGISTER        Register,
+  IN UINTN                              CpuIndex,
+  IN CONST VOID                         *Buffer
   );
 
 /**
@@ -337,7 +299,7 @@ This function supports reading a CPU Save State register in SMBase relocation ha
 
 @retval EFI_SUCCESS           The register was read from Save State.
 @retval EFI_NOT_FOUND         The register is not defined for the Save State of Processor.
-@retval EFI_INVALID_PARAMETER Buffer is NULL, or Width does not meet requirement per Register type.
+@retval EFI_INVALID_PARAMTER  This or Buffer is NULL.
 
 **/
 EFI_STATUS
@@ -364,7 +326,7 @@ This function supports writing a CPU Save State register in SMBase relocation ha
 
 @retval EFI_SUCCESS           The register was written to Save State.
 @retval EFI_NOT_FOUND         The register is not defined for the Save State of Processor.
-@retval EFI_INVALID_PARAMETER  ProcessorIndex or Width is not correct.
+@retval EFI_INVALID_PARAMTER  ProcessorIndex or Width is not correct.
 
 **/
 EFI_STATUS
@@ -376,16 +338,16 @@ WriteSaveStateRegister (
   IN CONST VOID                   *Buffer
   );
 
-extern CONST UINT8        gcSmmInitTemplate[];
-extern CONST UINT16       gcSmmInitSize;
-X86_ASSEMBLY_PATCH_LABEL  gPatchSmmCr0;
-extern UINT32             mSmmCr0;
-X86_ASSEMBLY_PATCH_LABEL  gPatchSmmCr3;
-extern UINT32             mSmmCr4;
-X86_ASSEMBLY_PATCH_LABEL  gPatchSmmCr4;
-X86_ASSEMBLY_PATCH_LABEL  gPatchSmmInitStack;
-X86_ASSEMBLY_PATCH_LABEL  mPatchCetSupported;
-extern BOOLEAN            mCetSupported;
+extern CONST UINT8                  gcSmmInitTemplate[];
+extern CONST UINT16                 gcSmmInitSize;
+X86_ASSEMBLY_PATCH_LABEL            gPatchSmmCr0;
+extern UINT32                       mSmmCr0;
+X86_ASSEMBLY_PATCH_LABEL            gPatchSmmCr3;
+extern UINT32                       mSmmCr4;
+X86_ASSEMBLY_PATCH_LABEL            gPatchSmmCr4;
+X86_ASSEMBLY_PATCH_LABEL            gPatchSmmInitStack;
+X86_ASSEMBLY_PATCH_LABEL            mPatchCetSupported;
+extern BOOLEAN                      mCetSupported;
 
 /**
   Semaphore operation for all processor relocate SMMBase.
@@ -400,13 +362,11 @@ SmmRelocationSemaphoreComplete (
 /// The type of SMM CPU Information
 ///
 typedef struct {
-  SPIN_LOCK                     *Busy;
-  volatile EFI_AP_PROCEDURE2    Procedure;
-  volatile VOID                 *Parameter;
-  volatile UINT32               *Run;
-  volatile BOOLEAN              *Present;
-  PROCEDURE_TOKEN               *Token;
-  EFI_STATUS                    *Status;
+  SPIN_LOCK                         *Busy;
+  volatile EFI_AP_PROCEDURE         Procedure;
+  volatile VOID                     *Parameter;
+  volatile UINT32                   *Run;
+  volatile BOOLEAN                  *Present;
 } SMM_CPU_DATA_BLOCK;
 
 typedef enum {
@@ -428,60 +388,57 @@ typedef struct {
   volatile SMM_CPU_SYNC_MODE    EffectiveSyncMode;
   volatile BOOLEAN              SwitchBsp;
   volatile BOOLEAN              *CandidateBsp;
-  EFI_AP_PROCEDURE              StartupProcedure;
-  VOID                          *StartupProcArgs;
 } SMM_DISPATCHER_MP_SYNC_DATA;
 
-#define SMM_PSD_OFFSET  0xfb00
+#define SMM_PSD_OFFSET              0xfb00
 
 ///
 /// All global semaphores' pointer
 ///
 typedef struct {
-  volatile UINT32     *Counter;
-  volatile BOOLEAN    *InsideSmm;
-  volatile BOOLEAN    *AllCpusInSync;
-  SPIN_LOCK           *PFLock;
-  SPIN_LOCK           *CodeAccessCheckLock;
+  volatile UINT32      *Counter;
+  volatile BOOLEAN     *InsideSmm;
+  volatile BOOLEAN     *AllCpusInSync;
+  SPIN_LOCK            *PFLock;
+  SPIN_LOCK            *CodeAccessCheckLock;
 } SMM_CPU_SEMAPHORE_GLOBAL;
 
 ///
 /// All semaphores for each processor
 ///
 typedef struct {
-  SPIN_LOCK           *Busy;
-  volatile UINT32     *Run;
-  volatile BOOLEAN    *Present;
-  SPIN_LOCK           *Token;
+  SPIN_LOCK                         *Busy;
+  volatile UINT32                   *Run;
+  volatile BOOLEAN                  *Present;
 } SMM_CPU_SEMAPHORE_CPU;
 
 ///
 /// All semaphores' information
 ///
 typedef struct {
-  SMM_CPU_SEMAPHORE_GLOBAL    SemaphoreGlobal;
-  SMM_CPU_SEMAPHORE_CPU       SemaphoreCpu;
+  SMM_CPU_SEMAPHORE_GLOBAL          SemaphoreGlobal;
+  SMM_CPU_SEMAPHORE_CPU             SemaphoreCpu;
 } SMM_CPU_SEMAPHORES;
 
-extern IA32_DESCRIPTOR               gcSmiGdtr;
-extern EFI_PHYSICAL_ADDRESS          mGdtBuffer;
-extern UINTN                         mGdtBufferSize;
-extern IA32_DESCRIPTOR               gcSmiIdtr;
-extern VOID                          *gcSmiIdtrPtr;
-extern UINT64                        gPhyMask;
-extern SMM_DISPATCHER_MP_SYNC_DATA   *mSmmMpSyncData;
-extern UINTN                         mSmmStackArrayBase;
-extern UINTN                         mSmmStackArrayEnd;
-extern UINTN                         mSmmStackSize;
-extern EFI_SMM_CPU_SERVICE_PROTOCOL  mSmmCpuService;
-extern IA32_DESCRIPTOR               gcSmiInitGdtr;
-extern SMM_CPU_SEMAPHORES            mSmmCpuSemaphores;
-extern UINTN                         mSemaphoreSize;
-extern SPIN_LOCK                     *mPFLock;
-extern SPIN_LOCK                     *mConfigSmmCodeAccessCheckLock;
-extern EFI_SMRAM_DESCRIPTOR          *mSmmCpuSmramRanges;
-extern UINTN                         mSmmCpuSmramRangeCount;
-extern UINT8                         mPhysicalAddressBits;
+extern IA32_DESCRIPTOR                     gcSmiGdtr;
+extern EFI_PHYSICAL_ADDRESS                mGdtBuffer;
+extern UINTN                               mGdtBufferSize;
+extern IA32_DESCRIPTOR                     gcSmiIdtr;
+extern VOID                                *gcSmiIdtrPtr;
+extern UINT64                              gPhyMask;
+extern SMM_DISPATCHER_MP_SYNC_DATA         *mSmmMpSyncData;
+extern UINTN                               mSmmStackArrayBase;
+extern UINTN                               mSmmStackArrayEnd;
+extern UINTN                               mSmmStackSize;
+extern EFI_SMM_CPU_SERVICE_PROTOCOL        mSmmCpuService;
+extern IA32_DESCRIPTOR                     gcSmiInitGdtr;
+extern SMM_CPU_SEMAPHORES                  mSmmCpuSemaphores;
+extern UINTN                               mSemaphoreSize;
+extern SPIN_LOCK                           *mPFLock;
+extern SPIN_LOCK                           *mConfigSmmCodeAccessCheckLock;
+extern EFI_SMRAM_DESCRIPTOR                *mSmmCpuSmramRanges;
+extern UINTN                               mSmmCpuSmramRangeCount;
+extern UINT8                               mPhysicalAddressBits;
 
 //
 // Copy of the PcdPteMemoryEncryptionAddressOrMask
@@ -497,8 +454,9 @@ extern UINT64  mAddressEncMask;
 **/
 UINT32
 Gen4GPageTable (
-  IN      BOOLEAN  Is32BitPageTable
+  IN      BOOLEAN                   Is32BitPageTable
   );
+
 
 /**
   Initialize global data for MP synchronization.
@@ -510,9 +468,9 @@ Gen4GPageTable (
 **/
 UINT32
 InitializeMpServiceData (
-  IN VOID   *Stacks,
-  IN UINTN  StackSize,
-  IN UINTN  ShadowStackSize
+  IN VOID        *Stacks,
+  IN UINTN       StackSize,
+  IN UINTN       ShadowStackSize
   );
 
 /**
@@ -543,7 +501,7 @@ StartSyncTimer (
 BOOLEAN
 EFIAPI
 IsSyncTimerTimeout (
-  IN      UINT64  Timer
+  IN      UINT64                    Timer
   );
 
 /**
@@ -554,20 +512,6 @@ VOID
 EFIAPI
 InitializeIDTSmmStackGuard (
   VOID
-  );
-
-/**
-  Initialize IDT IST Field.
-
-  @param[in]  ExceptionType       Exception type.
-  @param[in]  Ist                 IST value.
-
-**/
-VOID
-EFIAPI
-InitializeIdtIst (
-  IN EFI_EXCEPTION_TYPE  ExceptionType,
-  IN UINT8               Ist
   );
 
 /**
@@ -630,9 +574,9 @@ SmmInitPageTable (
 EFI_STATUS
 EFIAPI
 SmmStartupThisAp (
-  IN      EFI_AP_PROCEDURE  Procedure,
-  IN      UINTN             CpuIndex,
-  IN OUT  VOID              *ProcArguments OPTIONAL
+  IN      EFI_AP_PROCEDURE          Procedure,
+  IN      UINTN                     CpuIndex,
+  IN OUT  VOID                      *ProcArguments OPTIONAL
   );
 
 /**
@@ -652,9 +596,9 @@ SmmStartupThisAp (
 EFI_STATUS
 EFIAPI
 SmmBlockingStartupThisAp (
-  IN      EFI_AP_PROCEDURE  Procedure,
-  IN      UINTN             CpuIndex,
-  IN OUT  VOID              *ProcArguments OPTIONAL
+  IN      EFI_AP_PROCEDURE          Procedure,
+  IN      UINTN                     CpuIndex,
+  IN OUT  VOID                      *ProcArguments OPTIONAL
   );
 
 /**
@@ -682,9 +626,9 @@ SmmBlockingStartupThisAp (
 EFI_STATUS
 EFIAPI
 SmmSetMemoryAttributes (
-  IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN  UINT64                Length,
-  IN  UINT64                Attributes
+  IN  EFI_PHYSICAL_ADDRESS                       BaseAddress,
+  IN  UINT64                                     Length,
+  IN  UINT64                                     Attributes
   );
 
 /**
@@ -712,9 +656,9 @@ SmmSetMemoryAttributes (
 EFI_STATUS
 EFIAPI
 SmmClearMemoryAttributes (
-  IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN  UINT64                Length,
-  IN  UINT64                Attributes
+  IN  EFI_PHYSICAL_ADDRESS                       BaseAddress,
+  IN  UINT64                                     Length,
+  IN  UINT64                                     Attributes
   );
 
 /**
@@ -737,8 +681,8 @@ InitializeMpSyncData (
 **/
 VOID
 FindSmramInfo (
-  OUT UINT32  *SmrrBase,
-  OUT UINT32  *SmrrSize
+  OUT UINT32   *SmrrBase,
+  OUT UINT32   *SmrrSize
   );
 
 /**
@@ -764,8 +708,8 @@ SmmRelocateBases (
 VOID
 EFIAPI
 SmiPFHandler (
-  IN EFI_EXCEPTION_TYPE  InterruptType,
-  IN EFI_SYSTEM_CONTEXT  SystemContext
+  IN EFI_EXCEPTION_TYPE   InterruptType,
+  IN EFI_SYSTEM_CONTEXT   SystemContext
   );
 
 /**
@@ -794,7 +738,7 @@ PerformPreTasks (
 **/
 VOID
 InitMsrSpinLockByIndex (
-  IN UINT32  MsrIndex
+  IN UINT32      MsrIndex
   );
 
 /**
@@ -907,7 +851,7 @@ InstallSmiHandler (
 **/
 VOID
 DumpModuleInfoByIp (
-  IN  UINTN  CallerIpAddress
+  IN  UINTN              CallerIpAddress
   );
 
 /**
@@ -956,15 +900,13 @@ SetPageTableAttributes (
   );
 
 /**
-  Get page table base address and the depth of the page table.
+  Return page table base.
 
-  @param[out] Base        Page table base address.
-  @param[out] FiveLevels  TRUE means 5 level paging. FALSE means 4 level paging.
+  @return page table base.
 **/
-VOID
-GetPageTable (
-  OUT UINTN    *Base,
-  OUT BOOLEAN  *FiveLevels OPTIONAL
+UINTN
+GetPageTableBase (
+  VOID
   );
 
 /**
@@ -993,10 +935,10 @@ GetPageTable (
 EFI_STATUS
 EFIAPI
 SmmSetMemoryAttributesEx (
-  IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN  UINT64                Length,
-  IN  UINT64                Attributes,
-  OUT BOOLEAN               *IsSplitted  OPTIONAL
+  IN  EFI_PHYSICAL_ADDRESS                       BaseAddress,
+  IN  UINT64                                     Length,
+  IN  UINT64                                     Attributes,
+  OUT BOOLEAN                                    *IsSplitted  OPTIONAL
   );
 
 /**
@@ -1025,10 +967,10 @@ SmmSetMemoryAttributesEx (
 EFI_STATUS
 EFIAPI
 SmmClearMemoryAttributesEx (
-  IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN  UINT64                Length,
-  IN  UINT64                Attributes,
-  OUT BOOLEAN               *IsSplitted  OPTIONAL
+  IN  EFI_PHYSICAL_ADDRESS                       BaseAddress,
+  IN  UINT64                                     Length,
+  IN  UINT64                                     Attributes,
+  OUT BOOLEAN                                    *IsSplitted  OPTIONAL
   );
 
 /**
@@ -1048,7 +990,7 @@ SmmClearMemoryAttributesEx (
 **/
 VOID *
 AllocatePageTableMemory (
-  IN UINTN  Pages
+  IN UINTN           Pages
   );
 
 /**
@@ -1060,7 +1002,7 @@ AllocatePageTableMemory (
 **/
 VOID *
 AllocateCodePages (
-  IN UINTN  Pages
+  IN UINTN           Pages
   );
 
 /**
@@ -1075,15 +1017,16 @@ AllocateCodePages (
 **/
 VOID *
 AllocateAlignedCodePages (
-  IN UINTN  Pages,
-  IN UINTN  Alignment
+  IN UINTN            Pages,
+  IN UINTN            Alignment
   );
+
 
 //
 // S3 related global variable and function prototype.
 //
 
-extern BOOLEAN  mSmmS3Flag;
+extern BOOLEAN                mSmmS3Flag;
 
 /**
   Initialize SMM S3 resume state structure used during S3 Resume.
@@ -1149,9 +1092,9 @@ TransferApToSafeState (
 **/
 EFI_STATUS
 SetShadowStack (
-  IN  UINTN                 Cr3,
-  IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN  UINT64                Length
+  IN  UINTN                                      Cr3,
+  IN  EFI_PHYSICAL_ADDRESS                       BaseAddress,
+  IN  UINT64                                     Length
   );
 
 /**
@@ -1165,9 +1108,9 @@ SetShadowStack (
 **/
 EFI_STATUS
 SetNotPresentPage (
-  IN  UINTN                 Cr3,
-  IN  EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN  UINT64                Length
+  IN  UINTN                                      Cr3,
+  IN  EFI_PHYSICAL_ADDRESS                       BaseAddress,
+  IN  UINT64                                     Length
   );
 
 /**
@@ -1208,10 +1151,10 @@ InitShadowStack (
 EFI_STATUS
 EFIAPI
 EdkiiSmmSetMemoryAttributes (
-  IN  EDKII_SMM_MEMORY_ATTRIBUTE_PROTOCOL  *This,
-  IN  EFI_PHYSICAL_ADDRESS                 BaseAddress,
-  IN  UINT64                               Length,
-  IN  UINT64                               Attributes
+  IN  EDKII_SMM_MEMORY_ATTRIBUTE_PROTOCOL   *This,
+  IN  EFI_PHYSICAL_ADDRESS                  BaseAddress,
+  IN  UINT64                                Length,
+  IN  UINT64                                Attributes
   );
 
 /**
@@ -1240,10 +1183,10 @@ EdkiiSmmSetMemoryAttributes (
 EFI_STATUS
 EFIAPI
 EdkiiSmmClearMemoryAttributes (
-  IN  EDKII_SMM_MEMORY_ATTRIBUTE_PROTOCOL  *This,
-  IN  EFI_PHYSICAL_ADDRESS                 BaseAddress,
-  IN  UINT64                               Length,
-  IN  UINT64                               Attributes
+  IN  EDKII_SMM_MEMORY_ATTRIBUTE_PROTOCOL   *This,
+  IN  EFI_PHYSICAL_ADDRESS                  BaseAddress,
+  IN  UINT64                                Length,
+  IN  UINT64                                Attributes
   );
 
 /**
@@ -1270,29 +1213,29 @@ EdkiiSmmClearMemoryAttributes (
 EFI_STATUS
 EFIAPI
 EdkiiSmmGetMemoryAttributes (
-  IN  EDKII_SMM_MEMORY_ATTRIBUTE_PROTOCOL  *This,
-  IN  EFI_PHYSICAL_ADDRESS                 BaseAddress,
-  IN  UINT64                               Length,
-  IN  UINT64                               *Attributes
+  IN  EDKII_SMM_MEMORY_ATTRIBUTE_PROTOCOL   *This,
+  IN  EFI_PHYSICAL_ADDRESS                  BaseAddress,
+  IN  UINT64                                Length,
+  IN  UINT64                                *Attributes
   );
 
 /**
   This function fixes up the address of the global variable or function
-  referred in SmmInit assembly files to be the absolute address.
+  referred in SmmInit assembly files to be the absoute address.
 **/
 VOID
 EFIAPI
 PiSmmCpuSmmInitFixupAddress (
-  );
+ );
 
 /**
   This function fixes up the address of the global variable or function
-  referred in SmiEntry assembly files to be the absolute address.
+  referred in SmiEntry assembly files to be the absoute address.
 **/
 VOID
 EFIAPI
 PiSmmCpuSmiEntryFixupAddress (
-  );
+ );
 
 /**
   This function reads CR2 register when on-demand paging is enabled
@@ -1314,178 +1257,6 @@ SaveCr2 (
 VOID
 RestoreCr2 (
   IN UINTN  Cr2
-  );
-
-/**
-  Schedule a procedure to run on the specified CPU.
-
-  @param[in]       Procedure                The address of the procedure to run
-  @param[in]       CpuIndex                 Target CPU Index
-  @param[in,out]   ProcArguments            The parameter to pass to the procedure
-  @param[in,out]   Token                    This is an optional parameter that allows the caller to execute the
-                                            procedure in a blocking or non-blocking fashion. If it is NULL the
-                                            call is blocking, and the call will not return until the AP has
-                                            completed the procedure. If the token is not NULL, the call will
-                                            return immediately. The caller can check whether the procedure has
-                                            completed with CheckOnProcedure or WaitForProcedure.
-  @param[in]       TimeoutInMicroseconds    Indicates the time limit in microseconds for the APs to finish
-                                            execution of Procedure, either for blocking or non-blocking mode.
-                                            Zero means infinity. If the timeout expires before all APs return
-                                            from Procedure, then Procedure on the failed APs is terminated. If
-                                            the timeout expires in blocking mode, the call returns EFI_TIMEOUT.
-                                            If the timeout expires in non-blocking mode, the timeout determined
-                                            can be through CheckOnProcedure or WaitForProcedure.
-                                            Note that timeout support is optional. Whether an implementation
-                                            supports this feature can be determined via the Attributes data
-                                            member.
-  @param[in,out]   CpuStatus                This optional pointer may be used to get the status code returned
-                                            by Procedure when it completes execution on the target AP, or with
-                                            EFI_TIMEOUT if the Procedure fails to complete within the optional
-                                            timeout. The implementation will update this variable with
-                                            EFI_NOT_READY prior to starting Procedure on the target AP.
-
-  @retval EFI_INVALID_PARAMETER    CpuNumber not valid
-  @retval EFI_INVALID_PARAMETER    CpuNumber specifying BSP
-  @retval EFI_INVALID_PARAMETER    The AP specified by CpuNumber did not enter SMM
-  @retval EFI_INVALID_PARAMETER    The AP specified by CpuNumber is busy
-  @retval EFI_SUCCESS              The procedure has been successfully scheduled
-
-**/
-EFI_STATUS
-InternalSmmStartupThisAp (
-  IN      EFI_AP_PROCEDURE2  Procedure,
-  IN      UINTN              CpuIndex,
-  IN OUT  VOID               *ProcArguments OPTIONAL,
-  IN OUT  MM_COMPLETION      *Token,
-  IN      UINTN              TimeoutInMicroseconds,
-  IN OUT  EFI_STATUS         *CpuStatus
-  );
-
-/**
-  Checks whether the input token is the current used token.
-
-  @param[in]  Token      This parameter describes the token that was passed into DispatchProcedure or
-                         BroadcastProcedure.
-
-  @retval TRUE           The input token is the current used token.
-  @retval FALSE          The input token is not the current used token.
-**/
-BOOLEAN
-IsTokenInUse (
-  IN SPIN_LOCK  *Token
-  );
-
-/**
-  Checks status of specified AP.
-
-  This function checks whether the specified AP has finished the task assigned
-  by StartupThisAP(), and whether timeout expires.
-
-  @param[in]  Token             This parameter describes the token that was passed into DispatchProcedure or
-                                BroadcastProcedure.
-
-  @retval EFI_SUCCESS           Specified AP has finished task assigned by StartupThisAPs().
-  @retval EFI_NOT_READY         Specified AP has not finished task and timeout has not expired.
-**/
-EFI_STATUS
-IsApReady (
-  IN SPIN_LOCK  *Token
-  );
-
-/**
-  Check whether it is an present AP.
-
-  @param   CpuIndex      The AP index which calls this function.
-
-  @retval  TRUE           It's a present AP.
-  @retval  TRUE           This is not an AP or it is not present.
-
-**/
-BOOLEAN
-IsPresentAp (
-  IN UINTN  CpuIndex
-  );
-
-/**
-  Worker function to execute a caller provided function on all enabled APs.
-
-  @param[in]     Procedure               A pointer to the function to be run on
-                                         enabled APs of the system.
-  @param[in]     TimeoutInMicroseconds   Indicates the time limit in microseconds for
-                                         APs to return from Procedure, either for
-                                         blocking or non-blocking mode.
-  @param[in,out] ProcedureArguments      The parameter passed into Procedure for
-                                         all APs.
-  @param[in,out] Token                   This is an optional parameter that allows the caller to execute the
-                                         procedure in a blocking or non-blocking fashion. If it is NULL the
-                                         call is blocking, and the call will not return until the AP has
-                                         completed the procedure. If the token is not NULL, the call will
-                                         return immediately. The caller can check whether the procedure has
-                                         completed with CheckOnProcedure or WaitForProcedure.
-  @param[in,out] CPUStatus               This optional pointer may be used to get the status code returned
-                                         by Procedure when it completes execution on the target AP, or with
-                                         EFI_TIMEOUT if the Procedure fails to complete within the optional
-                                         timeout. The implementation will update this variable with
-                                         EFI_NOT_READY prior to starting Procedure on the target AP.
-
-  @retval EFI_SUCCESS             In blocking mode, all APs have finished before
-                                  the timeout expired.
-  @retval EFI_SUCCESS             In non-blocking mode, function has been dispatched
-                                  to all enabled APs.
-  @retval others                  Failed to Startup all APs.
-
-**/
-EFI_STATUS
-InternalSmmStartupAllAPs (
-  IN       EFI_AP_PROCEDURE2  Procedure,
-  IN       UINTN              TimeoutInMicroseconds,
-  IN OUT   VOID               *ProcedureArguments OPTIONAL,
-  IN OUT   MM_COMPLETION      *Token,
-  IN OUT   EFI_STATUS         *CPUStatus
-  );
-
-/**
-
-  Register the SMM Foundation entry point.
-
-  @param[in]      Procedure            A pointer to the code stream to be run on the designated target AP
-                                       of the system. Type EFI_AP_PROCEDURE is defined below in Volume 2
-                                       with the related definitions of
-                                       EFI_MP_SERVICES_PROTOCOL.StartupAllAPs.
-                                       If caller may pass a value of NULL to deregister any existing
-                                       startup procedure.
-  @param[in,out]  ProcedureArguments   Allows the caller to pass a list of parameters to the code that is
-                                       run by the AP. It is an optional common mailbox between APs and
-                                       the caller to share information
-
-  @retval EFI_SUCCESS                  The Procedure has been set successfully.
-  @retval EFI_INVALID_PARAMETER        The Procedure is NULL but ProcedureArguments not NULL.
-
-**/
-EFI_STATUS
-RegisterStartupProcedure (
-  IN     EFI_AP_PROCEDURE  Procedure,
-  IN OUT VOID              *ProcedureArguments OPTIONAL
-  );
-
-/**
-  Allocate buffer for SpinLock and Wrapper function buffer.
-
-**/
-VOID
-InitializeDataForMmMp (
-  VOID
-  );
-
-/**
-  Return whether access to non-SMRAM is restricted.
-
-  @retval TRUE  Access to non-SMRAM is restricted.
-  @retval FALSE Access to non-SMRAM is not restricted.
-**/
-BOOLEAN
-IsRestrictedMemoryAccess (
-  VOID
   );
 
 #endif

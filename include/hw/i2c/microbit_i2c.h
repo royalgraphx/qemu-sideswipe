@@ -13,7 +13,6 @@
 
 #include "hw/sysbus.h"
 #include "hw/arm/nrf51.h"
-#include "qom/object.h"
 
 #define NRF51_TWI_TASK_STARTRX 0x000
 #define NRF51_TWI_TASK_STARTTX 0x008
@@ -27,16 +26,17 @@
 #define NRF51_TWI_REG_ADDRESS 0x588
 
 #define TYPE_MICROBIT_I2C "microbit.i2c"
-OBJECT_DECLARE_SIMPLE_TYPE(MicrobitI2CState, MICROBIT_I2C)
+#define MICROBIT_I2C(obj) \
+    OBJECT_CHECK(MicrobitI2CState, (obj), TYPE_MICROBIT_I2C)
 
 #define MICROBIT_I2C_NREGS (NRF51_PERIPHERAL_SIZE / sizeof(uint32_t))
 
-struct MicrobitI2CState {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
     uint32_t regs[MICROBIT_I2C_NREGS];
     uint32_t read_idx;
-};
+} MicrobitI2CState;
 
 #endif /* MICROBIT_I2C_H */

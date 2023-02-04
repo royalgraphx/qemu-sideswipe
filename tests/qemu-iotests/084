@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: img quick
 #
 # Test case for VDI header corruption; image too large, and too many blocks.
 # Also simple test for creating dynamic and static VDI images.
@@ -21,7 +20,7 @@
 #
 
 # creator
-owner=codyprime@gmail.com
+owner=jcody@redhat.com
 
 seq=`basename $0`
 echo "QA output created by $seq"

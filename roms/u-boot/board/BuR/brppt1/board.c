@@ -10,10 +10,7 @@
  */
 
 #include <common.h>
-#include <bootcount.h>
-#include <env.h>
 #include <errno.h>
-#include <init.h>
 #include <spl.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/hardware.h>
@@ -23,7 +20,6 @@
 #include <asm/arch/gpio.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/mem.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/emif.h>
 #include <asm/gpio.h>
@@ -110,8 +106,9 @@ void am33xx_spl_board_init(void)
 
 	/* setup I2C */
 	enable_i2c_pin_mux();
-
-	pmicsetup(0, 0);
+	i2c_set_bus_num(0);
+	i2c_init(CONFIG_SYS_OMAP24_I2C_SPEED, CONFIG_SYS_OMAP24_I2C_SLAVE);
+	pmicsetup(0);
 
 	/* peripheral reset */
 	rc = gpio_request(64 + 29, "GPMC_WAIT1");
@@ -151,7 +148,7 @@ int board_init(void)
 	hw_watchdog_init();
 #endif
 	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
-#ifdef CONFIG_MTD_RAW_NAND
+#ifdef CONFIG_NAND
 	gpmc_init();
 #endif
 	return 0;

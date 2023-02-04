@@ -2,7 +2,7 @@
   Serial I/O Port library functions with no library constructor/destructor
 
   Copyright (c) 2008 - 2010, Apple Inc. All rights reserved.<BR>
-  Copyright (c) 2011 - 2020, Arm Limited. All rights reserved.<BR>
+  Copyright (c) 2011 - 2016, ARM Ltd. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -25,7 +25,7 @@
 // EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE is the only
 // control bit that is not supported.
 //
-STATIC CONST UINT32  mInvalidControlBits = EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE;
+STATIC CONST UINT32 mInvalidControlBits = EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE;
 
 /**
 
@@ -73,25 +73,21 @@ PL011UartInitializePort (
   IN OUT EFI_STOP_BITS_TYPE  *StopBits
   )
 {
-  UINT32  LineControl;
-  UINT32  Divisor;
-  UINT32  Integer;
-  UINT32  Fractional;
-  UINT32  HardwareFifoDepth;
-  UINT32  UartPid2;
+  UINT32      LineControl;
+  UINT32      Divisor;
+  UINT32      Integer;
+  UINT32      Fractional;
+  UINT32      HardwareFifoDepth;
 
-  HardwareFifoDepth = FixedPcdGet16 (PcdUartDefaultReceiveFifoDepth);
-  if (HardwareFifoDepth == 0) {
-    UartPid2          = MmioRead32 (UartBase + UARTPID2);
-    HardwareFifoDepth = (PL011_UARTPID2_VER (UartPid2) > PL011_VER_R1P4) ? 32 : 16;
-  }
-
+  HardwareFifoDepth = (PL011_UARTPID2_VER (MmioRead32 (UartBase + UARTPID2)) \
+                       > PL011_VER_R1P4) \
+                      ? 32 : 16 ;
   // The PL011 supports a buffer of 1, 16 or 32 chars. Therefore we can accept
   // 1 char buffer as the minimum FIFO size. Because everything can be rounded
   // down, there is no maximum FIFO size.
   if ((*ReceiveFifoDepth == 0) || (*ReceiveFifoDepth >= HardwareFifoDepth)) {
     // Enable FIFO
-    LineControl       = PL011_UARTLCR_H_FEN;
+    LineControl = PL011_UARTLCR_H_FEN;
     *ReceiveFifoDepth = HardwareFifoDepth;
   } else {
     // Disable FIFO
@@ -104,67 +100,67 @@ PL011UartInitializePort (
   // Parity
   //
   switch (*Parity) {
-    case DefaultParity:
-      *Parity = NoParity;
-    case NoParity:
-      // Nothing to do. Parity is disabled by default.
-      break;
-    case EvenParity:
-      LineControl |= (PL011_UARTLCR_H_PEN | PL011_UARTLCR_H_EPS);
-      break;
-    case OddParity:
-      LineControl |= PL011_UARTLCR_H_PEN;
-      break;
-    case MarkParity:
-      LineControl |= (PL011_UARTLCR_H_PEN \
-                      | PL011_UARTLCR_H_SPS \
-                      | PL011_UARTLCR_H_EPS);
-      break;
-    case SpaceParity:
-      LineControl |= (PL011_UARTLCR_H_PEN | PL011_UARTLCR_H_SPS);
-      break;
-    default:
-      return RETURN_INVALID_PARAMETER;
+  case DefaultParity:
+    *Parity = NoParity;
+  case NoParity:
+    // Nothing to do. Parity is disabled by default.
+    break;
+  case EvenParity:
+    LineControl |= (PL011_UARTLCR_H_PEN | PL011_UARTLCR_H_EPS);
+    break;
+  case OddParity:
+    LineControl |= PL011_UARTLCR_H_PEN;
+    break;
+  case MarkParity:
+    LineControl |= (  PL011_UARTLCR_H_PEN \
+                    | PL011_UARTLCR_H_SPS \
+                    | PL011_UARTLCR_H_EPS);
+    break;
+  case SpaceParity:
+    LineControl |= (PL011_UARTLCR_H_PEN | PL011_UARTLCR_H_SPS);
+    break;
+  default:
+    return RETURN_INVALID_PARAMETER;
   }
 
   //
   // Data Bits
   //
   switch (*DataBits) {
-    case 0:
-      *DataBits = 8;
-    case 8:
-      LineControl |= PL011_UARTLCR_H_WLEN_8;
-      break;
-    case 7:
-      LineControl |= PL011_UARTLCR_H_WLEN_7;
-      break;
-    case 6:
-      LineControl |= PL011_UARTLCR_H_WLEN_6;
-      break;
-    case 5:
-      LineControl |= PL011_UARTLCR_H_WLEN_5;
-      break;
-    default:
-      return RETURN_INVALID_PARAMETER;
+  case 0:
+    *DataBits = 8;
+  case 8:
+    LineControl |= PL011_UARTLCR_H_WLEN_8;
+    break;
+  case 7:
+    LineControl |= PL011_UARTLCR_H_WLEN_7;
+    break;
+  case 6:
+    LineControl |= PL011_UARTLCR_H_WLEN_6;
+    break;
+  case 5:
+    LineControl |= PL011_UARTLCR_H_WLEN_5;
+    break;
+  default:
+    return RETURN_INVALID_PARAMETER;
   }
 
   //
   // Stop Bits
   //
   switch (*StopBits) {
-    case DefaultStopBits:
-      *StopBits = OneStopBit;
-    case OneStopBit:
-      // Nothing to do. One stop bit is enabled by default.
-      break;
-    case TwoStopBits:
-      LineControl |= PL011_UARTLCR_H_STP2;
-      break;
-    case OneFiveStopBits:
+  case DefaultStopBits:
+    *StopBits = OneStopBit;
+  case OneStopBit:
+    // Nothing to do. One stop bit is enabled by default.
+    break;
+  case TwoStopBits:
+    LineControl |= PL011_UARTLCR_H_STP2;
+    break;
+  case OneFiveStopBits:
     // Only 1 or 2 stop bits are supported
-    default:
-      return RETURN_INVALID_PARAMETER;
+  default:
+    return RETURN_INVALID_PARAMETER;
   }
 
   // Don't send the LineControl value to the PL011 yet,
@@ -178,7 +174,7 @@ PL011UartInitializePort (
 
   // If PL011 Integer value has been defined then always ignore the BAUD rate
   if (FixedPcdGet32 (PL011UartInteger) != 0) {
-    Integer    = FixedPcdGet32 (PL011UartInteger);
+    Integer = FixedPcdGet32 (PL011UartInteger);
     Fractional = FixedPcdGet32 (PL011UartFractional);
   } else {
     // If BAUD rate is zero then replace it with the system default value
@@ -188,13 +184,12 @@ PL011UartInitializePort (
         return RETURN_INVALID_PARAMETER;
       }
     }
-
     if (0 == UartClkInHz) {
       return RETURN_INVALID_PARAMETER;
     }
 
-    Divisor    = (UartClkInHz * 4) / *BaudRate;
-    Integer    = Divisor >> FRACTION_PART_SIZE_IN_BITS;
+    Divisor = (UartClkInHz * 4) / *BaudRate;
+    Integer = Divisor >> FRACTION_PART_SIZE_IN_BITS;
     Fractional = Divisor & FRACTION_PART_MASK;
   }
 
@@ -203,17 +198,15 @@ PL011UartInitializePort (
   // and re-initialize only if the settings are different.
   //
   if (((MmioRead32 (UartBase + UARTCR) & PL011_UARTCR_UARTEN) != 0) &&
-      (MmioRead32 (UartBase + UARTLCR_H) == LineControl) &&
-      (MmioRead32 (UartBase + UARTIBRD) == Integer) &&
-      (MmioRead32 (UartBase + UARTFBRD) == Fractional))
-  {
+       (MmioRead32 (UartBase + UARTLCR_H) == LineControl) &&
+       (MmioRead32 (UartBase + UARTIBRD) == Integer) &&
+       (MmioRead32 (UartBase + UARTFBRD) == Fractional)) {
     // Nothing to do - already initialized with correct attributes
     return RETURN_SUCCESS;
   }
 
   // Wait for the end of transmission
-  while ((MmioRead32 (UartBase + UARTFR) & PL011_UARTFR_TXFE) == 0) {
-  }
+  while ((MmioRead32 (UartBase + UARTFR) & PL011_UARTFR_TXFE) == 0);
 
   // Disable UART: "The UARTLCR_H, UARTIBRD, and UARTFBRD registers must not be changed
   // when the UART is enabled"
@@ -230,10 +223,8 @@ PL011UartInitializePort (
   MmioWrite32 (UartBase + UARTECR, 0);
 
   // Enable Tx, Rx, and UART overall
-  MmioWrite32 (
-    UartBase + UARTCR,
-    PL011_UARTCR_RXE | PL011_UARTCR_TXE | PL011_UARTCR_UARTEN
-    );
+  MmioWrite32 (UartBase + UARTCR,
+               PL011_UARTCR_RXE | PL011_UARTCR_TXE | PL011_UARTCR_UARTEN);
 
   return RETURN_SUCCESS;
 }
@@ -268,37 +259,37 @@ PL011UartInitializePort (
 RETURN_STATUS
 EFIAPI
 PL011UartSetControl (
-  IN UINTN   UartBase,
-  IN UINT32  Control
+    IN UINTN   UartBase,
+    IN UINT32  Control
   )
 {
   UINT32  Bits;
 
-  if ((Control & mInvalidControlBits) != 0) {
+  if (Control & (mInvalidControlBits)) {
     return RETURN_UNSUPPORTED;
   }
 
   Bits = MmioRead32 (UartBase + UARTCR);
 
-  if ((Control & EFI_SERIAL_REQUEST_TO_SEND) != 0) {
+  if (Control & EFI_SERIAL_REQUEST_TO_SEND) {
     Bits |= PL011_UARTCR_RTS;
   } else {
     Bits &= ~PL011_UARTCR_RTS;
   }
 
-  if ((Control & EFI_SERIAL_DATA_TERMINAL_READY) != 0) {
+  if (Control & EFI_SERIAL_DATA_TERMINAL_READY) {
     Bits |= PL011_UARTCR_DTR;
   } else {
     Bits &= ~PL011_UARTCR_DTR;
   }
 
-  if ((Control & EFI_SERIAL_HARDWARE_LOOPBACK_ENABLE) != 0) {
+  if (Control & EFI_SERIAL_HARDWARE_LOOPBACK_ENABLE) {
     Bits |= PL011_UARTCR_LBE;
   } else {
     Bits &= ~PL011_UARTCR_LBE;
   }
 
-  if ((Control & EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE) != 0) {
+  if (Control & EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE) {
     Bits |= (PL011_UARTCR_CTSEN | PL011_UARTCR_RTSEN);
   } else {
     Bits &= ~(PL011_UARTCR_CTSEN | PL011_UARTCR_RTSEN);
@@ -330,7 +321,7 @@ PL011UartSetControl (
                          . EFI_SERIAL_OUTPUT_BUFFER_EMPTY : equal to one if the
                            transmit buffer is empty, 0 otherwise.
                          . EFI_SERIAL_HARDWARE_LOOPBACK_ENABLE : equal to one if
-                           the hardware loopback is enabled (the output feeds the
+                           the hardware loopback is enabled (the ouput feeds the
                            receive buffer), 0 otherwise.
                          . EFI_SERIAL_SOFTWARE_LOOPBACK_ENABLE : equal to one if
                            a loopback is accomplished by software, 0 otherwise.
@@ -345,14 +336,15 @@ PL011UartSetControl (
 RETURN_STATUS
 EFIAPI
 PL011UartGetControl (
-  IN UINTN    UartBase,
-  OUT UINT32  *Control
+    IN UINTN     UartBase,
+    OUT UINT32  *Control
   )
 {
-  UINT32  FlagRegister;
-  UINT32  ControlRegister;
+  UINT32      FlagRegister;
+  UINT32      ControlRegister;
 
-  FlagRegister    = MmioRead32 (UartBase + UARTFR);
+
+  FlagRegister = MmioRead32 (UartBase + UARTFR);
   ControlRegister = MmioRead32 (UartBase + UARTCR);
 
   *Control = 0;
@@ -390,8 +382,7 @@ PL011UartGetControl (
   }
 
   if ((ControlRegister & (PL011_UARTCR_CTSEN | PL011_UARTCR_RTSEN))
-      == (PL011_UARTCR_CTSEN | PL011_UARTCR_RTSEN))
-  {
+       == (PL011_UARTCR_CTSEN | PL011_UARTCR_RTSEN)) {
     *Control |= EFI_SERIAL_HARDWARE_FLOW_CONTROL_ENABLE;
   }
 
@@ -415,17 +406,16 @@ PL011UartGetControl (
 UINTN
 EFIAPI
 PL011UartWrite (
-  IN  UINTN  UartBase,
-  IN UINT8   *Buffer,
-  IN UINTN   NumberOfBytes
+  IN  UINTN    UartBase,
+  IN UINT8     *Buffer,
+  IN UINTN     NumberOfBytes
   )
 {
-  UINT8 *CONST  Final = &Buffer[NumberOfBytes];
+  UINT8* CONST Final = &Buffer[NumberOfBytes];
 
   while (Buffer < Final) {
     // Wait until UART able to accept another char
-    while ((MmioRead32 (UartBase + UARTFR) & UART_TX_FULL_FLAG_MASK)) {
-    }
+    while ((MmioRead32 (UartBase + UARTFR) & UART_TX_FULL_FLAG_MASK));
 
     MmioWrite8 (UartBase + UARTDR, *Buffer++);
   }
@@ -446,17 +436,15 @@ PL011UartWrite (
 UINTN
 EFIAPI
 PL011UartRead (
-  IN  UINTN  UartBase,
-  OUT UINT8  *Buffer,
-  IN  UINTN  NumberOfBytes
+  IN  UINTN     UartBase,
+  OUT UINT8     *Buffer,
+  IN  UINTN     NumberOfBytes
   )
 {
-  UINTN  Count;
+  UINTN   Count;
 
   for (Count = 0; Count < NumberOfBytes; Count++, Buffer++) {
-    while ((MmioRead32 (UartBase + UARTFR) & UART_RX_EMPTY_FLAG_MASK) != 0) {
-    }
-
+    while ((MmioRead32 (UartBase + UARTFR) & UART_RX_EMPTY_FLAG_MASK) != 0);
     *Buffer = MmioRead8 (UartBase + UARTDR);
   }
 
@@ -473,7 +461,7 @@ PL011UartRead (
 BOOLEAN
 EFIAPI
 PL011UartPoll (
-  IN  UINTN  UartBase
+  IN  UINTN     UartBase
   )
 {
   return ((MmioRead32 (UartBase + UARTFR) & UART_RX_EMPTY_FLAG_MASK) == 0);

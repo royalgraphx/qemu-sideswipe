@@ -21,15 +21,16 @@
 #include "qemu/module.h"
 
 #include <scsi/sg.h>
-#include "qom/object.h"
 
 #define PR_MAX_RECONNECT_ATTEMPTS 5
 
 #define TYPE_PR_MANAGER_HELPER "pr-manager-helper"
 
-OBJECT_DECLARE_SIMPLE_TYPE(PRManagerHelper, PR_MANAGER_HELPER)
+#define PR_MANAGER_HELPER(obj) \
+     OBJECT_CHECK(PRManagerHelper, (obj), \
+                  TYPE_PR_MANAGER_HELPER)
 
-struct PRManagerHelper {
+typedef struct PRManagerHelper {
     /* <private> */
     PRManager parent;
 
@@ -37,7 +38,7 @@ struct PRManagerHelper {
 
     QemuMutex lock;
     QIOChannel *ioc;
-};
+} PRManagerHelper;
 
 static void pr_manager_send_status_changed_event(PRManagerHelper *pr_mgr)
 {
@@ -77,7 +78,7 @@ static int pr_manager_helper_write(PRManagerHelper *pr_mgr,
         iov.iov_base = (void *)buf;
         iov.iov_len = sz;
         n_written = qio_channel_writev_full(QIO_CHANNEL(pr_mgr->ioc), &iov, 1,
-                                            nfds ? &fd : NULL, nfds, 0, errp);
+                                            nfds ? &fd : NULL, nfds, errp);
 
         if (n_written <= 0) {
             assert(n_written != QIO_CHANNEL_ERR_BLOCK);
@@ -125,7 +126,7 @@ static int pr_manager_helper_initialize(PRManagerHelper *pr_mgr,
     qio_channel_set_delay(QIO_CHANNEL(sioc), false);
     pr_mgr->ioc = QIO_CHANNEL(sioc);
 
-    /* A simple feature negotiation protocol, even though there is
+    /* A simple feature negotation protocol, even though there is
      * no optional feature right now.
      */
     r = pr_manager_helper_read(pr_mgr, &flags, sizeof(flags), errp);

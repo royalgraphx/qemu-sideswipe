@@ -8,25 +8,21 @@
 
 /* These structures may only be used in SPL */
 #if CONFIG_IS_ENABLED(OF_PLATDATA)
-struct driver_info;
-
 struct phandle_0_arg {
-	uint idx;
+	const void *node;
 	int arg[0];
 };
 
 struct phandle_1_arg {
-	uint idx;
+	const void *node;
 	int arg[1];
 };
 
 struct phandle_2_arg {
-	uint idx;
+	const void *node;
 	int arg[2];
 };
-
 #include <generated/dt-structs-gen.h>
-#include <generated/dt-decl.h>
 #endif
 
 #endif

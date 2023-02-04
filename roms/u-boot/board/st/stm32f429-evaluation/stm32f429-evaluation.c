@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2018, STMicroelectronics - All Rights Reserved
- * Author(s): Patrice Chotard, <patrice.chotard@foss.st.com> for STMicroelectronics.
+ * Author(s): Patrice Chotard, <patrice.chotard@st.com> for STMicroelectronics.
  */
 
 #include <common.h>
 #include <dm.h>
-#include <env.h>
-#include <init.h>
-#include <log.h>
-#include <asm/global_data.h>
 
 #include <asm/io.h>
 #include <asm/arch/stm32.h>
@@ -41,6 +37,11 @@ int dram_init_banksize(void)
 }
 
 u32 get_board_rev(void)
+{
+	return 0;
+}
+
+int board_early_init_f(void)
 {
 	return 0;
 }

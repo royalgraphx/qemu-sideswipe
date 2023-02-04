@@ -15,6 +15,7 @@
 
 **/
 
+
 #include <Base.h>
 
 #include <IndustryStandard/Q35MchIch9.h>
@@ -24,7 +25,7 @@
 #include <Library/PciExpressLib.h>
 #include <Library/PcdLib.h>
 
-STATIC BOOLEAN  mRunningOnQ35;
+STATIC BOOLEAN mRunningOnQ35;
 
 RETURN_STATUS
 EFIAPI
@@ -38,19 +39,19 @@ InitializeConfigAccessMethod (
 }
 
 /**
-  Registers a PCI device so PCI configuration registers may be accessed after
+  Registers a PCI device so PCI configuration registers may be accessed after 
   SetVirtualAddressMap().
-
-  Registers the PCI device specified by Address so all the PCI configuration registers
+  
+  Registers the PCI device specified by Address so all the PCI configuration registers 
   associated with that PCI device may be accessed after SetVirtualAddressMap() is called.
-
+  
   If Address > 0x0FFFFFFF, then ASSERT().
 
   @param  Address The address that encodes the PCI Bus, Device, Function and
                   Register.
-
+  
   @retval RETURN_SUCCESS           The PCI device was registered for runtime access.
-  @retval RETURN_UNSUPPORTED       An attempt was made to call this function
+  @retval RETURN_UNSUPPORTED       An attempt was made to call this function 
                                    after ExitBootServices().
   @retval RETURN_UNSUPPORTED       The resources required to access the PCI device
                                    at runtime could not be mapped.
@@ -87,7 +88,7 @@ PciRegisterForRuntimeAccess (
 UINT8
 EFIAPI
 PciRead8 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
   return mRunningOnQ35 ?
@@ -114,8 +115,8 @@ PciRead8 (
 UINT8
 EFIAPI
 PciWrite8 (
-  IN      UINTN  Address,
-  IN      UINT8  Value
+  IN      UINTN                     Address,
+  IN      UINT8                     Value
   )
 {
   return mRunningOnQ35 ?
@@ -146,8 +147,8 @@ PciWrite8 (
 UINT8
 EFIAPI
 PciOr8 (
-  IN      UINTN  Address,
-  IN      UINT8  OrData
+  IN      UINTN                     Address,
+  IN      UINT8                     OrData
   )
 {
   return mRunningOnQ35 ?
@@ -178,8 +179,8 @@ PciOr8 (
 UINT8
 EFIAPI
 PciAnd8 (
-  IN      UINTN  Address,
-  IN      UINT8  AndData
+  IN      UINTN                     Address,
+  IN      UINT8                     AndData
   )
 {
   return mRunningOnQ35 ?
@@ -212,9 +213,9 @@ PciAnd8 (
 UINT8
 EFIAPI
 PciAndThenOr8 (
-  IN      UINTN  Address,
-  IN      UINT8  AndData,
-  IN      UINT8  OrData
+  IN      UINTN                     Address,
+  IN      UINT8                     AndData,
+  IN      UINT8                     OrData
   )
 {
   return mRunningOnQ35 ?
@@ -246,9 +247,9 @@ PciAndThenOr8 (
 UINT8
 EFIAPI
 PciBitFieldRead8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit
   )
 {
   return mRunningOnQ35 ?
@@ -283,10 +284,10 @@ PciBitFieldRead8 (
 UINT8
 EFIAPI
 PciBitFieldWrite8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit,
-  IN      UINT8  Value
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT8                     Value
   )
 {
   return mRunningOnQ35 ?
@@ -324,10 +325,10 @@ PciBitFieldWrite8 (
 UINT8
 EFIAPI
 PciBitFieldOr8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit,
-  IN      UINT8  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT8                     OrData
   )
 {
   return mRunningOnQ35 ?
@@ -365,10 +366,10 @@ PciBitFieldOr8 (
 UINT8
 EFIAPI
 PciBitFieldAnd8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit,
-  IN      UINT8  AndData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT8                     AndData
   )
 {
   return mRunningOnQ35 ?
@@ -410,11 +411,11 @@ PciBitFieldAnd8 (
 UINT8
 EFIAPI
 PciBitFieldAndThenOr8 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit,
-  IN      UINT8  AndData,
-  IN      UINT8  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT8                     AndData,
+  IN      UINT8                     OrData
   )
 {
   return mRunningOnQ35 ?
@@ -441,7 +442,7 @@ PciBitFieldAndThenOr8 (
 UINT16
 EFIAPI
 PciRead16 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
   return mRunningOnQ35 ?
@@ -469,8 +470,8 @@ PciRead16 (
 UINT16
 EFIAPI
 PciWrite16 (
-  IN      UINTN   Address,
-  IN      UINT16  Value
+  IN      UINTN                     Address,
+  IN      UINT16                    Value
   )
 {
   return mRunningOnQ35 ?
@@ -502,8 +503,8 @@ PciWrite16 (
 UINT16
 EFIAPI
 PciOr16 (
-  IN      UINTN   Address,
-  IN      UINT16  OrData
+  IN      UINTN                     Address,
+  IN      UINT16                    OrData
   )
 {
   return mRunningOnQ35 ?
@@ -535,8 +536,8 @@ PciOr16 (
 UINT16
 EFIAPI
 PciAnd16 (
-  IN      UINTN   Address,
-  IN      UINT16  AndData
+  IN      UINTN                     Address,
+  IN      UINT16                    AndData
   )
 {
   return mRunningOnQ35 ?
@@ -570,9 +571,9 @@ PciAnd16 (
 UINT16
 EFIAPI
 PciAndThenOr16 (
-  IN      UINTN   Address,
-  IN      UINT16  AndData,
-  IN      UINT16  OrData
+  IN      UINTN                     Address,
+  IN      UINT16                    AndData,
+  IN      UINT16                    OrData
   )
 {
   return mRunningOnQ35 ?
@@ -605,9 +606,9 @@ PciAndThenOr16 (
 UINT16
 EFIAPI
 PciBitFieldRead16 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit
   )
 {
   return mRunningOnQ35 ?
@@ -643,10 +644,10 @@ PciBitFieldRead16 (
 UINT16
 EFIAPI
 PciBitFieldWrite16 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT16  Value
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT16                    Value
   )
 {
   return mRunningOnQ35 ?
@@ -685,10 +686,10 @@ PciBitFieldWrite16 (
 UINT16
 EFIAPI
 PciBitFieldOr16 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT16  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT16                    OrData
   )
 {
   return mRunningOnQ35 ?
@@ -727,10 +728,10 @@ PciBitFieldOr16 (
 UINT16
 EFIAPI
 PciBitFieldAnd16 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT16  AndData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT16                    AndData
   )
 {
   return mRunningOnQ35 ?
@@ -773,11 +774,11 @@ PciBitFieldAnd16 (
 UINT16
 EFIAPI
 PciBitFieldAndThenOr16 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT16  AndData,
-  IN      UINT16  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT16                    AndData,
+  IN      UINT16                    OrData
   )
 {
   return mRunningOnQ35 ?
@@ -804,7 +805,7 @@ PciBitFieldAndThenOr16 (
 UINT32
 EFIAPI
 PciRead32 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
   return mRunningOnQ35 ?
@@ -832,8 +833,8 @@ PciRead32 (
 UINT32
 EFIAPI
 PciWrite32 (
-  IN      UINTN   Address,
-  IN      UINT32  Value
+  IN      UINTN                     Address,
+  IN      UINT32                    Value
   )
 {
   return mRunningOnQ35 ?
@@ -865,8 +866,8 @@ PciWrite32 (
 UINT32
 EFIAPI
 PciOr32 (
-  IN      UINTN   Address,
-  IN      UINT32  OrData
+  IN      UINTN                     Address,
+  IN      UINT32                    OrData
   )
 {
   return mRunningOnQ35 ?
@@ -898,8 +899,8 @@ PciOr32 (
 UINT32
 EFIAPI
 PciAnd32 (
-  IN      UINTN   Address,
-  IN      UINT32  AndData
+  IN      UINTN                     Address,
+  IN      UINT32                    AndData
   )
 {
   return mRunningOnQ35 ?
@@ -933,9 +934,9 @@ PciAnd32 (
 UINT32
 EFIAPI
 PciAndThenOr32 (
-  IN      UINTN   Address,
-  IN      UINT32  AndData,
-  IN      UINT32  OrData
+  IN      UINTN                     Address,
+  IN      UINT32                    AndData,
+  IN      UINT32                    OrData
   )
 {
   return mRunningOnQ35 ?
@@ -968,9 +969,9 @@ PciAndThenOr32 (
 UINT32
 EFIAPI
 PciBitFieldRead32 (
-  IN      UINTN  Address,
-  IN      UINTN  StartBit,
-  IN      UINTN  EndBit
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit
   )
 {
   return mRunningOnQ35 ?
@@ -1006,10 +1007,10 @@ PciBitFieldRead32 (
 UINT32
 EFIAPI
 PciBitFieldWrite32 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  Value
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    Value
   )
 {
   return mRunningOnQ35 ?
@@ -1048,10 +1049,10 @@ PciBitFieldWrite32 (
 UINT32
 EFIAPI
 PciBitFieldOr32 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    OrData
   )
 {
   return mRunningOnQ35 ?
@@ -1090,10 +1091,10 @@ PciBitFieldOr32 (
 UINT32
 EFIAPI
 PciBitFieldAnd32 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  AndData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    AndData
   )
 {
   return mRunningOnQ35 ?
@@ -1136,11 +1137,11 @@ PciBitFieldAnd32 (
 UINT32
 EFIAPI
 PciBitFieldAndThenOr32 (
-  IN      UINTN   Address,
-  IN      UINTN   StartBit,
-  IN      UINTN   EndBit,
-  IN      UINT32  AndData,
-  IN      UINT32  OrData
+  IN      UINTN                     Address,
+  IN      UINTN                     StartBit,
+  IN      UINTN                     EndBit,
+  IN      UINT32                    AndData,
+  IN      UINT32                    OrData
   )
 {
   return mRunningOnQ35 ?
@@ -1155,7 +1156,7 @@ PciBitFieldAndThenOr32 (
   Size into the buffer specified by Buffer. This function only allows the PCI
   configuration registers from a single PCI function to be read. Size is
   returned. When possible 32-bit PCI configuration read cycles are used to read
-  from StartAddress to StartAddress + Size. Due to alignment restrictions, 8-bit
+  from StartAdress to StartAddress + Size. Due to alignment restrictions, 8-bit
   and 16-bit PCI configuration read cycles may be used at the beginning and the
   end of the range.
 
@@ -1174,9 +1175,9 @@ PciBitFieldAndThenOr32 (
 UINTN
 EFIAPI
 PciReadBuffer (
-  IN      UINTN  StartAddress,
-  IN      UINTN  Size,
-  OUT     VOID   *Buffer
+  IN      UINTN                     StartAddress,
+  IN      UINTN                     Size,
+  OUT     VOID                      *Buffer
   )
 {
   return mRunningOnQ35 ?
@@ -1192,7 +1193,7 @@ PciReadBuffer (
   Size from the buffer specified by Buffer. This function only allows the PCI
   configuration registers from a single PCI function to be written. Size is
   returned. When possible 32-bit PCI configuration write cycles are used to
-  write from StartAddress to StartAddress + Size. Due to alignment restrictions,
+  write from StartAdress to StartAddress + Size. Due to alignment restrictions,
   8-bit and 16-bit PCI configuration write cycles may be used at the beginning
   and the end of the range.
 
@@ -1211,9 +1212,9 @@ PciReadBuffer (
 UINTN
 EFIAPI
 PciWriteBuffer (
-  IN      UINTN  StartAddress,
-  IN      UINTN  Size,
-  IN      VOID   *Buffer
+  IN      UINTN                     StartAddress,
+  IN      UINTN                     Size,
+  IN      VOID                      *Buffer
   )
 {
   return mRunningOnQ35 ?

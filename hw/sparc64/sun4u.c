@@ -26,7 +26,7 @@
 #include "qemu/units.h"
 #include "qemu/error-report.h"
 #include "qapi/error.h"
-#include "qemu/datadir.h"
+#include "qemu-common.h"
 #include "cpu.h"
 #include "hw/pci/pci.h"
 #include "hw/pci/pci_bridge.h"
@@ -55,7 +55,6 @@
 #include "hw/fw-path-provider.h"
 #include "elf.h"
 #include "trace.h"
-#include "qom/object.h"
 
 #define KERNEL_LOAD_ADDR     0x00404000
 #define CMDLINE_ADDR         0x003ff000
@@ -66,6 +65,7 @@
 #define PBM_PCI_IO_BASE      (PBM_SPECIAL_BASE + 0x02000000ULL)
 #define PROM_FILENAME        "openbios-sparc64"
 #define NVRAM_SIZE           0x2000
+#define MAX_IDE_BUS          2
 #define BIOS_CFG_IOPORT      0x510
 #define FW_CFG_SPARC64_WIDTH (FW_CFG_ARCH_LOCAL + 0x00)
 #define FW_CFG_SPARC64_HEIGHT (FW_CFG_ARCH_LOCAL + 0x01)
@@ -79,7 +79,7 @@ struct hwdef {
     uint64_t console_serial_base;
 };
 
-struct EbusState {
+typedef struct EbusState {
     /*< private >*/
     PCIDevice parent_obj;
 
@@ -88,10 +88,10 @@ struct EbusState {
     uint64_t console_serial_base;
     MemoryRegion bar0;
     MemoryRegion bar1;
-};
+} EbusState;
 
 #define TYPE_EBUS "ebus"
-OBJECT_DECLARE_SIMPLE_TYPE(EbusState, EBUS)
+#define EBUS(obj) OBJECT_CHECK(EbusState, (obj), TYPE_EBUS)
 
 const char *fw_cfg_arch_key_name(uint16_t key)
 {
@@ -136,7 +136,7 @@ static int sun4u_NVRAM_set_params(Nvram *nvram, uint16_t NVRAM_size,
     memset(image, '\0', sizeof(image));
 
     /* OpenBIOS nvram variables partition */
-    sysp_end = chrp_nvram_create_system_partition(image, 0, 0x1fd0);
+    sysp_end = chrp_nvram_create_system_partition(image, 0);
 
     /* Free space partition */
     chrp_nvram_create_free_partition(&image[sysp_end], 0x1fd0 - sysp_end);
@@ -226,13 +226,13 @@ typedef struct ResetData {
 } ResetData;
 
 #define TYPE_SUN4U_POWER "power"
-OBJECT_DECLARE_SIMPLE_TYPE(PowerDevice, SUN4U_POWER)
+#define SUN4U_POWER(obj) OBJECT_CHECK(PowerDevice, (obj), TYPE_SUN4U_POWER)
 
-struct PowerDevice {
+typedef struct PowerDevice {
     SysBusDevice parent_obj;
 
     MemoryRegion power_mmio;
-};
+} PowerDevice;
 
 /* Power */
 static uint64_t power_mem_read(void *opaque, hwaddr addr, unsigned size)
@@ -333,7 +333,7 @@ static void ebus_realize(PCIDevice *pci_dev, Error **errp)
     parallel_hds_isa_init(s->isa_bus, MAX_PARALLEL_PORTS);
 
     /* Keyboard */
-    isa_create_simple(s->isa_bus, TYPE_I8042);
+    isa_create_simple(s->isa_bus, "i8042");
 
     /* Floppy */
     for (i = 0; i < MAX_FD; i++) {
@@ -399,15 +399,13 @@ static const TypeInfo ebus_info = {
 };
 
 #define TYPE_OPENPROM "openprom"
-typedef struct PROMState PROMState;
-DECLARE_INSTANCE_CHECKER(PROMState, OPENPROM,
-                         TYPE_OPENPROM)
+#define OPENPROM(obj) OBJECT_CHECK(PROMState, (obj), TYPE_OPENPROM)
 
-struct PROMState {
+typedef struct PROMState {
     SysBusDevice parent_obj;
 
     MemoryRegion prom;
-};
+} PROMState;
 
 static uint64_t translate_prom_address(void *opaque, uint64_t addr)
 {
@@ -489,16 +487,14 @@ static const TypeInfo prom_info = {
 
 
 #define TYPE_SUN4U_MEMORY "memory"
-typedef struct RamDevice RamDevice;
-DECLARE_INSTANCE_CHECKER(RamDevice, SUN4U_RAM,
-                         TYPE_SUN4U_MEMORY)
+#define SUN4U_RAM(obj) OBJECT_CHECK(RamDevice, (obj), TYPE_SUN4U_MEMORY)
 
-struct RamDevice {
+typedef struct RamDevice {
     SysBusDevice parent_obj;
 
     MemoryRegion ram;
     uint64_t size;
-};
+} RamDevice;
 
 /* System RAM */
 static void ram_realize(DeviceState *dev, Error **errp)
@@ -577,22 +573,15 @@ static void sun4uv_init(MemoryRegion *address_space_mem,
     /* set up devices */
     ram_init(0, machine->ram_size);
 
-    prom_init(hwdef->prom_addr, machine->firmware);
+    prom_init(hwdef->prom_addr, bios_name);
 
     /* Init sabre (PCI host bridge) */
-    sabre = SABRE(qdev_new(TYPE_SABRE));
+    sabre = SABRE_DEVICE(qdev_new(TYPE_SABRE));
     qdev_prop_set_uint64(DEVICE(sabre), "special-base", PBM_SPECIAL_BASE);
     qdev_prop_set_uint64(DEVICE(sabre), "mem-base", PBM_MEM_BASE);
     object_property_set_link(OBJECT(sabre), "iommu", OBJECT(iommu),
                              &error_abort);
     sysbus_realize_and_unref(SYS_BUS_DEVICE(sabre), &error_fatal);
-
-    /* sabre_config */
-    sysbus_mmio_map(SYS_BUS_DEVICE(sabre), 0, PBM_SPECIAL_BASE);
-    /* PCI configuration space */
-    sysbus_mmio_map(SYS_BUS_DEVICE(sabre), 1, PBM_SPECIAL_BASE + 0x1000000ULL);
-    /* pci_ioport */
-    sysbus_mmio_map(SYS_BUS_DEVICE(sabre), 2, PBM_SPECIAL_BASE + 0x2000000ULL);
 
     /* Wire up PCI interrupts to CPU */
     for (i = 0; i < IVEC_MAX; i++) {
@@ -631,7 +620,6 @@ static void sun4uv_init(MemoryRegion *address_space_mem,
     switch (vga_interface_type) {
     case VGA_STD:
         pci_create_simple(pci_busA, PCI_DEVFN(2, 0), "VGA");
-        vga_interface_created = true;
         break;
     case VGA_NONE:
         break;
@@ -678,23 +666,20 @@ static void sun4uv_init(MemoryRegion *address_space_mem,
     pci_ide_create_devs(pci_dev);
 
     /* Map NVRAM into I/O (ebus) space */
-    dev = qdev_new("sysbus-m48t59");
-    qdev_prop_set_int32(dev, "base-year", 1968);
-    s = SYS_BUS_DEVICE(dev);
-    sysbus_realize_and_unref(s, &error_fatal);
+    nvram = m48t59_init(NULL, 0, 0, NVRAM_SIZE, 1968, 59);
+    s = SYS_BUS_DEVICE(nvram);
     memory_region_add_subregion(pci_address_space_io(ebus), 0x2000,
                                 sysbus_mmio_get_region(s, 0));
-    nvram = NVRAM(dev);
  
     initrd_size = 0;
     initrd_addr = 0;
     kernel_size = sun4u_load_kernel(machine->kernel_filename,
                                     machine->initrd_filename,
-                                    machine->ram_size, &initrd_size, &initrd_addr,
+                                    ram_size, &initrd_size, &initrd_addr,
                                     &kernel_addr, &kernel_entry);
 
     sun4u_NVRAM_set_params(nvram, NVRAM_SIZE, "Sun4u", machine->ram_size,
-                           machine->boot_config.order,
+                           machine->boot_order,
                            kernel_addr, kernel_size,
                            machine->kernel_cmdline,
                            initrd_addr, initrd_size,
@@ -713,7 +698,7 @@ static void sun4uv_init(MemoryRegion *address_space_mem,
     fw_cfg = FW_CFG(dev);
     fw_cfg_add_i16(fw_cfg, FW_CFG_NB_CPUS, (uint16_t)machine->smp.cpus);
     fw_cfg_add_i16(fw_cfg, FW_CFG_MAX_CPUS, (uint16_t)machine->smp.max_cpus);
-    fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)machine->ram_size);
+    fw_cfg_add_i64(fw_cfg, FW_CFG_RAM_SIZE, (uint64_t)ram_size);
     fw_cfg_add_i16(fw_cfg, FW_CFG_MACHINE_ID, hwdef->machine_id);
     fw_cfg_add_i64(fw_cfg, FW_CFG_KERNEL_ADDR, kernel_entry);
     fw_cfg_add_i64(fw_cfg, FW_CFG_KERNEL_SIZE, kernel_size);
@@ -726,7 +711,7 @@ static void sun4uv_init(MemoryRegion *address_space_mem,
     }
     fw_cfg_add_i64(fw_cfg, FW_CFG_INITRD_ADDR, initrd_addr);
     fw_cfg_add_i64(fw_cfg, FW_CFG_INITRD_SIZE, initrd_size);
-    fw_cfg_add_i16(fw_cfg, FW_CFG_BOOT_DEVICE, machine->boot_config.order[0]);
+    fw_cfg_add_i16(fw_cfg, FW_CFG_BOOT_DEVICE, machine->boot_order[0]);
 
     fw_cfg_add_i16(fw_cfg, FW_CFG_SPARC64_WIDTH, graphic_width);
     fw_cfg_add_i16(fw_cfg, FW_CFG_SPARC64_HEIGHT, graphic_height);
@@ -748,6 +733,9 @@ static char *sun4u_fw_dev_path(FWPathProvider *p, BusState *bus,
                                DeviceState *dev)
 {
     PCIDevice *pci;
+    IDEBus *ide_bus;
+    IDEState *ide_s;
+    int bus_id;
 
     if (!strcmp(object_get_typename(OBJECT(dev)), "pbm-bridge")) {
         pci = PCI_DEVICE(dev);
@@ -758,6 +746,18 @@ static char *sun4u_fw_dev_path(FWPathProvider *p, BusState *bus,
         } else {
             return g_strdup_printf("pci@%x", PCI_SLOT(pci->devfn));
         }
+    }
+
+    if (!strcmp(object_get_typename(OBJECT(dev)), "ide-drive")) {
+         ide_bus = IDE_BUS(qdev_get_parent_bus(dev));
+         ide_s = idebus_active_if(ide_bus);
+         bus_id = ide_bus->bus_id;
+
+         if (ide_s->drive_kind == IDE_CD) {
+             return g_strdup_printf("ide@%x/cdrom", bus_id);
+         }
+
+         return g_strdup_printf("ide@%x/disk", bus_id);
     }
 
     if (!strcmp(object_get_typename(OBJECT(dev)), "ide-hd")) {

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 #
-#  Copyright 2014 Apple Inc. All rights reserved.
+#  Copyright 2014 Apple Inc. All righes reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -10,6 +10,7 @@ import lldb
 import os
 import uuid
 import string
+import commands
 import optparse
 import shlex
 
@@ -277,7 +278,7 @@ def EFI_DEVICE_PATH_PROTOCOL_TypeSummary (valobj,internal_dict):
 
     Address = long ("%d" % valobj.addr)
     if (Address == lldb.LLDB_INVALID_ADDRESS):
-      # Need to research this, it seems to be the nested struct case
+      # Need to reserach this, it seems to be the nested struct case
       ExprStr = ""
     elif (Type & 0x7f == 0x7f):
       ExprStr = "End Device Path" if SubType == 0xff else "End This Instance"
@@ -303,7 +304,7 @@ def EFI_DEVICE_PATH_PROTOCOL_TypeSummary (valobj,internal_dict):
 
 def TypePrintFormating(debugger):
     #
-    # Set the default print formatting for EFI types in lldb.
+    # Set the default print formating for EFI types in lldb.
     # seems lldb defaults to decimal.
     #
     category = debugger.GetDefaultCategory()
@@ -345,11 +346,6 @@ def TypePrintFormating(debugger):
     debugger.HandleCommand("type summary add CHAR8 --python-function lldbefi.CHAR8_TypeSummary")
     debugger.HandleCommand('type summary add --regex "CHAR8 \[[0-9]+\]" --python-function lldbefi.CHAR8_TypeSummary')
 
-    debugger.HandleCommand(
-      'setting set frame-format "frame #${frame.index}: ${frame.pc}'
-      '{ ${module.file.basename}{:${function.name}()${function.pc-offset}}}'
-      '{ at ${line.file.fullpath}:${line.number}}\n"'
-      )
 
 gEmulatorBreakWorkaroundNeeded = True
 
@@ -385,19 +381,18 @@ def LoadEmulatorEfiSymbols(frame, bp_loc , internal_dict):
     Error = lldb.SBError()
     FileNamePtr = frame.FindVariable ("FileName").GetValueAsUnsigned()
     FileNameLen = frame.FindVariable ("FileNameLength").GetValueAsUnsigned()
-
     FileName = frame.thread.process.ReadCStringFromMemory (FileNamePtr, FileNameLen, Error)
     if not Error.Success():
-        print("!ReadCStringFromMemory() did not find a %d byte C string at %x" % (FileNameLen, FileNamePtr))
-        # make breakpoint command continue
-        return False
+        print "!ReadCStringFromMemory() did not find a %d byte C string at %x" % (FileNameLen, FileNamePtr)
+        # make breakpoint command contiue
+        frame.GetThread().GetProcess().Continue()
 
     debugger = frame.thread.process.target.debugger
     if frame.FindVariable ("AddSymbolFlag").GetValueAsUnsigned() == 1:
-        LoadAddress = frame.FindVariable ("LoadAddress").GetValueAsUnsigned() - 0x240
+        LoadAddress = frame.FindVariable ("LoadAddress").GetValueAsUnsigned()
 
         debugger.HandleCommand ("target modules add  %s" % FileName)
-        print("target modules load --slid 0x%x %s" % (LoadAddress, FileName))
+        print "target modules load --slid 0x%x %s" % (LoadAddress, FileName)
         debugger.HandleCommand ("target modules load --slide 0x%x --file %s" % (LoadAddress, FileName))
     else:
         target = debugger.GetSelectedTarget()
@@ -407,14 +402,14 @@ def LoadEmulatorEfiSymbols(frame, bp_loc , internal_dict):
             if FileName == ModuleName or FileName == SBModule.GetFileSpec().GetFilename():
                 target.ClearModuleLoadAddress (SBModule)
                 if not target.RemoveModule (SBModule):
-                    print("!lldb.target.RemoveModule (%s) FAILED" % SBModule)
+                    print "!lldb.target.RemoveModule (%s) FAILED" % SBModule
 
-    # make breakpoint command continue
-    return False
+    # make breakpoint command contiue
+    frame.thread.process.Continue()
 
 def GuidToCStructStr (guid, Name=False):
   #
-  # Convert a 16-byte bytesarray (or bytearray compat object) to C guid string
+  # Convert a 16-byte bytesarry (or bytearray compat object) to C guid string
   # { 0xB402621F, 0xA940, 0x1E4A, { 0x86, 0x6B, 0x4D, 0xC9, 0x16, 0x2B, 0x34, 0x7C } }
   #
   # Name=True means lookup name in GuidNameDict and us it if you find it
@@ -489,15 +484,15 @@ def efi_guid_command(debugger, command, result, dict):
 
     if len(args) >= 1:
         if GuidStr in guid_dict:
-            print("%s = %s" % (guid_dict[GuidStr], GuidStr))
-            print("%s = %s" % (guid_dict[GuidStr], GuidToCStructStr (GuidStr)))
+            print "%s = %s" % (guid_dict[GuidStr], GuidStr)
+            print "%s = %s" % (guid_dict[GuidStr], GuidToCStructStr (GuidStr))
         else:
-            print(GuidStr)
+            print GuidStr
     else:
         # dump entire dictionary
         width = max(len(v) for k,v in guid_dict.iteritems())
         for value in sorted(guid_dict, key=guid_dict.get):
-            print('%-*s %s %s' % (width, guid_dict[value], value, GuidToCStructStr(value)))
+            print '%-*s %s %s' % (width, guid_dict[value], value, GuidToCStructStr(value))
 
     return
 
@@ -521,7 +516,7 @@ def __lldb_init_module (debugger, internal_dict):
             if len(data) >= 2:
                 guid_dict[data[0].upper()] = data[1].strip('\n')
 
-    # init EFI specific type formatters
+    # init EFI specific type formaters
     TypePrintFormating (debugger)
 
 
@@ -537,4 +532,4 @@ def __lldb_init_module (debugger, internal_dict):
         if Breakpoint.GetNumLocations() == 1:
             # Set the emulator breakpoints, if we are in the emulator
             debugger.HandleCommand("breakpoint command add -s python -F lldbefi.LoadEmulatorEfiSymbols {id}".format(id=Breakpoint.GetID()))
-            print('Type r to run emulator. SecLldbScriptBreak armed. EFI modules should now get source level debugging in the emulator.')
+            print 'Type r to run emulator. SecLldbScriptBreak armed. EFI modules should now get source level debugging in the emulator.'

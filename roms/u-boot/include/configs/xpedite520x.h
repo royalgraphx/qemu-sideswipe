@@ -25,6 +25,7 @@
 /*
  * DDR config
  */
+#undef CONFIG_FSL_DDR_INTERACTIVE
 #define CONFIG_SPD_EEPROM		/* Use SPD EEPROM for DDR setup */
 #define CONFIG_DDR_SPD
 #define CONFIG_MEM_INIT_VALUE		0xdeadbeef
@@ -52,6 +53,8 @@
 /*
  * Diagnostics
  */
+#define CONFIG_SYS_MEMTEST_START	0x10000000
+#define CONFIG_SYS_MEMTEST_END		0x20000000
 #define CONFIG_POST			(CONFIG_SYS_POST_MEMORY | \
 					 CONFIG_SYS_POST_I2C)
 #define I2C_ADDR_LIST			{CONFIG_SYS_I2C_MAX1237_ADDR,	\
@@ -269,6 +272,7 @@
  */
 #define CONFIG_SYS_LOAD_ADDR	0x2000000	/* default load address */
 #define CONFIG_LOADADDR		0x1000000	/* default location for tftp and bootm */
+#define CONFIG_PREBOOT				/* enable preboot variable */
 #define CONFIG_INTEGRITY			/* support booting INTEGRITY OS */
 #define CONFIG_INTERRUPTS		/* enable pci, srio, ddr interrupts */
 
@@ -283,6 +287,9 @@
 /*
  * Environment Configuration
  */
+#define CONFIG_ENV_SECT_SIZE	0x20000		/* 128k (one sector) for env */
+#define CONFIG_ENV_SIZE		0x8000
+#define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE - (256 * 1024))
 
 /*
  * Flash memory map:

@@ -28,18 +28,17 @@
 #include "migration/vmstate.h"
 #include "qemu/module.h"
 #include "qemu/timer.h"
-#include "qom/object.h"
 
 #define TYPE_GPIOKEY "gpio-key"
-OBJECT_DECLARE_SIMPLE_TYPE(GPIOKEYState, GPIOKEY)
+#define GPIOKEY(obj) OBJECT_CHECK(GPIOKEYState, (obj), TYPE_GPIOKEY)
 #define GPIO_KEY_LATENCY 100 /* 100ms */
 
-struct GPIOKEYState {
+typedef struct GPIOKEYState {
     SysBusDevice parent_obj;
 
     QEMUTimer *timer;
     qemu_irq irq;
-};
+} GPIOKEYState;
 
 static const VMStateDescription vmstate_gpio_key = {
     .name = "gpio-key",

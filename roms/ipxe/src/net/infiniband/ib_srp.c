@@ -498,21 +498,14 @@ static struct ib_srp_root_path_parser ib_srp_rp_parser[] = {
 static int ib_srp_parse_root_path ( const char *rp_string,
 				    struct ib_srp_root_path *rp ) {
 	struct ib_srp_root_path_parser *parser;
+	char rp_string_copy[ strlen ( rp_string ) + 1 ];
 	char *rp_comp[IB_SRP_NUM_RP_COMPONENTS];
-	char *rp_string_copy;
-	char *rp_string_tmp;
+	char *rp_string_tmp = rp_string_copy;
 	unsigned int i = 0;
 	int rc;
 
-	/* Create modifiable copy of root path */
-	rp_string_copy = strdup ( rp_string );
-	if ( ! rp_string_copy ) {
-		rc = -ENOMEM;
-		goto err_strdup;
-	}
-	rp_string_tmp = rp_string_copy;
-
 	/* Split root path into component parts */
+	strcpy ( rp_string_copy, rp_string );
 	while ( 1 ) {
 		rp_comp[i++] = rp_string_tmp;
 		if ( i == IB_SRP_NUM_RP_COMPONENTS )
@@ -521,8 +514,7 @@ static int ib_srp_parse_root_path ( const char *rp_string,
 			if ( ! *rp_string_tmp ) {
 				DBG ( "IBSRP root path \"%s\" too short\n",
 				      rp_string );
-				rc = -EINVAL_RP_TOO_SHORT;
-				goto err_split;
+				return -EINVAL_RP_TOO_SHORT;
 			}
 		}
 		*(rp_string_tmp++) = '\0';
@@ -535,15 +527,11 @@ static int ib_srp_parse_root_path ( const char *rp_string,
 			DBG ( "IBSRP could not parse \"%s\" in root path "
 			      "\"%s\": %s\n", rp_comp[i], rp_string,
 			      strerror ( rc ) );
-			goto err_parse;
+			return rc;
 		}
 	}
 
- err_parse:
- err_split:
-	free ( rp_string_copy );
- err_strdup:
-	return rc;
+	return 0;
 }
 
 /**

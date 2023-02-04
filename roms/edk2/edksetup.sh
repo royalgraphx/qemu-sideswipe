@@ -49,11 +49,11 @@ function SetWorkspace()
     return 0
   fi
 
-  if [ ! ${BASH_SOURCE[0]} -ef ./$SCRIPTNAME ] && [ -z "$PACKAGES_PATH" ]
+  if [ ! ${BASH_SOURCE[0]} -ef ./edksetup.sh ] && [ -z "$PACKAGES_PATH" ]
   then
     echo Run this script from the base of your tree.  For example:
     echo "  cd /Path/To/Edk/Root"
-    echo "  . $SCRIPTNAME"
+    echo "  . edksetup.sh"
     return 1
   fi
 
@@ -71,7 +71,7 @@ function SetWorkspace()
   #
   # Set $WORKSPACE
   #
-  export WORKSPACE=$PWD
+  export WORKSPACE=`pwd`
   return 0
 }
 
@@ -108,26 +108,27 @@ function SetupEnv()
 function SetupPython3()
 {
   if [ $origin_version ];then
-    origin_version=
-  fi
-  for python in $(whereis python3)
-  do
-    python=$(echo $python | grep "[[:digit:]]$" || true)
-    python_version=${python##*python}
-    if [ -z "${python_version}" ] || (! command -v $python >/dev/null 2>&1);then
-      continue
+      origin_version=
     fi
-    if [ -z $origin_version ];then
-      origin_version=$python_version
-      export PYTHON_COMMAND=$python
-      continue
-    fi
-      if [[ "$origin_version" < "$python_version" ]]; then
-      origin_version=$python_version
-      export PYTHON_COMMAND=$python
-    fi
-  done
-  return 0
+    for python in $(whereis python3)
+    do
+      python=$(echo $python | grep "[[:digit:]]$" || true)
+      python_version=${python##*python}
+      if [ -z "${python_version}" ] || (! command -v $python >/dev/null 2>&1);then
+        continue
+      fi
+      if [ -z $origin_version ];then
+        origin_version=$python_version
+        export PYTHON_COMMAND=$python
+        continue
+      fi
+      ret=`echo "$origin_version < $python_version" |bc`
+      if [ "$ret" -eq 1 ]; then
+        origin_version=$python_version
+        export PYTHON_COMMAND=$python
+      fi
+    done
+    return 0
 }
 
 function SetupPython()
@@ -164,7 +165,8 @@ function SetupPython()
         export PYTHON_COMMAND=$python
         continue
       fi
-      if [[ "$origin_version" < "$python_version" ]]; then
+      ret=`echo "$origin_version < $python_version" |bc`
+      if [ "$ret" -eq 1 ]; then
         origin_version=$python_version
         export PYTHON_COMMAND=$python
       fi
@@ -194,12 +196,12 @@ do
       RECONFIG=TRUE
       shift
     ;;
-    *)
+    -?|-h|--help|*)
       HelpMsg
       break
     ;;
   esac
-  I=$((I - 1))
+  I=$(($I - 1))
 done
 
 if [ $I -gt 0 ]

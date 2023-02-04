@@ -40,7 +40,6 @@
 #include "qemu/module.h"
 #include "net/eth.h"
 #include "trace.h"
-#include "qom/object.h"
 
 /* RECSMALL is not used because it breaks tap networking in linux:
  * incoming ARP responses are too short
@@ -272,9 +271,9 @@ typedef struct desc {
 #define DEFAULT_PHY 1
 
 #define TYPE_OPEN_ETH "open_eth"
-OBJECT_DECLARE_SIMPLE_TYPE(OpenEthState, OPEN_ETH)
+#define OPEN_ETH(obj) OBJECT_CHECK(OpenEthState, (obj), TYPE_OPEN_ETH)
 
-struct OpenEthState {
+typedef struct OpenEthState {
     SysBusDevice parent_obj;
 
     NICState *nic;
@@ -288,7 +287,7 @@ struct OpenEthState {
     unsigned tx_desc;
     unsigned rx_desc;
     desc desc[128];
-};
+} OpenEthState;
 
 static desc *rx_desc(OpenEthState *s)
 {

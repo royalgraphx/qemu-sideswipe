@@ -16,7 +16,6 @@
 #include "cpu.h"
 #include "exec/address-spaces.h"
 #include "hw/qdev-core.h"
-#include "qom/object.h"
 
 struct IPLBlockPVComp {
     uint64_t tweak_pref;
@@ -32,7 +31,7 @@ struct IPLBlockPV {
     uint32_t num_comp;          /* 0x74 */
     uint64_t pv_header_addr;    /* 0x78 */
     uint64_t pv_header_len;     /* 0x80 */
-    struct IPLBlockPVComp components[0];
+    struct IPLBlockPVComp components[];
 } QEMU_PACKED;
 typedef struct IPLBlockPV IPLBlockPV;
 
@@ -63,7 +62,7 @@ struct IplBlockFcp {
     uint64_t br_lba;
     uint32_t scp_data_len;
     uint8_t  reserved6[260];
-    uint8_t  scp_data[0];
+    uint8_t  scp_data[];
 } QEMU_PACKED;
 typedef struct IplBlockFcp IplBlockFcp;
 
@@ -140,7 +139,7 @@ void s390_ipl_clear_reset_request(void);
  * have an offset of 4 + n * 8 bytes within the struct in order
  * to keep it double-word aligned.
  * The total size of the struct must never exceed 28 bytes.
- * This definition must be kept in sync with the definition
+ * This definition must be kept in sync with the defininition
  * in pc-bios/s390-ccw/iplb.h.
  */
 struct QemuIplParameters {
@@ -153,7 +152,7 @@ struct QemuIplParameters {
 typedef struct QemuIplParameters QemuIplParameters;
 
 #define TYPE_S390_IPL "s390-ipl"
-OBJECT_DECLARE_SIMPLE_TYPE(S390IPLState, S390_IPL)
+#define S390_IPL(obj) OBJECT_CHECK(S390IPLState, (obj), TYPE_S390_IPL)
 
 struct S390IPLState {
     /*< private >*/
@@ -184,6 +183,7 @@ struct S390IPLState {
     uint16_t devno;
     bool iplbext_migration;
 };
+typedef struct S390IPLState S390IPLState;
 QEMU_BUILD_BUG_MSG(offsetof(S390IPLState, iplb) & 3, "alignment of iplb wrong");
 
 #define DIAG_308_RC_OK              0x0001

@@ -2,7 +2,7 @@
   Locate handle functions
 
   Copyright (c) 2009 - 2017, Intel Corporation. All rights reserved.<BR>
-  Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
+  Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -12,24 +12,24 @@
 //
 // ProtocolRequest - Last LocateHandle request ID
 //
-UINTN  mEfiLocateHandleRequest = 0;
+UINTN mEfiLocateHandleRequest = 0;
 
 //
 // Internal prototypes
 //
 
 typedef struct {
-  EFI_GUID          *Protocol;
-  VOID              *SearchKey;
-  LIST_ENTRY        *Position;
-  PROTOCOL_ENTRY    *ProtEntry;
+  EFI_GUID        *Protocol;
+  VOID            *SearchKey;
+  LIST_ENTRY      *Position;
+  PROTOCOL_ENTRY  *ProtEntry;
 } LOCATE_POSITION;
 
 typedef
 IHANDLE *
-(*CORE_GET_NEXT) (
-  IN OUT LOCATE_POSITION  *Position,
-  OUT VOID                **Interface
+(* CORE_GET_NEXT) (
+  IN OUT LOCATE_POSITION    *Position,
+  OUT VOID                  **Interface
   );
 
 /**
@@ -49,7 +49,7 @@ MmGetNextLocateAllHandles (
   OUT    VOID             **Interface
   )
 {
-  IHANDLE  *Handle;
+  IHANDLE     *Handle;
 
   //
   // Next handle
@@ -59,12 +59,11 @@ MmGetNextLocateAllHandles (
   //
   // If not at the end of the list, get the handle
   //
-  Handle     = NULL;
-  *Interface = NULL;
+  Handle      = NULL;
+  *Interface  = NULL;
   if (Position->Position != &gHandleList) {
     Handle = CR (Position->Position, IHANDLE, AllHandles, EFI_HANDLE_SIGNATURE);
   }
-
   return Handle;
 }
 
@@ -91,8 +90,8 @@ MmGetNextLocateByRegisterNotify (
   PROTOCOL_INTERFACE  *Prot;
   LIST_ENTRY          *Link;
 
-  Handle     = NULL;
-  *Interface = NULL;
+  Handle      = NULL;
+  *Interface  = NULL;
   ProtNotify = Position->SearchKey;
 
   //
@@ -107,12 +106,11 @@ MmGetNextLocateByRegisterNotify (
     //
     Link = ProtNotify->Position->ForwardLink;
     if (Link != &ProtNotify->Protocol->Protocols) {
-      Prot       = CR (Link, PROTOCOL_INTERFACE, ByProtocol, PROTOCOL_INTERFACE_SIGNATURE);
-      Handle     = Prot->Handle;
+      Prot = CR (Link, PROTOCOL_INTERFACE, ByProtocol, PROTOCOL_INTERFACE_SIGNATURE);
+      Handle = Prot->Handle;
       *Interface = Prot->Interface;
     }
   }
-
   return Handle;
 }
 
@@ -137,13 +135,13 @@ MmGetNextLocateByProtocol (
   LIST_ENTRY          *Link;
   PROTOCOL_INTERFACE  *Prot;
 
-  Handle     = NULL;
-  *Interface = NULL;
-  for ( ; ;) {
+  Handle      = NULL;
+  *Interface  = NULL;
+  for (; ;) {
     //
     // Next entry
     //
-    Link               = Position->Position->ForwardLink;
+    Link = Position->Position->ForwardLink;
     Position->Position = Link;
 
     //
@@ -157,8 +155,8 @@ MmGetNextLocateByProtocol (
     //
     // Get the handle
     //
-    Prot       = CR (Link, PROTOCOL_INTERFACE, ByProtocol, PROTOCOL_INTERFACE_SIGNATURE);
-    Handle     = Prot->Handle;
+    Prot = CR (Link, PROTOCOL_INTERFACE, ByProtocol, PROTOCOL_INTERFACE_SIGNATURE);
+    Handle = Prot->Handle;
     *Interface = Prot->Interface;
 
     //
@@ -170,14 +168,13 @@ MmGetNextLocateByProtocol (
       break;
     }
   }
-
   return Handle;
 }
 
 /**
   Return the first Protocol Interface that matches the Protocol GUID. If
-  Registration is passed in return a Protocol Instance that was just add
-  to the system. If Registration is NULL return the first Protocol Interface
+  Registration is pasased in return a Protocol Instance that was just add
+  to the system. If Retistration is NULL return the first Protocol Interface
   you find.
 
   @param  Protocol               The protocol to search for
@@ -198,17 +195,17 @@ MmLocateProtocol (
   OUT VOID      **Interface
   )
 {
-  EFI_STATUS       Status;
-  LOCATE_POSITION  Position;
-  PROTOCOL_NOTIFY  *ProtNotify;
-  IHANDLE          *Handle;
+  EFI_STATUS              Status;
+  LOCATE_POSITION         Position;
+  PROTOCOL_NOTIFY         *ProtNotify;
+  IHANDLE                 *Handle;
 
   if ((Interface == NULL) || (Protocol == NULL)) {
     return EFI_INVALID_PARAMETER;
   }
 
   *Interface = NULL;
-  Status     = EFI_SUCCESS;
+  Status = EFI_SUCCESS;
 
   //
   // Set initial position
@@ -227,7 +224,6 @@ MmLocateProtocol (
     if (Position.ProtEntry == NULL) {
       return EFI_NOT_FOUND;
     }
-
     Position.Position = &Position.ProtEntry->Protocols;
 
     Handle = MmGetNextLocateByProtocol (&Position, Interface);
@@ -242,7 +238,7 @@ MmLocateProtocol (
     // If this is a search by register notify and a handle was
     // returned, update the register notification position
     //
-    ProtNotify           = Registration;
+    ProtNotify = Registration;
     ProtNotify->Position = ProtNotify->Position->ForwardLink;
   }
 
@@ -303,51 +299,48 @@ MmLocateHandle (
   Position.SearchKey = SearchKey;
   Position.Position  = &gHandleList;
 
-  ResultSize   = 0;
-  ResultBuffer = (IHANDLE **)Buffer;
-  Status       = EFI_SUCCESS;
+  ResultSize = 0;
+  ResultBuffer = (IHANDLE **) Buffer;
+  Status = EFI_SUCCESS;
 
   //
   // Get the search function based on type
   //
   switch (SearchType) {
-    case AllHandles:
-      GetNext = MmGetNextLocateAllHandles;
-      break;
+  case AllHandles:
+    GetNext = MmGetNextLocateAllHandles;
+    break;
 
-    case ByRegisterNotify:
-      GetNext = MmGetNextLocateByRegisterNotify;
-      //
-      // Must have SearchKey for locate ByRegisterNotify
-      //
-      if (SearchKey == NULL) {
-        Status = EFI_INVALID_PARAMETER;
-      }
+  case ByRegisterNotify:
+    GetNext = MmGetNextLocateByRegisterNotify;
+    //
+    // Must have SearchKey for locate ByRegisterNotify
+    //
+    if (SearchKey == NULL) {
+      Status = EFI_INVALID_PARAMETER;
+    }
+    break;
 
-      break;
-
-    case ByProtocol:
-      GetNext = MmGetNextLocateByProtocol;
-      if (Protocol == NULL) {
-        Status = EFI_INVALID_PARAMETER;
-        break;
-      }
-
-      //
-      // Look up the protocol entry and set the head pointer
-      //
-      Position.ProtEntry = MmFindProtocolEntry (Protocol, FALSE);
-      if (Position.ProtEntry == NULL) {
-        Status = EFI_NOT_FOUND;
-        break;
-      }
-
-      Position.Position = &Position.ProtEntry->Protocols;
-      break;
-
-    default:
+  case ByProtocol:
+    GetNext = MmGetNextLocateByProtocol;
+    if (Protocol == NULL) {
       Status = EFI_INVALID_PARAMETER;
       break;
+    }
+    //
+    // Look up the protocol entry and set the head pointer
+    //
+    Position.ProtEntry = MmFindProtocolEntry (Protocol, FALSE);
+    if (Position.ProtEntry == NULL) {
+      Status = EFI_NOT_FOUND;
+      break;
+    }
+    Position.Position = &Position.ProtEntry->Protocols;
+    break;
+
+  default:
+    Status = EFI_INVALID_PARAMETER;
+    break;
   }
 
   if (EFI_ERROR (Status)) {
@@ -358,7 +351,7 @@ MmLocateHandle (
   // Enumerate out the matching handles
   //
   mEfiLocateHandleRequest += 1;
-  for ( ; ;) {
+  for (; ;) {
     //
     // Get the next handle.  If no more handles, stop
     //
@@ -373,8 +366,8 @@ MmLocateHandle (
     //
     ResultSize += sizeof (Handle);
     if (ResultSize <= *BufferSize) {
-      *ResultBuffer = Handle;
-      ResultBuffer += 1;
+        *ResultBuffer = Handle;
+        ResultBuffer += 1;
     }
   }
 
@@ -395,13 +388,13 @@ MmLocateHandle (
 
     *BufferSize = ResultSize;
 
-    if ((SearchType == ByRegisterNotify) && !EFI_ERROR (Status)) {
+    if (SearchType == ByRegisterNotify && !EFI_ERROR (Status)) {
       ASSERT (SearchKey != NULL);
       //
       // If this is a search by register notify and a handle was
       // returned, update the register notification position
       //
-      ProtNotify           = SearchKey;
+      ProtNotify = SearchKey;
       ProtNotify->Position = ProtNotify->Position->ForwardLink;
     }
   }
@@ -452,27 +445,26 @@ MmLocateHandleBuffer (
     return EFI_INVALID_PARAMETER;
   }
 
-  BufferSize     = 0;
+  BufferSize = 0;
   *NumberHandles = 0;
-  *Buffer        = NULL;
-  Status         = MmLocateHandle (
-                     SearchType,
-                     Protocol,
-                     SearchKey,
-                     &BufferSize,
-                     *Buffer
-                     );
+  *Buffer = NULL;
+  Status = MmLocateHandle (
+             SearchType,
+             Protocol,
+             SearchKey,
+             &BufferSize,
+             *Buffer
+             );
   //
   // LocateHandleBuffer() returns incorrect status code if SearchType is
   // invalid.
   //
   // Add code to correctly handle expected errors from MmLocateHandle().
   //
-  if (EFI_ERROR (Status) && (Status != EFI_BUFFER_TOO_SMALL)) {
+  if (EFI_ERROR (Status) && Status != EFI_BUFFER_TOO_SMALL) {
     if (Status != EFI_INVALID_PARAMETER) {
       Status = EFI_NOT_FOUND;
     }
-
     return Status;
   }
 
@@ -489,7 +481,7 @@ MmLocateHandleBuffer (
              *Buffer
              );
 
-  *NumberHandles = BufferSize / sizeof (EFI_HANDLE);
+  *NumberHandles = BufferSize / sizeof(EFI_HANDLE);
   if (EFI_ERROR (Status)) {
     *NumberHandles = 0;
   }

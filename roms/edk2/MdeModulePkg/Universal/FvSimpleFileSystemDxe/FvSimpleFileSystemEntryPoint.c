@@ -20,21 +20,21 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "FvSimpleFileSystemInternal.h"
 
-EFI_UNICODE_COLLATION_PROTOCOL  *mUnicodeCollation = NULL;
+EFI_UNICODE_COLLATION_PROTOCOL          *mUnicodeCollation = NULL;
 
 //
 // A Guid string is 32 hex characters with 4 hyphens and a NULL-terminated char: 37 characters total
 //
-#define GUID_STRING_SIZE  (37 * sizeof (CHAR16))
+#define GUID_STRING_SIZE                (37 * sizeof (CHAR16))
 
-#define FVFS_VOLUME_LABEL_PREFIX    L"Firmware Volume: "
-#define FVFS_VOLUME_LABEL_SIZE      (sizeof (FVFS_VOLUME_LABEL_PREFIX) + GUID_STRING_SIZE - sizeof (CHAR16))
-#define FVFS_FALLBACK_VOLUME_LABEL  L"Firmware Volume"
+#define FVFS_VOLUME_LABEL_PREFIX        L"Firmware Volume: "
+#define FVFS_VOLUME_LABEL_SIZE          (sizeof (FVFS_VOLUME_LABEL_PREFIX) + GUID_STRING_SIZE - sizeof (CHAR16))
+#define FVFS_FALLBACK_VOLUME_LABEL      L"Firmware Volume"
 
 //
 // Template for EFI_SIMPLE_FILE_SYSTEM_PROTOCOL data structure.
 //
-EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  mSimpleFsTemplate = {
+EFI_SIMPLE_FILE_SYSTEM_PROTOCOL mSimpleFsTemplate = {
   EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_REVISION,
   FvSimpleFileSystemOpenVolume
 };
@@ -42,7 +42,7 @@ EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  mSimpleFsTemplate = {
 //
 // Template for EFI_DRIVER_BINDING_PROTOCOL data structure.
 //
-EFI_DRIVER_BINDING_PROTOCOL  mDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL mDriverBinding = {
   FvSimpleFileSystemDriverSupported,
   FvSimpleFileSystemDriverStart,
   FvSimpleFileSystemDriverStop,
@@ -74,29 +74,29 @@ EFI_DRIVER_BINDING_PROTOCOL  mDriverBinding = {
 EFI_STATUS
 EFIAPI
 FvSimpleFileSystemOpenVolume (
-  IN     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  *This,
-  OUT EFI_FILE_PROTOCOL                   **RootFile
+  IN     EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *This,
+     OUT EFI_FILE_PROTOCOL               **RootFile
   )
 {
-  EFI_STATUS                     Status;
-  FV_FILESYSTEM_FILE             *Root;
-  CHAR16                         *UiSection;
-  EFI_GUID                       NameGuid;
-  EFI_FV_FILE_ATTRIBUTES         Attributes;
-  UINT32                         Authentication;
-  UINTN                          Key;
-  EFI_FV_FILETYPE                FileType;
-  UINTN                          Size;
-  FV_FILESYSTEM_INSTANCE         *Instance;
-  FV_FILESYSTEM_FILE_INFO        *FvFileInfo;
-  EFI_FIRMWARE_VOLUME2_PROTOCOL  *FvProtocol;
-  CHAR16                         *Name;
-  UINTN                          NameLen;
-  UINTN                          NumChars;
-  UINTN                          DestMax;
+  EFI_STATUS                      Status;
+  FV_FILESYSTEM_FILE              *Root;
+  CHAR16                          *UiSection;
+  EFI_GUID                        NameGuid;
+  EFI_FV_FILE_ATTRIBUTES          Attributes;
+  UINT32                          Authentication;
+  UINTN                           Key;
+  EFI_FV_FILETYPE                 FileType;
+  UINTN                           Size;
+  FV_FILESYSTEM_INSTANCE          *Instance;
+  FV_FILESYSTEM_FILE_INFO         *FvFileInfo;
+  EFI_FIRMWARE_VOLUME2_PROTOCOL   *FvProtocol;
+  CHAR16                          *Name;
+  UINTN                           NameLen;
+  UINTN                           NumChars;
+  UINTN                           DestMax;
 
   Instance = FVFS_INSTANCE_FROM_SIMPLE_FS_THIS (This);
-  Status   = EFI_SUCCESS;
+  Status = EFI_SUCCESS;
 
   if (Instance->Root == NULL) {
     //
@@ -113,9 +113,8 @@ FvSimpleFileSystemOpenVolume (
     CopyMem (&Root->FileProtocol, &mFileSystemTemplate, sizeof (mFileSystemTemplate));
     Root->FvFileInfo = AllocateZeroPool (sizeof (FV_FILESYSTEM_FILE_INFO));
     if (Root->FvFileInfo == NULL) {
-      return EFI_OUT_OF_RESOURCES;
+        return EFI_OUT_OF_RESOURCES;
     }
-
     Root->FvFileInfo->FileInfo.Size      = sizeof (EFI_FILE_INFO);
     Root->FvFileInfo->FileInfo.Attribute = EFI_FILE_DIRECTORY | EFI_FILE_READ_ONLY;
 
@@ -150,15 +149,15 @@ FvSimpleFileSystemOpenVolume (
       // its NameGuid.
       //
       UiSection = NULL;
-      Status    = FvProtocol->ReadSection (
-                                FvProtocol,
-                                &NameGuid,
-                                EFI_SECTION_USER_INTERFACE,
-                                0,
-                                (VOID **)&UiSection,
-                                &Size,
-                                &Authentication
-                                );
+      Status = FvProtocol->ReadSection (
+                             FvProtocol,
+                             &NameGuid,
+                             EFI_SECTION_USER_INTERFACE,
+                             0,
+                             (VOID **)&UiSection,
+                             &Size,
+                             &Authentication
+                             );
       if (!EFI_ERROR (Status)) {
         Name = UiSection;
       } else {
@@ -166,7 +165,6 @@ FvSimpleFileSystemOpenVolume (
         if (Name == NULL) {
           return EFI_OUT_OF_RESOURCES;
         }
-
         NumChars = UnicodeSPrint (Name, GUID_STRING_SIZE, L"%g", &NameGuid);
         ASSERT ((NumChars + 1) * sizeof (CHAR16) == GUID_STRING_SIZE);
       }
@@ -198,12 +196,12 @@ FvSimpleFileSystemOpenVolume (
       ASSERT_EFI_ERROR (Status);
 
       if (FV_FILETYPE_IS_EXECUTABLE (FileType)) {
-        Status = StrnCatS (&FvFileInfo->FileInfo.FileName[0], DestMax, L".efi", StrLen (L".efi"));
+        Status  = StrnCatS (&FvFileInfo->FileInfo.FileName[0], DestMax, L".efi", StrLen (L".efi"));
         ASSERT_EFI_ERROR (Status);
       }
 
-      FvFileInfo->FileInfo.Size = sizeof (EFI_FILE_INFO) + NameLen - sizeof (CHAR16);
-      Status                    = FvFsGetFileSize (FvProtocol, FvFileInfo);
+      FvFileInfo->FileInfo.Size     = sizeof (EFI_FILE_INFO) + NameLen - sizeof (CHAR16);
+      Status = FvFsGetFileSize (FvProtocol, FvFileInfo);
       ASSERT_EFI_ERROR (Status);
       FvFileInfo->FileInfo.PhysicalSize = FvFileInfo->FileInfo.FileSize;
       FvFileInfo->FileInfo.Attribute    = EFI_FILE_READ_ONLY;
@@ -211,6 +209,7 @@ FvSimpleFileSystemOpenVolume (
       InsertHeadList (&Instance->FileInfoHead, &FvFileInfo->Link);
 
       FreePool (Name);
+
     } while (TRUE);
 
     if (Status == EFI_NOT_FOUND) {
@@ -244,10 +243,10 @@ FvSimpleFileSystemOpenVolume (
 **/
 EFI_STATUS
 InitializeUnicodeCollationSupportWorker (
-  IN       EFI_HANDLE  AgentHandle,
-  IN       EFI_GUID    *ProtocolGuid,
-  IN CONST CHAR16      *VariableName,
-  IN CONST CHAR8       *DefaultLanguage
+  IN       EFI_HANDLE             AgentHandle,
+  IN       EFI_GUID               *ProtocolGuid,
+  IN CONST CHAR16                 *VariableName,
+  IN CONST CHAR8                  *DefaultLanguage
   )
 {
   EFI_STATUS                      ReturnStatus;
@@ -271,8 +270,8 @@ InitializeUnicodeCollationSupportWorker (
     return Status;
   }
 
-  Iso639Language = (BOOLEAN)(ProtocolGuid == &gEfiUnicodeCollationProtocolGuid);
-  GetEfiGlobalVariable2 (VariableName, (VOID **)&Language, NULL);
+  Iso639Language = (BOOLEAN) (ProtocolGuid == &gEfiUnicodeCollationProtocolGuid);
+  GetEfiGlobalVariable2 (VariableName, (VOID**) &Language, NULL);
 
   ReturnStatus = EFI_UNSUPPORTED;
   for (Index = 0; Index < NumHandles; Index++) {
@@ -282,7 +281,7 @@ InitializeUnicodeCollationSupportWorker (
     Status = gBS->OpenProtocol (
                     Handles[Index],
                     ProtocolGuid,
-                    (VOID **)&Uci,
+                    (VOID **) &Uci,
                     AgentHandle,
                     NULL,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -305,7 +304,7 @@ InitializeUnicodeCollationSupportWorker (
     if (BestLanguage != NULL) {
       FreePool (BestLanguage);
       mUnicodeCollation = Uci;
-      ReturnStatus      = EFI_SUCCESS;
+      ReturnStatus = EFI_SUCCESS;
       break;
     }
   }
@@ -334,10 +333,11 @@ InitializeUnicodeCollationSupportWorker (
 **/
 EFI_STATUS
 InitializeUnicodeCollationSupport (
-  IN EFI_HANDLE  AgentHandle
+  IN EFI_HANDLE    AgentHandle
   )
 {
-  EFI_STATUS  Status;
+
+  EFI_STATUS       Status;
 
   Status = EFI_UNSUPPORTED;
 
@@ -348,7 +348,7 @@ InitializeUnicodeCollationSupport (
              AgentHandle,
              &gEfiUnicodeCollation2ProtocolGuid,
              L"PlatformLang",
-             (CONST CHAR8 *)PcdGetPtr (PcdUefiVariableDefaultPlatformLang)
+             (CONST CHAR8 *) PcdGetPtr (PcdUefiVariableDefaultPlatformLang)
              );
   //
   // If the attempt to use Unicode Collation 2 Protocol fails, then we fall back
@@ -359,7 +359,7 @@ InitializeUnicodeCollationSupport (
                AgentHandle,
                &gEfiUnicodeCollationProtocolGuid,
                L"Lang",
-               (CONST CHAR8 *)PcdGetPtr (PcdUefiVariableDefaultLang)
+               (CONST CHAR8 *) PcdGetPtr (PcdUefiVariableDefaultLang)
                );
   }
 
@@ -419,12 +419,12 @@ FvSimpleFileSystemDriverStart (
   IN  EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS                     Status;
-  EFI_FIRMWARE_VOLUME2_PROTOCOL  *FvProtocol;
-  FV_FILESYSTEM_INSTANCE         *Instance;
-  EFI_DEVICE_PATH_PROTOCOL       *FvDevicePath;
-  EFI_GUID                       *FvGuid;
-  UINTN                          NumChars;
+  EFI_STATUS                       Status;
+  EFI_FIRMWARE_VOLUME2_PROTOCOL    *FvProtocol;
+  FV_FILESYSTEM_INSTANCE           *Instance;
+  EFI_DEVICE_PATH_PROTOCOL         *FvDevicePath;
+  EFI_GUID                         *FvGuid;
+  UINTN                            NumChars;
 
   Status = InitializeUnicodeCollationSupport (DriverBinding->DriverBindingHandle);
   if (EFI_ERROR (Status)) {
@@ -437,7 +437,7 @@ FvSimpleFileSystemDriverStart (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiFirmwareVolume2ProtocolGuid,
-                  (VOID **)&FvProtocol,
+                  (VOID **) &FvProtocol,
                   gImageHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -452,14 +452,14 @@ FvSimpleFileSystemDriverStart (
   Instance = AllocateZeroPool (sizeof (FV_FILESYSTEM_INSTANCE));
   ASSERT (Instance != NULL);
 
-  Instance->Root       = NULL;
+  Instance->Root = NULL;
   Instance->FvProtocol = FvProtocol;
-  Instance->Signature  = FVFS_INSTANCE_SIGNATURE;
+  Instance->Signature = FVFS_INSTANCE_SIGNATURE;
   InitializeListHead (&Instance->FileInfoHead);
   InitializeListHead (&Instance->FileHead);
   CopyMem (&Instance->SimpleFs, &mSimpleFsTemplate, sizeof (mSimpleFsTemplate));
 
-  Status = gBS->InstallProtocolInterface (
+  Status = gBS->InstallProtocolInterface(
                   &ControllerHandle,
                   &gEfiSimpleFileSystemProtocolGuid,
                   EFI_NATIVE_INTERFACE,
@@ -472,22 +472,21 @@ FvSimpleFileSystemDriverStart (
   // Get the device path to find the FV's GUID
   //
   Instance->VolumeLabel = NULL;
-  Status                =  gBS->OpenProtocol (
-                                  ControllerHandle,
-                                  &gEfiDevicePathProtocolGuid,
-                                  (VOID **)&FvDevicePath,
-                                  gImageHandle,
-                                  ControllerHandle,
-                                  EFI_OPEN_PROTOCOL_GET_PROTOCOL
-                                  );
+  Status =  gBS->OpenProtocol (
+                   ControllerHandle,
+                   &gEfiDevicePathProtocolGuid,
+                   (VOID **) &FvDevicePath,
+                   gImageHandle,
+                   ControllerHandle,
+                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
+                   );
   if (!EFI_ERROR (Status)) {
     //
     // Iterate over device path until we find a firmware volume node
     //
     while (!IsDevicePathEndType (FvDevicePath)) {
-      if ((DevicePathType (FvDevicePath) == MEDIA_DEVICE_PATH) &&
-          (DevicePathSubType (FvDevicePath) == MEDIA_PIWG_FW_VOL_DP))
-      {
+      if (DevicePathType (FvDevicePath) == MEDIA_DEVICE_PATH &&
+          DevicePathSubType (FvDevicePath) == MEDIA_PIWG_FW_VOL_DP) {
         //
         // Allocate the volume label
         //
@@ -499,7 +498,7 @@ FvSimpleFileSystemDriverStart (
           //
           // Extract the FV's guid
           //
-          FvGuid = &((MEDIA_FW_VOL_DEVICE_PATH *)FvDevicePath)->FvName;
+          FvGuid = &((MEDIA_FW_VOL_DEVICE_PATH *) FvDevicePath)->FvName;
           //
           // Build the volume label string
           //
@@ -511,14 +510,11 @@ FvSimpleFileSystemDriverStart (
                        );
           ASSERT ((NumChars + 1) * sizeof (CHAR16) == FVFS_VOLUME_LABEL_SIZE);
         }
-
         break;
       }
-
       FvDevicePath = NextDevicePathNode (FvDevicePath);
     }
   }
-
   //
   // If we didn't decide on a volume label, set a fallback one
   //
@@ -549,10 +545,10 @@ FvSimpleFileSystemDriverStart (
 EFI_STATUS
 EFIAPI
 FvSimpleFileSystemDriverStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL  *DriverBinding,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  UINTN                        NumberOfChildren,
-  IN  EFI_HANDLE                   *ChildHandleBuffer OPTIONAL
+  IN  EFI_DRIVER_BINDING_PROTOCOL       *DriverBinding,
+  IN  EFI_HANDLE                        ControllerHandle,
+  IN  UINTN                             NumberOfChildren,
+  IN  EFI_HANDLE                        *ChildHandleBuffer OPTIONAL
   )
 {
   EFI_STATUS                       Status;
@@ -565,7 +561,7 @@ FvSimpleFileSystemDriverStop (
   Status = gBS->OpenProtocol (
                   ControllerHandle,
                   &gEfiSimpleFileSystemProtocolGuid,
-                  (VOID **)&SimpleFile,
+                  (VOID **) &SimpleFile,
                   DriverBinding->DriverBindingHandle,
                   ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -587,11 +583,11 @@ FvSimpleFileSystemDriverStop (
   // Close and uninstall protocols.
   //
   Status = gBS->CloseProtocol (
-                  ControllerHandle,
-                  &gEfiFirmwareVolume2ProtocolGuid,
-                  gImageHandle,
-                  ControllerHandle
-                  );
+                   ControllerHandle,
+                   &gEfiFirmwareVolume2ProtocolGuid,
+                   gImageHandle,
+                   ControllerHandle
+                   );
   ASSERT_EFI_ERROR (Status);
 
   Status = gBS->UninstallProtocolInterface (
@@ -608,10 +604,9 @@ FvSimpleFileSystemDriverStop (
     //
     // Free the Subtask list.
     //
-    for (Entry = Instance->FileInfoHead.ForwardLink;
-         Entry != (&Instance->FileInfoHead);
-         )
-    {
+    for(Entry = Instance->FileInfoHead.ForwardLink;
+        Entry != (&Instance->FileInfoHead);
+       ) {
       DelEntry   = Entry;
       Entry      = Entry->ForwardLink;
       FvFileInfo = FVFS_FILE_INFO_FROM_LINK (DelEntry);
@@ -628,7 +623,6 @@ FvSimpleFileSystemDriverStop (
     if (Instance->Root->FvFileInfo != NULL) {
       FreePool (Instance->Root->FvFileInfo);
     }
-
     FreePool (Instance->Root);
   }
 
@@ -638,7 +632,6 @@ FvSimpleFileSystemDriverStop (
   if (Instance->VolumeLabel != NULL) {
     FreePool (Instance->VolumeLabel);
   }
-
   FreePool (Instance);
 
   return EFI_SUCCESS;
@@ -657,11 +650,11 @@ FvSimpleFileSystemDriverStop (
 EFI_STATUS
 EFIAPI
 FvSimpleFileSystemEntryPoint (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE               ImageHandle,
+  IN EFI_SYSTEM_TABLE         *SystemTable
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS Status;
 
   //
   // Install driver model protocol(s).

@@ -345,7 +345,6 @@ ahci_port_alloc(struct ahci_ctrl_s *ctrl, u32 pnr)
         warn_noalloc();
         return NULL;
     }
-    memset(port, 0, sizeof(*port));
     port->pnr = pnr;
     port->ctrl = ctrl;
     port->list = memalign_tmp(1024, 1024);
@@ -594,7 +593,6 @@ static int ahci_port_setup(struct ahci_port_s *port)
                               , ata_extract_version(buffer));
         port->prio = bootprio_find_ata_device(ctrl->pci_tmp, pnr, 0);
     }
-    boot_lchs_find_ata_device(ctrl->pci_tmp, pnr, 0, &(port->drive.lchs));
     return 0;
 }
 

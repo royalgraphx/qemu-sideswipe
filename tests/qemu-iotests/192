@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # Test NBD export with -incoming (non-shared storage migration use case from
 # libvirt)
@@ -21,7 +20,7 @@
 #
 
 # creator
-owner=fam@euphon.net
+owner=famz@redhat.com
 
 seq=`basename $0`
 echo "QA output created by $seq"

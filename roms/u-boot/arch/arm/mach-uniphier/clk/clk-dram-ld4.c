@@ -4,6 +4,7 @@
  * Copyright (C) 2015-2017 Socionext Inc.
  */
 
+#include <common.h>
 #include <spl.h>
 #include <linux/io.h>
 
@@ -15,14 +16,14 @@ void uniphier_ld4_dram_clk_init(void)
 	u32 tmp;
 
 	/* deassert reset */
-	tmp = readl(sc_base + SC_RSTCTRL);
+	tmp = readl(SC_RSTCTRL);
 	tmp |= SC_RSTCTRL_NRST_UMC1 | SC_RSTCTRL_NRST_UMC0;
-	writel(tmp, sc_base + SC_RSTCTRL);
-	readl(sc_base + SC_RSTCTRL); /* dummy read */
+	writel(tmp, SC_RSTCTRL);
+	readl(SC_RSTCTRL); /* dummy read */
 
 	/* provide clocks */
-	tmp = readl(sc_base + SC_CLKCTRL);
+	tmp = readl(SC_CLKCTRL);
 	tmp |= SC_CLKCTRL_CEN_UMC;
-	writel(tmp, sc_base + SC_CLKCTRL);
-	readl(sc_base + SC_CLKCTRL); /* dummy read */
+	writel(tmp, SC_CLKCTRL);
+	readl(SC_CLKCTRL); /* dummy read */
 }

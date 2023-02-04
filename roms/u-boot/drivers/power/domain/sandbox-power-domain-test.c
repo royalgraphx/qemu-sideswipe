@@ -5,7 +5,6 @@
 
 #include <common.h>
 #include <dm.h>
-#include <malloc.h>
 #include <power-domain.h>
 #include <asm/io.h>
 #include <asm/power-domain.h>
@@ -51,5 +50,5 @@ U_BOOT_DRIVER(sandbox_power_domain_test) = {
 	.name = "sandbox_power_domain_test",
 	.id = UCLASS_MISC,
 	.of_match = sandbox_power_domain_test_ids,
-	.priv_auto	= sizeof(struct sandbox_power_domain_test),
+	.priv_auto_alloc_size = sizeof(struct sandbox_power_domain_test),
 };

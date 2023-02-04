@@ -15,9 +15,8 @@
 
 #include "hw/sysbus.h"
 #include "qemu/timer.h"
-#include "qom/object.h"
 #define TYPE_NRF51_TIMER "nrf51_soc.timer"
-OBJECT_DECLARE_SIMPLE_TYPE(NRF51TimerState, NRF51_TIMER)
+#define NRF51_TIMER(obj) OBJECT_CHECK(NRF51TimerState, (obj), TYPE_NRF51_TIMER)
 
 #define NRF51_TIMER_REG_COUNT 4
 
@@ -54,7 +53,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(NRF51TimerState, NRF51_TIMER)
 #define NRF51_TIMER_REG_CC0 0x540
 #define NRF51_TIMER_REG_CC3 0x54C
 
-struct NRF51TimerState {
+typedef struct NRF51TimerState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -76,7 +75,7 @@ struct NRF51TimerState {
     uint32_t bitmode;
     uint32_t prescaler;
 
-};
+} NRF51TimerState;
 
 
 #endif

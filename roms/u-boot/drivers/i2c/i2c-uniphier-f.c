@@ -5,7 +5,6 @@
  *   Author: Masahiro Yamada <yamada.masahiro@socionext.com>
  */
 
-#include <dm/device_compat.h>
 #include <linux/errno.h>
 #include <linux/io.h>
 #include <linux/iopoll.h>
@@ -94,7 +93,7 @@ static int uniphier_fi2c_probe(struct udevice *dev)
 	fdt_addr_t addr;
 	struct uniphier_fi2c_priv *priv = dev_get_priv(dev);
 
-	addr = dev_read_addr(dev);
+	addr = devfdt_get_addr(dev);
 	if (addr == FDT_ADDR_T_NONE)
 		return -EINVAL;
 
@@ -282,7 +281,7 @@ static int uniphier_fi2c_set_bus_speed(struct udevice *bus, unsigned int speed)
 	struct uniphier_fi2c_regs __iomem *regs = priv->regs;
 
 	/* max supported frequency is 400 kHz */
-	if (speed > I2C_SPEED_FAST_RATE)
+	if (speed > 400000)
 		return -EINVAL;
 
 	ret = uniphier_fi2c_check_bus_busy(priv);
@@ -326,6 +325,6 @@ U_BOOT_DRIVER(uniphier_fi2c) = {
 	.id = UCLASS_I2C,
 	.of_match = uniphier_fi2c_of_match,
 	.probe = uniphier_fi2c_probe,
-	.priv_auto	= sizeof(struct uniphier_fi2c_priv),
+	.priv_auto_alloc_size = sizeof(struct uniphier_fi2c_priv),
 	.ops = &uniphier_fi2c_ops,
 };

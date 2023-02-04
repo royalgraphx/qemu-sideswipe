@@ -38,7 +38,7 @@ static void assert_recovered(QTestState *qts)
     QDict *resp;
 
     resp = qtest_qmp(qts, "{ 'execute': 'no-such-cmd' }");
-    qmp_expect_error_and_unref(resp, "CommandNotFound");
+    qmp_assert_error_class(resp, "CommandNotFound");
 }
 
 static void test_malformed(QTestState *qts)
@@ -47,59 +47,59 @@ static void test_malformed(QTestState *qts)
 
     /* syntax error */
     qtest_qmp_send_raw(qts, "{]\n");
-    resp = qtest_qmp_receive_dict(qts);
-    qmp_expect_error_and_unref(resp, "GenericError");
+    resp = qtest_qmp_receive(qts);
+    qmp_assert_error_class(resp, "GenericError");
     assert_recovered(qts);
 
     /* lexical error: impossible byte outside string */
     qtest_qmp_send_raw(qts, "{\xFF");
-    resp = qtest_qmp_receive_dict(qts);
-    qmp_expect_error_and_unref(resp, "GenericError");
+    resp = qtest_qmp_receive(qts);
+    qmp_assert_error_class(resp, "GenericError");
     assert_recovered(qts);
 
     /* lexical error: funny control character outside string */
     qtest_qmp_send_raw(qts, "{\x01");
-    resp = qtest_qmp_receive_dict(qts);
-    qmp_expect_error_and_unref(resp, "GenericError");
+    resp = qtest_qmp_receive(qts);
+    qmp_assert_error_class(resp, "GenericError");
     assert_recovered(qts);
 
     /* lexical error: impossible byte in string */
     qtest_qmp_send_raw(qts, "{'bad \xFF");
-    resp = qtest_qmp_receive_dict(qts);
-    qmp_expect_error_and_unref(resp, "GenericError");
+    resp = qtest_qmp_receive(qts);
+    qmp_assert_error_class(resp, "GenericError");
     assert_recovered(qts);
 
     /* lexical error: control character in string */
     qtest_qmp_send_raw(qts, "{'execute': 'nonexistent', 'id':'\n");
-    resp = qtest_qmp_receive_dict(qts);
-    qmp_expect_error_and_unref(resp, "GenericError");
+    resp = qtest_qmp_receive(qts);
+    qmp_assert_error_class(resp, "GenericError");
     assert_recovered(qts);
 
     /* lexical error: interpolation */
     qtest_qmp_send_raw(qts, "%%p");
-    resp = qtest_qmp_receive_dict(qts);
-    qmp_expect_error_and_unref(resp, "GenericError");
+    resp = qtest_qmp_receive(qts);
+    qmp_assert_error_class(resp, "GenericError");
     assert_recovered(qts);
 
     /* Not even a dictionary */
     resp = qtest_qmp(qts, "null");
-    qmp_expect_error_and_unref(resp, "GenericError");
+    qmp_assert_error_class(resp, "GenericError");
 
     /* No "execute" key */
     resp = qtest_qmp(qts, "{}");
-    qmp_expect_error_and_unref(resp, "GenericError");
+    qmp_assert_error_class(resp, "GenericError");
 
     /* "execute" isn't a string */
     resp = qtest_qmp(qts, "{ 'execute': true }");
-    qmp_expect_error_and_unref(resp, "GenericError");
+    qmp_assert_error_class(resp, "GenericError");
 
     /* "arguments" isn't a dictionary */
     resp = qtest_qmp(qts, "{ 'execute': 'no-such-cmd', 'arguments': [] }");
-    qmp_expect_error_and_unref(resp, "GenericError");
+    qmp_assert_error_class(resp, "GenericError");
 
     /* extra key */
     resp = qtest_qmp(qts, "{ 'execute': 'no-such-cmd', 'extra': true }");
-    qmp_expect_error_and_unref(resp, "GenericError");
+    qmp_assert_error_class(resp, "GenericError");
 }
 
 static void test_qmp_protocol(void)
@@ -111,7 +111,7 @@ static void test_qmp_protocol(void)
     qts = qtest_init_without_qmp_handshake(common_args);
 
     /* Test greeting */
-    resp = qtest_qmp_receive_dict(qts);
+    resp = qtest_qmp_receive(qts);
     q = qdict_get_qdict(resp, "QMP");
     g_assert(q);
     test_version(qdict_get(q, "version"));
@@ -121,7 +121,7 @@ static void test_qmp_protocol(void)
 
     /* Test valid command before handshake */
     resp = qtest_qmp(qts, "{ 'execute': 'query-version' }");
-    qmp_expect_error_and_unref(resp, "CommandNotFound");
+    qmp_assert_error_class(resp, "CommandNotFound");
 
     /* Test malformed commands before handshake */
     test_malformed(qts);
@@ -134,7 +134,7 @@ static void test_qmp_protocol(void)
 
     /* Test repeated handshake */
     resp = qtest_qmp(qts, "{ 'execute': 'qmp_capabilities' }");
-    qmp_expect_error_and_unref(resp, "CommandNotFound");
+    qmp_assert_error_class(resp, "CommandNotFound");
 
     /* Test valid command */
     resp = qtest_qmp(qts, "{ 'execute': 'query-version' }");
@@ -154,24 +154,21 @@ static void test_qmp_protocol(void)
     /* Test command failure with 'id' */
     resp = qtest_qmp(qts, "{ 'execute': 'human-monitor-command', 'id': 2 }");
     g_assert_cmpint(qdict_get_int(resp, "id"), ==, 2);
-    qmp_expect_error_and_unref(resp, "GenericError");
+    qmp_assert_error_class(resp, "GenericError");
 
     qtest_quit(qts);
 }
 
-#ifndef _WIN32
-
 /* Out-of-band tests */
 
-char *tmpdir;
+char tmpdir[] = "/tmp/qmp-test-XXXXXX";
 char *fifo_name;
 
 static void setup_blocking_cmd(void)
 {
-    GError *err = NULL;
-    tmpdir = g_dir_make_tmp("qmp-test-XXXXXX", &err);
-    g_assert_no_error(err);
-
+    if (!mkdtemp(tmpdir)) {
+        g_error("mkdtemp: %s", strerror(errno));
+    }
     fifo_name = g_strdup_printf("%s/fifo", tmpdir);
     if (mkfifo(fifo_name, 0666)) {
         g_error("mkfifo: %s", strerror(errno));
@@ -182,7 +179,6 @@ static void cleanup_blocking_cmd(void)
 {
     unlink(fifo_name);
     rmdir(tmpdir);
-    g_free(tmpdir);
 }
 
 static void send_cmd_that_blocks(QTestState *s, const char *id)
@@ -209,7 +205,7 @@ static void send_oob_cmd_that_fails(QTestState *s, const char *id)
 
 static void recv_cmd_id(QTestState *s, const char *id)
 {
-    QDict *resp = qtest_qmp_receive_dict(s);
+    QDict *resp = qtest_qmp_receive(s);
 
     g_assert_cmpstr(qdict_get_try_str(resp, "id"), ==, id);
     qobject_unref(resp);
@@ -226,7 +222,7 @@ static void test_qmp_oob(void)
     qts = qtest_init_without_qmp_handshake(common_args);
 
     /* Check the greeting message. */
-    resp = qtest_qmp_receive_dict(qts);
+    resp = qtest_qmp_receive(qts);
     q = qdict_get_qdict(resp, "QMP");
     g_assert(q);
     capabilities = qdict_get_qlist(q, "capabilities");
@@ -256,7 +252,7 @@ static void test_qmp_oob(void)
      * Try any command that does not support OOB but with OOB flag. We
      * should get failure.
      */
-    resp = qtest_qmp(qts, "{ 'exec-oob': 'query-cpus-fast' }");
+    resp = qtest_qmp(qts, "{ 'exec-oob': 'query-cpus' }");
     g_assert(qdict_haskey(resp, "error"));
     qobject_unref(resp);
 
@@ -281,8 +277,6 @@ static void test_qmp_oob(void)
     qtest_quit(qts);
 }
 
-#endif /* _WIN32 */
-
 /* Preconfig tests */
 
 static void test_qmp_preconfig(void)
@@ -295,13 +289,13 @@ static void test_qmp_preconfig(void)
     g_assert(!qmp_rsp_is_err(qtest_qmp(qs, "{ 'execute': 'query-commands' }")));
 
     /* forbidden commands, expected error */
-    g_assert(qmp_rsp_is_err(qtest_qmp(qs, "{ 'execute': 'query-cpus-fast' }")));
+    g_assert(qmp_rsp_is_err(qtest_qmp(qs, "{ 'execute': 'query-cpus' }")));
 
     /* check that query-status returns preconfig state */
     rsp = qtest_qmp(qs, "{ 'execute': 'query-status' }");
     ret = qdict_get_qdict(rsp, "return");
     g_assert(ret);
-    g_assert_cmpstr(qdict_get_try_str(ret, "status"), ==, "prelaunch");
+    g_assert_cmpstr(qdict_get_try_str(ret, "status"), ==, "preconfig");
     qobject_unref(rsp);
 
     /* exit preconfig state */
@@ -319,7 +313,7 @@ static void test_qmp_preconfig(void)
     g_assert(qmp_rsp_is_err(qtest_qmp(qs, "{ 'execute': 'x-exit-preconfig' }")));
 
     /* enabled commands, no error expected  */
-    g_assert(!qmp_rsp_is_err(qtest_qmp(qs, "{ 'execute': 'query-cpus-fast' }")));
+    g_assert(!qmp_rsp_is_err(qtest_qmp(qs, "{ 'execute': 'query-cpus' }")));
 
     qtest_quit(qs);
 }
@@ -333,7 +327,7 @@ static void test_qmp_missing_any_arg(void)
     resp = qtest_qmp(qts, "{'execute': 'qom-set', 'arguments':"
                      " { 'path': '/machine', 'property': 'rtc-time' } }");
     g_assert_nonnull(resp);
-    qmp_expect_error_and_unref(resp, "GenericError");
+    qmp_assert_error_class(resp, "GenericError");
     qtest_quit(qts);
 }
 
@@ -342,10 +336,7 @@ int main(int argc, char *argv[])
     g_test_init(&argc, &argv, NULL);
 
     qtest_add_func("qmp/protocol", test_qmp_protocol);
-#ifndef _WIN32
-    /* This case calls mkfifo() which does not exist on win32 */
     qtest_add_func("qmp/oob", test_qmp_oob);
-#endif
     qtest_add_func("qmp/preconfig", test_qmp_preconfig);
     qtest_add_func("qmp/missing-any-arg", test_qmp_missing_any_arg);
 

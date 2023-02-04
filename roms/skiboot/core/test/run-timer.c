@@ -1,8 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * Copyright 2014-2018 IBM Corp
- */
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,7 +11,7 @@
 #define smt_lowest()
 #define smt_medium()
 
-enum proc_gen proc_gen = proc_gen_unknown;
+enum proc_gen proc_gen = proc_gen_p9;
 
 static uint64_t stamp, last;
 struct lock;

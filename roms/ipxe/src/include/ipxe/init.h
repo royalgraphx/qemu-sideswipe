@@ -39,7 +39,6 @@ struct init_fn {
  * part of the calls to startup() and shutdown().
  */
 struct startup_fn {
-	const char *name;
 	void ( * startup ) ( void );
 	void ( * shutdown ) ( int booting );
 };

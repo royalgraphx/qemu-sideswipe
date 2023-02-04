@@ -5,13 +5,8 @@
 
 #include <common.h>
 #include <adc.h>
-#include <command.h>
-#include <env.h>
-#include <log.h>
 #include <asm/io.h>
-#include <asm/arch-rockchip/boot_mode.h>
-#include <dm/device.h>
-#include <dm/uclass.h>
+#include <asm/arch/boot_mode.h>
 
 #if (CONFIG_ROCKCHIP_BOOT_MODE_REG == 0)
 
@@ -40,26 +35,8 @@ void set_back_to_bootrom_dnl_flag(void)
 __weak int rockchip_dnl_key_pressed(void)
 {
 	unsigned int val;
-	struct udevice *dev;
-	struct uclass *uc;
-	int ret;
 
-	ret = uclass_get(UCLASS_ADC, &uc);
-	if (ret)
-		return false;
-
-	ret = -ENODEV;
-	uclass_foreach_dev(dev, uc) {
-		if (!strncmp(dev->name, "saradc", 6)) {
-			ret = adc_channel_single_shot(dev->name, 1, &val);
-			break;
-		}
-	}
-
-	if (ret == -ENODEV) {
-		pr_warn("%s: no saradc device found\n", __func__);
-		return false;
-	} else if (ret) {
+	if (adc_channel_single_shot("saradc", 1, &val)) {
 		pr_err("%s: adc_channel_single_shot fail!\n", __func__);
 		return false;
 	}

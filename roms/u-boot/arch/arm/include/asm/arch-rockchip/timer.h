@@ -15,4 +15,7 @@ struct rk_timer {
 	u32 timer_int_status;
 };
 
+void rockchip_timer_init(void);
+void rockchip_udelay(unsigned int usec);
+
 #endif

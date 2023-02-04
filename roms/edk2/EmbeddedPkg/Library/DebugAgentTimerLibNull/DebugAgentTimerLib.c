@@ -11,10 +11,11 @@
 
 **/
 
+
 /**
   Setup all the hardware needed for the debug agents timer.
 
-  This function is used to set up debug environment. It may enable interrupts.
+  This function is used to set up debug enviroment. It may enable interrupts.
 
 **/
 VOID
@@ -24,6 +25,7 @@ DebugAgentTimerIntialize (
   )
 {
 }
+
 
 /**
   Set the period for the debug agent timer. Zero means disable the timer.
@@ -39,6 +41,7 @@ DebugAgentTimerSetPeriod (
 {
 }
 
+
 /**
   Perform End Of Interrupt for the debug agent timer. This is called in the
   interrupt handler after the interrupt has been processed.
@@ -51,3 +54,4 @@ DebugAgentTimerEndOfInterrupt (
   )
 {
 }
+

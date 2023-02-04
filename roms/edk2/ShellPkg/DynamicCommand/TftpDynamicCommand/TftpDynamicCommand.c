@@ -20,16 +20,16 @@
   @param[in] Shell                  The instance of the shell protocol used in the context
                                     of processing this command.
 
-  @return EFI_SUCCESS               the operation was successful
+  @return EFI_SUCCESS               the operation was sucessful
   @return other                     the operation failed.
 **/
 SHELL_STATUS
 EFIAPI
 TftpCommandHandler (
-  IN EFI_SHELL_DYNAMIC_COMMAND_PROTOCOL  *This,
-  IN EFI_SYSTEM_TABLE                    *SystemTable,
-  IN EFI_SHELL_PARAMETERS_PROTOCOL       *ShellParameters,
-  IN EFI_SHELL_PROTOCOL                  *Shell
+  IN EFI_SHELL_DYNAMIC_COMMAND_PROTOCOL    *This,
+  IN EFI_SYSTEM_TABLE                      *SystemTable,
+  IN EFI_SHELL_PARAMETERS_PROTOCOL         *ShellParameters,
+  IN EFI_SHELL_PROTOCOL                    *Shell
   )
 {
   gEfiShellParametersProtocol = ShellParameters;
@@ -50,14 +50,14 @@ TftpCommandHandler (
 CHAR16 *
 EFIAPI
 TftpCommandGetHelp (
-  IN EFI_SHELL_DYNAMIC_COMMAND_PROTOCOL  *This,
-  IN CONST CHAR8                         *Language
+  IN EFI_SHELL_DYNAMIC_COMMAND_PROTOCOL    *This,
+  IN CONST CHAR8                           *Language
   )
 {
   return HiiGetString (mTftpHiiHandle, STRING_TOKEN (STR_GET_HELP_TFTP), Language);
 }
 
-EFI_SHELL_DYNAMIC_COMMAND_PROTOCOL  mTftpDynamicCommand = {
+EFI_SHELL_DYNAMIC_COMMAND_PROTOCOL mTftpDynamicCommand = {
   L"tftp",
   TftpCommandHandler,
   TftpCommandGetHelp
@@ -71,19 +71,18 @@ EFI_SHELL_DYNAMIC_COMMAND_PROTOCOL  mTftpDynamicCommand = {
   @param ImageHandle            The image handle of the process.
   @param SystemTable            The EFI System Table pointer.
 
-  @retval EFI_SUCCESS           Tftp command is executed successfully.
+  @retval EFI_SUCCESS           Tftp command is executed sucessfully.
   @retval EFI_ABORTED           HII package was failed to initialize.
   @retval others                Other errors when executing tftp command.
 **/
 EFI_STATUS
 EFIAPI
 TftpCommandInitialize (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE               ImageHandle,
+  IN EFI_SYSTEM_TABLE         *SystemTable
   )
 {
-  EFI_STATUS  Status;
-
+  EFI_STATUS                  Status;
   mTftpHiiHandle = InitializeHiiPackage (ImageHandle);
   if (mTftpHiiHandle == NULL) {
     return EFI_ABORTED;
@@ -110,11 +109,10 @@ TftpCommandInitialize (
 EFI_STATUS
 EFIAPI
 TftpUnload (
-  IN EFI_HANDLE  ImageHandle
-  )
+  IN EFI_HANDLE               ImageHandle
+)
 {
-  EFI_STATUS  Status;
-
+  EFI_STATUS                  Status;
   Status = gBS->UninstallProtocolInterface (
                   ImageHandle,
                   &gEfiShellDynamicCommandProtocolGuid,
@@ -123,7 +121,6 @@ TftpUnload (
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   HiiRemovePackages (mTftpHiiHandle);
   return EFI_SUCCESS;
 }

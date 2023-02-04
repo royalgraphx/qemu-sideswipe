@@ -59,7 +59,7 @@ void tpm_test_swtpm_test(const char *src_tpm_path, tx_func *tx,
     tpm_util_startup(s, tx);
     tpm_util_pcrextend(s, tx);
 
-    static const unsigned char tpm_pcrread_resp[] =
+    unsigned char tpm_pcrread_resp[] =
         "\x80\x01\x00\x00\x00\x3e\x00\x00\x00\x00\x00\x00\x00\x16\x00\x00"
         "\x00\x01\x00\x0b\x03\x00\x04\x00\x00\x00\x00\x01\x00\x20\xf6\x85"
         "\x98\xe5\x86\x8d\xe6\x8b\x97\x29\x99\x60\xf2\x71\x7d\x17\x67\x89"
@@ -70,8 +70,10 @@ void tpm_test_swtpm_test(const char *src_tpm_path, tx_func *tx,
     qtest_end();
     tpm_util_swtpm_kill(swtpm_pid);
 
-    g_unlink(addr->u.q_unix.path);
-    qapi_free_SocketAddress(addr);
+    if (addr) {
+        g_unlink(addr->u.q_unix.path);
+        qapi_free_SocketAddress(addr);
+    }
 }
 
 void tpm_test_swtpm_migration_test(const char *src_tpm_path,
@@ -105,7 +107,7 @@ void tpm_test_swtpm_migration_test(const char *src_tpm_path,
     tpm_util_startup(src_qemu, tx);
     tpm_util_pcrextend(src_qemu, tx);
 
-    static const unsigned char tpm_pcrread_resp[] =
+    unsigned char tpm_pcrread_resp[] =
         "\x80\x01\x00\x00\x00\x3e\x00\x00\x00\x00\x00\x00\x00\x16\x00\x00"
         "\x00\x01\x00\x0b\x03\x00\x04\x00\x00\x00\x00\x01\x00\x20\xf6\x85"
         "\x98\xe5\x86\x8d\xe6\x8b\x97\x29\x99\x60\xf2\x71\x7d\x17\x67\x89"
@@ -123,10 +125,14 @@ void tpm_test_swtpm_migration_test(const char *src_tpm_path,
     qtest_quit(src_qemu);
 
     tpm_util_swtpm_kill(dst_tpm_pid);
-    g_unlink(dst_tpm_addr->u.q_unix.path);
-    qapi_free_SocketAddress(dst_tpm_addr);
+    if (dst_tpm_addr) {
+        g_unlink(dst_tpm_addr->u.q_unix.path);
+        qapi_free_SocketAddress(dst_tpm_addr);
+    }
 
     tpm_util_swtpm_kill(src_tpm_pid);
-    g_unlink(src_tpm_addr->u.q_unix.path);
-    qapi_free_SocketAddress(src_tpm_addr);
+    if (src_tpm_addr) {
+        g_unlink(src_tpm_addr->u.q_unix.path);
+        qapi_free_SocketAddress(src_tpm_addr);
+    }
 }

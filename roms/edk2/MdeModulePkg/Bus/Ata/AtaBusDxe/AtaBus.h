@@ -38,27 +38,27 @@
 //
 // Time out value for ATA pass through protocol
 //
-#define ATA_TIMEOUT  EFI_TIMER_PERIOD_SECONDS (3)
+#define ATA_TIMEOUT                       EFI_TIMER_PERIOD_SECONDS (3)
 
 //
 // Maximum number of times to retry ATA command
 //
-#define MAX_RETRY_TIMES  3
+#define MAX_RETRY_TIMES                   3
 
 //
 // The maximum total sectors count in 28 bit addressing mode
 //
-#define MAX_28BIT_ADDRESSING_CAPACITY  0xfffffff
+#define MAX_28BIT_ADDRESSING_CAPACITY     0xfffffff
 
 //
 // The maximum ATA transaction sector count in 28 bit addressing mode.
 //
-#define MAX_28BIT_TRANSFER_BLOCK_NUM  0x100
+#define MAX_28BIT_TRANSFER_BLOCK_NUM      0x100
 
 //
 // The maximum ATA transaction sector count in 48 bit addressing mode.
 //
-// #define MAX_48BIT_TRANSFER_BLOCK_NUM      0x10000
+//#define MAX_48BIT_TRANSFER_BLOCK_NUM      0x10000
 
 //
 // BugBug: if the TransferLength is equal with 0x10000 (the 48bit max length),
@@ -66,109 +66,109 @@
 // seems not ready. Change the Maximum Sector Numbers to 0xFFFF to work round
 // this issue.
 //
-#define MAX_48BIT_TRANSFER_BLOCK_NUM  0xFFFF
+#define MAX_48BIT_TRANSFER_BLOCK_NUM      0xFFFF
 
 //
 // The maximum model name in ATA identify data
 //
-#define MAX_MODEL_NAME_LEN  40
+#define MAX_MODEL_NAME_LEN                40
 
-#define ATA_TASK_SIGNATURE      SIGNATURE_32 ('A', 'T', 'S', 'K')
-#define ATA_DEVICE_SIGNATURE    SIGNATURE_32 ('A', 'B', 'I', 'D')
-#define ATA_SUB_TASK_SIGNATURE  SIGNATURE_32 ('A', 'S', 'T', 'S')
-#define IS_ALIGNED(addr, size)  (((UINTN) (addr) & (size - 1)) == 0)
+#define ATA_TASK_SIGNATURE                SIGNATURE_32 ('A', 'T', 'S', 'K')
+#define ATA_DEVICE_SIGNATURE              SIGNATURE_32 ('A', 'B', 'I', 'D')
+#define ATA_SUB_TASK_SIGNATURE            SIGNATURE_32 ('A', 'S', 'T', 'S')
+#define IS_ALIGNED(addr, size)            (((UINTN) (addr) & (size - 1)) == 0)
 
 //
 // ATA bus data structure for ATA controller
 //
 typedef struct {
-  EFI_ATA_PASS_THRU_PROTOCOL    *AtaPassThru;
-  EFI_HANDLE                    Controller;
-  EFI_DEVICE_PATH_PROTOCOL      *ParentDevicePath;
-  EFI_HANDLE                    DriverBindingHandle;
+  EFI_ATA_PASS_THRU_PROTOCOL  *AtaPassThru;
+  EFI_HANDLE                  Controller;
+  EFI_DEVICE_PATH_PROTOCOL    *ParentDevicePath;
+  EFI_HANDLE                  DriverBindingHandle;
 } ATA_BUS_DRIVER_DATA;
 
 //
 // ATA device data structure for each child device
 //
 typedef struct {
-  UINT32                                   Signature;
+  UINT32                                Signature;
 
-  EFI_HANDLE                               Handle;
-  EFI_BLOCK_IO_PROTOCOL                    BlockIo;
-  EFI_BLOCK_IO2_PROTOCOL                   BlockIo2;
-  EFI_BLOCK_IO_MEDIA                       BlockMedia;
-  EFI_DISK_INFO_PROTOCOL                   DiskInfo;
-  EFI_DEVICE_PATH_PROTOCOL                 *DevicePath;
-  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    StorageSecurity;
+  EFI_HANDLE                            Handle;
+  EFI_BLOCK_IO_PROTOCOL                 BlockIo;
+  EFI_BLOCK_IO2_PROTOCOL                BlockIo2;
+  EFI_BLOCK_IO_MEDIA                    BlockMedia;
+  EFI_DISK_INFO_PROTOCOL                DiskInfo;
+  EFI_DEVICE_PATH_PROTOCOL              *DevicePath;
+  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL StorageSecurity;
 
-  ATA_BUS_DRIVER_DATA                      *AtaBusDriverData;
-  UINT16                                   Port;
-  UINT16                                   PortMultiplierPort;
+  ATA_BUS_DRIVER_DATA                   *AtaBusDriverData;
+  UINT16                                Port;
+  UINT16                                PortMultiplierPort;
 
   //
   // Buffer for the execution of ATA pass through protocol
   //
-  EFI_ATA_PASS_THRU_COMMAND_PACKET         Packet;
-  EFI_ATA_COMMAND_BLOCK                    Acb;
-  EFI_ATA_STATUS_BLOCK                     *Asb;
+  EFI_ATA_PASS_THRU_COMMAND_PACKET      Packet;
+  EFI_ATA_COMMAND_BLOCK                 Acb;
+  EFI_ATA_STATUS_BLOCK                  *Asb;
 
-  BOOLEAN                                  UdmaValid;
-  BOOLEAN                                  Lba48Bit;
+  BOOLEAN                               UdmaValid;
+  BOOLEAN                               Lba48Bit;
 
   //
   // Cached data for ATA identify data
   //
-  ATA_IDENTIFY_DATA                        *IdentifyData;
+  ATA_IDENTIFY_DATA                     *IdentifyData;
 
-  EFI_UNICODE_STRING_TABLE                 *ControllerNameTable;
-  CHAR16                                   ModelName[MAX_MODEL_NAME_LEN + 1];
+  EFI_UNICODE_STRING_TABLE              *ControllerNameTable;
+  CHAR16                                ModelName[MAX_MODEL_NAME_LEN + 1];
 
-  LIST_ENTRY                               AtaTaskList;
-  LIST_ENTRY                               AtaSubTaskList;
-  BOOLEAN                                  Abort;
+  LIST_ENTRY                            AtaTaskList;
+  LIST_ENTRY                            AtaSubTaskList;
+  BOOLEAN                               Abort;
 } ATA_DEVICE;
 
 //
 // Sub-Task for the non blocking I/O
 //
 typedef struct {
-  UINT32                              Signature;
-  ATA_DEVICE                          *AtaDevice;
-  EFI_BLOCK_IO2_TOKEN                 *Token;
-  UINTN                               *UnsignalledEventCount;
-  EFI_ATA_PASS_THRU_COMMAND_PACKET    Packet;
-  BOOLEAN                             *IsError;// Indicate whether meeting error during source allocation for new task.
-  LIST_ENTRY                          TaskEntry;
+  UINT32                            Signature;
+  ATA_DEVICE                        *AtaDevice;
+  EFI_BLOCK_IO2_TOKEN               *Token;
+  UINTN                             *UnsignalledEventCount;
+  EFI_ATA_PASS_THRU_COMMAND_PACKET  Packet;
+  BOOLEAN                           *IsError;// Indicate whether meeting error during source allocation for new task.
+  LIST_ENTRY                        TaskEntry;
 } ATA_BUS_ASYN_SUB_TASK;
 
 //
 // Task for the non blocking I/O
 //
 typedef struct {
-  UINT32                 Signature;
-  EFI_BLOCK_IO2_TOKEN    *Token;
-  ATA_DEVICE             *AtaDevice;
-  UINT8                  *Buffer;
-  EFI_LBA                StartLba;
-  UINTN                  NumberOfBlocks;
-  BOOLEAN                IsWrite;
-  LIST_ENTRY             TaskEntry;
+  UINT32                            Signature;
+  EFI_BLOCK_IO2_TOKEN               *Token;
+  ATA_DEVICE                        *AtaDevice;
+  UINT8                             *Buffer;
+  EFI_LBA                           StartLba;
+  UINTN                             NumberOfBlocks;
+  BOOLEAN                           IsWrite;
+  LIST_ENTRY                        TaskEntry;
 } ATA_BUS_ASYN_TASK;
 
-#define ATA_DEVICE_FROM_BLOCK_IO(a)          CR (a, ATA_DEVICE, BlockIo, ATA_DEVICE_SIGNATURE)
-#define ATA_DEVICE_FROM_BLOCK_IO2(a)         CR (a, ATA_DEVICE, BlockIo2, ATA_DEVICE_SIGNATURE)
-#define ATA_DEVICE_FROM_DISK_INFO(a)         CR (a, ATA_DEVICE, DiskInfo, ATA_DEVICE_SIGNATURE)
-#define ATA_DEVICE_FROM_STORAGE_SECURITY(a)  CR (a, ATA_DEVICE, StorageSecurity, ATA_DEVICE_SIGNATURE)
-#define ATA_ASYN_SUB_TASK_FROM_ENTRY(a)      CR (a, ATA_BUS_ASYN_SUB_TASK, TaskEntry, ATA_SUB_TASK_SIGNATURE)
-#define ATA_ASYN_TASK_FROM_ENTRY(a)          CR (a, ATA_BUS_ASYN_TASK, TaskEntry, ATA_TASK_SIGNATURE)
+#define ATA_DEVICE_FROM_BLOCK_IO(a)         CR (a, ATA_DEVICE, BlockIo, ATA_DEVICE_SIGNATURE)
+#define ATA_DEVICE_FROM_BLOCK_IO2(a)        CR (a, ATA_DEVICE, BlockIo2, ATA_DEVICE_SIGNATURE)
+#define ATA_DEVICE_FROM_DISK_INFO(a)        CR (a, ATA_DEVICE, DiskInfo, ATA_DEVICE_SIGNATURE)
+#define ATA_DEVICE_FROM_STORAGE_SECURITY(a) CR (a, ATA_DEVICE, StorageSecurity, ATA_DEVICE_SIGNATURE)
+#define ATA_ASYN_SUB_TASK_FROM_ENTRY(a)     CR (a, ATA_BUS_ASYN_SUB_TASK, TaskEntry, ATA_SUB_TASK_SIGNATURE)
+#define ATA_ASYN_TASK_FROM_ENTRY(a)         CR (a, ATA_BUS_ASYN_TASK, TaskEntry, ATA_TASK_SIGNATURE)
 
 //
 // Global Variables
 //
-extern EFI_DRIVER_BINDING_PROTOCOL   gAtaBusDriverBinding;
-extern EFI_COMPONENT_NAME_PROTOCOL   gAtaBusComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL  gAtaBusComponentName2;
+extern EFI_DRIVER_BINDING_PROTOCOL        gAtaBusDriverBinding;
+extern EFI_COMPONENT_NAME_PROTOCOL        gAtaBusComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL       gAtaBusComponentName2;
 
 /**
   Allocates an aligned buffer for ATA device.
@@ -185,8 +185,8 @@ extern EFI_COMPONENT_NAME2_PROTOCOL  gAtaBusComponentName2;
 **/
 VOID *
 AllocateAlignedBuffer (
-  IN ATA_DEVICE  *AtaDevice,
-  IN UINTN       BufferSize
+  IN ATA_DEVICE               *AtaDevice,
+  IN UINTN                    BufferSize
   );
 
 /**
@@ -201,8 +201,8 @@ AllocateAlignedBuffer (
 **/
 VOID
 FreeAlignedBuffer (
-  IN VOID   *Buffer,
-  IN UINTN  BufferSize
+  IN VOID                     *Buffer,
+  IN UINTN                    BufferSize
   );
 
 /**
@@ -230,8 +230,9 @@ FreeAtaSubTask (
 **/
 EFI_STATUS
 ResetAtaDevice (
-  IN ATA_DEVICE  *AtaDevice
+  IN ATA_DEVICE                           *AtaDevice
   );
+
 
 /**
   Discovers whether it is a valid ATA device.
@@ -249,7 +250,7 @@ ResetAtaDevice (
 **/
 EFI_STATUS
 DiscoverAtaDevice (
-  IN OUT ATA_DEVICE  *AtaDevice
+  IN OUT ATA_DEVICE                 *AtaDevice
   );
 
 /**
@@ -271,13 +272,13 @@ DiscoverAtaDevice (
 
 **/
 EFI_STATUS
-AccessAtaDevice (
-  IN OUT ATA_DEVICE           *AtaDevice,
-  IN OUT UINT8                *Buffer,
-  IN EFI_LBA                  StartLba,
-  IN UINTN                    NumberOfBlocks,
-  IN BOOLEAN                  IsWrite,
-  IN OUT EFI_BLOCK_IO2_TOKEN  *Token
+AccessAtaDevice(
+  IN OUT ATA_DEVICE                 *AtaDevice,
+  IN OUT UINT8                      *Buffer,
+  IN EFI_LBA                        StartLba,
+  IN UINTN                          NumberOfBlocks,
+  IN BOOLEAN                        IsWrite,
+  IN OUT EFI_BLOCK_IO2_TOKEN        *Token
   );
 
 /**
@@ -312,20 +313,19 @@ AccessAtaDevice (
 EFI_STATUS
 EFIAPI
 TrustTransferAtaDevice (
-  IN OUT ATA_DEVICE  *AtaDevice,
-  IN OUT VOID        *Buffer,
-  IN UINT8           SecurityProtocolId,
-  IN UINT16          SecurityProtocolSpecificData,
-  IN UINTN           TransferLength,
-  IN BOOLEAN         IsTrustSend,
-  IN UINT64          Timeout,
-  OUT UINTN          *TransferLengthOut
+  IN OUT ATA_DEVICE                 *AtaDevice,
+  IN OUT VOID                       *Buffer,
+  IN UINT8                          SecurityProtocolId,
+  IN UINT16                         SecurityProtocolSpecificData,
+  IN UINTN                          TransferLength,
+  IN BOOLEAN                        IsTrustSend,
+  IN UINT64                         Timeout,
+  OUT UINTN                         *TransferLengthOut
   );
 
 //
 // Protocol interface prototypes
 //
-
 /**
   Tests to see if this driver supports a given controller. If a child device is provided,
   it further tests to see if this driver supports creating a handle for the specified child device.
@@ -408,7 +408,7 @@ AtaBusDriverBindingSupported (
   @retval EFI_SUCCESS              The device was started.
   @retval EFI_DEVICE_ERROR         The device could not be started due to a device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a lack of resources.
-  @retval Others                   The driver failed to start the device.
+  @retval Others                   The driver failded to start the device.
 
 **/
 EFI_STATUS
@@ -448,11 +448,12 @@ AtaBusDriverBindingStart (
 EFI_STATUS
 EFIAPI
 AtaBusDriverBindingStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN  EFI_HANDLE                   Controller,
-  IN  UINTN                        NumberOfChildren,
-  IN  EFI_HANDLE                   *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL     *This,
+  IN  EFI_HANDLE                      Controller,
+  IN  UINTN                           NumberOfChildren,
+  IN  EFI_HANDLE                      *ChildHandleBuffer
   );
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
@@ -500,6 +501,7 @@ AtaBusComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -572,12 +574,13 @@ AtaBusComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 AtaBusComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   );
+
 
 /**
   Reset the Block Device.
@@ -593,9 +596,10 @@ AtaBusComponentNameGetControllerName (
 EFI_STATUS
 EFIAPI
 AtaBlockIoReset (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  BOOLEAN                ExtendedVerification
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  BOOLEAN                 ExtendedVerification
   );
+
 
 /**
   Read BufferSize bytes from Lba into Buffer.
@@ -610,7 +614,7 @@ AtaBlockIoReset (
   @retval EFI_SUCCESS           The data was read correctly from the device.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the read.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHANGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The read request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -619,12 +623,13 @@ AtaBlockIoReset (
 EFI_STATUS
 EFIAPI
 AtaBlockIoReadBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  UINT32                 MediaId,
-  IN  EFI_LBA                Lba,
-  IN  UINTN                  BufferSize,
-  OUT VOID                   *Buffer
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  UINT32                  MediaId,
+  IN  EFI_LBA                 Lba,
+  IN  UINTN                   BufferSize,
+  OUT VOID                    *Buffer
   );
+
 
 /**
   Write BufferSize bytes from Lba into Buffer.
@@ -640,7 +645,7 @@ AtaBlockIoReadBlocks (
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -649,12 +654,13 @@ AtaBlockIoReadBlocks (
 EFI_STATUS
 EFIAPI
 AtaBlockIoWriteBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  UINT32                 MediaId,
-  IN  EFI_LBA                Lba,
-  IN  UINTN                  BufferSize,
-  IN  VOID                   *Buffer
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  UINT32                  MediaId,
+  IN  EFI_LBA                 Lba,
+  IN  UINTN                   BufferSize,
+  IN  VOID                    *Buffer
   );
+
 
 /**
   Flush the Block Device.
@@ -669,11 +675,11 @@ AtaBlockIoWriteBlocks (
 EFI_STATUS
 EFIAPI
 AtaBlockIoFlushBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This
+  IN  EFI_BLOCK_IO_PROTOCOL   *This
   );
 
 /**
-  Reset the Block Device through Block I/O2 protocol.
+  Reset the Block Device throught Block I/O2 protocol.
 
   @param[in]  This                 Indicates a pointer to the calling context.
   @param[in]  ExtendedVerification Driver may perform diagnostics on reset.
@@ -743,7 +749,7 @@ AtaBlockIoReadBlocksEx (
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -791,7 +797,7 @@ AtaBlockIoFlushBlocksEx (
 VOID
 EFIAPI
 AtaTerminateNonBlockingTask (
-  IN ATA_DEVICE  *AtaDevice
+  IN ATA_DEVICE               *AtaDevice
   );
 
 /**
@@ -813,10 +819,11 @@ AtaTerminateNonBlockingTask (
 EFI_STATUS
 EFIAPI
 AtaDiskInfoInquiry (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *InquiryData,
-  IN OUT UINT32                  *InquiryDataSize
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *InquiryData,
+  IN OUT UINT32                   *InquiryDataSize
   );
+
 
 /**
   Provides identify information for the controller type.
@@ -839,10 +846,11 @@ AtaDiskInfoInquiry (
 EFI_STATUS
 EFIAPI
 AtaDiskInfoIdentify (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *IdentifyData,
-  IN OUT UINT32                  *IdentifyDataSize
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *IdentifyData,
+  IN OUT UINT32                   *IdentifyDataSize
   );
+
 
 /**
   Provides sense data information for the controller type.
@@ -864,11 +872,12 @@ AtaDiskInfoIdentify (
 EFI_STATUS
 EFIAPI
 AtaDiskInfoSenseData (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *SenseData,
-  IN OUT UINT32                  *SenseDataSize,
-  OUT    UINT8                   *SenseDataNumber
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *SenseData,
+  IN OUT UINT32                   *SenseDataSize,
+  OUT    UINT8                    *SenseDataNumber
   );
+
 
 /**
   This function is used by the IDE bus driver to get controller information.
@@ -884,9 +893,9 @@ AtaDiskInfoSenseData (
 EFI_STATUS
 EFIAPI
 AtaDiskInfoWhichIde (
-  IN  EFI_DISK_INFO_PROTOCOL  *This,
-  OUT UINT32                  *IdeChannel,
-  OUT UINT32                  *IdeDevice
+  IN  EFI_DISK_INFO_PROTOCOL   *This,
+  OUT UINT32                   *IdeChannel,
+  OUT UINT32                   *IdeDevice
   );
 
 /**
@@ -964,14 +973,14 @@ AtaDiskInfoWhichIde (
 EFI_STATUS
 EFIAPI
 AtaStorageSecurityReceiveData (
-  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN UINT32                                 MediaId,
-  IN UINT64                                 Timeout,
-  IN UINT8                                  SecurityProtocolId,
-  IN UINT16                                 SecurityProtocolSpecificData,
-  IN UINTN                                  PayloadBufferSize,
-  OUT VOID                                  *PayloadBuffer,
-  OUT UINTN                                 *PayloadTransferSize
+  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN UINT32                                   MediaId,
+  IN UINT64                                   Timeout,
+  IN UINT8                                    SecurityProtocolId,
+  IN UINT16                                   SecurityProtocolSpecificData,
+  IN UINTN                                    PayloadBufferSize,
+  OUT VOID                                    *PayloadBuffer,
+  OUT UINTN                                   *PayloadTransferSize
   );
 
 /**
@@ -1038,13 +1047,13 @@ AtaStorageSecurityReceiveData (
 EFI_STATUS
 EFIAPI
 AtaStorageSecuritySendData (
-  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN UINT32                                 MediaId,
-  IN UINT64                                 Timeout,
-  IN UINT8                                  SecurityProtocolId,
-  IN UINT16                                 SecurityProtocolSpecificData,
-  IN UINTN                                  PayloadBufferSize,
-  IN VOID                                   *PayloadBuffer
+  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN UINT32                                   MediaId,
+  IN UINT64                                   Timeout,
+  IN UINT8                                    SecurityProtocolId,
+  IN UINT16                                   SecurityProtocolSpecificData,
+  IN UINTN                                    PayloadBufferSize,
+  IN VOID                                     *PayloadBuffer
   );
 
 /**
@@ -1052,7 +1061,7 @@ AtaStorageSecuritySendData (
   Typically, there are 2 mechanism for resetting eDrive. They are:
   1. TPer Reset through IEEE 1667 protocol.
   2. TPer Reset through native TCG protocol.
-  This routine will detect what protocol the attached eDrive conform to, TCG or
+  This routine will detect what protocol the attached eDrive comform to, TCG or
   IEEE 1667 protocol. Then send out TPer Reset command separately.
 
   @param[in] AtaDevice    ATA_DEVICE pointer.
@@ -1060,7 +1069,7 @@ AtaStorageSecuritySendData (
 **/
 VOID
 InitiateTPerReset (
-  IN   ATA_DEVICE  *AtaDevice
+  IN   ATA_DEVICE       *AtaDevice
   );
 
 #endif

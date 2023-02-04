@@ -16,10 +16,11 @@
 
 #include "BlockFront.h"
 
+
 ///
 /// Driver Binding Protocol instance
 ///
-EFI_DRIVER_BINDING_PROTOCOL  gXenPvBlkDxeDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL gXenPvBlkDxeDriverBinding = {
   XenPvBlkDxeDriverBindingSupported,
   XenPvBlkDxeDriverBindingStart,
   XenPvBlkDxeDriverBindingStop,
@@ -27,6 +28,7 @@ EFI_DRIVER_BINDING_PROTOCOL  gXenPvBlkDxeDriverBinding = {
   NULL,
   NULL
 };
+
 
 /**
   Unloads an image.
@@ -48,6 +50,7 @@ XenPvBlkDxeUnload (
   EFI_HANDLE  *HandleBuffer;
   UINTN       HandleCount;
   UINTN       Index;
+
 
   //
   // Retrieve array of all handles in the handle database
@@ -75,17 +78,15 @@ XenPvBlkDxeUnload (
   //
   FreePool (HandleBuffer);
 
+
   //
   // Uninstall protocols installed in the driver entry point
   //
   Status = gBS->UninstallMultipleProtocolInterfaces (
                   ImageHandle,
-                  &gEfiDriverBindingProtocolGuid,
-                  &gXenPvBlkDxeDriverBinding,
-                  &gEfiComponentNameProtocolGuid,
-                  &gXenPvBlkDxeComponentName,
-                  &gEfiComponentName2ProtocolGuid,
-                  &gXenPvBlkDxeComponentName2,
+                  &gEfiDriverBindingProtocolGuid, &gXenPvBlkDxeDriverBinding,
+                  &gEfiComponentNameProtocolGuid,  &gXenPvBlkDxeComponentName,
+                  &gEfiComponentName2ProtocolGuid, &gXenPvBlkDxeComponentName2,
                   NULL
                   );
   if (EFI_ERROR (Status)) {
@@ -130,6 +131,7 @@ XenPvBlkDxeDriverEntryPoint (
 
   return Status;
 }
+
 
 /**
   Tests to see if this driver supports a given controller. If a child device is provided,
@@ -181,33 +183,28 @@ XenPvBlkDxeDriverBindingSupported (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS       Status;
-  XENBUS_PROTOCOL  *XenBusIo;
+  EFI_STATUS Status;
+  XENBUS_PROTOCOL *XenBusIo;
 
   Status = gBS->OpenProtocol (
-                  ControllerHandle,
-                  &gXenBusProtocolGuid,
-                  (VOID **)&XenBusIo,
-                  This->DriverBindingHandle,
-                  ControllerHandle,
-                  EFI_OPEN_PROTOCOL_BY_DRIVER
-                  );
+                ControllerHandle,
+                &gXenBusProtocolGuid,
+                (VOID **)&XenBusIo,
+                This->DriverBindingHandle,
+                ControllerHandle,
+                EFI_OPEN_PROTOCOL_BY_DRIVER
+                );
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   if (AsciiStrCmp (XenBusIo->Type, "vbd") == 0) {
     Status = EFI_SUCCESS;
   } else {
     Status = EFI_UNSUPPORTED;
   }
 
-  gBS->CloseProtocol (
-         ControllerHandle,
-         &gXenBusProtocolGuid,
-         This->DriverBindingHandle,
-         ControllerHandle
-         );
+  gBS->CloseProtocol (ControllerHandle, &gXenBusProtocolGuid,
+                      This->DriverBindingHandle, ControllerHandle);
 
   return Status;
 }
@@ -244,7 +241,7 @@ XenPvBlkDxeDriverBindingSupported (
   @retval EFI_SUCCESS              The device was started.
   @retval EFI_DEVICE_ERROR         The device could not be started due to a device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a lack of resources.
-  @retval Others                   The driver failed to start the device.
+  @retval Others                   The driver failded to start the device.
 
 **/
 EFI_STATUS
@@ -255,19 +252,19 @@ XenPvBlkDxeDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath OPTIONAL
   )
 {
-  EFI_STATUS              Status;
-  XENBUS_PROTOCOL         *XenBusIo;
-  XEN_BLOCK_FRONT_DEVICE  *Dev;
-  EFI_BLOCK_IO_MEDIA      *Media;
+  EFI_STATUS Status;
+  XENBUS_PROTOCOL *XenBusIo;
+  XEN_BLOCK_FRONT_DEVICE *Dev;
+  EFI_BLOCK_IO_MEDIA *Media;
 
   Status = gBS->OpenProtocol (
-                  ControllerHandle,
-                  &gXenBusProtocolGuid,
-                  (VOID **)&XenBusIo,
-                  This->DriverBindingHandle,
-                  ControllerHandle,
-                  EFI_OPEN_PROTOCOL_BY_DRIVER
-                  );
+                ControllerHandle,
+                &gXenBusProtocolGuid,
+                (VOID **)&XenBusIo,
+                This->DriverBindingHandle,
+                ControllerHandle,
+                EFI_OPEN_PROTOCOL_BY_DRIVER
+                );
   if (EFI_ERROR (Status)) {
     return Status;
   }
@@ -278,16 +275,13 @@ XenPvBlkDxeDriverBindingStart (
   }
 
   CopyMem (&Dev->BlockIo, &gXenPvBlkDxeBlockIo, sizeof (EFI_BLOCK_IO_PROTOCOL));
-  Media = AllocateCopyPool (
-            sizeof (EFI_BLOCK_IO_MEDIA),
-            &gXenPvBlkDxeBlockIoMedia
-            );
+  Media = AllocateCopyPool (sizeof (EFI_BLOCK_IO_MEDIA),
+                            &gXenPvBlkDxeBlockIoMedia);
   if (Dev->MediaInfo.VDiskInfo & VDISK_REMOVABLE) {
     Media->RemovableMedia = TRUE;
   }
-
   Media->MediaPresent = TRUE;
-  Media->ReadOnly     = !Dev->MediaInfo.ReadWrite;
+  Media->ReadOnly = !Dev->MediaInfo.ReadWrite;
   if (Dev->MediaInfo.CdRom) {
     //
     // If it's a cdrom, the blocksize value need to be 2048 for OVMF to
@@ -295,26 +289,22 @@ XenPvBlkDxeDriverBindingStart (
     //    MdeModulePkg/Universal/Disk/PartitionDxe/ElTorito.c
     //
     Media->BlockSize = 2048;
-    Media->LastBlock = DivU64x32 (
-                         Dev->MediaInfo.Sectors,
-                         Media->BlockSize / Dev->MediaInfo.SectorSize
-                         ) - 1;
+    Media->LastBlock = DivU64x32 (Dev->MediaInfo.Sectors,
+                                  Media->BlockSize / Dev->MediaInfo.SectorSize) - 1;
   } else {
     Media->BlockSize = Dev->MediaInfo.SectorSize;
     Media->LastBlock = Dev->MediaInfo.Sectors - 1;
   }
-
   ASSERT (Media->BlockSize % 512 == 0);
   Dev->BlockIo.Media = Media;
 
   Status = gBS->InstallMultipleProtocolInterfaces (
-                  &ControllerHandle,
-                  &gEfiBlockIoProtocolGuid,
-                  &Dev->BlockIo,
-                  NULL
-                  );
+                    &ControllerHandle,
+                    &gEfiBlockIoProtocolGuid, &Dev->BlockIo,
+                    NULL
+                    );
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XenPvBlk: install protocol fail: %r\n", Status));
+    DEBUG ((EFI_D_ERROR, "XenPvBlk: install protocol fail: %r\n", Status));
     goto UninitBlockFront;
   }
 
@@ -324,12 +314,8 @@ UninitBlockFront:
   FreePool (Media);
   XenPvBlockFrontShutdown (Dev);
 CloseProtocol:
-  gBS->CloseProtocol (
-         ControllerHandle,
-         &gXenBusProtocolGuid,
-         This->DriverBindingHandle,
-         ControllerHandle
-         );
+  gBS->CloseProtocol (ControllerHandle, &gXenBusProtocolGuid,
+                      This->DriverBindingHandle, ControllerHandle);
   return Status;
 }
 
@@ -368,44 +354,35 @@ XenPvBlkDxeDriverBindingStop (
   IN EFI_HANDLE                   *ChildHandleBuffer OPTIONAL
   )
 {
-  EFI_BLOCK_IO_PROTOCOL   *BlockIo;
-  XEN_BLOCK_FRONT_DEVICE  *Dev;
-  EFI_BLOCK_IO_MEDIA      *Media;
-  EFI_STATUS              Status;
+  EFI_BLOCK_IO_PROTOCOL *BlockIo;
+  XEN_BLOCK_FRONT_DEVICE *Dev;
+  EFI_BLOCK_IO_MEDIA *Media;
+  EFI_STATUS Status;
 
   Status = gBS->OpenProtocol (
-                  ControllerHandle,
-                  &gEfiBlockIoProtocolGuid,
+                  ControllerHandle, &gEfiBlockIoProtocolGuid,
                   (VOID **)&BlockIo,
-                  This->DriverBindingHandle,
-                  ControllerHandle,
+                  This->DriverBindingHandle, ControllerHandle,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  Status = gBS->UninstallProtocolInterface (
-                  ControllerHandle,
-                  &gEfiBlockIoProtocolGuid,
-                  BlockIo
-                  );
+  Status = gBS->UninstallProtocolInterface (ControllerHandle,
+                  &gEfiBlockIoProtocolGuid, BlockIo);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
   Media = BlockIo->Media;
-  Dev   = XEN_BLOCK_FRONT_FROM_BLOCK_IO (BlockIo);
+  Dev = XEN_BLOCK_FRONT_FROM_BLOCK_IO (BlockIo);
   XenPvBlockFrontShutdown (Dev);
 
   FreePool (Media);
 
-  gBS->CloseProtocol (
-         ControllerHandle,
-         &gXenBusProtocolGuid,
-         This->DriverBindingHandle,
-         ControllerHandle
-         );
+  gBS->CloseProtocol (ControllerHandle, &gXenBusProtocolGuid,
+         This->DriverBindingHandle, ControllerHandle);
 
   return EFI_SUCCESS;
 }

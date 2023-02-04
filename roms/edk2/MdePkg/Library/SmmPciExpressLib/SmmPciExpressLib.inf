@@ -35,4 +35,3 @@
 
 [Pcd]
  gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress ## CONSUMES
- gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseSize  ## CONSUMES

@@ -423,19 +423,9 @@ int bootprio_find_usb(struct usbdevice_s *usbdev, int lun)
 {
     if (!CONFIG_BOOTORDER)
         return -1;
-    // Find usb - examples:
-    //   pci:  /pci@i0cf8/usb@1,2/storage@1/channel@0/disk@0,0
-    //   mmio: /sysbus-xhci@00000000fe900000/storage@1/channel@0/disk@0,0
+    // Find usb - for example: /pci@i0cf8/usb@1,2/storage@1/channel@0/disk@0,0
     char desc[256], *p;
-
-    if (usbdev->hub->cntl->pci)
-        p = build_pci_path(desc, sizeof(desc), "usb", usbdev->hub->cntl->pci);
-    else if (usbdev->hub->cntl->mmio)
-        p = desc + snprintf(desc, sizeof(desc), "/*@%016x"
-                            , (u32)usbdev->hub->cntl->mmio);
-    else
-        return -1;
-
+    p = build_pci_path(desc, sizeof(desc), "usb", usbdev->hub->cntl->pci);
     p = build_usb_path(p, desc+sizeof(desc)-p, usbdev->hub);
     snprintf(p, desc+sizeof(desc)-p, "/storage@%x/*@0/*@0,%x"
              , usb_portmap(usbdev), lun);

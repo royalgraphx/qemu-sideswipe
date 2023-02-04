@@ -52,12 +52,11 @@
 
 #include "hw/sysbus.h"
 #include "target/arm/idau.h"
-#include "qom/object.h"
 
 #define TYPE_TZ_MSC "tz-msc"
-OBJECT_DECLARE_SIMPLE_TYPE(TZMSC, TZ_MSC)
+#define TZ_MSC(obj) OBJECT_CHECK(TZMSC, (obj), TYPE_TZ_MSC)
 
-struct TZMSC {
+typedef struct TZMSC {
     /*< private >*/
     SysBusDevice parent_obj;
 
@@ -75,6 +74,6 @@ struct TZMSC {
     AddressSpace downstream_as;
     MemoryRegion upstream;
     IDAUInterface *idau;
-};
+} TZMSC;
 
 #endif

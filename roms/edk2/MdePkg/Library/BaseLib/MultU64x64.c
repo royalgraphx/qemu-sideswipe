@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 #include "BaseLibInternals.h"
 
 /**
@@ -25,11 +28,11 @@
 UINT64
 EFIAPI
 MultU64x64 (
-  IN      UINT64  Multiplicand,
-  IN      UINT64  Multiplier
+  IN      UINT64                    Multiplicand,
+  IN      UINT64                    Multiplier
   )
 {
-  UINT64  Result;
+  UINT64                            Result;
 
   Result = InternalMathMultU64x64 (Multiplicand, Multiplier);
 

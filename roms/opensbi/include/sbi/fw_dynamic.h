@@ -15,24 +15,23 @@
 /* clang-format off */
 
 /** Offset of magic member in fw_dynamic_info */
-#define FW_DYNAMIC_INFO_MAGIC_OFFSET		(0 * __SIZEOF_LONG__)
+#define FW_DYNAMIC_INFO_MAGIC_OFFSET		(0 * __SIZEOF_POINTER__)
 /** Offset of version member in fw_dynamic_info */
-#define FW_DYNAMIC_INFO_VERSION_OFFSET		(1 * __SIZEOF_LONG__)
+#define FW_DYNAMIC_INFO_VERSION_OFFSET		(1 * __SIZEOF_POINTER__)
 /** Offset of next_addr member in fw_dynamic_info (version >= 1) */
-#define FW_DYNAMIC_INFO_NEXT_ADDR_OFFSET	(2 * __SIZEOF_LONG__)
+#define FW_DYNAMIC_INFO_NEXT_ADDR_OFFSET	(2 * __SIZEOF_POINTER__)
 /** Offset of next_mode member in fw_dynamic_info  (version >= 1) */
-#define FW_DYNAMIC_INFO_NEXT_MODE_OFFSET	(3 * __SIZEOF_LONG__)
+#define FW_DYNAMIC_INFO_NEXT_MODE_OFFSET	(3 * __SIZEOF_POINTER__)
 /** Offset of options member in fw_dynamic_info  (version >= 1) */
-#define FW_DYNAMIC_INFO_OPTIONS_OFFSET		(4 * __SIZEOF_LONG__)
+#define FW_DYNAMIC_INFO_OPTIONS_OFFSET		(4 * __SIZEOF_POINTER__)
 /** Offset of boot_hart member in fw_dynamic_info  (version >= 2) */
-#define FW_DYNAMIC_INFO_BOOT_HART_OFFSET	(5 * __SIZEOF_LONG__)
+#define FW_DYNAMIC_INFO_BOOT_HART_OFFSET	(5 * __SIZEOF_POINTER__)
 
 /** Expected value of info magic ('OSBI' ascii string in hex) */
 #define FW_DYNAMIC_INFO_MAGIC_VALUE		0x4942534f
 
 /** Maximum supported info version */
-#define FW_DYNAMIC_INFO_VERSION_2		0x2
-#define FW_DYNAMIC_INFO_VERSION_MAX		FW_DYNAMIC_INFO_VERSION_2
+#define FW_DYNAMIC_INFO_VERSION_MAX		0x2
 
 /** Possible next mode values */
 #define FW_DYNAMIC_INFO_NEXT_MODE_U		0x0
@@ -41,7 +40,7 @@
 
 /* clang-format on */
 
-#ifndef __ASSEMBLER__
+#ifndef __ASSEMBLY__
 
 #include <sbi/sbi_types.h>
 
@@ -74,41 +73,6 @@ struct fw_dynamic_info {
 	 */
 	unsigned long boot_hart;
 } __packed;
-
-/**
- * Prevent modification of struct fw_dynamic_info from affecting
- * FW_DYNAMIC_INFO_xxx_OFFSET
- */
-_Static_assert(
-	offsetof(struct fw_dynamic_info, magic)
-		== FW_DYNAMIC_INFO_MAGIC_OFFSET,
-	"struct fw_dynamic_info definition has changed, please redefine "
-	"FW_DYNAMIC_INFO_MAGIC_OFFSET");
-_Static_assert(
-	offsetof(struct fw_dynamic_info, version)
-		== FW_DYNAMIC_INFO_VERSION_OFFSET,
-	"struct fw_dynamic_info definition has changed, please redefine "
-	"FW_DYNAMIC_INFO_VERSION_OFFSET");
-_Static_assert(
-	offsetof(struct fw_dynamic_info, next_addr)
-		== FW_DYNAMIC_INFO_NEXT_ADDR_OFFSET,
-	"struct fw_dynamic_info definition has changed, please redefine "
-	"FW_DYNAMIC_INFO_NEXT_ADDR_OFFSET");
-_Static_assert(
-	offsetof(struct fw_dynamic_info, next_mode)
-		== FW_DYNAMIC_INFO_NEXT_MODE_OFFSET,
-	"struct fw_dynamic_info definition has changed, please redefine "
-	"FW_DYNAMIC_INFO_NEXT_MODE_OFFSET");
-_Static_assert(
-	offsetof(struct fw_dynamic_info, options)
-		== FW_DYNAMIC_INFO_OPTIONS_OFFSET,
-	"struct fw_dynamic_info definition has changed, please redefine "
-	"FW_DYNAMIC_INFO_OPTIONS_OFFSET");
-_Static_assert(
-	offsetof(struct fw_dynamic_info, boot_hart)
-		== FW_DYNAMIC_INFO_BOOT_HART_OFFSET,
-	"struct fw_dynamic_info definition has changed, please redefine "
-	"FW_DYNAMIC_INFO_BOOT_HART_OFFSET");
 
 #endif
 

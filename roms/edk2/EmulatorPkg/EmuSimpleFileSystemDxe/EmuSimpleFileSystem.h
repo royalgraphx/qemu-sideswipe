@@ -30,18 +30,19 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
 
-extern EFI_DRIVER_BINDING_PROTOCOL   gEmuSimpleFileSystemDriverBinding;
-extern EFI_COMPONENT_NAME_PROTOCOL   gEmuSimpleFileSystemComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL  gEmuSimpleFileSystemComponentName2;
 
-#define EMU_SIMPLE_FILE_SYSTEM_PRIVATE_SIGNATURE  SIGNATURE_32 ('E', 'M', 'f', 's')
+extern EFI_DRIVER_BINDING_PROTOCOL  gEmuSimpleFileSystemDriverBinding;
+extern EFI_COMPONENT_NAME_PROTOCOL  gEmuSimpleFileSystemComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL gEmuSimpleFileSystemComponentName2;
+
+#define EMU_SIMPLE_FILE_SYSTEM_PRIVATE_SIGNATURE SIGNATURE_32 ('E', 'M', 'f', 's')
 
 typedef struct {
-  UINTN                              Signature;
-  EMU_IO_THUNK_PROTOCOL              *IoThunk;
-  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL    SimpleFileSystem;
-  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL    *Io;
-  EFI_UNICODE_STRING_TABLE           *ControllerNameTable;
+  UINTN                           Signature;
+  EMU_IO_THUNK_PROTOCOL           *IoThunk;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL SimpleFileSystem;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *Io;
+  EFI_UNICODE_STRING_TABLE        *ControllerNameTable;
 } EMU_SIMPLE_FILE_SYSTEM_PRIVATE;
 
 #define EMU_SIMPLE_FILE_SYSTEM_PRIVATE_DATA_FROM_THIS(a) \
@@ -51,14 +52,14 @@ typedef struct {
       EMU_SIMPLE_FILE_SYSTEM_PRIVATE_SIGNATURE \
       )
 
-#define EMU_EFI_FILE_PRIVATE_SIGNATURE  SIGNATURE_32 ('e', 'm', 'f', 's')
+#define EMU_EFI_FILE_PRIVATE_SIGNATURE SIGNATURE_32 ('e', 'm', 'f', 's')
 
 typedef struct {
-  UINTN                              Signature;
-  EMU_IO_THUNK_PROTOCOL              *IoThunk;
-  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL    *SimpleFileSystem;
-  EFI_FILE_PROTOCOL                  EfiFile;
-  EFI_FILE_PROTOCOL                  *Io;
+  UINTN                           Signature;
+  EMU_IO_THUNK_PROTOCOL           *IoThunk;
+  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *SimpleFileSystem;
+  EFI_FILE_PROTOCOL               EfiFile;
+  EFI_FILE_PROTOCOL               *Io;
 } EMU_EFI_FILE_PRIVATE;
 
 #define EMU_EFI_FILE_PRIVATE_DATA_FROM_THIS(a) \
@@ -67,5 +68,7 @@ typedef struct {
       EfiFile, \
       EMU_EFI_FILE_PRIVATE_SIGNATURE \
       )
+
+
 
 #endif

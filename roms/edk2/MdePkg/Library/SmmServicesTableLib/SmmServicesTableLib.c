@@ -11,7 +11,7 @@
 #include <Library/SmmServicesTableLib.h>
 #include <Library/DebugLib.h>
 
-EFI_SMM_SYSTEM_TABLE2  *gSmst = NULL;
+EFI_SMM_SYSTEM_TABLE2   *gSmst             = NULL;
 
 /**
   The constructor function caches the pointer of SMM Services Table.
@@ -36,7 +36,7 @@ SmmServicesTableLibConstructor (
   //
   // Retrieve SMM Base2 Protocol,  Do not use gBS from UefiBootServicesTableLib on purpose
   // to prevent inclusion of gBS, gST, and gImageHandle from SMM Drivers unless the
-  // SMM driver explicitly declares that dependency.
+  // SMM driver explicity declares that dependency.
   //
   Status = SystemTable->BootServices->LocateProtocol (
                                         &gEfiSmmBase2ProtocolGuid,

@@ -7,12 +7,10 @@
  */
 
 #include <common.h>
-#include <log.h>
 #include <net.h>
 #include <malloc.h>
 #include <miiphy.h>
 #include <asm/io.h>
-#include <linux/delay.h>
 #include <linux/errno.h>
 #include <asm/types.h>
 #include <asm/system.h>
@@ -375,8 +373,7 @@ static int lpc32xx_eth_send(struct eth_device *dev, void *dataptr, int datasize)
 	tx_index = readl(&regs->txproduceindex);
 
 	/* set up transmit packet */
-	memcpy((void *)&bufs->tx_buf[tx_index * PKTSIZE_ALIGN],
-	       (void *)dataptr, datasize);
+	writel((u32)dataptr, &bufs->tx_desc[tx_index].packet);
 	writel(TX_CTRL_LAST | ((datasize - 1) & TX_CTRL_TXSIZE),
 	       &bufs->tx_desc[tx_index].control);
 	writel(0, &bufs->tx_stat[tx_index].statusinfo);
@@ -511,11 +508,6 @@ static int lpc32xx_eth_init(struct eth_device *dev)
 	writel((u32)(&bufs->rx_stat), &regs->rxstatus);
 	writel(RX_BUF_COUNT-1, &regs->rxdescriptornumber);
 
-	/* set up transmit buffers */
-	for (index = 0; index < TX_BUF_COUNT; index++)
-		bufs->tx_desc[index].packet =
-			(u32)(bufs->tx_buf + index * PKTSIZE_ALIGN);
-
 	/* Enable broadcast and matching address packets */
 	writel(RXFILTERCTRL_ACCEPTBROADCAST |
 		RXFILTERCTRL_ACCEPTPERFECT, &regs->rxfilterctrl);
@@ -597,7 +589,7 @@ int lpc32xx_eth_phylib_init(struct eth_device *dev, int phyid)
 }
 #endif
 
-int lpc32xx_eth_initialize(struct bd_info *bis)
+int lpc32xx_eth_initialize(bd_t *bis)
 {
 	struct eth_device *dev = &lpc32xx_eth.dev;
 	struct lpc32xx_eth_registers *regs = lpc32xx_eth.regs;

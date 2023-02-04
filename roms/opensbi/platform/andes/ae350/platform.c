@@ -12,22 +12,13 @@
 #include <sbi/riscv_encoding.h>
 #include <sbi/sbi_console.h>
 #include <sbi/sbi_const.h>
-#include <sbi/sbi_ipi.h>
 #include <sbi/sbi_platform.h>
-#include <sbi/sbi_trap.h>
-#include <sbi_utils/fdt/fdt_helper.h>
 #include <sbi_utils/fdt/fdt_fixup.h>
 #include <sbi_utils/irqchip/plic.h>
 #include <sbi_utils/serial/uart8250.h>
 #include "platform.h"
 #include "plicsw.h"
 #include "plmt.h"
-#include "cache.h"
-
-static struct plic_data plic = {
-	.addr = AE350_PLIC_ADDR,
-	.num_src = AE350_PLIC_NUM_SOURCES,
-};
 
 /* Platform final initialization. */
 static int ae350_final_init(bool cold_boot)
@@ -56,10 +47,39 @@ static int ae350_final_init(bool cold_boot)
 	if (!cold_boot)
 		return 0;
 
-	fdt = fdt_get_address();
+	fdt = sbi_scratch_thishart_arg1_ptr();
 	fdt_fixups(fdt);
 
 	return 0;
+}
+
+/* Get number of PMP regions for given HART. */
+static u32 ae350_pmp_region_count(u32 hartid)
+{
+	return 1;
+}
+
+/*
+ * Get PMP regions details (namely: protection, base address, and size) for
+ * a given HART.
+ */
+static int ae350_pmp_region_info(u32 hartid, u32 index, ulong *prot,
+				 ulong *addr, ulong *log2size)
+{
+	int ret = 0;
+
+	switch (index) {
+	case 0:
+		*prot	  = PMP_R | PMP_W | PMP_X;
+		*addr	  = 0;
+		*log2size = __riscv_xlen;
+		break;
+	default:
+		ret = -1;
+		break;
+	};
+
+	return ret;
 }
 
 /* Initialize the platform console. */
@@ -69,8 +89,7 @@ static int ae350_console_init(void)
 			     AE350_UART_FREQUENCY,
 			     AE350_UART_BAUDRATE,
 			     AE350_UART_REG_SHIFT,
-			     AE350_UART_REG_WIDTH,
-			     AE350_UART_REG_OFFSET);
+			     AE350_UART_REG_WIDTH);
 }
 
 /* Initialize the platform interrupt controller for current HART. */
@@ -80,19 +99,15 @@ static int ae350_irqchip_init(bool cold_boot)
 	int ret;
 
 	if (cold_boot) {
-		ret = plic_cold_irqchip_init(&plic);
+		ret = plic_cold_irqchip_init(AE350_PLIC_ADDR,
+					     AE350_PLIC_NUM_SOURCES,
+					     AE350_HART_COUNT);
 		if (ret)
 			return ret;
 	}
 
-	return plic_warm_irqchip_init(&plic, 2 * hartid, 2 * hartid + 1);
+	return plic_warm_irqchip_init(hartid, 2 * hartid, 2 * hartid + 1);
 }
-
-static struct sbi_ipi_device plicsw_ipi = {
-	.name = "ae350_plicsw",
-	.ipi_send = plicsw_ipi_send,
-	.ipi_clear = plicsw_ipi_clear
-};
 
 /* Initialize IPI for current HART. */
 static int ae350_ipi_init(bool cold_boot)
@@ -104,8 +119,6 @@ static int ae350_ipi_init(bool cold_boot)
 					   AE350_HART_COUNT);
 		if (ret)
 			return ret;
-
-		sbi_ipi_set_device(&plicsw_ipi);
 	}
 
 	return plicsw_warm_ipi_init();
@@ -126,63 +139,46 @@ static int ae350_timer_init(bool cold_boot)
 	return plmt_warm_timer_init();
 }
 
-/* Vendor-Specific SBI handler */
-static int ae350_vendor_ext_provider(long extid, long funcid,
-	const struct sbi_trap_regs *regs, unsigned long *out_value,
-	struct sbi_trap_info *out_trap)
+/* Reboot the platform. */
+static int ae350_system_reboot(u32 type)
 {
-	int ret = 0;
-	switch (funcid) {
-	case SBI_EXT_ANDES_GET_MCACHE_CTL_STATUS:
-		*out_value = csr_read(CSR_MCACHECTL);
-		break;
-	case SBI_EXT_ANDES_GET_MMISC_CTL_STATUS:
-		*out_value = csr_read(CSR_MMISCCTL);
-		break;
-	case SBI_EXT_ANDES_SET_MCACHE_CTL:
-		ret = mcall_set_mcache_ctl(regs->a0);
-		break;
-	case SBI_EXT_ANDES_SET_MMISC_CTL:
-		ret = mcall_set_mmisc_ctl(regs->a0);
-		break;
-	case SBI_EXT_ANDES_ICACHE_OP:
-		ret = mcall_icache_op(regs->a0);
-		break;
-	case SBI_EXT_ANDES_DCACHE_OP:
-		ret = mcall_dcache_op(regs->a0);
-		break;
-	case SBI_EXT_ANDES_L1CACHE_I_PREFETCH:
-		ret = mcall_l1_cache_i_prefetch_op(regs->a0);
-		break;
-	case SBI_EXT_ANDES_L1CACHE_D_PREFETCH:
-		ret = mcall_l1_cache_d_prefetch_op(regs->a0);
-		break;
-	case SBI_EXT_ANDES_NON_BLOCKING_LOAD_STORE:
-		ret = mcall_non_blocking_load_store(regs->a0);
-		break;
-	case SBI_EXT_ANDES_WRITE_AROUND:
-		ret = mcall_write_around(regs->a0);
-		break;
-	default:
-		sbi_printf("Unsupported vendor sbi call : %ld\n", funcid);
-		asm volatile("ebreak");
-	}
-	return ret;
+	/* For now nothing to do. */
+	sbi_printf("System reboot\n");
+	return 0;
+}
+
+/* Shutdown or poweroff the platform. */
+static int ae350_system_shutdown(u32 type)
+{
+	/* For now nothing to do. */
+	sbi_printf("System shutdown\n");
+	return 0;
 }
 
 /* Platform descriptor. */
 const struct sbi_platform_operations platform_ops = {
 	.final_init = ae350_final_init,
 
+	.pmp_region_count = ae350_pmp_region_count,
+	.pmp_region_info  = ae350_pmp_region_info,
+
 	.console_init = ae350_console_init,
+	.console_putc = uart8250_putc,
+	.console_getc = uart8250_getc,
 
 	.irqchip_init = ae350_irqchip_init,
 
 	.ipi_init     = ae350_ipi_init,
+	.ipi_send     = plicsw_ipi_send,
+	.ipi_clear    = plicsw_ipi_clear,
 
 	.timer_init	   = ae350_timer_init,
+	.timer_value	   = plmt_timer_value,
+	.timer_event_start = plmt_timer_event_start,
+	.timer_event_stop  = plmt_timer_event_stop,
 
-	.vendor_ext_provider = ae350_vendor_ext_provider
+	.system_reboot	 = ae350_system_reboot,
+	.system_shutdown = ae350_system_shutdown
 };
 
 const struct sbi_platform platform = {

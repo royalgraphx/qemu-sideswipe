@@ -10,13 +10,13 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef _VIRTUAL_KEYBOARD_COMPONENT_NAME_H_
 #define _VIRTUAL_KEYBOARD_COMPONENT_NAME_H_
 
+
 extern EFI_COMPONENT_NAME_PROTOCOL   gVirtualKeyboardComponentName;
 extern EFI_COMPONENT_NAME2_PROTOCOL  gVirtualKeyboardComponentName2;
 
 //
 // EFI Component Name Functions
 //
-
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
 
@@ -63,6 +63,7 @@ VirtualKeyboardComponentNameGetDriverName (
   IN  CHAR8                        *Language,
   OUT CHAR16                       **DriverName
   );
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the controller
@@ -135,11 +136,12 @@ VirtualKeyboardComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 VirtualKeyboardComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL                     *This,
+  IN  EFI_HANDLE                                      ControllerHandle,
+  IN  EFI_HANDLE                                      ChildHandle        OPTIONAL,
+  IN  CHAR8                                           *Language,
+  OUT CHAR16                                          **ControllerName
   );
+
 
 #endif

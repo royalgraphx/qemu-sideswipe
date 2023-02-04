@@ -2,15 +2,30 @@
 #define HPPA_H
 /* this file is included by x86.h */
 
+#if 0
+// CPU flag bitdefs
+#define F_CF (1<<0)
+#define F_ZF (1<<6)
+#define F_IF (1<<9)
+#define F_ID (1<<21)
+
+// CR0 flags
+#define CR0_PG (1<<31) // Paging
+#define CR0_CD (1<<30) // Cache disable
+#define CR0_NW (1<<29) // Not Write-through
+#define CR0_PE (1<<0)  // Protection enable
+
+// PORT_A20 bitdefs
+#define PORT_A20 0x0092
+#define A20_ENABLE_BIT 0x02
+#endif
+
 #include "parisc/hppa_hardware.h"
 
 #ifndef __ASSEMBLY__
 
 #include "types.h" // u32
 #include "byteorder.h" // le16_to_cpu
-
-/* Pointer to zero-page of PA-RISC */
-#define PAGE0 ((volatile struct zeropage *) 0UL)
 
 #define   PSW_I   0x00000001
 
@@ -193,11 +208,6 @@ static inline u32 rol(u32 val, u16 rol) {
     resr = val >> (32-rol);
     res |= resr;
     return res;
-}
-
-static inline u32 ror(u32 word, unsigned int shift)
-{
-        return (word >> (shift & 31)) | (word << ((-shift) & 31));
 }
 
 #define pci_ioport_addr(port) ((port >= 0x1000)  && (port < FIRMWARE_START))

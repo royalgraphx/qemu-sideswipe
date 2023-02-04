@@ -22,7 +22,6 @@
 
 		serial@12000 {
 			status = "okay";
-			clock-frequency = <200000000>;
 		};
 	};
 

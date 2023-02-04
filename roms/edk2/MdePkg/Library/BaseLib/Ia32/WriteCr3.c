@@ -28,3 +28,4 @@ AsmWriteCr3 (
     mov     cr3, eax
   }
 }
+

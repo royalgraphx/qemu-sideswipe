@@ -1,5 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
-
 CC ?= $(CROSS_COMPILE)gcc
 LD ?= $(CROSS_COMPILE)ld
 ARCH := $(shell $(GET_ARCH) "$(CROSS_COMPILE)")
@@ -12,8 +10,12 @@ ifeq ($(ARCH),ARCH_POWERPC)
 arch := powerpc
 ARCH_FILES := arch_flash_common.c arch_flash_powerpc.c
 else
-arch := unknown
-ARCH_FILES := arch_flash_common.c arch_flash_unknown.c
+ifeq ($(ARCH),ARCH_X86)
+arch := x86
+ARCH_FILES := arch_flash_common.c arch_flash_x86.c
+else
+$(error Unsupported architecture $(ARCH))
+endif
 endif
 endif
 

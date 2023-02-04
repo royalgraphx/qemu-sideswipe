@@ -19,7 +19,7 @@
   information will be returned. If Sections is NULL, then all help text information
   available will be returned.
 
-  if BriefDesc is NULL, then the breif description will not be savedd separately,
+  if BriefDesc is NULL, then the breif description will not be savedd seperatly,
   but placed first in the main HelpText.
 
   @param[in] ManFileName        Points to the NULL-terminated UEFI Shell MAN file name.
@@ -39,21 +39,21 @@
   @retval EFI_NOT_FOUND         There is no help text available for Command.
 **/
 EFI_STATUS
-ProcessManFile (
-  IN CONST CHAR16  *ManFileName,
-  IN CONST CHAR16  *Command,
-  IN CONST CHAR16  *Sections OPTIONAL,
-  OUT CHAR16       **BriefDesc,
-  OUT CHAR16       **HelpText
+ProcessManFile(
+  IN CONST CHAR16 *ManFileName,
+  IN CONST CHAR16 *Command,
+  IN CONST CHAR16 *Sections OPTIONAL,
+  OUT CHAR16      **BriefDesc,
+  OUT CHAR16      **HelpText
   );
 
 /**
   parses through the MAN file specified by SHELL_FILE_HANDLE and returns the
-  detailed help for any sub section specified in the comma separated list of
+  detailed help for any sub section specified in the comma seperated list of
   sections provided.  If the end of the file or a .TH section is found then
   return.
 
-  Upon a successful return the caller is responsible to free the memory in *HelpText
+  Upon a sucessful return the caller is responsible to free the memory in *HelpText
 
   @param[in] Handle             FileHandle to read from
   @param[in] Sections           name of command's sub sections to find
@@ -62,11 +62,11 @@ ProcessManFile (
   @param[in] Ascii              TRUE if the file is ASCII, FALSE otherwise.
 
   @retval EFI_OUT_OF_RESOURCES  a memory allocation failed.
-  @retval EFI_SUCCESS           the section was found and its description stored in
-                                an allocated buffer.
+  @retval EFI_SUCCESS           the section was found and its description sotred in
+                                an alloceted buffer.
 **/
 EFI_STATUS
-ManFileFindSections (
+ManFileFindSections(
   IN SHELL_FILE_HANDLE  Handle,
   IN CONST CHAR16       *Sections,
   OUT CHAR16            **HelpText,
@@ -75,3 +75,4 @@ ManFileFindSections (
   );
 
 #endif //_SHELL_MAN_FILE_PARSER_HEADER_
+

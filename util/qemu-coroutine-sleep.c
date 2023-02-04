@@ -19,34 +19,43 @@
 
 static const char *qemu_co_sleep_ns__scheduled = "qemu_co_sleep_ns";
 
-void qemu_co_sleep_wake(QemuCoSleep *w)
-{
+struct QemuCoSleepState {
     Coroutine *co;
+    QEMUTimer *ts;
+    QemuCoSleepState **user_state_pointer;
+};
 
-    co = w->to_wake;
-    w->to_wake = NULL;
-    if (co) {
-        /* Write of schedule protected by barrier write in aio_co_schedule */
-        const char *scheduled = qatomic_cmpxchg(&co->scheduled,
-                                                qemu_co_sleep_ns__scheduled, NULL);
+void qemu_co_sleep_wake(QemuCoSleepState *sleep_state)
+{
+    /* Write of schedule protected by barrier write in aio_co_schedule */
+    const char *scheduled = atomic_cmpxchg(&sleep_state->co->scheduled,
+                                           qemu_co_sleep_ns__scheduled, NULL);
 
-        assert(scheduled == qemu_co_sleep_ns__scheduled);
-        aio_co_wake(co);
+    assert(scheduled == qemu_co_sleep_ns__scheduled);
+    if (sleep_state->user_state_pointer) {
+        *sleep_state->user_state_pointer = NULL;
     }
+    timer_del(sleep_state->ts);
+    aio_co_wake(sleep_state->co);
 }
 
 static void co_sleep_cb(void *opaque)
 {
-    QemuCoSleep *w = opaque;
-    qemu_co_sleep_wake(w);
+    qemu_co_sleep_wake(opaque);
 }
 
-void coroutine_fn qemu_co_sleep(QemuCoSleep *w)
+void coroutine_fn qemu_co_sleep_ns_wakeable(QEMUClockType type, int64_t ns,
+                                            QemuCoSleepState **sleep_state)
 {
-    Coroutine *co = qemu_coroutine_self();
+    AioContext *ctx = qemu_get_current_aio_context();
+    QemuCoSleepState state = {
+        .co = qemu_coroutine_self(),
+        .ts = aio_timer_new(ctx, type, SCALE_NS, co_sleep_cb, &state),
+        .user_state_pointer = sleep_state,
+    };
 
-    const char *scheduled = qatomic_cmpxchg(&co->scheduled, NULL,
-                                            qemu_co_sleep_ns__scheduled);
+    const char *scheduled = atomic_cmpxchg(&state.co->scheduled, NULL,
+                                           qemu_co_sleep_ns__scheduled);
     if (scheduled) {
         fprintf(stderr,
                 "%s: Co-routine was already scheduled in '%s'\n",
@@ -54,27 +63,17 @@ void coroutine_fn qemu_co_sleep(QemuCoSleep *w)
         abort();
     }
 
-    w->to_wake = co;
+    if (sleep_state) {
+        *sleep_state = &state;
+    }
+    timer_mod(state.ts, qemu_clock_get_ns(type) + ns);
     qemu_coroutine_yield();
-
-    /* w->to_wake is cleared before resuming this coroutine.  */
-    assert(w->to_wake == NULL);
-}
-
-void coroutine_fn qemu_co_sleep_ns_wakeable(QemuCoSleep *w,
-                                            QEMUClockType type, int64_t ns)
-{
-    AioContext *ctx = qemu_get_current_aio_context();
-    QEMUTimer ts;
-
-    aio_timer_init(ctx, &ts, type, SCALE_NS, co_sleep_cb, w);
-    timer_mod(&ts, qemu_clock_get_ns(type) + ns);
-
-    /*
-     * The timer will fire in the current AiOContext, so the callback
-     * must happen after qemu_co_sleep yields and there is no race
-     * between timer_mod and qemu_co_sleep.
-     */
-    qemu_co_sleep(w);
-    timer_del(&ts);
+    if (sleep_state) {
+        /*
+         * Note that *sleep_state is cleared during qemu_co_sleep_wake
+         * before resuming this coroutine.
+         */
+        assert(*sleep_state == NULL);
+    }
+    timer_free(state.ts);
 }

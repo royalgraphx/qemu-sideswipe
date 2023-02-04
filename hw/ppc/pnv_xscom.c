@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -284,20 +284,11 @@ int pnv_dt_xscom(PnvChip *chip, void *fdt, int root_offset,
     _FDT(xscom_offset);
     g_free(name);
     _FDT((fdt_setprop_cell(fdt, xscom_offset, "ibm,chip-id", chip->chip_id)));
-    /*
-     * On P10, the xscom bus id has been deprecated and the chip id is
-     * calculated from the "Primary topology table index". See skiboot.
-     */
-    _FDT((fdt_setprop_cell(fdt, xscom_offset, "ibm,primary-topology-index",
-                           chip->chip_id)));
     _FDT((fdt_setprop_cell(fdt, xscom_offset, "#address-cells", 1)));
     _FDT((fdt_setprop_cell(fdt, xscom_offset, "#size-cells", 1)));
     _FDT((fdt_setprop(fdt, xscom_offset, "reg", reg, sizeof(reg))));
     _FDT((fdt_setprop(fdt, xscom_offset, "compatible", compat, compat_size)));
     _FDT((fdt_setprop(fdt, xscom_offset, "scom-controller", NULL, 0)));
-    if (chip->chip_id == 0) {
-        _FDT((fdt_setprop(fdt, xscom_offset, "primary", NULL, 0)));
-    }
 
     args.fdt = fdt;
     args.xscom_offset = xscom_offset;
@@ -317,7 +308,7 @@ void pnv_xscom_add_subregion(PnvChip *chip, hwaddr offset, MemoryRegion *mr)
 }
 
 void pnv_xscom_region_init(MemoryRegion *mr,
-                           Object *owner,
+                           struct Object *owner,
                            const MemoryRegionOps *ops,
                            void *opaque,
                            const char *name,

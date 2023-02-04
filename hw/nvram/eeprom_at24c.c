@@ -13,9 +13,7 @@
 #include "qemu/module.h"
 #include "hw/i2c/i2c.h"
 #include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
 #include "sysemu/block-backend.h"
-#include "qom/object.h"
 
 /* #define DEBUG_AT24C */
 
@@ -29,11 +27,9 @@
                             ## __VA_ARGS__)
 
 #define TYPE_AT24C_EE "at24c-eeprom"
-typedef struct EEPROMState EEPROMState;
-DECLARE_INSTANCE_CHECKER(EEPROMState, AT24C_EE,
-                         TYPE_AT24C_EE)
+#define AT24C_EE(obj) OBJECT_CHECK(EEPROMState, (obj), TYPE_AT24C_EE)
 
-struct EEPROMState {
+typedef struct EEPROMState {
     I2CSlave parent_obj;
 
     /* address counter */
@@ -49,23 +45,22 @@ struct EEPROMState {
     uint8_t *mem;
 
     BlockBackend *blk;
-};
+} EEPROMState;
 
 static
 int at24c_eeprom_event(I2CSlave *s, enum i2c_event event)
 {
-    EEPROMState *ee = AT24C_EE(s);
+    EEPROMState *ee = container_of(s, EEPROMState, parent_obj);
 
     switch (event) {
     case I2C_START_SEND:
+    case I2C_START_RECV:
     case I2C_FINISH:
         ee->haveaddr = 0;
-        /* fallthrough */
-    case I2C_START_RECV:
         DPRINTK("clear\n");
         if (ee->blk && ee->changed) {
-            int ret = blk_pwrite(ee->blk, 0, ee->rsize, ee->mem, 0);
-            if (ret < 0) {
+            int len = blk_pwrite(ee->blk, 0, ee->mem, ee->rsize, 0);
+            if (len != ee->rsize) {
                 ERR(TYPE_AT24C_EE
                         " : failed to write backing file\n");
             }
@@ -75,8 +70,6 @@ int at24c_eeprom_event(I2CSlave *s, enum i2c_event event)
         break;
     case I2C_NACK:
         break;
-    default:
-        return -1;
     }
     return 0;
 }
@@ -86,10 +79,6 @@ uint8_t at24c_eeprom_recv(I2CSlave *s)
 {
     EEPROMState *ee = AT24C_EE(s);
     uint8_t ret;
-
-    if (ee->haveaddr == 1) {
-        return 0xff;
-    }
 
     ret = ee->mem[ee->cur];
 
@@ -165,9 +154,9 @@ void at24c_eeprom_reset(DeviceState *state)
     memset(ee->mem, 0, ee->rsize);
 
     if (ee->blk) {
-        int ret = blk_pread(ee->blk, 0, ee->rsize, ee->mem, 0);
+        int len = blk_pread(ee->blk, 0, ee->mem, ee->rsize);
 
-        if (ret < 0) {
+        if (len != ee->rsize) {
             ERR(TYPE_AT24C_EE
                     " : Failed initial sync with backing file\n");
         }

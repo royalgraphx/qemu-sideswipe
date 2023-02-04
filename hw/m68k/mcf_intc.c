@@ -11,15 +11,15 @@
 #include "qemu/module.h"
 #include "qemu/log.h"
 #include "cpu.h"
+#include "hw/hw.h"
 #include "hw/irq.h"
 #include "hw/sysbus.h"
 #include "hw/m68k/mcf.h"
-#include "qom/object.h"
 
 #define TYPE_MCF_INTC "mcf-intc"
-OBJECT_DECLARE_SIMPLE_TYPE(mcf_intc_state, MCF_INTC)
+#define MCF_INTC(obj) OBJECT_CHECK(mcf_intc_state, (obj), TYPE_MCF_INTC)
 
-struct mcf_intc_state {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -30,7 +30,7 @@ struct mcf_intc_state {
     uint8_t icr[64];
     M68kCPU *cpu;
     int active_vector;
-};
+} mcf_intc_state;
 
 static void mcf_intc_update(mcf_intc_state *s)
 {

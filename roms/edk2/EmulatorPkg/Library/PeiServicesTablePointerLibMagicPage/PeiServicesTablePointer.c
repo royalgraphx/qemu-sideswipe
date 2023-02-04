@@ -16,6 +16,7 @@
 #include <Library/DebugLib.h>
 #include <Library/EmuMagicPageLib.h>
 
+
 /**
   Caches a pointer PEI Services Table.
 
@@ -30,12 +31,12 @@
 VOID
 EFIAPI
 SetPeiServicesTablePointer (
-  IN CONST EFI_PEI_SERVICES  **PeiServicesTablePointer
+  IN CONST EFI_PEI_SERVICES ** PeiServicesTablePointer
   )
 {
   ASSERT (PeiServicesTablePointer != NULL);
   ASSERT (*PeiServicesTablePointer != NULL);
-  EMU_MAGIC_PAGE ()->PeiServicesTablePointer = PeiServicesTablePointer;
+  EMU_MAGIC_PAGE()->PeiServicesTablePointer = PeiServicesTablePointer;
 }
 
 /**
@@ -56,9 +57,9 @@ GetPeiServicesTablePointer (
   VOID
   )
 {
-  CONST EFI_PEI_SERVICES  **PeiServicesTablePointer;
+  CONST EFI_PEI_SERVICES **PeiServicesTablePointer;
 
-  PeiServicesTablePointer = EMU_MAGIC_PAGE ()->PeiServicesTablePointer;
+  PeiServicesTablePointer = EMU_MAGIC_PAGE()->PeiServicesTablePointer;
   ASSERT (PeiServicesTablePointer != NULL);
   ASSERT (*PeiServicesTablePointer != NULL);
   return PeiServicesTablePointer;
@@ -90,3 +91,5 @@ MigratePeiServicesTablePointer (
   //
   return;
 }
+
+

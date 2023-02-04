@@ -8,7 +8,6 @@
  */
 
 #include <sbi/riscv_io.h>
-#include <sbi/sbi_console.h>
 #include <sbi_utils/serial/uart8250.h>
 
 /* clang-format off */
@@ -39,7 +38,7 @@
 
 /* clang-format on */
 
-static volatile char *uart8250_base;
+static volatile void *uart8250_base;
 static u32 uart8250_in_freq;
 static u32 uart8250_baudrate;
 static u32 uart8250_reg_width;
@@ -69,7 +68,7 @@ static void set_reg(u32 num, u32 val)
 		writel(val, uart8250_base + offset);
 }
 
-static void uart8250_putc(char ch)
+void uart8250_putc(char ch)
 {
 	while ((get_reg(UART_LSR_OFFSET) & UART_LSR_THRE) == 0)
 		;
@@ -77,44 +76,34 @@ static void uart8250_putc(char ch)
 	set_reg(UART_THR_OFFSET, ch);
 }
 
-static int uart8250_getc(void)
+int uart8250_getc(void)
 {
 	if (get_reg(UART_LSR_OFFSET) & UART_LSR_DR)
 		return get_reg(UART_RBR_OFFSET);
 	return -1;
 }
 
-static struct sbi_console_device uart8250_console = {
-	.name = "uart8250",
-	.console_putc = uart8250_putc,
-	.console_getc = uart8250_getc
-};
-
 int uart8250_init(unsigned long base, u32 in_freq, u32 baudrate, u32 reg_shift,
-		  u32 reg_width, u32 reg_offset)
+		  u32 reg_width)
 {
 	u16 bdiv;
 
-	uart8250_base      = (volatile char *)base + reg_offset;
+	uart8250_base      = (volatile void *)base;
 	uart8250_reg_shift = reg_shift;
 	uart8250_reg_width = reg_width;
 	uart8250_in_freq   = in_freq;
 	uart8250_baudrate  = baudrate;
 
-	bdiv = (uart8250_in_freq + 8 * uart8250_baudrate) / (16 * uart8250_baudrate);
+	bdiv = uart8250_in_freq / (16 * uart8250_baudrate);
 
 	/* Disable all interrupts */
 	set_reg(UART_IER_OFFSET, 0x00);
 	/* Enable DLAB */
 	set_reg(UART_LCR_OFFSET, 0x80);
-
-	if (bdiv) {
-		/* Set divisor low byte */
-		set_reg(UART_DLL_OFFSET, bdiv & 0xff);
-		/* Set divisor high byte */
-		set_reg(UART_DLM_OFFSET, (bdiv >> 8) & 0xff);
-	}
-
+	/* Set divisor low byte */
+	set_reg(UART_DLL_OFFSET, bdiv & 0xff);
+	/* Set divisor high byte */
+	set_reg(UART_DLM_OFFSET, (bdiv >> 8) & 0xff);
 	/* 8 bits, no parity, one stop bit */
 	set_reg(UART_LCR_OFFSET, 0x03);
 	/* Enable FIFO */
@@ -127,8 +116,6 @@ int uart8250_init(unsigned long base, u32 in_freq, u32 baudrate, u32 reg_shift,
 	get_reg(UART_RBR_OFFSET);
 	/* Set scratchpad */
 	set_reg(UART_SCR_OFFSET, 0x00);
-
-	sbi_console_set_device(&uart8250_console);
 
 	return 0;
 }

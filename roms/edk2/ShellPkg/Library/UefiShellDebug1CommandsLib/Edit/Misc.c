@@ -19,10 +19,10 @@
 **/
 EFI_EDITOR_LINE *
 LineDup (
-  IN  EFI_EDITOR_LINE  *Src
+  IN  EFI_EDITOR_LINE *Src
   )
 {
-  EFI_EDITOR_LINE  *Dest;
+  EFI_EDITOR_LINE *Dest;
 
   //
   // allocate for the line structure
@@ -31,7 +31,6 @@ LineDup (
   if (Dest == NULL) {
     return NULL;
   }
-
   //
   // allocate and set the line buffer
   //
@@ -60,16 +59,26 @@ LineDup (
 **/
 VOID
 LineFree (
-  IN  EFI_EDITOR_LINE  *Src
+  IN  EFI_EDITOR_LINE *Src
   )
 {
   if (Src == NULL) {
-    return;
+    return ;
   }
-
   //
   // free the line buffer and then the line structure itself
   //
   SHELL_FREE_NON_NULL (Src->Buffer);
   SHELL_FREE_NON_NULL (Src);
+
 }
+
+
+
+
+
+
+
+
+
+

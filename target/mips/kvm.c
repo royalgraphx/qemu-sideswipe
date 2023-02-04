@@ -14,16 +14,19 @@
 
 #include <linux/kvm.h>
 
+#include "qemu-common.h"
 #include "cpu.h"
 #include "internal.h"
 #include "qemu/error-report.h"
 #include "qemu/main-loop.h"
+#include "qemu/timer.h"
 #include "sysemu/kvm.h"
 #include "sysemu/kvm_int.h"
 #include "sysemu/runstate.h"
+#include "sysemu/cpus.h"
 #include "kvm_mips.h"
+#include "exec/memattrs.h"
 #include "hw/boards.h"
-#include "fpu_helper.h"
 
 #define DEBUG_KVM 0
 
@@ -37,7 +40,7 @@ const KVMCapabilityInfo kvm_arch_required_capabilities[] = {
     KVM_CAP_LAST_INFO
 };
 
-static void kvm_mips_update_state(void *opaque, bool running, RunState state);
+static void kvm_mips_update_state(void *opaque, int running, RunState state);
 
 unsigned long kvm_arch_vcpu_id(CPUState *cs)
 {
@@ -78,7 +81,7 @@ int kvm_arch_init_vcpu(CPUState *cs)
         }
     }
 
-    if (kvm_mips_msa_cap && ase_msa_available(env)) {
+    if (kvm_mips_msa_cap && env->CP0_Config3 & (1 << CP0C3_MSAP)) {
         ret = kvm_vcpu_enable_cap(cs, KVM_CAP_MIPS_MSA, 0, 0);
         if (ret < 0) {
             /* mark unsupported so it gets disabled on reset */
@@ -104,7 +107,7 @@ void kvm_mips_reset_vcpu(MIPSCPU *cpu)
         warn_report("KVM does not support FPU, disabling");
         env->CP0_Config1 &= ~(1 << CP0C1_FP);
     }
-    if (!kvm_mips_msa_cap && ase_msa_available(env)) {
+    if (!kvm_mips_msa_cap && env->CP0_Config3 & (1 << CP0C3_MSAP)) {
         warn_report("KVM does not support MSA, disabling");
         env->CP0_Config3 &= ~(1 << CP0C3_MSAP);
     }
@@ -195,7 +198,9 @@ int kvm_mips_set_interrupt(MIPSCPU *cpu, int irq, int level)
     CPUState *cs = CPU(cpu);
     struct kvm_mips_interrupt intr;
 
-    assert(kvm_enabled());
+    if (!kvm_enabled()) {
+        return 0;
+    }
 
     intr.cpu = -1;
 
@@ -216,7 +221,9 @@ int kvm_mips_set_ipi_interrupt(MIPSCPU *cpu, int irq, int level)
     CPUState *dest_cs = CPU(cpu);
     struct kvm_mips_interrupt intr;
 
-    assert(kvm_enabled());
+    if (!kvm_enabled()) {
+        return 0;
+    }
 
     intr.cpu = dest_cs->cpu_index;
 
@@ -552,7 +559,7 @@ static int kvm_mips_restore_count(CPUState *cs)
 /*
  * Handle the VM clock being started or stopped
  */
-static void kvm_mips_update_state(void *opaque, bool running, RunState state)
+static void kvm_mips_update_state(void *opaque, int running, RunState state)
 {
     CPUState *cs = opaque;
     int ret;
@@ -617,7 +624,7 @@ static int kvm_mips_put_fpu_registers(CPUState *cs, int level)
          * FPU register state is a subset of MSA vector state, so don't put FPU
          * registers if we're emulating a CPU with MSA.
          */
-        if (!ase_msa_available(env)) {
+        if (!(env->CP0_Config3 & (1 << CP0C3_MSAP))) {
             /* Floating point registers */
             for (i = 0; i < 32; ++i) {
                 if (env->CP0_Status & (1 << CP0St_FR)) {
@@ -636,7 +643,7 @@ static int kvm_mips_put_fpu_registers(CPUState *cs, int level)
     }
 
     /* Only put MSA state if we're emulating a CPU with MSA */
-    if (ase_msa_available(env)) {
+    if (env->CP0_Config3 & (1 << CP0C3_MSAP)) {
         /* MSA Control Registers */
         if (level == KVM_PUT_FULL_STATE) {
             err = kvm_mips_put_one_reg(cs, KVM_REG_MIPS_MSA_IR,
@@ -697,7 +704,7 @@ static int kvm_mips_get_fpu_registers(CPUState *cs)
          * FPU register state is a subset of MSA vector state, so don't save FPU
          * registers if we're emulating a CPU with MSA.
          */
-        if (!ase_msa_available(env)) {
+        if (!(env->CP0_Config3 & (1 << CP0C3_MSAP))) {
             /* Floating point registers */
             for (i = 0; i < 32; ++i) {
                 if (env->CP0_Status & (1 << CP0St_FR)) {
@@ -716,7 +723,7 @@ static int kvm_mips_get_fpu_registers(CPUState *cs)
     }
 
     /* Only get MSA state if we're emulating a CPU with MSA */
-    if (ase_msa_available(env)) {
+    if (env->CP0_Config3 & (1 << CP0C3_MSAP)) {
         /* MSA Control Registers */
         err = kvm_mips_get_one_reg(cs, KVM_REG_MIPS_MSA_IR,
                                    &env->msair);
@@ -1288,13 +1295,4 @@ int mips_kvm_type(MachineState *machine, const char *vm_type)
 #endif
 
     return -1;
-}
-
-bool kvm_arch_cpu_check_are_resettable(void)
-{
-    return true;
-}
-
-void kvm_arch_accel_class_init(ObjectClass *oc)
-{
 }

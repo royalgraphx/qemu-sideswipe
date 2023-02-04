@@ -1,6 +1,6 @@
 /** @file
   Library functions that perform file IO. Memory buffer, file system, and
-  firmware volume operations are supported.
+  fimrware volume operations are supproted.
 
   Copyright (c) 2007, Intel Corporation. All rights reserved.<BR>
   Portions copyright (c) 2008 - 2009, Apple Inc. All rights reserved.<BR>
@@ -12,7 +12,7 @@
   current mounted device concept of current working directory concept implement
   by this library.
 
-  Device names are case insensitive and only check the leading characters for
+  Device names are case insensative and only check the leading characters for
   unique matches. Thus the following are all the same:
     LoadFile0:
     l0:
@@ -24,7 +24,7 @@
   l1:          - EFI LoadFile device one.
   B0:          - EFI BlockIo zero.
   fs3:         - EFI Simple File System device 3
-  Fv2:         - EFI Firmware Volume device 2
+  Fv2:         - EFI Firmware VOlume device 2
   1.2.3.4:name - TFTP IP and file name
 
 **/
@@ -42,7 +42,7 @@
 #include <Guid/FileInfo.h>
 #include <Guid/FileSystemInfo.h>
 
-#define MAX_PATHNAME  0x200
+#define MAX_PATHNAME    0x200
 
 /// Type of the file that has been opened
 typedef enum {
@@ -55,48 +55,51 @@ typedef enum {
   EfiOpenMaxValue
 } EFI_OPEN_FILE_TYPE;
 
+
 /// Public information about the open file
 typedef struct {
-  UINTN                            Version;       // Common information
-  EFI_OPEN_FILE_TYPE               Type;
-  EFI_DEVICE_PATH_PROTOCOL         *DevicePath;
-  EFI_STATUS                       LastError;
-  EFI_HANDLE                       EfiHandle;
-  CHAR8                            *DeviceName;
-  CHAR8                            *FileName;
+  UINTN                         Version;          // Common information
+  EFI_OPEN_FILE_TYPE            Type;
+  EFI_DEVICE_PATH_PROTOCOL      *DevicePath;
+  EFI_STATUS                    LastError;
+  EFI_HANDLE                    EfiHandle;
+  CHAR8                         *DeviceName;
+  CHAR8                         *FileName;
 
-  UINT64                           CurrentPosition; // Information for Seek
-  UINT64                           MaxPosition;
+  UINT64                        CurrentPosition;  // Information for Seek
+  UINT64                        MaxPosition;
 
-  UINTN                            BaseOffset;    // Base offset for hexdump command
+  UINTN                         BaseOffset;       // Base offset for hexdump command
 
-  UINTN                            Size;          // Valid for all types other than l#:
-  UINT8                            *Buffer;       // Information valid for A#:
+  UINTN                         Size;             // Valid for all types other than l#:
+  UINT8                         *Buffer;          // Information valid for A#:
 
-  EFI_FIRMWARE_VOLUME2_PROTOCOL    *Fv;           // Information valid for Fv#:
-  EFI_GUID                         FvNameGuid;
-  EFI_SECTION_TYPE                 FvSectionType;
-  EFI_FV_FILETYPE                  FvType;
-  EFI_FV_FILE_ATTRIBUTES           FvAttributes;
+  EFI_FIRMWARE_VOLUME2_PROTOCOL *Fv;              // Information valid for Fv#:
+  EFI_GUID                      FvNameGuid;
+  EFI_SECTION_TYPE              FvSectionType;
+  EFI_FV_FILETYPE               FvType;
+  EFI_FV_FILE_ATTRIBUTES        FvAttributes;
 
-  EFI_PHYSICAL_ADDRESS             FvStart;
-  UINTN                            FvSize;
-  UINTN                            FvHeaderSize;
+  EFI_PHYSICAL_ADDRESS          FvStart;
+  UINTN                         FvSize;
+  UINTN                         FvHeaderSize;
 
-  EFI_FILE                         *FsFileHandle; // Information valid for Fs#:
-  EFI_FILE_SYSTEM_INFO             *FsInfo;
-  EFI_FILE_INFO                    *FsFileInfo;
-  EFI_BLOCK_IO_MEDIA               *FsBlockIoMedia; // Information valid for Fs#: or B#:
-  EFI_BLOCK_IO_PROTOCOL            *FsBlockIo;      // Information valid for Fs#: or B#:
+  EFI_FILE                      *FsFileHandle;    // Information valid for Fs#:
+  EFI_FILE_SYSTEM_INFO          *FsInfo;
+  EFI_FILE_INFO                 *FsFileInfo;
+  EFI_BLOCK_IO_MEDIA            *FsBlockIoMedia;  // Information valid for Fs#: or B#:
+  EFI_BLOCK_IO_PROTOCOL         *FsBlockIo;       // Information valid for Fs#: or B#:
 
-  UINTN                            DiskOffset;    // Information valid for B#:
+  UINTN                         DiskOffset;       // Information valid for B#:
 
-  EFI_LOAD_FILE_PROTOCOL           *LoadFile;     // Information valid for l#:
+  EFI_LOAD_FILE_PROTOCOL        *LoadFile;        // Information valid for l#:
 
-  EFI_IP_ADDRESS                   ServerIp;      // Information valid for t:
-  BOOLEAN                          IsDirty;
-  BOOLEAN                          IsBufferValid;
+  EFI_IP_ADDRESS                ServerIp;         // Information valid for t:
+  BOOLEAN                       IsDirty;
+  BOOLEAN                       IsBufferValid;
+
 } EFI_OPEN_FILE;
+
 
 /// Type of Seek to perform
 typedef enum {
@@ -105,6 +108,7 @@ typedef enum {
   EfiSeekEnd,
   EfiSeekMax
 } EFI_SEEK_TYPE;
+
 
 /**
   Open a device named by PathName. The PathName includes a device name and
@@ -127,15 +131,15 @@ typedef enum {
 **/
 EFI_OPEN_FILE *
 EfiOpen (
-  IN        CHAR8             *PathName,
-  IN  CONST UINT64            OpenMode,
-  IN  CONST EFI_SECTION_TYPE  SectionType
+  IN        CHAR8               *PathName,
+  IN  CONST UINT64              OpenMode,
+  IN  CONST EFI_SECTION_TYPE    SectionType
   );
 
 EFI_STATUS
 EfiCopyFile (
-  IN        CHAR8  *DestinationFile,
-  IN        CHAR8  *SourceFile
+  IN        CHAR8               *DestinationFile,
+  IN        CHAR8               *SourceFile
   );
 
 /**
@@ -150,9 +154,10 @@ EfiCopyFile (
 **/
 EFI_OPEN_FILE  *
 EfiDeviceOpenByType (
-  IN  EFI_OPEN_FILE_TYPE  DeviceType,
-  IN  UINTN               Index
+  IN  EFI_OPEN_FILE_TYPE    DeviceType,
+  IN  UINTN                 Index
   );
+
 
 /**
   Close a file handle opened by EfiOpen() and free all resources allocated by
@@ -166,8 +171,9 @@ EfiDeviceOpenByType (
 **/
 EFI_STATUS
 EfiClose (
-  IN  EFI_OPEN_FILE  *Stream
+  IN  EFI_OPEN_FILE     *Stream
   );
+
 
 /**
   Return the size of the file represented by Stream. Also return the current
@@ -181,9 +187,10 @@ EfiClose (
 **/
 UINTN
 EfiTell (
-  IN  EFI_OPEN_FILE  *Stream,
-  OUT UINT64         *CurrentPosition   OPTIONAL
+  IN  EFI_OPEN_FILE     *Stream,
+  OUT UINT64            *CurrentPosition   OPTIONAL
   );
+
 
 /**
   Seek to the Offset location in the file. LoadFile and FV device types do
@@ -208,10 +215,11 @@ EfiTell (
 **/
 EFI_STATUS
 EfiSeek (
-  IN  EFI_OPEN_FILE  *Stream,
-  IN  EFI_LBA        Offset,
-  IN  EFI_SEEK_TYPE  SeekType
+  IN  EFI_OPEN_FILE     *Stream,
+  IN  EFI_LBA           Offset,
+  IN  EFI_SEEK_TYPE     SeekType
   );
+
 
 /**
   Read BufferSize bytes from the current location in the file. For load file
@@ -231,10 +239,11 @@ EfiSeek (
 **/
 EFI_STATUS
 EfiRead (
-  IN  EFI_OPEN_FILE  *Stream,
-  OUT VOID           *Buffer,
-  OUT UINTN          *BufferSize
+  IN  EFI_OPEN_FILE     *Stream,
+  OUT VOID              *Buffer,
+  OUT UINTN             *BufferSize
   );
+
 
 /**
   Read the entire file into a buffer. This routine allocates the buffer and
@@ -257,10 +266,11 @@ EfiRead (
 **/
 EFI_STATUS
 EfiReadAllocatePool (
-  IN  EFI_OPEN_FILE  *Stream,
-  OUT VOID           **Buffer,
-  OUT UINTN          *BufferSize
+  IN  EFI_OPEN_FILE     *Stream,
+  OUT VOID              **Buffer,
+  OUT UINTN             *BufferSize
   );
+
 
 /**
   Write data back to the file.
@@ -279,10 +289,11 @@ EfiReadAllocatePool (
 **/
 EFI_STATUS
 EfiWrite (
-  IN  EFI_OPEN_FILE  *Stream,
-  OUT VOID           *Buffer,
-  OUT UINTN          *BufferSize
+  IN  EFI_OPEN_FILE   *Stream,
+  OUT VOID            *Buffer,
+  OUT UINTN           *BufferSize
   );
+
 
 /**
   Return the number of devices of the current type active in the system
@@ -294,8 +305,9 @@ EfiWrite (
 **/
 UINTN
 EfiGetDeviceCounts (
-  IN  EFI_OPEN_FILE_TYPE  Type
+  IN  EFI_OPEN_FILE_TYPE     Type
   );
+
 
 /**
   Set the Current Working Directory (CWD). If a call is made to EfiOpen () and
@@ -310,7 +322,7 @@ EfiGetDeviceCounts (
 **/
 EFI_STATUS
 EfiSetCwd (
-  IN  CHAR8  *Cwd
+  IN  CHAR8   *Cwd
   );
 
 /**

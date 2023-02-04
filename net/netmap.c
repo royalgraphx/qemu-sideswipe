@@ -33,6 +33,7 @@
 #include "net/net.h"
 #include "net/tap.h"
 #include "clients.h"
+#include "sysemu/sysemu.h"
 #include "qemu/error-report.h"
 #include "qapi/error.h"
 #include "qemu/iov.h"

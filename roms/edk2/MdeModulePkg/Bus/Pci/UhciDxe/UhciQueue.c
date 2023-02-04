@@ -9,6 +9,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "Uhci.h"
 
+
 /**
   Map address of request structure buffer.
 
@@ -23,10 +24,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 EFI_STATUS
 UhciMapUserRequest (
-  IN  USB_HC_DEV  *Uhc,
-  IN  OUT VOID    *Request,
-  OUT UINT8       **MappedAddr,
-  OUT VOID        **Map
+  IN  USB_HC_DEV          *Uhc,
+  IN  OUT VOID            *Request,
+  OUT UINT8               **MappedAddr,
+  OUT VOID                **Map
   )
 {
   EFI_STATUS            Status;
@@ -44,11 +45,12 @@ UhciMapUserRequest (
                          );
 
   if (!EFI_ERROR (Status)) {
-    *MappedAddr = (UINT8 *)(UINTN)PhyAddr;
+    *MappedAddr = (UINT8 *) (UINTN) PhyAddr;
   }
 
   return Status;
 }
+
 
 /**
   Map address of user data buffer.
@@ -82,63 +84,64 @@ UhciMapUserData (
   Status = EFI_SUCCESS;
 
   switch (Direction) {
-    case EfiUsbDataIn:
-      //
-      // BusMasterWrite means cpu read
-      //
-      *PktId = INPUT_PACKET_ID;
-      Status = Uhc->PciIo->Map (
-                             Uhc->PciIo,
-                             EfiPciIoOperationBusMasterWrite,
-                             Data,
-                             Len,
-                             &PhyAddr,
-                             Map
-                             );
+  case EfiUsbDataIn:
+    //
+    // BusMasterWrite means cpu read
+    //
+    *PktId = INPUT_PACKET_ID;
+    Status = Uhc->PciIo->Map (
+                           Uhc->PciIo,
+                           EfiPciIoOperationBusMasterWrite,
+                           Data,
+                           Len,
+                           &PhyAddr,
+                           Map
+                           );
 
-      if (EFI_ERROR (Status)) {
-        goto EXIT;
-      }
+    if (EFI_ERROR (Status)) {
+      goto EXIT;
+    }
 
-      *MappedAddr = (UINT8 *)(UINTN)PhyAddr;
-      break;
+    *MappedAddr = (UINT8 *) (UINTN) PhyAddr;
+    break;
 
-    case EfiUsbDataOut:
-      *PktId = OUTPUT_PACKET_ID;
-      Status = Uhc->PciIo->Map (
-                             Uhc->PciIo,
-                             EfiPciIoOperationBusMasterRead,
-                             Data,
-                             Len,
-                             &PhyAddr,
-                             Map
-                             );
+  case EfiUsbDataOut:
+    *PktId = OUTPUT_PACKET_ID;
+    Status = Uhc->PciIo->Map (
+                           Uhc->PciIo,
+                           EfiPciIoOperationBusMasterRead,
+                           Data,
+                           Len,
+                           &PhyAddr,
+                           Map
+                           );
 
-      if (EFI_ERROR (Status)) {
-        goto EXIT;
-      }
+    if (EFI_ERROR (Status)) {
+      goto EXIT;
+    }
 
-      *MappedAddr = (UINT8 *)(UINTN)PhyAddr;
-      break;
+    *MappedAddr = (UINT8 *) (UINTN) PhyAddr;
+    break;
 
-    case EfiUsbNoData:
-      if ((Len != NULL) && (*Len != 0)) {
-        Status = EFI_INVALID_PARAMETER;
-        goto EXIT;
-      }
+  case EfiUsbNoData:
+    if ((Len != NULL) && (*Len != 0)) {
+      Status    = EFI_INVALID_PARAMETER;
+      goto EXIT;
+    }
 
-      *PktId      = OUTPUT_PACKET_ID;
-      *MappedAddr = NULL;
-      *Map        = NULL;
-      break;
+    *PktId      = OUTPUT_PACKET_ID;
+    *MappedAddr = NULL;
+    *Map        = NULL;
+    break;
 
-    default:
-      Status = EFI_INVALID_PARAMETER;
+  default:
+    Status      = EFI_INVALID_PARAMETER;
   }
 
 EXIT:
   return Status;
 }
+
 
 /**
   Link the TD To QH.
@@ -150,9 +153,9 @@ EXIT:
 **/
 VOID
 UhciLinkTdToQh (
-  IN USB_HC_DEV  *Uhc,
-  IN UHCI_QH_SW  *Qh,
-  IN UHCI_TD_SW  *Td
+  IN USB_HC_DEV           *Uhc,
+  IN UHCI_QH_SW           *Qh,
+  IN UHCI_TD_SW           *Td
   )
 {
   EFI_PHYSICAL_ADDRESS  PhyAddr;
@@ -162,8 +165,9 @@ UhciLinkTdToQh (
   ASSERT ((Qh != NULL) && (Td != NULL));
 
   Qh->QhHw.VerticalLink = QH_VLINK (PhyAddr, FALSE);
-  Qh->TDs               = (VOID *)Td;
+  Qh->TDs               = (VOID *) Td;
 }
+
 
 /**
   Unlink TD from the QH.
@@ -174,8 +178,8 @@ UhciLinkTdToQh (
 **/
 VOID
 UhciUnlinkTdFromQh (
-  IN UHCI_QH_SW  *Qh,
-  IN UHCI_TD_SW  *Td
+  IN UHCI_QH_SW           *Qh,
+  IN UHCI_TD_SW           *Td
   )
 {
   ASSERT ((Qh != NULL) && (Td != NULL));
@@ -183,6 +187,7 @@ UhciUnlinkTdFromQh (
   Qh->QhHw.VerticalLink = QH_VLINK (NULL, TRUE);
   Qh->TDs               = NULL;
 }
+
 
 /**
   Append a new TD To the previous TD.
@@ -194,9 +199,9 @@ UhciUnlinkTdFromQh (
 **/
 VOID
 UhciAppendTd (
-  IN USB_HC_DEV  *Uhc,
-  IN UHCI_TD_SW  *PrevTd,
-  IN UHCI_TD_SW  *ThisTd
+  IN USB_HC_DEV     *Uhc,
+  IN UHCI_TD_SW     *PrevTd,
+  IN UHCI_TD_SW     *ThisTd
   )
 {
   EFI_PHYSICAL_ADDRESS  PhyAddr;
@@ -206,8 +211,9 @@ UhciAppendTd (
   ASSERT ((PrevTd != NULL) && (ThisTd != NULL));
 
   PrevTd->TdHw.NextLink = TD_LINK (PhyAddr, TRUE, FALSE);
-  PrevTd->NextTd        = (VOID *)ThisTd;
+  PrevTd->NextTd        = (VOID *) ThisTd;
 }
+
 
 /**
   Delete a list of TDs.
@@ -220,21 +226,22 @@ UhciAppendTd (
 **/
 VOID
 UhciDestoryTds (
-  IN USB_HC_DEV  *Uhc,
-  IN UHCI_TD_SW  *FirstTd
+  IN USB_HC_DEV           *Uhc,
+  IN UHCI_TD_SW           *FirstTd
   )
 {
-  UHCI_TD_SW  *NextTd;
-  UHCI_TD_SW  *ThisTd;
+  UHCI_TD_SW            *NextTd;
+  UHCI_TD_SW            *ThisTd;
 
   NextTd = FirstTd;
 
   while (NextTd != NULL) {
-    ThisTd = NextTd;
-    NextTd = ThisTd->NextTd;
+    ThisTd  = NextTd;
+    NextTd  = ThisTd->NextTd;
     UsbHcFreeMem (Uhc->MemPool, ThisTd, sizeof (UHCI_TD_SW));
   }
 }
+
 
 /**
   Create an initialize a new queue head.
@@ -247,11 +254,11 @@ UhciDestoryTds (
 **/
 UHCI_QH_SW *
 UhciCreateQh (
-  IN  USB_HC_DEV  *Uhc,
-  IN  UINTN       Interval
+  IN  USB_HC_DEV        *Uhc,
+  IN  UINTN             Interval
   )
 {
-  UHCI_QH_SW  *Qh;
+  UHCI_QH_SW            *Qh;
 
   Qh = UsbHcAllocateMem (Uhc->MemPool, sizeof (UHCI_QH_SW));
 
@@ -261,12 +268,13 @@ UhciCreateQh (
 
   Qh->QhHw.HorizonLink  = QH_HLINK (NULL, TRUE);
   Qh->QhHw.VerticalLink = QH_VLINK (NULL, TRUE);
-  Qh->Interval          = UhciConvertPollRate (Interval);
+  Qh->Interval          = UhciConvertPollRate(Interval);
   Qh->TDs               = NULL;
   Qh->NextQh            = NULL;
 
   return Qh;
 }
+
 
 /**
   Create and intialize a TD.
@@ -278,12 +286,12 @@ UhciCreateQh (
 **/
 UHCI_TD_SW *
 UhciCreateTd (
-  IN  USB_HC_DEV  *Uhc
+  IN  USB_HC_DEV          *Uhc
   )
 {
-  UHCI_TD_SW  *Td;
+  UHCI_TD_SW              *Td;
 
-  Td = UsbHcAllocateMem (Uhc->MemPool, sizeof (UHCI_TD_SW));
+  Td     = UsbHcAllocateMem (Uhc->MemPool, sizeof (UHCI_TD_SW));
   if (Td == NULL) {
     return NULL;
   }
@@ -295,6 +303,7 @@ UhciCreateTd (
 
   return Td;
 }
+
 
 /**
   Create and initialize a TD for Setup Stage of a control transfer.
@@ -310,14 +319,14 @@ UhciCreateTd (
 **/
 UHCI_TD_SW *
 UhciCreateSetupTd (
-  IN  USB_HC_DEV  *Uhc,
-  IN  UINT8       DevAddr,
-  IN  UINT8       *Request,
-  IN  UINT8       *RequestPhy,
-  IN  BOOLEAN     IsLow
+  IN  USB_HC_DEV          *Uhc,
+  IN  UINT8               DevAddr,
+  IN  UINT8               *Request,
+  IN  UINT8               *RequestPhy,
+  IN  BOOLEAN             IsLow
   )
 {
-  UHCI_TD_SW  *Td;
+  UHCI_TD_SW              *Td;
 
   Td = UhciCreateTd (Uhc);
 
@@ -335,15 +344,16 @@ UhciCreateSetupTd (
   Td->TdHw.EndPoint     = 0;
   Td->TdHw.LowSpeed     = IsLow ? 1 : 0;
   Td->TdHw.DeviceAddr   = DevAddr & 0x7F;
-  Td->TdHw.MaxPacketLen = (UINT32)(sizeof (EFI_USB_DEVICE_REQUEST) - 1);
+  Td->TdHw.MaxPacketLen = (UINT32) (sizeof (EFI_USB_DEVICE_REQUEST) - 1);
   Td->TdHw.PidCode      = SETUP_PACKET_ID;
-  Td->TdHw.DataBuffer   = (UINT32)(UINTN)RequestPhy;
+  Td->TdHw.DataBuffer   = (UINT32) (UINTN) RequestPhy;
 
-  Td->Data    = Request;
-  Td->DataLen = (UINT16)sizeof (EFI_USB_DEVICE_REQUEST);
+  Td->Data              = Request;
+  Td->DataLen           = (UINT16) sizeof (EFI_USB_DEVICE_REQUEST);
 
   return Td;
 }
+
 
 /**
   Create a TD for data.
@@ -363,15 +373,15 @@ UhciCreateSetupTd (
 **/
 UHCI_TD_SW *
 UhciCreateDataTd (
-  IN  USB_HC_DEV  *Uhc,
-  IN  UINT8       DevAddr,
-  IN  UINT8       Endpoint,
-  IN  UINT8       *DataPtr,
-  IN  UINT8       *DataPhyPtr,
-  IN  UINTN       Len,
-  IN  UINT8       PktId,
-  IN  UINT8       Toggle,
-  IN  BOOLEAN     IsLow
+  IN  USB_HC_DEV          *Uhc,
+  IN  UINT8               DevAddr,
+  IN  UINT8               Endpoint,
+  IN  UINT8               *DataPtr,
+  IN  UINT8               *DataPhyPtr,
+  IN  UINTN               Len,
+  IN  UINT8               PktId,
+  IN  UINT8               Toggle,
+  IN  BOOLEAN             IsLow
   )
 {
   UHCI_TD_SW  *Td;
@@ -381,7 +391,7 @@ UhciCreateDataTd (
   //
   ASSERT (Len <= 0x500);
 
-  Td = UhciCreateTd (Uhc);
+  Td  = UhciCreateTd (Uhc);
 
   if (Td == NULL) {
     return NULL;
@@ -397,15 +407,16 @@ UhciCreateDataTd (
   Td->TdHw.DataToggle   = Toggle & 0x01;
   Td->TdHw.EndPoint     = Endpoint & 0x0F;
   Td->TdHw.DeviceAddr   = DevAddr & 0x7F;
-  Td->TdHw.MaxPacketLen = (UINT32)(Len - 1);
-  Td->TdHw.PidCode      = (UINT8)PktId;
-  Td->TdHw.DataBuffer   = (UINT32)(UINTN)DataPhyPtr;
+  Td->TdHw.MaxPacketLen = (UINT32) (Len - 1);
+  Td->TdHw.PidCode      = (UINT8) PktId;
+  Td->TdHw.DataBuffer   = (UINT32) (UINTN) DataPhyPtr;
 
-  Td->Data    = DataPtr;
-  Td->DataLen = (UINT16)Len;
+  Td->Data              = DataPtr;
+  Td->DataLen           = (UINT16) Len;
 
   return Td;
 }
+
 
 /**
   Create TD for the Status Stage of control transfer.
@@ -420,13 +431,13 @@ UhciCreateDataTd (
 **/
 UHCI_TD_SW *
 UhciCreateStatusTd (
-  IN  USB_HC_DEV  *Uhc,
-  IN  UINT8       DevAddr,
-  IN  UINT8       PktId,
-  IN  BOOLEAN     IsLow
+  IN  USB_HC_DEV          *Uhc,
+  IN  UINT8               DevAddr,
+  IN  UINT8               PktId,
+  IN  BOOLEAN             IsLow
   )
 {
-  UHCI_TD_SW  *Td;
+  UHCI_TD_SW              *Td;
 
   Td = UhciCreateTd (Uhc);
 
@@ -440,19 +451,20 @@ UhciCreateStatusTd (
   Td->TdHw.IntOnCpl     = FALSE;
   Td->TdHw.ErrorCount   = 0x03;
   Td->TdHw.Status      |= USBTD_ACTIVE;
-  Td->TdHw.MaxPacketLen = 0x7FF;      // 0x7FF: there is no data (refer to UHCI spec)
+  Td->TdHw.MaxPacketLen = 0x7FF;      //0x7FF: there is no data (refer to UHCI spec)
   Td->TdHw.DataToggle   = 1;
   Td->TdHw.EndPoint     = 0;
   Td->TdHw.LowSpeed     = IsLow ? 1 : 0;
   Td->TdHw.DeviceAddr   = DevAddr & 0x7F;
-  Td->TdHw.PidCode      = (UINT8)PktId;
-  Td->TdHw.DataBuffer   = (UINT32)(UINTN)NULL;
+  Td->TdHw.PidCode      = (UINT8) PktId;
+  Td->TdHw.DataBuffer   = (UINT32) (UINTN) NULL;
 
-  Td->Data    = NULL;
-  Td->DataLen = 0;
+  Td->Data              = NULL;
+  Td->DataLen           = 0;
 
   return Td;
 }
+
 
 /**
   Create Tds list for Control Transfer.
@@ -473,26 +485,27 @@ UhciCreateStatusTd (
 **/
 UHCI_TD_SW *
 UhciCreateCtrlTds (
-  IN USB_HC_DEV  *Uhc,
-  IN UINT8       DeviceAddr,
-  IN UINT8       DataPktId,
-  IN UINT8       *Request,
-  IN UINT8       *RequestPhy,
-  IN UINT8       *Data,
-  IN UINT8       *DataPhy,
-  IN UINTN       DataLen,
-  IN UINT8       MaxPacket,
-  IN BOOLEAN     IsLow
+  IN USB_HC_DEV           *Uhc,
+  IN UINT8                DeviceAddr,
+  IN UINT8                DataPktId,
+  IN UINT8                *Request,
+  IN UINT8                *RequestPhy,
+  IN UINT8                *Data,
+  IN UINT8                *DataPhy,
+  IN UINTN                DataLen,
+  IN UINT8                MaxPacket,
+  IN BOOLEAN              IsLow
   )
 {
-  UHCI_TD_SW  *SetupTd;
-  UHCI_TD_SW  *FirstDataTd;
-  UHCI_TD_SW  *DataTd;
-  UHCI_TD_SW  *PrevDataTd;
-  UHCI_TD_SW  *StatusTd;
-  UINT8       DataToggle;
-  UINT8       StatusPktId;
-  UINTN       ThisTdLen;
+  UHCI_TD_SW                *SetupTd;
+  UHCI_TD_SW                *FirstDataTd;
+  UHCI_TD_SW                *DataTd;
+  UHCI_TD_SW                *PrevDataTd;
+  UHCI_TD_SW                *StatusTd;
+  UINT8                     DataToggle;
+  UINT8                     StatusPktId;
+  UINTN                     ThisTdLen;
+
 
   DataTd      = NULL;
   SetupTd     = NULL;
@@ -524,8 +537,8 @@ UhciCreateCtrlTds (
                Uhc,
                DeviceAddr,
                0,
-               Data,    // cpu memory address
-               DataPhy, // Pci memory address
+               Data,  //cpu memory address
+               DataPhy, //Pci memory address
                ThisTdLen,
                DataPktId,
                DataToggle,
@@ -544,10 +557,10 @@ UhciCreateCtrlTds (
     }
 
     DataToggle ^= 1;
-    PrevDataTd  = DataTd;
-    Data       += ThisTdLen;
-    DataPhy    += ThisTdLen;
-    DataLen    -= ThisTdLen;
+    PrevDataTd = DataTd;
+    Data += ThisTdLen;
+    DataPhy += ThisTdLen;
+    DataLen -= ThisTdLen;
   }
 
   //
@@ -589,6 +602,7 @@ FREE_TD:
   return NULL;
 }
 
+
 /**
   Create Tds list for Bulk/Interrupt Transfer.
 
@@ -608,22 +622,22 @@ FREE_TD:
 **/
 UHCI_TD_SW *
 UhciCreateBulkOrIntTds (
-  IN USB_HC_DEV  *Uhc,
-  IN UINT8       DevAddr,
-  IN UINT8       EndPoint,
-  IN UINT8       PktId,
-  IN UINT8       *Data,
-  IN UINT8       *DataPhy,
-  IN UINTN       DataLen,
-  IN OUT UINT8   *DataToggle,
-  IN UINT8       MaxPacket,
-  IN BOOLEAN     IsLow
+  IN USB_HC_DEV           *Uhc,
+  IN UINT8                DevAddr,
+  IN UINT8                EndPoint,
+  IN UINT8                PktId,
+  IN UINT8                *Data,
+  IN UINT8                *DataPhy,
+  IN UINTN                DataLen,
+  IN OUT UINT8            *DataToggle,
+  IN UINT8                MaxPacket,
+  IN BOOLEAN              IsLow
   )
 {
-  UHCI_TD_SW  *DataTd;
-  UHCI_TD_SW  *FirstDataTd;
-  UHCI_TD_SW  *PrevDataTd;
-  UINTN       ThisTdLen;
+  UHCI_TD_SW              *DataTd;
+  UHCI_TD_SW              *FirstDataTd;
+  UHCI_TD_SW              *PrevDataTd;
+  UINTN                   ThisTdLen;
 
   DataTd      = NULL;
   FirstDataTd = NULL;

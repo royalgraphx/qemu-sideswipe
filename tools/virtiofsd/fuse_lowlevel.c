@@ -16,9 +16,19 @@
 #include "fuse_opt.h"
 #include "fuse_virtio.h"
 
+#include <assert.h>
+#include <errno.h>
+#include <glib.h>
+#include <limits.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/file.h>
+#include <unistd.h>
 
-#define THREAD_POOL_SIZE 0
+#define THREAD_POOL_SIZE 64
 
 #define OFFSET_MAX 0x7fffffffffffffffLL
 
@@ -106,7 +116,7 @@ static void list_add_req(struct fuse_req *req, struct fuse_req *next)
 static void destroy_req(fuse_req_t req)
 {
     pthread_mutex_destroy(&req->lock);
-    g_free(req);
+    free(req);
 }
 
 void fuse_free_req(fuse_req_t req)
@@ -130,7 +140,7 @@ static struct fuse_req *fuse_ll_alloc_req(struct fuse_session *se)
 {
     struct fuse_req *req;
 
-    req = g_try_new0(struct fuse_req, 1);
+    req = (struct fuse_req *)calloc(1, sizeof(struct fuse_req));
     if (req == NULL) {
         fuse_log(FUSE_LOG_ERR, "fuse: failed to allocate request\n");
     } else {
@@ -217,9 +227,9 @@ static int send_reply(fuse_req_t req, int error, const void *arg,
 int fuse_reply_iov(fuse_req_t req, const struct iovec *iov, int count)
 {
     int res;
-    g_autofree struct iovec *padded_iov = NULL;
+    struct iovec *padded_iov;
 
-    padded_iov = g_try_new(struct iovec, count + 1);
+    padded_iov = malloc((count + 1) * sizeof(struct iovec));
     if (padded_iov == NULL) {
         return fuse_reply_err(req, ENOMEM);
     }
@@ -228,6 +238,7 @@ int fuse_reply_iov(fuse_req_t req, const struct iovec *iov, int count)
     count++;
 
     res = send_reply_iov(req, 0, padded_iov, count);
+    free(padded_iov);
 
     return res;
 }
@@ -330,8 +341,6 @@ static void fill_entry(struct fuse_entry_out *arg,
         .attr_valid_nsec = calc_timeout_nsec(e->attr_timeout),
     };
     convert_stat(&e->attr, &arg->attr);
-
-    arg->attr.flags = e->attr_flags;
 }
 
 /*
@@ -567,7 +576,7 @@ static struct fuse_ioctl_iovec *fuse_ioctl_iovec_copy(const struct iovec *iov,
     struct fuse_ioctl_iovec *fiov;
     size_t i;
 
-    fiov = g_try_new(struct fuse_ioctl_iovec, count);
+    fiov = malloc(sizeof(fiov[0]) * count);
     if (!fiov) {
         return NULL;
     }
@@ -585,8 +594,8 @@ int fuse_reply_ioctl_retry(fuse_req_t req, const struct iovec *in_iov,
                            size_t out_count)
 {
     struct fuse_ioctl_out arg;
-    g_autofree struct fuse_ioctl_iovec *in_fiov = NULL;
-    g_autofree struct fuse_ioctl_iovec *out_fiov = NULL;
+    struct fuse_ioctl_iovec *in_fiov = NULL;
+    struct fuse_ioctl_iovec *out_fiov = NULL;
     struct iovec iov[4];
     size_t count = 1;
     int res;
@@ -602,14 +611,13 @@ int fuse_reply_ioctl_retry(fuse_req_t req, const struct iovec *in_iov,
     /* Can't handle non-compat 64bit ioctls on 32bit */
     if (sizeof(void *) == 4 && req->ioctl_64bit) {
         res = fuse_reply_err(req, EINVAL);
-        return res;
+        goto out;
     }
 
     if (in_count) {
         in_fiov = fuse_ioctl_iovec_copy(in_iov, in_count);
         if (!in_fiov) {
-            res = fuse_reply_err(req, ENOMEM);
-            return res;
+            goto enomem;
         }
 
         iov[count].iov_base = (void *)in_fiov;
@@ -619,8 +627,7 @@ int fuse_reply_ioctl_retry(fuse_req_t req, const struct iovec *in_iov,
     if (out_count) {
         out_fiov = fuse_ioctl_iovec_copy(out_iov, out_count);
         if (!out_fiov) {
-            res = fuse_reply_err(req, ENOMEM);
-            return res;
+            goto enomem;
         }
 
         iov[count].iov_base = (void *)out_fiov;
@@ -629,8 +636,15 @@ int fuse_reply_ioctl_retry(fuse_req_t req, const struct iovec *in_iov,
     }
 
     res = send_reply_iov(req, 0, iov, count);
+out:
+    free(in_fiov);
+    free(out_fiov);
 
     return res;
+
+enomem:
+    res = fuse_reply_err(req, ENOMEM);
+    goto out;
 }
 
 int fuse_reply_ioctl(fuse_req_t req, int result, const void *buf, size_t size)
@@ -657,11 +671,11 @@ int fuse_reply_ioctl(fuse_req_t req, int result, const void *buf, size_t size)
 int fuse_reply_ioctl_iov(fuse_req_t req, int result, const struct iovec *iov,
                          int count)
 {
-    g_autofree struct iovec *padded_iov = NULL;
+    struct iovec *padded_iov;
     struct fuse_ioctl_out arg;
     int res;
 
-    padded_iov = g_try_new(struct iovec, count + 2);
+    padded_iov = malloc((count + 2) * sizeof(struct iovec));
     if (padded_iov == NULL) {
         return fuse_reply_err(req, ENOMEM);
     }
@@ -674,6 +688,7 @@ int fuse_reply_ioctl_iov(fuse_req_t req, int result, const struct iovec *iov,
     memcpy(&padded_iov[2], iov, count * sizeof(struct iovec));
 
     res = send_reply_iov(req, 0, padded_iov, count + 2);
+    free(padded_iov);
 
     return res;
 }
@@ -848,7 +863,7 @@ static void do_setattr(fuse_req_t req, fuse_ino_t nodeid,
                       FUSE_SET_ATTR_GID | FUSE_SET_ATTR_SIZE |
                       FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME |
                       FUSE_SET_ATTR_ATIME_NOW | FUSE_SET_ATTR_MTIME_NOW |
-                      FUSE_SET_ATTR_CTIME | FUSE_SET_ATTR_KILL_SUIDGID;
+                      FUSE_SET_ATTR_CTIME;
 
         req->se->op.setattr(req, nodeid, &stbuf, arg->valid, fi);
     } else {
@@ -886,63 +901,11 @@ static void do_readlink(fuse_req_t req, fuse_ino_t nodeid,
     }
 }
 
-static int parse_secctx_fill_req(fuse_req_t req, struct fuse_mbuf_iter *iter)
-{
-    struct fuse_secctx_header *fsecctx_header;
-    struct fuse_secctx *fsecctx;
-    const void *secctx;
-    const char *name;
-
-    fsecctx_header = fuse_mbuf_iter_advance(iter, sizeof(*fsecctx_header));
-    if (!fsecctx_header) {
-        return -EINVAL;
-    }
-
-    /*
-     * As of now maximum of one security context is supported. It can
-     * change in future though.
-     */
-    if (fsecctx_header->nr_secctx > 1) {
-        return -EINVAL;
-    }
-
-    /* No security context sent. Maybe no LSM supports it */
-    if (!fsecctx_header->nr_secctx) {
-        return 0;
-    }
-
-    fsecctx = fuse_mbuf_iter_advance(iter, sizeof(*fsecctx));
-    if (!fsecctx) {
-        return -EINVAL;
-    }
-
-    /* struct fsecctx with zero sized context is not expected */
-    if (!fsecctx->size) {
-        return -EINVAL;
-    }
-    name = fuse_mbuf_iter_advance_str(iter);
-    if (!name) {
-        return -EINVAL;
-    }
-
-    secctx = fuse_mbuf_iter_advance(iter, fsecctx->size);
-    if (!secctx) {
-        return -EINVAL;
-    }
-
-    req->secctx.name = name;
-    req->secctx.ctx = secctx;
-    req->secctx.ctxlen = fsecctx->size;
-    return 0;
-}
-
 static void do_mknod(fuse_req_t req, fuse_ino_t nodeid,
                      struct fuse_mbuf_iter *iter)
 {
     struct fuse_mknod_in *arg;
     const char *name;
-    bool secctx_enabled = req->se->conn.want & FUSE_CAP_SECURITY_CTX;
-    int err;
 
     arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
     name = fuse_mbuf_iter_advance_str(iter);
@@ -952,14 +915,6 @@ static void do_mknod(fuse_req_t req, fuse_ino_t nodeid,
     }
 
     req->ctx.umask = arg->umask;
-
-    if (secctx_enabled) {
-        err = parse_secctx_fill_req(req, iter);
-        if (err) {
-            fuse_reply_err(req, -err);
-            return;
-        }
-    }
 
     if (req->se->op.mknod) {
         req->se->op.mknod(req, nodeid, name, arg->mode, arg->rdev);
@@ -973,8 +928,6 @@ static void do_mkdir(fuse_req_t req, fuse_ino_t nodeid,
 {
     struct fuse_mkdir_in *arg;
     const char *name;
-    bool secctx_enabled = req->se->conn.want & FUSE_CAP_SECURITY_CTX;
-    int err;
 
     arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
     name = fuse_mbuf_iter_advance_str(iter);
@@ -984,14 +937,6 @@ static void do_mkdir(fuse_req_t req, fuse_ino_t nodeid,
     }
 
     req->ctx.umask = arg->umask;
-
-    if (secctx_enabled) {
-        err = parse_secctx_fill_req(req, iter);
-        if (err) {
-            fuse_reply_err(req, err);
-            return;
-        }
-    }
 
     if (req->se->op.mkdir) {
         req->se->op.mkdir(req, nodeid, name, arg->mode);
@@ -1039,20 +984,10 @@ static void do_symlink(fuse_req_t req, fuse_ino_t nodeid,
 {
     const char *name = fuse_mbuf_iter_advance_str(iter);
     const char *linkname = fuse_mbuf_iter_advance_str(iter);
-    bool secctx_enabled = req->se->conn.want & FUSE_CAP_SECURITY_CTX;
-    int err;
 
     if (!name || !linkname) {
         fuse_reply_err(req, EINVAL);
         return;
-    }
-
-    if (secctx_enabled) {
-        err = parse_secctx_fill_req(req, iter);
-        if (err) {
-            fuse_reply_err(req, err);
-            return;
-        }
     }
 
     if (req->se->op.symlink) {
@@ -1128,8 +1063,6 @@ static void do_link(fuse_req_t req, fuse_ino_t nodeid,
 static void do_create(fuse_req_t req, fuse_ino_t nodeid,
                       struct fuse_mbuf_iter *iter)
 {
-    bool secctx_enabled = req->se->conn.want & FUSE_CAP_SECURITY_CTX;
-
     if (req->se->op.create) {
         struct fuse_create_in *arg;
         struct fuse_file_info fi;
@@ -1142,18 +1075,8 @@ static void do_create(fuse_req_t req, fuse_ino_t nodeid,
             return;
         }
 
-        if (secctx_enabled) {
-            int err;
-            err = parse_secctx_fill_req(req, iter);
-            if (err) {
-                fuse_reply_err(req, err);
-                return;
-            }
-        }
-
         memset(&fi, 0, sizeof(fi));
         fi.flags = arg->flags;
-        fi.kill_priv = arg->open_flags & FUSE_OPEN_KILL_SUIDGID;
 
         req->ctx.umask = arg->umask;
 
@@ -1175,15 +1098,8 @@ static void do_open(fuse_req_t req, fuse_ino_t nodeid,
         return;
     }
 
-    /* File creation is handled by do_create() or do_mknod() */
-    if (arg->flags & (O_CREAT | O_TMPFILE)) {
-        fuse_reply_err(req, EINVAL);
-        return;
-    }
-
     memset(&fi, 0, sizeof(fi));
     fi.flags = arg->flags;
-    fi.kill_priv = arg->open_flags & FUSE_OPEN_KILL_SUIDGID;
 
     if (req->se->op.open) {
         req->se->op.open(req, nodeid, &fi);
@@ -1516,13 +1432,8 @@ static void do_setxattr(fuse_req_t req, fuse_ino_t nodeid,
     struct fuse_setxattr_in *arg;
     const char *name;
     const char *value;
-    bool setxattr_ext = req->se->conn.want & FUSE_CAP_SETXATTR_EXT;
 
-    if (setxattr_ext) {
-        arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
-    } else {
-        arg = fuse_mbuf_iter_advance(iter, FUSE_COMPAT_SETXATTR_IN_SIZE);
-    }
+    arg = fuse_mbuf_iter_advance(iter, sizeof(*arg));
     name = fuse_mbuf_iter_advance_str(iter);
     if (!arg || !name) {
         fuse_reply_err(req, EINVAL);
@@ -1536,9 +1447,7 @@ static void do_setxattr(fuse_req_t req, fuse_ino_t nodeid,
     }
 
     if (req->se->op.setxattr) {
-        uint32_t setxattr_flags = setxattr_ext ? arg->setxattr_flags : 0;
-        req->se->op.setxattr(req, nodeid, name, value, arg->size, arg->flags,
-                             setxattr_flags);
+        req->se->op.setxattr(req, nodeid, name, value, arg->size, arg->flags);
     } else {
         fuse_reply_err(req, ENOSYS);
     }
@@ -1781,7 +1690,7 @@ static struct fuse_req *check_interrupt(struct fuse_session *se,
         if (curr->u.i.unique == req->unique) {
             req->interrupted = 1;
             list_del_req(curr);
-            g_free(curr);
+            free(curr);
             return NULL;
         }
     }
@@ -1967,30 +1876,15 @@ static void do_lseek(fuse_req_t req, fuse_ino_t nodeid,
     }
 }
 
-static void do_syncfs(fuse_req_t req, fuse_ino_t nodeid,
-                      struct fuse_mbuf_iter *iter)
-{
-    if (req->se->op.syncfs) {
-        req->se->op.syncfs(req, nodeid);
-    } else {
-        fuse_reply_err(req, ENOSYS);
-    }
-}
-
 static void do_init(fuse_req_t req, fuse_ino_t nodeid,
                     struct fuse_mbuf_iter *iter)
 {
     size_t compat_size = offsetof(struct fuse_init_in, max_readahead);
-    size_t compat2_size = offsetof(struct fuse_init_in, flags) +
-                              sizeof(uint32_t);
-    /* Fuse structure extended with minor version 36 */
-    size_t compat3_size = endof(struct fuse_init_in, unused);
     struct fuse_init_in *arg;
     struct fuse_init_out outarg;
     struct fuse_session *se = req->se;
     size_t bufsize = se->bufsize;
     size_t outargsize = sizeof(outarg);
-    uint64_t flags = 0;
 
     (void)nodeid;
 
@@ -2003,29 +1897,15 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
 
     /* ...and now consume the new fields. */
     if (arg->major == 7 && arg->minor >= 6) {
-        if (!fuse_mbuf_iter_advance(iter, compat2_size - compat_size)) {
+        if (!fuse_mbuf_iter_advance(iter, sizeof(*arg) - compat_size)) {
             fuse_reply_err(req, EINVAL);
             return;
         }
-        flags |= arg->flags;
-    }
-
-    /*
-     * fuse_init_in was extended again with minor version 36. Just read
-     * current known size of fuse_init so that future extension and
-     * header rebase does not cause breakage.
-     */
-    if (sizeof(*arg) > compat2_size && (arg->flags & FUSE_INIT_EXT)) {
-        if (!fuse_mbuf_iter_advance(iter, compat3_size - compat2_size)) {
-            fuse_reply_err(req, EINVAL);
-            return;
-        }
-        flags |= (uint64_t) arg->flags2 << 32;
     }
 
     fuse_log(FUSE_LOG_DEBUG, "INIT: %u.%u\n", arg->major, arg->minor);
     if (arg->major == 7 && arg->minor >= 6) {
-        fuse_log(FUSE_LOG_DEBUG, "flags=0x%016" PRIx64 "\n", flags);
+        fuse_log(FUSE_LOG_DEBUG, "flags=0x%08x\n", arg->flags);
         fuse_log(FUSE_LOG_DEBUG, "max_readahead=0x%08x\n", arg->max_readahead);
     }
     se->conn.proto_major = arg->major;
@@ -2053,72 +1933,60 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
     if (arg->max_readahead < se->conn.max_readahead) {
         se->conn.max_readahead = arg->max_readahead;
     }
-    if (flags & FUSE_ASYNC_READ) {
+    if (arg->flags & FUSE_ASYNC_READ) {
         se->conn.capable |= FUSE_CAP_ASYNC_READ;
     }
-    if (flags & FUSE_POSIX_LOCKS) {
+    if (arg->flags & FUSE_POSIX_LOCKS) {
         se->conn.capable |= FUSE_CAP_POSIX_LOCKS;
     }
-    if (flags & FUSE_ATOMIC_O_TRUNC) {
+    if (arg->flags & FUSE_ATOMIC_O_TRUNC) {
         se->conn.capable |= FUSE_CAP_ATOMIC_O_TRUNC;
     }
-    if (flags & FUSE_EXPORT_SUPPORT) {
+    if (arg->flags & FUSE_EXPORT_SUPPORT) {
         se->conn.capable |= FUSE_CAP_EXPORT_SUPPORT;
     }
-    if (flags & FUSE_DONT_MASK) {
+    if (arg->flags & FUSE_DONT_MASK) {
         se->conn.capable |= FUSE_CAP_DONT_MASK;
     }
-    if (flags & FUSE_FLOCK_LOCKS) {
+    if (arg->flags & FUSE_FLOCK_LOCKS) {
         se->conn.capable |= FUSE_CAP_FLOCK_LOCKS;
     }
-    if (flags & FUSE_AUTO_INVAL_DATA) {
+    if (arg->flags & FUSE_AUTO_INVAL_DATA) {
         se->conn.capable |= FUSE_CAP_AUTO_INVAL_DATA;
     }
-    if (flags & FUSE_DO_READDIRPLUS) {
+    if (arg->flags & FUSE_DO_READDIRPLUS) {
         se->conn.capable |= FUSE_CAP_READDIRPLUS;
     }
-    if (flags & FUSE_READDIRPLUS_AUTO) {
+    if (arg->flags & FUSE_READDIRPLUS_AUTO) {
         se->conn.capable |= FUSE_CAP_READDIRPLUS_AUTO;
     }
-    if (flags & FUSE_ASYNC_DIO) {
+    if (arg->flags & FUSE_ASYNC_DIO) {
         se->conn.capable |= FUSE_CAP_ASYNC_DIO;
     }
-    if (flags & FUSE_WRITEBACK_CACHE) {
+    if (arg->flags & FUSE_WRITEBACK_CACHE) {
         se->conn.capable |= FUSE_CAP_WRITEBACK_CACHE;
     }
-    if (flags & FUSE_NO_OPEN_SUPPORT) {
+    if (arg->flags & FUSE_NO_OPEN_SUPPORT) {
         se->conn.capable |= FUSE_CAP_NO_OPEN_SUPPORT;
     }
-    if (flags & FUSE_PARALLEL_DIROPS) {
+    if (arg->flags & FUSE_PARALLEL_DIROPS) {
         se->conn.capable |= FUSE_CAP_PARALLEL_DIROPS;
     }
-    if (flags & FUSE_POSIX_ACL) {
+    if (arg->flags & FUSE_POSIX_ACL) {
         se->conn.capable |= FUSE_CAP_POSIX_ACL;
     }
-    if (flags & FUSE_HANDLE_KILLPRIV) {
+    if (arg->flags & FUSE_HANDLE_KILLPRIV) {
         se->conn.capable |= FUSE_CAP_HANDLE_KILLPRIV;
     }
-    if (flags & FUSE_NO_OPENDIR_SUPPORT) {
+    if (arg->flags & FUSE_NO_OPENDIR_SUPPORT) {
         se->conn.capable |= FUSE_CAP_NO_OPENDIR_SUPPORT;
     }
-    if (!(flags & FUSE_MAX_PAGES)) {
+    if (!(arg->flags & FUSE_MAX_PAGES)) {
         size_t max_bufsize = FUSE_DEFAULT_MAX_PAGES_PER_REQ * getpagesize() +
                              FUSE_BUFFER_HEADER_SIZE;
         if (bufsize > max_bufsize) {
             bufsize = max_bufsize;
         }
-    }
-    if (flags & FUSE_SUBMOUNTS) {
-        se->conn.capable |= FUSE_CAP_SUBMOUNTS;
-    }
-    if (flags & FUSE_HANDLE_KILLPRIV_V2) {
-        se->conn.capable |= FUSE_CAP_HANDLE_KILLPRIV_V2;
-    }
-    if (flags & FUSE_SETXATTR_EXT) {
-        se->conn.capable |= FUSE_CAP_SETXATTR_EXT;
-    }
-    if (flags & FUSE_SECURITY_CTX) {
-        se->conn.capable |= FUSE_CAP_SECURITY_CTX;
     }
 #ifdef HAVE_SPLICE
 #ifdef HAVE_VMSPLICE
@@ -2174,7 +2042,7 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
     if (se->conn.want & (~se->conn.capable)) {
         fuse_log(FUSE_LOG_ERR,
                  "fuse: error: filesystem requested capabilities "
-                 "0x%" PRIx64 " that are not supported by kernel, aborting.\n",
+                 "0x%x that are not supported by kernel, aborting.\n",
                  se->conn.want & (~se->conn.capable));
         fuse_reply_err(req, EPROTO);
         se->error = -EPROTO;
@@ -2185,7 +2053,7 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
     if (se->conn.max_write < bufsize - FUSE_BUFFER_HEADER_SIZE) {
         se->bufsize = se->conn.max_write + FUSE_BUFFER_HEADER_SIZE;
     }
-    if (flags & FUSE_MAX_PAGES) {
+    if (arg->flags & FUSE_MAX_PAGES) {
         outarg.flags |= FUSE_MAX_PAGES;
         outarg.max_pages = (se->conn.max_write - 1) / getpagesize() + 1;
     }
@@ -2251,22 +2119,8 @@ static void do_init(fuse_req_t req, fuse_ino_t nodeid,
     outarg.congestion_threshold = se->conn.congestion_threshold;
     outarg.time_gran = se->conn.time_gran;
 
-    if (se->conn.want & FUSE_CAP_HANDLE_KILLPRIV_V2) {
-        outarg.flags |= FUSE_HANDLE_KILLPRIV_V2;
-    }
-
-    if (se->conn.want & FUSE_CAP_SETXATTR_EXT) {
-        outarg.flags |= FUSE_SETXATTR_EXT;
-    }
-
-    if (se->conn.want & FUSE_CAP_SECURITY_CTX) {
-        /* bits 32..63 get shifted down 32 bits into the flags2 field */
-        outarg.flags2 |= FUSE_SECURITY_CTX >> 32;
-    }
-
     fuse_log(FUSE_LOG_DEBUG, "   INIT: %u.%u\n", outarg.major, outarg.minor);
-    fuse_log(FUSE_LOG_DEBUG, "   flags2=0x%08x flags=0x%08x\n", outarg.flags2,
-             outarg.flags);
+    fuse_log(FUSE_LOG_DEBUG, "   flags=0x%08x\n", outarg.flags);
     fuse_log(FUSE_LOG_DEBUG, "   max_readahead=0x%08x\n", outarg.max_readahead);
     fuse_log(FUSE_LOG_DEBUG, "   max_write=0x%08x\n", outarg.max_write);
     fuse_log(FUSE_LOG_DEBUG, "   max_background=%i\n", outarg.max_background);
@@ -2292,6 +2146,104 @@ static void do_destroy(fuse_req_t req, fuse_ino_t nodeid,
     }
 
     send_reply_ok(req, NULL, 0);
+}
+
+static int send_notify_iov(struct fuse_session *se, int notify_code,
+                           struct iovec *iov, int count)
+{
+    struct fuse_out_header out = {
+        .error = notify_code,
+    };
+
+    if (!se->got_init) {
+        return -ENOTCONN;
+    }
+
+    iov[0].iov_base = &out;
+    iov[0].iov_len = sizeof(struct fuse_out_header);
+
+    return fuse_send_msg(se, NULL, iov, count);
+}
+
+int fuse_lowlevel_notify_poll(struct fuse_pollhandle *ph)
+{
+    if (ph != NULL) {
+        struct fuse_notify_poll_wakeup_out outarg = {
+            .kh = ph->kh,
+        };
+        struct iovec iov[2];
+
+        iov[1].iov_base = &outarg;
+        iov[1].iov_len = sizeof(outarg);
+
+        return send_notify_iov(ph->se, FUSE_NOTIFY_POLL, iov, 2);
+    } else {
+        return 0;
+    }
+}
+
+int fuse_lowlevel_notify_inval_inode(struct fuse_session *se, fuse_ino_t ino,
+                                     off_t off, off_t len)
+{
+    struct fuse_notify_inval_inode_out outarg = {
+        .ino = ino,
+        .off = off,
+        .len = len,
+    };
+    struct iovec iov[2];
+
+    if (!se) {
+        return -EINVAL;
+    }
+
+    iov[1].iov_base = &outarg;
+    iov[1].iov_len = sizeof(outarg);
+
+    return send_notify_iov(se, FUSE_NOTIFY_INVAL_INODE, iov, 2);
+}
+
+int fuse_lowlevel_notify_inval_entry(struct fuse_session *se, fuse_ino_t parent,
+                                     const char *name, size_t namelen)
+{
+    struct fuse_notify_inval_entry_out outarg = {
+        .parent = parent,
+        .namelen = namelen,
+    };
+    struct iovec iov[3];
+
+    if (!se) {
+        return -EINVAL;
+    }
+
+    iov[1].iov_base = &outarg;
+    iov[1].iov_len = sizeof(outarg);
+    iov[2].iov_base = (void *)name;
+    iov[2].iov_len = namelen + 1;
+
+    return send_notify_iov(se, FUSE_NOTIFY_INVAL_ENTRY, iov, 3);
+}
+
+int fuse_lowlevel_notify_delete(struct fuse_session *se, fuse_ino_t parent,
+                                fuse_ino_t child, const char *name,
+                                size_t namelen)
+{
+    struct fuse_notify_delete_out outarg = {
+        .parent = parent,
+        .child = child,
+        .namelen = namelen,
+    };
+    struct iovec iov[3];
+
+    if (!se) {
+        return -EINVAL;
+    }
+
+    iov[1].iov_base = &outarg;
+    iov[1].iov_len = sizeof(outarg);
+    iov[2].iov_base = (void *)name;
+    iov[2].iov_len = namelen + 1;
+
+    return send_notify_iov(se, FUSE_NOTIFY_DELETE, iov, 3);
 }
 
 int fuse_lowlevel_notify_store(struct fuse_session *se, fuse_ino_t ino,
@@ -2409,7 +2361,6 @@ static struct {
     [FUSE_RENAME2] = { do_rename2, "RENAME2" },
     [FUSE_COPY_FILE_RANGE] = { do_copy_file_range, "COPY_FILE_RANGE" },
     [FUSE_LSEEK] = { do_lseek, "LSEEK" },
-    [FUSE_SYNCFS] = { do_syncfs, "SYNCFS" },
 };
 
 #define FUSE_MAXOP (sizeof(fuse_ll_ops) / sizeof(fuse_ll_ops[0]))
@@ -2572,7 +2523,6 @@ static const struct fuse_opt fuse_ll_opts[] = {
     LL_OPTION("--debug", debug, 1),
     LL_OPTION("allow_root", deny_others, 1),
     LL_OPTION("--socket-path=%s", vu_socket_path, 0),
-    LL_OPTION("--socket-group=%s", vu_socket_group, 0),
     LL_OPTION("--fd=%d", vu_listen_fd, 0),
     LL_OPTION("--thread-pool-size=%d", thread_pool_size, 0),
     FUSE_OPT_END
@@ -2593,7 +2543,6 @@ void fuse_lowlevel_help(void)
     printf(
         "    -o allow_root              allow access by root\n"
         "    --socket-path=PATH         path for the vhost-user socket\n"
-        "    --socket-group=GRNAME      name of group for the vhost-user socket\n"
         "    --fd=FDNUM                 fd number of vhost-user socket\n"
         "    --thread-pool-size=NUM     thread pool size limit (default %d)\n",
         THREAD_POOL_SIZE);
@@ -2620,7 +2569,7 @@ void fuse_session_destroy(struct fuse_session *se)
     free(se->vu_socket_path);
     se->vu_socket_path = NULL;
 
-    g_free(se);
+    free(se);
 }
 
 
@@ -2643,7 +2592,7 @@ struct fuse_session *fuse_session_new(struct fuse_args *args,
         return NULL;
     }
 
-    se = g_try_new0(struct fuse_session, 1);
+    se = (struct fuse_session *)calloc(1, sizeof(struct fuse_session));
     if (se == NULL) {
         fuse_log(FUSE_LOG_ERR, "fuse: failed to allocate fuse object\n");
         goto out1;
@@ -2681,11 +2630,6 @@ struct fuse_session *fuse_session_new(struct fuse_args *args,
                  "fuse: --socket-path and --fd cannot be given together\n");
         goto out4;
     }
-    if (se->vu_socket_group && !se->vu_socket_path) {
-        fuse_log(FUSE_LOG_ERR,
-                 "fuse: --socket-group can only be used with --socket-path\n");
-        goto out4;
-    }
 
     se->bufsize = FUSE_MAX_MAX_PAGES * getpagesize() + FUSE_BUFFER_HEADER_SIZE;
 
@@ -2703,7 +2647,7 @@ struct fuse_session *fuse_session_new(struct fuse_args *args,
 out4:
     fuse_opt_free_args(args);
 out2:
-    g_free(se);
+    free(se);
 out1:
     return NULL;
 }

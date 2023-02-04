@@ -70,15 +70,17 @@ static const char reg_names[NUMBER_OF_CPU_REGISTERS][8] = {
 };
 #define REG(x) (cpu_r[x])
 
-#define DISAS_EXIT   DISAS_TARGET_0  /* We want return to the cpu main loop.  */
-#define DISAS_LOOKUP DISAS_TARGET_1  /* We have a variable condition exit.  */
-#define DISAS_CHAIN  DISAS_TARGET_2  /* We have a single condition exit.  */
+enum {
+    DISAS_EXIT   = DISAS_TARGET_0,  /* We want return to the cpu main loop.  */
+    DISAS_LOOKUP = DISAS_TARGET_1,  /* We have a variable condition exit.  */
+    DISAS_CHAIN  = DISAS_TARGET_2,  /* We have a single condition exit.  */
+};
 
 typedef struct DisasContext DisasContext;
 
 /* This is the state at translation time. */
 struct DisasContext {
-    DisasContextBase base;
+    TranslationBlock *tb;
 
     CPUAVRState *env;
     CPUState *cs;
@@ -88,6 +90,8 @@ struct DisasContext {
 
     /* Routine used to access memory */
     int memidx;
+    int bstate;
+    int singlestep;
 
     /*
      * some AVR instructions can make the following instruction to be skipped
@@ -102,7 +106,7 @@ struct DisasContext {
      * used in the following manner (sketch)
      *
      * TCGLabel *skip_label = NULL;
-     * if (ctx->skip_cond != TCG_COND_NEVER) {
+     * if (ctx.skip_cond != TCG_COND_NEVER) {
      *     skip_label = gen_new_label();
      *     tcg_gen_brcond_tl(skip_cond, skip_var0, skip_var1, skip_label);
      * }
@@ -112,7 +116,7 @@ struct DisasContext {
      *     free_skip_var0 = false;
      * }
      *
-     * translate(ctx);
+     * translate(&ctx);
      *
      * if (skip_label) {
      *     gen_set_label(skip_label);
@@ -187,14 +191,14 @@ static bool avr_have_feature(DisasContext *ctx, int feature)
 {
     if (!avr_feature(ctx->env, feature)) {
         gen_helper_unsupported(cpu_env);
-        ctx->base.is_jmp = DISAS_NORETURN;
+        ctx->bstate = DISAS_NORETURN;
         return false;
     }
     return true;
 }
 
 static bool decode_insn(DisasContext *ctx, uint16_t insn);
-#include "decode-insn.c.inc"
+#include "decode_insn.inc.c"
 
 /*
  * Arithmetic Instructions
@@ -1007,13 +1011,13 @@ static void gen_jmp_ez(DisasContext *ctx)
 {
     tcg_gen_deposit_tl(cpu_pc, cpu_r[30], cpu_r[31], 8, 8);
     tcg_gen_or_tl(cpu_pc, cpu_pc, cpu_eind);
-    ctx->base.is_jmp = DISAS_LOOKUP;
+    ctx->bstate = DISAS_LOOKUP;
 }
 
 static void gen_jmp_z(DisasContext *ctx)
 {
     tcg_gen_deposit_tl(cpu_pc, cpu_r[30], cpu_r[31], 8, 8);
-    ctx->base.is_jmp = DISAS_LOOKUP;
+    ctx->bstate = DISAS_LOOKUP;
 }
 
 static void gen_push_ret(DisasContext *ctx, int ret)
@@ -1079,17 +1083,18 @@ static void gen_pop_ret(DisasContext *ctx, TCGv ret)
 
 static void gen_goto_tb(DisasContext *ctx, int n, target_ulong dest)
 {
-    const TranslationBlock *tb = ctx->base.tb;
+    TranslationBlock *tb = ctx->tb;
 
-    if (translator_use_goto_tb(&ctx->base, dest)) {
+    if (ctx->singlestep == 0) {
         tcg_gen_goto_tb(n);
         tcg_gen_movi_i32(cpu_pc, dest);
         tcg_gen_exit_tb(tb, n);
     } else {
         tcg_gen_movi_i32(cpu_pc, dest);
-        tcg_gen_lookup_and_goto_ptr();
+        gen_helper_debug(cpu_env);
+        tcg_gen_exit_tb(NULL, 0);
     }
-    ctx->base.is_jmp = DISAS_NORETURN;
+    ctx->bstate = DISAS_NORETURN;
 }
 
 /*
@@ -1249,7 +1254,7 @@ static bool trans_RET(DisasContext *ctx, arg_RET *a)
 {
     gen_pop_ret(ctx, cpu_pc);
 
-    ctx->base.is_jmp = DISAS_LOOKUP;
+    ctx->bstate = DISAS_LOOKUP;
     return true;
 }
 
@@ -1267,7 +1272,7 @@ static bool trans_RETI(DisasContext *ctx, arg_RETI *a)
     tcg_gen_movi_tl(cpu_If, 1);
 
     /* Need to return to main loop to re-evaluate interrupts.  */
-    ctx->base.is_jmp = DISAS_EXIT;
+    ctx->bstate = DISAS_EXIT;
     return true;
 }
 
@@ -1479,7 +1484,7 @@ static bool trans_BRBC(DisasContext *ctx, arg_BRBC *a)
     gen_goto_tb(ctx, 0, ctx->npc + a->imm);
     gen_set_label(not_taken);
 
-    ctx->base.is_jmp = DISAS_CHAIN;
+    ctx->bstate = DISAS_CHAIN;
     return true;
 }
 
@@ -1528,7 +1533,7 @@ static bool trans_BRBS(DisasContext *ctx, arg_BRBS *a)
     gen_goto_tb(ctx, 0, ctx->npc + a->imm);
     gen_set_label(not_taken);
 
-    ctx->base.is_jmp = DISAS_CHAIN;
+    ctx->bstate = DISAS_CHAIN;
     return true;
 }
 
@@ -1605,7 +1610,7 @@ static TCGv gen_get_zaddr(void)
  */
 static void gen_data_store(DisasContext *ctx, TCGv data, TCGv addr)
 {
-    if (ctx->base.tb->flags & TB_FLAGS_FULL_ACCESS) {
+    if (ctx->tb->flags & TB_FLAGS_FULL_ACCESS) {
         gen_helper_fullwr(cpu_env, data, addr);
     } else {
         tcg_gen_qemu_st8(data, addr, MMU_DATA_IDX); /* mem[addr] = data */
@@ -1614,7 +1619,7 @@ static void gen_data_store(DisasContext *ctx, TCGv data, TCGv addr)
 
 static void gen_data_load(DisasContext *ctx, TCGv data, TCGv addr)
 {
-    if (ctx->base.tb->flags & TB_FLAGS_FULL_ACCESS) {
+    if (ctx->tb->flags & TB_FLAGS_FULL_ACCESS) {
         gen_helper_fullrd(data, cpu_env, addr);
     } else {
         tcg_gen_qemu_ld8u(data, addr, MMU_DATA_IDX); /* data = mem[addr] */
@@ -2788,7 +2793,7 @@ static bool trans_BREAK(DisasContext *ctx, arg_BREAK *a)
 #ifdef BREAKPOINT_ON_BREAK
     tcg_gen_movi_tl(cpu_pc, ctx->npc - 1);
     gen_helper_debug(cpu_env);
-    ctx->base.is_jmp = DISAS_EXIT;
+    ctx->bstate = DISAS_EXIT;
 #else
     /* NOP */
 #endif
@@ -2814,7 +2819,7 @@ static bool trans_NOP(DisasContext *ctx, arg_NOP *a)
 static bool trans_SLEEP(DisasContext *ctx, arg_SLEEP *a)
 {
     gen_helper_sleep(cpu_env);
-    ctx->base.is_jmp = DISAS_NORETURN;
+    ctx->bstate = DISAS_NORETURN;
     return true;
 }
 
@@ -2845,7 +2850,7 @@ static void translate(DisasContext *ctx)
 
     if (!decode_insn(ctx, opcode)) {
         gen_helper_unsupported(cpu_env);
-        ctx->base.is_jmp = DISAS_NORETURN;
+        ctx->bstate = DISAS_NORETURN;
     }
 }
 
@@ -2894,164 +2899,163 @@ static bool canonicalize_skip(DisasContext *ctx)
     return true;
 }
 
-static void avr_tr_init_disas_context(DisasContextBase *dcbase, CPUState *cs)
+void gen_intermediate_code(CPUState *cs, TranslationBlock *tb, int max_insns)
 {
-    DisasContext *ctx = container_of(dcbase, DisasContext, base);
     CPUAVRState *env = cs->env_ptr;
-    uint32_t tb_flags = ctx->base.tb->flags;
+    DisasContext ctx = {
+        .tb = tb,
+        .cs = cs,
+        .env = env,
+        .memidx = 0,
+        .bstate = DISAS_NEXT,
+        .skip_cond = TCG_COND_NEVER,
+        .singlestep = cs->singlestep_enabled,
+    };
+    target_ulong pc_start = tb->pc / 2;
+    int num_insns = 0;
 
-    ctx->cs = cs;
-    ctx->env = env;
-    ctx->npc = ctx->base.pc_first / 2;
-
-    ctx->skip_cond = TCG_COND_NEVER;
-    if (tb_flags & TB_FLAGS_SKIP) {
-        ctx->skip_cond = TCG_COND_ALWAYS;
-        ctx->skip_var0 = cpu_skip;
-    }
-
-    if (tb_flags & TB_FLAGS_FULL_ACCESS) {
+    if (tb->flags & TB_FLAGS_FULL_ACCESS) {
         /*
          * This flag is set by ST/LD instruction we will regenerate it ONLY
          * with mem/cpu memory access instead of mem access
          */
-        ctx->base.max_insns = 1;
+        max_insns = 1;
     }
-}
-
-static void avr_tr_tb_start(DisasContextBase *db, CPUState *cs)
-{
-}
-
-static void avr_tr_insn_start(DisasContextBase *dcbase, CPUState *cs)
-{
-    DisasContext *ctx = container_of(dcbase, DisasContext, base);
-
-    tcg_gen_insn_start(ctx->npc);
-}
-
-static void avr_tr_translate_insn(DisasContextBase *dcbase, CPUState *cs)
-{
-    DisasContext *ctx = container_of(dcbase, DisasContext, base);
-    TCGLabel *skip_label = NULL;
-
-    /* Conditionally skip the next instruction, if indicated.  */
-    if (ctx->skip_cond != TCG_COND_NEVER) {
-        skip_label = gen_new_label();
-        if (ctx->skip_var0 == cpu_skip) {
-            /*
-             * Copy cpu_skip so that we may zero it before the branch.
-             * This ensures that cpu_skip is non-zero after the label
-             * if and only if the skipped insn itself sets a skip.
-             */
-            ctx->free_skip_var0 = true;
-            ctx->skip_var0 = tcg_temp_new();
-            tcg_gen_mov_tl(ctx->skip_var0, cpu_skip);
-            tcg_gen_movi_tl(cpu_skip, 0);
-        }
-        if (ctx->skip_var1 == NULL) {
-            tcg_gen_brcondi_tl(ctx->skip_cond, ctx->skip_var0, 0, skip_label);
-        } else {
-            tcg_gen_brcond_tl(ctx->skip_cond, ctx->skip_var0,
-                              ctx->skip_var1, skip_label);
-            ctx->skip_var1 = NULL;
-        }
-        if (ctx->free_skip_var0) {
-            tcg_temp_free(ctx->skip_var0);
-            ctx->free_skip_var0 = false;
-        }
-        ctx->skip_cond = TCG_COND_NEVER;
-        ctx->skip_var0 = NULL;
+    if (ctx.singlestep) {
+        max_insns = 1;
     }
 
-    translate(ctx);
+    gen_tb_start(tb);
 
-    ctx->base.pc_next = ctx->npc * 2;
+    ctx.npc = pc_start;
+    if (tb->flags & TB_FLAGS_SKIP) {
+        ctx.skip_cond = TCG_COND_ALWAYS;
+        ctx.skip_var0 = cpu_skip;
+    }
 
-    if (skip_label) {
-        canonicalize_skip(ctx);
-        gen_set_label(skip_label);
+    do {
+        TCGLabel *skip_label = NULL;
 
-        switch (ctx->base.is_jmp) {
-        case DISAS_NORETURN:
-            ctx->base.is_jmp = DISAS_CHAIN;
-            break;
-        case DISAS_NEXT:
-            if (ctx->base.tb->flags & TB_FLAGS_SKIP) {
-                ctx->base.is_jmp = DISAS_TOO_MANY;
+        /* translate current instruction */
+        tcg_gen_insn_start(ctx.npc);
+        num_insns++;
+
+        /*
+         * this is due to some strange GDB behavior
+         * let's assume main has address 0x100
+         * b main   - sets breakpoint at address 0x00000100 (code)
+         * b *0x100 - sets breakpoint at address 0x00800100 (data)
+         */
+        if (unlikely(!ctx.singlestep &&
+                (cpu_breakpoint_test(cs, OFFSET_CODE + ctx.npc * 2, BP_ANY) ||
+                 cpu_breakpoint_test(cs, OFFSET_DATA + ctx.npc * 2, BP_ANY)))) {
+            canonicalize_skip(&ctx);
+            tcg_gen_movi_tl(cpu_pc, ctx.npc);
+            gen_helper_debug(cpu_env);
+            goto done_generating;
+        }
+
+        /* Conditionally skip the next instruction, if indicated.  */
+        if (ctx.skip_cond != TCG_COND_NEVER) {
+            skip_label = gen_new_label();
+            if (ctx.skip_var0 == cpu_skip) {
+                /*
+                 * Copy cpu_skip so that we may zero it before the branch.
+                 * This ensures that cpu_skip is non-zero after the label
+                 * if and only if the skipped insn itself sets a skip.
+                 */
+                ctx.free_skip_var0 = true;
+                ctx.skip_var0 = tcg_temp_new();
+                tcg_gen_mov_tl(ctx.skip_var0, cpu_skip);
+                tcg_gen_movi_tl(cpu_skip, 0);
             }
-            break;
-        default:
-            break;
+            if (ctx.skip_var1 == NULL) {
+                tcg_gen_brcondi_tl(ctx.skip_cond, ctx.skip_var0, 0, skip_label);
+            } else {
+                tcg_gen_brcond_tl(ctx.skip_cond, ctx.skip_var0,
+                                  ctx.skip_var1, skip_label);
+                ctx.skip_var1 = NULL;
+            }
+            if (ctx.free_skip_var0) {
+                tcg_temp_free(ctx.skip_var0);
+                ctx.free_skip_var0 = false;
+            }
+            ctx.skip_cond = TCG_COND_NEVER;
+            ctx.skip_var0 = NULL;
         }
+
+        translate(&ctx);
+
+        if (skip_label) {
+            canonicalize_skip(&ctx);
+            gen_set_label(skip_label);
+            if (ctx.bstate == DISAS_NORETURN) {
+                ctx.bstate = DISAS_CHAIN;
+            }
+        }
+    } while (ctx.bstate == DISAS_NEXT
+             && num_insns < max_insns
+             && (ctx.npc - pc_start) * 2 < TARGET_PAGE_SIZE - 4
+             && !tcg_op_buf_full());
+
+    if (tb->cflags & CF_LAST_IO) {
+        gen_io_end();
     }
 
-    if (ctx->base.is_jmp == DISAS_NEXT) {
-        target_ulong page_first = ctx->base.pc_first & TARGET_PAGE_MASK;
+    bool nonconst_skip = canonicalize_skip(&ctx);
 
-        if ((ctx->base.pc_next - page_first) >= TARGET_PAGE_SIZE - 4) {
-            ctx->base.is_jmp = DISAS_TOO_MANY;
-        }
-    }
-}
-
-static void avr_tr_tb_stop(DisasContextBase *dcbase, CPUState *cs)
-{
-    DisasContext *ctx = container_of(dcbase, DisasContext, base);
-    bool nonconst_skip = canonicalize_skip(ctx);
-    /*
-     * Because we disable interrupts while env->skip is set,
-     * we must return to the main loop to re-evaluate afterward.
-     */
-    bool force_exit = ctx->base.tb->flags & TB_FLAGS_SKIP;
-
-    switch (ctx->base.is_jmp) {
+    switch (ctx.bstate) {
     case DISAS_NORETURN:
         assert(!nonconst_skip);
         break;
     case DISAS_NEXT:
     case DISAS_TOO_MANY:
     case DISAS_CHAIN:
-        if (!nonconst_skip && !force_exit) {
+        if (!nonconst_skip) {
             /* Note gen_goto_tb checks singlestep.  */
-            gen_goto_tb(ctx, 1, ctx->npc);
+            gen_goto_tb(&ctx, 1, ctx.npc);
             break;
         }
-        tcg_gen_movi_tl(cpu_pc, ctx->npc);
+        tcg_gen_movi_tl(cpu_pc, ctx.npc);
         /* fall through */
     case DISAS_LOOKUP:
-        if (!force_exit) {
+        if (!ctx.singlestep) {
             tcg_gen_lookup_and_goto_ptr();
             break;
         }
         /* fall through */
     case DISAS_EXIT:
-        tcg_gen_exit_tb(NULL, 0);
+        if (ctx.singlestep) {
+            gen_helper_debug(cpu_env);
+        } else {
+            tcg_gen_exit_tb(NULL, 0);
+        }
         break;
     default:
         g_assert_not_reached();
     }
+
+done_generating:
+    gen_tb_end(tb, num_insns);
+
+    tb->size = (ctx.npc - pc_start) * 2;
+    tb->icount = num_insns;
+
+#ifdef DEBUG_DISAS
+    if (qemu_loglevel_mask(CPU_LOG_TB_IN_ASM)
+        && qemu_log_in_addr_range(tb->pc)) {
+        FILE *fd;
+        fd = qemu_log_lock();
+        qemu_log("IN: %s\n", lookup_symbol(tb->pc));
+        log_target_disas(cs, tb->pc, tb->size);
+        qemu_log("\n");
+        qemu_log_unlock(fd);
+    }
+#endif
 }
 
-static void avr_tr_disas_log(const DisasContextBase *dcbase,
-                             CPUState *cs, FILE *logfile)
+void restore_state_to_opc(CPUAVRState *env, TranslationBlock *tb,
+                            target_ulong *data)
 {
-    fprintf(logfile, "IN: %s\n", lookup_symbol(dcbase->pc_first));
-    target_disas(logfile, cs, dcbase->pc_first, dcbase->tb->size);
-}
-
-static const TranslatorOps avr_tr_ops = {
-    .init_disas_context = avr_tr_init_disas_context,
-    .tb_start           = avr_tr_tb_start,
-    .insn_start         = avr_tr_insn_start,
-    .translate_insn     = avr_tr_translate_insn,
-    .tb_stop            = avr_tr_tb_stop,
-    .disas_log          = avr_tr_disas_log,
-};
-
-void gen_intermediate_code(CPUState *cs, TranslationBlock *tb, int max_insns,
-                           target_ulong pc, void *host_pc)
-{
-    DisasContext dc = { };
-    translator_loop(cs, tb, max_insns, pc, host_pc, &avr_tr_ops, &dc.base);
+    env->pc_w = data[0];
 }

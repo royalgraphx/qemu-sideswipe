@@ -1,10 +1,29 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2019 IBM Corp. */
+/* Copyright 2013-2017 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef __SPIRA_H
 #define __SPIRA_H
 
 #include "hdif.h"
+
+/*
+ * To help the FSP to distinguish between physical address and TCE mapped address.
+ * Also to help hostboot to distinguish physical and relative address.
+ */
+#define HRMOR_BIT (1ul << 63)
 
 /*
  * The SPIRA structure
@@ -57,10 +76,7 @@ struct spira_ntuples {
 	struct spira_ntuple	hs_data;		/* 0x320 */
 	struct spira_ntuple	ipmi_sensor;		/* 0x360 */
 	struct spira_ntuple	node_stb_data;		/* 0x380 */
-	struct spira_ntuple	proc_dump_area;		/* 0x400 */
 };
-
-#define SPIRA_RESERVED_BYTES	0x60
 
 struct spira {
 	struct HDIF_common_hdr	hdr;
@@ -69,14 +85,12 @@ struct spira {
 	struct spira_ntuples	ntuples;
 	/*
 	 * We reserve 0xc0 rather than 0x4c0 so we fit SPIRAH/SPIRAS here
-	 * while preserving compatibility with existing P8 systems.
+	 * while preserving compatibility with existing P7/P8 systems.
 	 *
 	 * According to FSP engineers, this is an okay thing to do.
 	 */
-	u8			reserved[SPIRA_RESERVED_BYTES];
+	u8			reserved[0x80];
 } __packed __align(0x100);
-
-#define SPIRA_ACTUAL_SIZE (sizeof(struct spira) - SPIRA_RESERVED_BYTES)
 
 extern struct spira spira;
 
@@ -178,7 +192,10 @@ extern struct HDIF_common_hdr *__get_hdif(struct spira_ntuple *n,
 			be32_to_cpu((_ntuples)->alloc_len));		\
 	     _p = (void *)_p + be32_to_cpu((_ntuples)->alloc_len))
 
+#define for_each_paca(p) for_each_ntuple(&spira.ntuples.paca, p, PACA_HDIF_SIG)
+
 #define for_each_pcia(p) for_each_ntuple(&spira.ntuples.pcia, p, SPPCIA_HDIF_SIG)
+
 
 /* We override these for testing. */
 #ifndef ntuple_addr
@@ -304,7 +321,7 @@ struct spss_iopath {
 			__be32	firmware_bar;
 			__be32	internal_bar;
 
-			__be32	mctp_base;
+			__be32	reserved2;
 
 			__be64	uart_base;
 			__be32	uart_size;
@@ -316,27 +333,13 @@ struct spss_iopath {
 #define			UART_INT_LVL_LOW	0x1
 #define			UART_INT_RISING		0x2
 #define			UART_INT_LVL_HIGH	0x3
-			uint8_t uart_valid;
-			uint8_t reserved3;
+			uint8_t reserved3[2];
 
 			__be64	bt_base;
 			__be32	bt_size;
 			uint8_t	bt_sms_int_num;
 			uint8_t	bt_bmc_response_int_num;
 			uint8_t	reserved4[2];
-
-			__be16	kcs_data_reg_addr;
-			__be16	kcs_status_reg_addr;
-			uint8_t kcs_int_number;
-
-			__be64	uart2_base;
-			__be32	uart2_size;
-			__be32	uart2_clk;  /* UART baud clock in Hz */
-			__be32	uart2_baud; /* UART baud rate */
-			uint8_t uart2_int_number;
-			uint8_t uart2_int_type;
-			uint8_t uart2_valid;
-			uint8_t reserved5;
 		} __packed lpc;
 	};
 } __packed;
@@ -360,7 +363,6 @@ struct iplparams_sysparams {
 	__be32		sys_eco_mode;
 #define SYS_ATTR_MULTIPLE_TPM PPC_BIT32(0)
 #define SYS_ATTR_RISK_LEVEL PPC_BIT32(3)
-#define SYS_ATTR_MPIPL_SUPPORTED PPC_BIT32(5)
 	__be32		sys_attributes;
 	__be32		mem_scrubbing;
 	__be16		cur_spl_value;
@@ -372,15 +374,10 @@ struct iplparams_sysparams {
 	__be16		hv_disp_wheel;		/* >= 0x58 */
 	__be32		nest_freq_mhz;		/* >= 0x5b */
 	uint8_t		split_core_mode;	/* >= 0x5c */
-	uint8_t		reserved[1];
-#define KEY_CLEAR_ALL     PPC_BIT16(0)
-#define KEY_CLEAR_OS_KEYS PPC_BIT16(1)
-#define KEY_CLEAR_MFG     PPC_BIT16(7)
-	__be16          host_fw_key_clear;
+	uint8_t		reserved[3];
 	uint8_t		sys_vendor[64];		/* >= 0x5f */
 #define SEC_CONTAINER_SIG_CHECKING PPC_BIT16(0)
 #define SEC_HASHES_EXTENDED_TO_TPM PPC_BIT16(1)
-#define PHYSICAL_PRESENCE_ASSERTED PPC_BIT16(3)
 	__be16		sys_sec_setting;	/* >= 0x60 */
 	__be16		tpm_config_bit;		/* >= 0x60 */
 	__be16		tpm_drawer;		/* >= 0x60 */
@@ -402,12 +399,8 @@ struct iplparams_iplparams {
 #define IPLPARAMS_FSP_FW_IPL_SIDE_TEMP	0x01
 	uint8_t		ipl_speed;
 	__be16		cec_ipl_attrib;
-#define IPLPARAMS_ATTRIB_MEM_PRESERVE	PPC_BIT16(2)
 	uint8_t		cec_ipl_maj_type;
-#define IPLPARAMS_MAJ_TYPE_REIPL	0x1
 	uint8_t		cec_ipl_min_type;
-#define IPLPARAMS_MIN_TYPE_POST_DUMP	0xc
-#define IPLPARAMS_MIN_TYPE_PLAT_REBOOT	0xd
 	uint8_t		os_ipl_mode;
 	uint8_t		keylock_pos;
 	uint8_t		lmb_size;
@@ -507,7 +500,6 @@ struct msvpd_ms_addr_config {
 	__be64	 max_possible_ms_address;
 	__be32	 deprecated;
 	__be64	 mirrorable_memory_starting_address;
-	__be64	 hrmor_stash_loc_address;
 } __packed;
 
 /* Idata index 1: Total configured mainstore */
@@ -665,9 +657,6 @@ struct cechub_io_hub {
 #define CECHUB_HUB_NIMBUS_MONZA		0x0021	/* Nimbus+monza from spec */
 #define CECHUB_HUB_NIMBUS_LAGRANGE	0x0022	/* Nimbus+lagrange from spec */
 #define CECHUB_HUB_CUMULUS_DUOMO	0x0030	/* cumulus+duomo from spec */
-#define CECHUB_HUB_AXONE_HOPPER		0x0040	/* axone+hopper */
-#define CECHUB_HUB_RAINIER		0x0050
-#define CECHUB_HUB_DENALI		0x0051
 	__be32		ec_level;
 	__be32		aff_dom2;	/* HDAT < v9.x only */
 	__be32		aff_dom3;	/* HDAT < v9.x only */
@@ -707,11 +696,8 @@ struct cechub_io_hub {
 		/* HDAT >= v9.x, HDIF version 0x6A adds phb_lane_eq with four
 		 *               words per PHB (4 PHBs).
 		 *
-		 * HDAT >= 10.x, HDIF version 0x7A adds space for another
+		 * HDAT >= 10.x, HDIF version 0x7A adds space for another two
 		 *               two PHBs (6 total) and the gen4 EQ values.
-		 *
-		 * HDAT >= 10.5x, HDIF version 0x8B adds space for the
-		 *                gen5 EQ values.
 		 */
 		struct {
 			/* Gen 3 PHB eq values, 6 PHBs */
@@ -719,9 +705,6 @@ struct cechub_io_hub {
 
 			/* Gen 4 PHB eq values */
 			__be64		phb4_lane_eq[6][4];
-
-			/* Gen 5 PHB eq values */
-			__be64		phb5_lane_eq[6][4];
 		};
 	};
 } __packed;
@@ -953,18 +936,24 @@ struct slca_entry {
 
 
 /*
- * SPPCIA structure. The SPIRA contain an array of these, one
- * per processor core
+ * SPPACA structure. The SPIRA contain an array of these, one
+ * per processor thread
  */
-#define SPPCIA_HDIF_SIG	"SPPCIA"
+#define PACA_HDIF_SIG	"SPPACA"
 
-/* Idata index 0 : Core unique data */
-#define SPPCIA_IDATA_CORE_UNIQUE	0
+/* Idata index 0 : FRU ID Data */
+#define SPPACA_IDATA_FRU_ID	0
 
-struct sppcia_core_unique {
-	__be32 reserved;
-	__be32 proc_fru_id;
-	__be32 hw_proc_id;
+/* Idata index 1 : Keyword VPD */
+#define SPPACA_IDATA_KW_VPD	1
+
+/* Idata index 2 : CPU ID data area */
+#define SPPACA_IDATA_CPU_ID	2
+
+struct sppaca_cpu_id {
+	__be32 pir;
+	__be32 fru_id;
+	__be32 hardware_proc_id;
 #define CPU_ID_VERIFY_MASK			0xC0000000
 #define CPU_ID_VERIFY_SHIFT			30
 #define CPU_ID_VERIFY_USABLE_NO_FAILURES	0
@@ -972,43 +961,45 @@ struct sppcia_core_unique {
 #define CPU_ID_VERIFY_NOT_INSTALLED		2
 #define CPU_ID_VERIFY_UNUSABLE			3
 #define CPU_ID_SECONDARY_THREAD			0x20000000
-#define CPU_ID_PCIA_RESERVED			0x10000000
+#define CPU_ID_PACA_RESERVED			0x10000000
 #define CPU_ID_NUM_SECONDARY_THREAD_MASK	0x00FF0000
 #define CPU_ID_NUM_SECONDARY_THREAD_SHIFT	16
-	__be32 verif_exist_flags;
+	__be32 verify_exists_flags;
 	__be32 chip_ec_level;
-	__be32 proc_chip_id;
-	__be32 reserved2;
-	__be32 reserved3;
-	__be32 reserved4;
-	__be32 hw_module_id;
-	__be64 reserved5;
-	__be32 reserved6;
-	__be32 reserved7;
-	__be32 reserved8;
+	__be32 processor_chip_id;
+	__be32 logical_processor_id;
+	/* This is the resource number, too. */
+	__be32 process_interrupt_line;
+	__be32 reserved1;
+	__be32 hardware_module_id;
+	__be64 ibase;
+	__be32 deprecated1;
+	__be32 physical_thread_id;
+	__be32 deprecated2;
 	__be32 ccm_node_id;
+	/* This fields are not always present, check struct size */
+#define SPIRA_CPU_ID_MIN_SIZE	0x40
 	__be32 hw_card_id;
 	__be32 internal_drawer_node_id;
 	__be32 drawer_book_octant_blade_id;
 	__be32 memory_interleaving_scope;
 	__be32 lco_target;
-	__be32 reserved9;
 } __packed;
 
-/* Idata index 1 : CPU Time base structure */
-#define SPPCIA_IDATA_TIMEBASE		1
+/* Idata index 3 : Timebase data */
+#define SPPACA_IDATA_TIMEBASE	3
 
-struct sppcia_cpu_timebase {
+struct sppaca_cpu_timebase {
 	__be32 cycle_time;
 	__be32 time_base;
 	__be32 actual_clock_speed;
 	__be32 memory_bus_frequency;
 } __packed;
 
-/* Idata index 2 : CPU Cache Size Structure */
-#define SPPCIA_IDATA_CPU_CACHE		2
+/* Idata index 4 : Cache size structure */
+#define SPPACA_IDATA_CACHE_SIZE	4
 
-struct sppcia_cpu_cache {
+struct sppaca_cpu_cache {
 	__be32 icache_size_kb;
 	__be32 icache_line_size;
 	__be32 l1_dcache_size_kb;
@@ -1031,6 +1022,57 @@ struct sppcia_cpu_cache {
 	__be32 l35_cache_line_size;
 } __packed;
 
+/* Idata index 6 : CPU Attributes */
+#define SPPACA_IDATA_CPU_ATTR	6
+
+#define sppaca_cpu_attr sppcia_cpu_attr
+
+/*
+ * SPPCIA structure. The SPIRA contain an array of these, one
+ * per processor core
+ */
+#define SPPCIA_HDIF_SIG	"SPPCIA"
+
+/* Idata index 0 : Core unique data */
+#define SPPCIA_IDATA_CORE_UNIQUE	0
+
+/* NOTE: This is the same layout as "struct sppaca_cpu_id",
+ *       with essentially some fields removed and a reserved
+ *       field added
+ */
+struct sppcia_core_unique {
+	__be32 reserved;
+	__be32 proc_fru_id;
+	__be32 hw_proc_id;
+	__be32 verif_exist_flags;	/* Same as PACA */
+	__be32 chip_ec_level;
+	__be32 proc_chip_id;
+	__be32 reserved2;
+	__be32 reserved3;
+	__be32 reserved4;
+	__be32 hw_module_id;
+	__be64 reserved5;
+	__be32 reserved6;
+	__be32 reserved7;
+	__be32 reserved8;
+	__be32 ccm_node_id;
+	__be32 hw_card_id;
+	__be32 internal_drawer_node_id;
+	__be32 drawer_book_octant_blade_id;
+	__be32 memory_interleaving_scope;
+	__be32 lco_target;
+	__be32 reserved9;
+} __packed;
+
+/* Idata index 1 : CPU Time base structure */
+#define SPPCIA_IDATA_TIMEBASE		1
+
+#define sppcia_cpu_timebase sppaca_cpu_timebase
+
+/* Idata index 2 : CPU Cache Size Structure */
+#define SPPCIA_IDATA_CPU_CACHE		2
+
+#define sppcia_cpu_cache sppaca_cpu_cache
 
 /* Idata index 3 : Thread Array Data
  *
@@ -1099,13 +1141,7 @@ struct sppcrd_chip_info {
 	/* From latest version (possibly 0x21 and later) */
 	__be32 sw_xstop_fir_scom;
 	uint8_t sw_xstop_fir_bitpos;
-	/* Latest version for P10 */
-#define	CHIP_MAX_TOPOLOGY_ENTRIES	32
-	uint8_t topology_id_table[CHIP_MAX_TOPOLOGY_ENTRIES];
-	uint8_t	primary_topology_loc;	/* Index in topology_id_table */
-	__be32  abc_bus_speed;	/* SMP A */
-	__be32  wxyz_bus_speed;	/* SMP X */
-	uint8_t	fab_topology_id;/* topology id associated with the chip. */
+	uint8_t	reserved_1[3];
 } __packed;
 
 /* Idata index 1 : Chip TOD */
@@ -1152,7 +1188,7 @@ struct sppcrd_smp_link {
 	__be16 pci_sideband_slot_idx;
 
 	__be16 slca_idx; /* SLCA index of the *external* port */
-	__be16 opt_id;
+	__be16 reserved;
 
 	/* nvlink/ocapi detection devices */
 	__be32 i2c_link_cable;
@@ -1191,8 +1227,7 @@ struct ipmi_sensors_data {
 	__be32	slca_index;
 	uint8_t	type;
 	uint8_t	id;
-	uint8_t entity_id;
-	uint8_t reserved;
+	__be16	reserved;
 } __packed;
 
 struct ipmi_sensors {

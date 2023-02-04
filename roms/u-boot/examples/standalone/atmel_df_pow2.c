@@ -9,7 +9,6 @@
 #include <common.h>
 #include <exports.h>
 #include <spi.h>
-#include <linux/delay.h>
 
 #define CMD_ID    0x9f
 #define CMD_STAT  0xd7
@@ -116,7 +115,7 @@ static char *getline(void)
 	}
 }
 
-int atmel_df_pow2(int argc, char *const argv[])
+int atmel_df_pow2(int argc, char * const argv[])
 {
 	/* Print the ABI version */
 	app_startup(argv);

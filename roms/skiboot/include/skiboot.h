@@ -1,5 +1,18 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2019 IBM Corp. */
+/* Copyright 2013-2014 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #ifndef __SKIBOOT_H
 #define __SKIBOOT_H
@@ -37,7 +50,6 @@ extern struct mem_region *mem_region_next(struct mem_region *region);
 
 /* Misc linker script symbols */
 extern char _start[];
-extern char _head_end[];
 extern char _stext[];
 extern char _etext[];
 extern char __sym_map_end[];
@@ -97,7 +109,6 @@ enum proc_gen {
 	proc_gen_unknown,
 	proc_gen_p8,
 	proc_gen_p9,
-	proc_gen_p10,
 };
 extern enum proc_gen proc_gen;
 
@@ -139,17 +150,6 @@ static inline bool is_pow2(unsigned long val)
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 #define MAX(a, b)	((a) > (b) ? (a) : (b))
 
-/* PCI Geographical Addressing */
-#define PCI_BUS_NUM(bdfn)	(((bdfn) >> 8) & 0xff)
-#define PCI_DEV(bdfn)		(((bdfn) >> 3) & 0x1f)
-#define PCI_FUNC(bdfn)		((bdfn) & 0x07)
-
-/*
- * To help the FSP to distinguish between physical address and TCE mapped address.
- * Also to help hostboot to distinguish physical and relative address.
- */
-#define HRMOR_BIT (1ul << 63)
-
 /* Clean the stray high bit which the FSP inserts: we only have 52 bits real */
 static inline u64 cleanup_addr(u64 addr)
 {
@@ -162,11 +162,6 @@ extern void start_kernel(uint64_t entry, void* fdt,
 extern void start_kernel32(uint64_t entry, void* fdt,
 			   uint64_t mem_top) __noreturn;
 extern void start_kernel_secondary(uint64_t entry) __noreturn;
-
-/* Re-set r16 register with CPU pointer, based on stack (r1) value */
-extern void restore_cpu_ptr_r16(void);
-/* Set r16 register with value in 'r16' parameter */
-extern void set_cpu_ptr_r16(uint64_t r16);
 
 /* Get description of machine from HDAT and create device-tree */
 extern int parse_hdat(bool is_opal);
@@ -205,7 +200,6 @@ extern bool start_preload_kernel(void);
 extern void copy_exception_vectors(void);
 extern void copy_sreset_vector(void);
 extern void copy_sreset_vector_fast_reboot(void);
-extern void patch_traps(bool enable);
 
 /* Various probe routines, to replace with an initcall system */
 extern void probe_phb3(void);
@@ -214,7 +208,6 @@ extern int preload_capp_ucode(void);
 extern void preload_io_vpd(void);
 extern void probe_npu(void);
 extern void probe_npu2(void);
-extern void probe_pau(void);
 extern void uart_init(void);
 extern void mbox_init(void);
 extern void early_uart_init(void);
@@ -231,7 +224,6 @@ extern int flash_start_preload_resource(enum resource_id id, uint32_t subid,
 extern int flash_resource_loaded(enum resource_id id, uint32_t idx);
 extern bool flash_reserve(void);
 extern void flash_release(void);
-extern bool flash_unregister(void);
 #define FLASH_SUBPART_ALIGNMENT 0x1000
 #define FLASH_SUBPART_HEADER_SIZE FLASH_SUBPART_ALIGNMENT
 extern int flash_subpart_info(void *part_header, uint32_t header_len,
@@ -241,9 +233,6 @@ extern int flash_subpart_info(void *part_header, uint32_t header_len,
 extern void flash_fw_version_preload(void);
 extern void flash_dt_add_fw_version(void);
 extern const char *flash_map_resource_name(enum resource_id id);
-extern int flash_secboot_info(uint32_t *total_size);
-extern int flash_secboot_read(void *dst, uint32_t src, uint32_t len);
-extern int flash_secboot_write(uint32_t dst, void *src, uint32_t len);
 
 /*
  * Decompression routines
@@ -315,6 +304,12 @@ enum wakeup_engine_states {
 extern enum wakeup_engine_states wakeup_engine_state;
 extern bool has_deep_states;
 extern void nx_p9_rng_late_init(void);
+extern void xive_late_init(void);
+
+
+
+/* SLW reinit function for switching core settings */
+extern int64_t slw_reinit(uint64_t flags);
 
 /* Patch SPR in SLW image */
 extern int64_t opal_slw_set_reg(uint64_t cpu_pir, uint64_t sprn, uint64_t val);
@@ -328,7 +323,7 @@ extern void fake_rtc_init(void);
 struct stack_frame;
 extern void exception_entry(struct stack_frame *stack);
 extern void exception_entry_pm_sreset(void);
-extern void __noreturn exception_entry_pm_mce(void);
+extern void exception_entry_pm_mce(void);
 
 /* Assembly in head.S */
 extern void disable_machine_check(void);

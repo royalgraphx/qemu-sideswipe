@@ -10,8 +10,6 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <irq_func.h>
 #include <asm/ptrace.h>
 #include <asm/system.h>
 #undef INTERRUPT_MODE
@@ -66,7 +64,7 @@ int disable_interrupts(void)
 void bad_mode(void)
 {
 	panic("Resetting CPU ...\n");
-	reset_cpu();
+	reset_cpu(0);
 }
 
 void show_regs(struct pt_regs *regs)

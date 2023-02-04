@@ -41,7 +41,7 @@ GetPeiServicesTablePointer (
 VOID
 EFIAPI
 SetPeiServicesTablePointer (
-  IN CONST EFI_PEI_SERVICES  **PeiServicesTablePointer
+  IN CONST EFI_PEI_SERVICES ** PeiServicesTablePointer
   );
 
 /**
@@ -65,3 +65,4 @@ MigratePeiServicesTablePointer (
   );
 
 #endif
+

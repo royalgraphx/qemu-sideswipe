@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: auto quick
 #
 # Test case for connecting to a non-existing NBD export name
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"

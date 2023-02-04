@@ -16,12 +16,10 @@
 #include "qom/object.h"
 #include "qom/object_interfaces.h"
 #include "qemu/cutils.h"
-#include "qemu/memalign.h"
 #include "qapi/visitor.h"
 #include "qapi/string-input-visitor.h"
 #include "qapi/string-output-visitor.h"
 #include "qapi/qobject-input-visitor.h"
-#include "qapi/forward-visitor.h"
 #include "qapi/qapi-builtin-visit.h"
 #include "qapi/qmp/qerror.h"
 #include "qapi/qmp/qjson.h"
@@ -52,7 +50,6 @@ struct TypeImpl
     size_t class_size;
 
     size_t instance_size;
-    size_t instance_align;
 
     void (*class_init)(ObjectClass *klass, void *data);
     void (*class_base_init)(ObjectClass *klass, void *data);
@@ -117,7 +114,6 @@ static TypeImpl *type_new(const TypeInfo *info)
 
     ti->class_size = info->class_size;
     ti->instance_size = info->instance_size;
-    ti->instance_align = info->instance_align;
 
     ti->class_init = info->class_init;
     ti->class_base_init = info->class_base_init;
@@ -405,7 +401,7 @@ bool object_apply_global_props(Object *obj, const GPtrArray *props,
         if (object_dynamic_cast(obj, p->driver) == NULL) {
             continue;
         }
-        if (p->optional && !object_property_find(obj, p->property)) {
+        if (p->optional && !object_property_find(obj, p->property, NULL)) {
             continue;
         }
         p->used = true;
@@ -444,8 +440,7 @@ static GPtrArray *object_compat_props[3];
  * other than "-global".  These are generally used for syntactic
  * sugar and legacy command line options.
  */
-void object_register_sugar_prop(const char *driver, const char *prop,
-                                const char *value, bool optional)
+void object_register_sugar_prop(const char *driver, const char *prop, const char *value)
 {
     GlobalProperty *g;
     if (!object_compat_props[2]) {
@@ -455,7 +450,6 @@ void object_register_sugar_prop(const char *driver, const char *prop,
     g->driver = g_strdup(driver);
     g->property = g_strdup(prop);
     g->value = g_strdup(value);
-    g->optional = optional;
     g_ptr_array_add(object_compat_props[2], g);
 }
 
@@ -524,17 +518,6 @@ void object_initialize(void *data, size_t size, const char *typename)
 {
     TypeImpl *type = type_get_by_name(typename);
 
-#ifdef CONFIG_MODULES
-    if (!type) {
-        int rv = module_load_qom(typename, &error_fatal);
-        if (rv > 0) {
-            type = type_get_by_name(typename);
-        } else {
-            error_report("missing object type '%s'", typename);
-            exit(1);
-        }
-    }
-#endif
     if (!type) {
         error_report("missing object type '%s'", typename);
         abort();
@@ -694,50 +677,21 @@ static void object_finalize(void *data)
     object_deinit(obj, ti);
 
     g_assert(obj->ref == 0);
-    g_assert(obj->parent == NULL);
     if (obj->free) {
         obj->free(obj);
     }
 }
 
-/* Find the minimum alignment guaranteed by the system malloc. */
-#if __STDC_VERSION__ >= 201112L
-typedef max_align_t qemu_max_align_t;
-#else
-typedef union {
-    long l;
-    void *p;
-    double d;
-    long double ld;
-} qemu_max_align_t;
-#endif
-
 static Object *object_new_with_type(Type type)
 {
     Object *obj;
-    size_t size, align;
-    void (*obj_free)(void *);
 
     g_assert(type != NULL);
     type_initialize(type);
 
-    size = type->instance_size;
-    align = type->instance_align;
-
-    /*
-     * Do not use qemu_memalign unless required.  Depending on the
-     * implementation, extra alignment implies extra overhead.
-     */
-    if (likely(align <= __alignof__(qemu_max_align_t))) {
-        obj = g_malloc(size);
-        obj_free = g_free;
-    } else {
-        obj = qemu_memalign(align, size);
-        obj_free = qemu_vfree;
-    }
-
-    object_initialize_with_type(obj, size, type);
-    obj->free = obj_free;
+    obj = g_malloc(type->instance_size);
+    object_initialize_with_type(obj, type->instance_size, type);
+    obj->free = g_free;
 
     return obj;
 }
@@ -877,7 +831,7 @@ Object *object_dynamic_cast_assert(Object *obj, const char *typename,
     Object *inst;
 
     for (i = 0; obj && i < OBJECT_CLASS_CAST_CACHE; i++) {
-        if (qatomic_read(&obj->class->object_cast_cache[i]) == typename) {
+        if (atomic_read(&obj->class->object_cast_cache[i]) == typename) {
             goto out;
         }
     }
@@ -894,10 +848,10 @@ Object *object_dynamic_cast_assert(Object *obj, const char *typename,
 
     if (obj && obj == inst) {
         for (i = 1; i < OBJECT_CLASS_CAST_CACHE; i++) {
-            qatomic_set(&obj->class->object_cast_cache[i - 1],
-                       qatomic_read(&obj->class->object_cast_cache[i]));
+            atomic_set(&obj->class->object_cast_cache[i - 1],
+                       atomic_read(&obj->class->object_cast_cache[i]));
         }
-        qatomic_set(&obj->class->object_cast_cache[i - 1], typename);
+        atomic_set(&obj->class->object_cast_cache[i - 1], typename);
     }
 
 out:
@@ -967,7 +921,7 @@ ObjectClass *object_class_dynamic_cast_assert(ObjectClass *class,
     int i;
 
     for (i = 0; class && i < OBJECT_CLASS_CAST_CACHE; i++) {
-        if (qatomic_read(&class->class_cast_cache[i]) == typename) {
+        if (atomic_read(&class->class_cast_cache[i]) == typename) {
             ret = class;
             goto out;
         }
@@ -988,10 +942,10 @@ ObjectClass *object_class_dynamic_cast_assert(ObjectClass *class,
 #ifdef CONFIG_QOM_CAST_DEBUG
     if (class && ret == class) {
         for (i = 1; i < OBJECT_CLASS_CAST_CACHE; i++) {
-            qatomic_set(&class->class_cast_cache[i - 1],
-                       qatomic_read(&class->class_cast_cache[i]));
+            atomic_set(&class->class_cast_cache[i - 1],
+                       atomic_read(&class->class_cast_cache[i]));
         }
-        qatomic_set(&class->class_cast_cache[i - 1], typename);
+        atomic_set(&class->class_cast_cache[i - 1], typename);
     }
 out:
 #endif
@@ -1038,13 +992,8 @@ ObjectClass *module_object_class_by_name(const char *typename)
     oc = object_class_by_name(typename);
 #ifdef CONFIG_MODULES
     if (!oc) {
-        Error *local_err = NULL;
-        int rv = module_load_qom(typename, &local_err);
-        if (rv > 0) {
-            oc = object_class_by_name(typename);
-        } else if (rv < 0) {
-            error_report_err(local_err);
-        }
+        module_load_qom_one(typename);
+        oc = object_class_by_name(typename);
     }
 #endif
     return oc;
@@ -1175,30 +1124,24 @@ GSList *object_class_get_list_sorted(const char *implements_type,
                         object_class_cmp);
 }
 
-Object *object_ref(void *objptr)
+Object *object_ref(Object *obj)
 {
-    Object *obj = OBJECT(objptr);
-    uint32_t ref;
-
     if (!obj) {
         return NULL;
     }
-    ref = qatomic_fetch_inc(&obj->ref);
-    /* Assert waaay before the integer overflows */
-    g_assert(ref < INT_MAX);
+    atomic_inc(&obj->ref);
     return obj;
 }
 
-void object_unref(void *objptr)
+void object_unref(Object *obj)
 {
-    Object *obj = OBJECT(objptr);
     if (!obj) {
         return;
     }
     g_assert(obj->ref > 0);
 
     /* parent always holds a reference to its children */
-    if (qatomic_fetch_dec(&obj->ref) == 1) {
+    if (atomic_fetch_dec(&obj->ref) == 1) {
         object_finalize(obj);
     }
 }
@@ -1215,11 +1158,11 @@ object_property_try_add(Object *obj, const char *name, const char *type,
 
     if (name_len >= 3 && !memcmp(name + name_len - 3, "[*]", 4)) {
         int i;
-        ObjectProperty *ret = NULL;
+        ObjectProperty *ret;
         char *name_no_array = g_strdup(name);
 
         name_no_array[name_len - 3] = '\0';
-        for (i = 0; i < INT16_MAX; ++i) {
+        for (i = 0; ; ++i) {
             char *full_name = g_strdup_printf("%s[%d]", name_no_array, i);
 
             ret = object_property_try_add(obj, full_name, type, get, set,
@@ -1230,11 +1173,10 @@ object_property_try_add(Object *obj, const char *name, const char *type,
             }
         }
         g_free(name_no_array);
-        assert(ret);
         return ret;
     }
 
-    if (object_property_find(obj, name) != NULL) {
+    if (object_property_find(obj, name, NULL) != NULL) {
         error_setg(errp, "attempt to add duplicate property '%s' to object (type '%s')",
                    name, object_get_typename(obj));
         return NULL;
@@ -1276,7 +1218,7 @@ object_class_property_add(ObjectClass *klass,
 {
     ObjectProperty *prop;
 
-    assert(!object_class_property_find(klass, name));
+    assert(!object_class_property_find(klass, name, NULL));
 
     prop = g_malloc0(sizeof(*prop));
 
@@ -1293,28 +1235,24 @@ object_class_property_add(ObjectClass *klass,
     return prop;
 }
 
-ObjectProperty *object_property_find(Object *obj, const char *name)
+ObjectProperty *object_property_find(Object *obj, const char *name,
+                                     Error **errp)
 {
     ObjectProperty *prop;
     ObjectClass *klass = object_get_class(obj);
 
-    prop = object_class_property_find(klass, name);
+    prop = object_class_property_find(klass, name, NULL);
     if (prop) {
         return prop;
     }
 
-    return g_hash_table_lookup(obj->properties, name);
-}
-
-ObjectProperty *object_property_find_err(Object *obj, const char *name,
-                                         Error **errp)
-{
-    ObjectProperty *prop = object_property_find(obj, name);
-    if (!prop) {
-        error_setg(errp, "Property '%s.%s' not found",
-                   object_get_typename(obj), name);
+    prop = g_hash_table_lookup(obj->properties, name);
+    if (prop) {
+        return prop;
     }
-    return prop;
+
+    error_setg(errp, "Property '.%s' not found", name);
+    return NULL;
 }
 
 void object_property_iter_init(ObjectPropertyIterator *iter,
@@ -1344,33 +1282,26 @@ void object_class_property_iter_init(ObjectPropertyIterator *iter,
     iter->nextclass = object_class_get_parent(klass);
 }
 
-ObjectProperty *object_class_property_find(ObjectClass *klass, const char *name)
+ObjectProperty *object_class_property_find(ObjectClass *klass, const char *name,
+                                           Error **errp)
 {
+    ObjectProperty *prop;
     ObjectClass *parent_klass;
 
     parent_klass = object_class_get_parent(klass);
     if (parent_klass) {
-        ObjectProperty *prop =
-            object_class_property_find(parent_klass, name);
+        prop = object_class_property_find(parent_klass, name, NULL);
         if (prop) {
             return prop;
         }
     }
 
-    return g_hash_table_lookup(klass->properties, name);
-}
-
-ObjectProperty *object_class_property_find_err(ObjectClass *klass,
-                                               const char *name,
-                                               Error **errp)
-{
-    ObjectProperty *prop = object_class_property_find(klass, name);
+    prop = g_hash_table_lookup(klass->properties, name);
     if (!prop) {
         error_setg(errp, "Property '.%s' not found", name);
     }
     return prop;
 }
-
 
 void object_property_del(Object *obj, const char *name)
 {
@@ -1386,15 +1317,14 @@ bool object_property_get(Object *obj, const char *name, Visitor *v,
                          Error **errp)
 {
     Error *err = NULL;
-    ObjectProperty *prop = object_property_find_err(obj, name, errp);
+    ObjectProperty *prop = object_property_find(obj, name, errp);
 
     if (prop == NULL) {
         return false;
     }
 
     if (!prop->get) {
-        error_setg(errp, "Property '%s.%s' is not readable",
-                   object_get_typename(obj), name);
+        error_setg(errp, QERR_PERMISSION_DENIED);
         return false;
     }
     prop->get(obj, v, name, prop->opaque, &err);
@@ -1405,20 +1335,20 @@ bool object_property_get(Object *obj, const char *name, Visitor *v,
 bool object_property_set(Object *obj, const char *name, Visitor *v,
                          Error **errp)
 {
-    ERRP_GUARD();
-    ObjectProperty *prop = object_property_find_err(obj, name, errp);
+    Error *err = NULL;
+    ObjectProperty *prop = object_property_find(obj, name, errp);
 
     if (prop == NULL) {
         return false;
     }
 
     if (!prop->set) {
-        error_setg(errp, "Property '%s.%s' is not writable",
-                   object_get_typename(obj), name);
+        error_setg(errp, QERR_PERMISSION_DENIED);
         return false;
     }
-    prop->set(obj, v, name, prop->opaque, errp);
-    return !*errp;
+    prop->set(obj, v, name, prop->opaque, &err);
+    error_propagate(errp, err);
+    return !err;
 }
 
 bool object_property_set_str(Object *obj, const char *name,
@@ -1435,18 +1365,15 @@ char *object_property_get_str(Object *obj, const char *name,
                               Error **errp)
 {
     QObject *ret = object_property_get_qobject(obj, name, errp);
-    QString *qstring;
     char *retval;
 
     if (!ret) {
         return NULL;
     }
-    qstring = qobject_to(QString, ret);
-    if (!qstring) {
+
+    retval = g_strdup(qobject_get_try_str(ret));
+    if (!retval) {
         error_setg(errp, QERR_INVALID_PARAMETER_TYPE, name, "string");
-        retval = NULL;
-    } else {
-        retval = g_strdup(qstring_get_str(qstring));
     }
 
     qobject_unref(ret);
@@ -1625,25 +1552,25 @@ int object_property_get_enum(Object *obj, const char *name,
 {
     char *str;
     int ret;
-    ObjectProperty *prop = object_property_find_err(obj, name, errp);
+    ObjectProperty *prop = object_property_find(obj, name, errp);
     EnumProperty *enumprop;
 
     if (prop == NULL) {
-        return -1;
+        return 0;
     }
 
     if (!g_str_equal(prop->type, typename)) {
         error_setg(errp, "Property %s on %s is not '%s' enum type",
                    name, object_class_get_name(
                        object_get_class(obj)), typename);
-        return -1;
+        return 0;
     }
 
     enumprop = prop->opaque;
 
     str = object_property_get_str(obj, name, errp);
     if (!str) {
-        return -1;
+        return 0;
     }
 
     ret = qapi_enum_parse(enumprop->lookup, str, -1, errp);
@@ -1682,7 +1609,7 @@ out:
 
 const char *object_property_get_type(Object *obj, const char *name, Error **errp)
 {
-    ObjectProperty *prop = object_property_find_err(obj, name, errp);
+    ObjectProperty *prop = object_property_find(obj, name, errp);
     if (prop == NULL) {
         return NULL;
     }
@@ -2060,7 +1987,7 @@ char *object_get_canonical_path(const Object *obj)
 
 Object *object_resolve_path_component(Object *parent, const char *part)
 {
-    ObjectProperty *prop = object_property_find(parent, part);
+    ObjectProperty *prop = object_property_find(parent, part, NULL);
     if (prop == NULL) {
         return NULL;
     }
@@ -2161,17 +2088,6 @@ Object *object_resolve_path(const char *path, bool *ambiguous)
     return object_resolve_path_type(path, TYPE_OBJECT, ambiguous);
 }
 
-Object *object_resolve_path_at(Object *parent, const char *path)
-{
-    g_auto(GStrv) parts = g_strsplit(path, "/", 0);
-
-    if (*path == '/') {
-        return object_resolve_abs_path(object_get_root(), parts + 1,
-                                       TYPE_OBJECT);
-    }
-    return object_resolve_abs_path(parent, parts, TYPE_OBJECT);
-}
-
 typedef struct StringProperty
 {
     char *(*get)(Object *, Error **);
@@ -2209,10 +2125,11 @@ static void property_set_str(Object *obj, Visitor *v, const char *name,
     g_free(value);
 }
 
-static void property_release_data(Object *obj, const char *name,
-                                  void *opaque)
+static void property_release_str(Object *obj, const char *name,
+                                 void *opaque)
 {
-    g_free(opaque);
+    StringProperty *prop = opaque;
+    g_free(prop);
 }
 
 ObjectProperty *
@@ -2228,7 +2145,7 @@ object_property_add_str(Object *obj, const char *name,
     return object_property_add(obj, name, "string",
                                get ? property_get_str : NULL,
                                set ? property_set_str : NULL,
-                               property_release_data,
+                               property_release_str,
                                prop);
 }
 
@@ -2285,6 +2202,13 @@ static void property_set_bool(Object *obj, Visitor *v, const char *name,
     prop->set(obj, value, errp);
 }
 
+static void property_release_bool(Object *obj, const char *name,
+                                  void *opaque)
+{
+    BoolProperty *prop = opaque;
+    g_free(prop);
+}
+
 ObjectProperty *
 object_property_add_bool(Object *obj, const char *name,
                          bool (*get)(Object *, Error **),
@@ -2298,7 +2222,7 @@ object_property_add_bool(Object *obj, const char *name,
     return object_property_add(obj, name, "bool",
                                get ? property_get_bool : NULL,
                                set ? property_set_bool : NULL,
-                               property_release_data,
+                               property_release_bool,
                                prop);
 }
 
@@ -2347,6 +2271,13 @@ static void property_set_enum(Object *obj, Visitor *v, const char *name,
     prop->set(obj, value, errp);
 }
 
+static void property_release_enum(Object *obj, const char *name,
+                                  void *opaque)
+{
+    EnumProperty *prop = opaque;
+    g_free(prop);
+}
+
 ObjectProperty *
 object_property_add_enum(Object *obj, const char *name,
                          const char *typename,
@@ -2363,7 +2294,7 @@ object_property_add_enum(Object *obj, const char *name,
     return object_property_add(obj, name, typename,
                                get ? property_get_enum : NULL,
                                set ? property_set_enum : NULL,
-                               property_release_data,
+                               property_release_enum,
                                prop);
 }
 
@@ -2430,6 +2361,13 @@ out_end:
     visit_end_struct(v, NULL);
 }
 
+static void property_release_tm(Object *obj, const char *name,
+                                void *opaque)
+{
+    TMProperty *prop = opaque;
+    g_free(prop);
+}
+
 ObjectProperty *
 object_property_add_tm(Object *obj, const char *name,
                        void (*get)(Object *, struct tm *, Error **))
@@ -2440,7 +2378,7 @@ object_property_add_tm(Object *obj, const char *name,
 
     return object_property_add(obj, name, "struct tm",
                                get ? property_get_tm : NULL, NULL,
-                               property_release_data,
+                               property_release_tm,
                                prop);
 }
 
@@ -2711,20 +2649,16 @@ static void property_get_alias(Object *obj, Visitor *v, const char *name,
                                void *opaque, Error **errp)
 {
     AliasProperty *prop = opaque;
-    Visitor *alias_v = visitor_forward_field(v, prop->target_name, name);
 
-    object_property_get(prop->target_obj, prop->target_name, alias_v, errp);
-    visit_free(alias_v);
+    object_property_get(prop->target_obj, prop->target_name, v, errp);
 }
 
 static void property_set_alias(Object *obj, Visitor *v, const char *name,
                                void *opaque, Error **errp)
 {
     AliasProperty *prop = opaque;
-    Visitor *alias_v = visitor_forward_field(v, prop->target_name, name);
 
-    object_property_set(prop->target_obj, prop->target_name, alias_v, errp);
-    visit_free(alias_v);
+    object_property_set(prop->target_obj, prop->target_name, v, errp);
 }
 
 static Object *property_resolve_alias(Object *obj, void *opaque,
@@ -2752,8 +2686,8 @@ object_property_add_alias(Object *obj, const char *name,
     ObjectProperty *target_prop;
     g_autofree char *prop_type = NULL;
 
-    target_prop = object_property_find_err(target_obj, target_name,
-                                           &error_abort);
+    target_prop = object_property_find(target_obj, target_name,
+                                       &error_abort);
 
     if (object_property_is_child(target_prop)) {
         prop_type = g_strdup_printf("link%s",
@@ -2786,7 +2720,7 @@ void object_property_set_description(Object *obj, const char *name,
 {
     ObjectProperty *op;
 
-    op = object_property_find_err(obj, name, &error_abort);
+    op = object_property_find(obj, name, &error_abort);
     g_free(op->description);
     op->description = g_strdup(description);
 }
@@ -2810,13 +2744,13 @@ static void object_class_init(ObjectClass *klass, void *data)
 
 static void register_types(void)
 {
-    static const TypeInfo interface_info = {
+    static TypeInfo interface_info = {
         .name = TYPE_INTERFACE,
         .class_size = sizeof(InterfaceClass),
         .abstract = true,
     };
 
-    static const TypeInfo object_info = {
+    static TypeInfo object_info = {
         .name = TYPE_OBJECT,
         .instance_size = sizeof(Object),
         .class_init = object_class_init,

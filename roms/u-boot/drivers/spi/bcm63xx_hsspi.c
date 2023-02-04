@@ -10,13 +10,10 @@
 #include <common.h>
 #include <clk.h>
 #include <dm.h>
-#include <log.h>
-#include <malloc.h>
 #include <spi.h>
 #include <reset.h>
 #include <wait_bit.h>
 #include <asm/io.h>
-#include <linux/bitops.h>
 
 #define HSSPI_PP			0
 
@@ -111,7 +108,7 @@ static int bcm63xx_hsspi_cs_info(struct udevice *bus, uint cs,
 
 	if (cs >= priv->num_cs) {
 		printf("no cs %u\n", cs);
-		return -EINVAL;
+		return -ENODEV;
 	}
 
 	return 0;
@@ -123,9 +120,9 @@ static int bcm63xx_hsspi_set_mode(struct udevice *bus, uint mode)
 
 	/* clock polarity */
 	if (mode & SPI_CPOL)
-		setbits_32(priv->regs + SPI_CTL_REG, SPI_CTL_CLK_POL_MASK);
+		setbits_be32(priv->regs + SPI_CTL_REG, SPI_CTL_CLK_POL_MASK);
 	else
-		clrbits_32(priv->regs + SPI_CTL_REG, SPI_CTL_CLK_POL_MASK);
+		clrbits_be32(priv->regs + SPI_CTL_REG, SPI_CTL_CLK_POL_MASK);
 
 	return 0;
 }
@@ -140,7 +137,7 @@ static int bcm63xx_hsspi_set_speed(struct udevice *bus, uint speed)
 }
 
 static void bcm63xx_hsspi_activate_cs(struct bcm63xx_hsspi_priv *priv,
-				   struct dm_spi_slave_plat *plat)
+				   struct dm_spi_slave_platdata *plat)
 {
 	uint32_t clr, set;
 
@@ -149,7 +146,7 @@ static void bcm63xx_hsspi_activate_cs(struct bcm63xx_hsspi_priv *priv,
 	set = DIV_ROUND_UP(2048, set);
 	set &= SPI_PFL_CLK_FREQ_MASK;
 	set |= SPI_PFL_CLK_RSTLOOP_MASK;
-	writel(set, priv->regs + SPI_PFL_CLK_REG(plat->cs));
+	writel_be(set, priv->regs + SPI_PFL_CLK_REG(plat->cs));
 
 	/* profile signal */
 	set = 0;
@@ -167,7 +164,7 @@ static void bcm63xx_hsspi_activate_cs(struct bcm63xx_hsspi_priv *priv,
 	if (priv->speed > SPI_MAX_SYNC_CLOCK)
 		set |= SPI_PFL_SIG_ASYNCIN_MASK;
 
-	clrsetbits_32(priv->regs + SPI_PFL_SIG_REG(plat->cs), clr, set);
+	clrsetbits_be32(priv->regs + SPI_PFL_SIG_REG(plat->cs), clr, set);
 
 	/* global control */
 	set = 0;
@@ -185,13 +182,13 @@ static void bcm63xx_hsspi_activate_cs(struct bcm63xx_hsspi_priv *priv,
 	else
 		set |= BIT(!plat->cs);
 
-	clrsetbits_32(priv->regs + SPI_CTL_REG, clr, set);
+	clrsetbits_be32(priv->regs + SPI_CTL_REG, clr, set);
 }
 
 static void bcm63xx_hsspi_deactivate_cs(struct bcm63xx_hsspi_priv *priv)
 {
 	/* restore cs polarities */
-	clrsetbits_32(priv->regs + SPI_CTL_REG, SPI_CTL_CS_POL_MASK,
+	clrsetbits_be32(priv->regs + SPI_CTL_REG, SPI_CTL_CS_POL_MASK,
 			priv->cs_pols);
 }
 
@@ -217,7 +214,7 @@ static int bcm63xx_hsspi_xfer(struct udevice *dev, unsigned int bitlen,
 		const void *dout, void *din, unsigned long flags)
 {
 	struct bcm63xx_hsspi_priv *priv = dev_get_priv(dev->parent);
-	struct dm_spi_slave_plat *plat = dev_get_parent_plat(dev);
+	struct dm_spi_slave_platdata *plat = dev_get_parent_platdata(dev);
 	size_t data_bytes = bitlen / 8;
 	size_t step_size = HSSPI_FIFO_SIZE;
 	uint16_t opcode = 0;
@@ -250,7 +247,7 @@ static int bcm63xx_hsspi_xfer(struct udevice *dev, unsigned int bitlen,
 	      SPI_PFL_MODE_MDWRSZ_MASK;
 	if (plat->mode & SPI_3WIRE)
 		val |= SPI_PFL_MODE_3WIRE_MASK;
-	writel(val, priv->regs + SPI_PFL_MODE_REG(plat->cs));
+	writel_be(val, priv->regs + SPI_PFL_MODE_REG(plat->cs));
 
 	/* transfer loop */
 	while (data_bytes > 0) {
@@ -265,7 +262,7 @@ static int bcm63xx_hsspi_xfer(struct udevice *dev, unsigned int bitlen,
 		}
 
 		/* set fifo operation */
-		writew(cpu_to_be16(opcode | (curr_step & HSSPI_FIFO_OP_BYTES_MASK)),
+		writew_be(opcode | (curr_step & HSSPI_FIFO_OP_BYTES_MASK),
 			  priv->regs + HSSPI_FIFO_OP_REG);
 
 		/* issue the transfer */
@@ -274,10 +271,10 @@ static int bcm63xx_hsspi_xfer(struct udevice *dev, unsigned int bitlen,
 		       SPI_CMD_PFL_MASK;
 		val |= (!plat->cs << SPI_CMD_SLAVE_SHIFT) &
 		       SPI_CMD_SLAVE_MASK;
-		writel(val, priv->regs + SPI_CMD_REG);
+		writel_be(val, priv->regs + SPI_CMD_REG);
 
 		/* wait for completion */
-		ret = wait_for_bit_32(priv->regs + SPI_STAT_REG,
+		ret = wait_for_bit_be32(priv->regs + SPI_STAT_REG,
 					SPI_STAT_SRCBUSY_MASK, false,
 					1000, false);
 		if (ret) {
@@ -316,7 +313,7 @@ static const struct udevice_id bcm63xx_hsspi_ids[] = {
 static int bcm63xx_hsspi_child_pre_probe(struct udevice *dev)
 {
 	struct bcm63xx_hsspi_priv *priv = dev_get_priv(dev->parent);
-	struct dm_spi_slave_plat *plat = dev_get_parent_plat(dev);
+	struct dm_spi_slave_platdata *plat = dev_get_parent_platdata(dev);
 
 	/* check cs */
 	if (plat->cs >= priv->num_cs) {
@@ -352,47 +349,48 @@ static int bcm63xx_hsspi_probe(struct udevice *dev)
 		return ret;
 
 	ret = clk_enable(&clk);
-	if (ret < 0 && ret != -ENOSYS)
+	if (ret < 0)
 		return ret;
 
 	ret = clk_free(&clk);
-	if (ret < 0 && ret != -ENOSYS)
+	if (ret < 0)
 		return ret;
 
 	/* get clock rate */
 	ret = clk_get_by_name(dev, "pll", &clk);
-	if (ret < 0 && ret != -ENOSYS)
+	if (ret < 0)
 		return ret;
 
 	priv->clk_rate = clk_get_rate(&clk);
 
 	ret = clk_free(&clk);
-	if (ret < 0 && ret != -ENOSYS)
+	if (ret < 0)
 		return ret;
 
 	/* perform reset */
 	ret = reset_get_by_index(dev, 0, &rst_ctl);
-	if (ret >= 0) {
-		ret = reset_deassert(&rst_ctl);
-		if (ret < 0)
-			return ret;
-	}
+	if (ret < 0)
+		return ret;
+
+	ret = reset_deassert(&rst_ctl);
+	if (ret < 0)
+		return ret;
 
 	ret = reset_free(&rst_ctl);
 	if (ret < 0)
 		return ret;
 
 	/* initialize hardware */
-	writel(0, priv->regs + SPI_IR_MASK_REG);
+	writel_be(0, priv->regs + SPI_IR_MASK_REG);
 
 	/* clear pending interrupts */
-	writel(SPI_IR_CLEAR_ALL, priv->regs + SPI_IR_STAT_REG);
+	writel_be(SPI_IR_CLEAR_ALL, priv->regs + SPI_IR_STAT_REG);
 
 	/* enable clk gate */
-	setbits_32(priv->regs + SPI_CTL_REG, SPI_CTL_CLK_GATE_MASK);
+	setbits_be32(priv->regs + SPI_CTL_REG, SPI_CTL_CLK_GATE_MASK);
 
 	/* read default cs polarities */
-	priv->cs_pols = readl(priv->regs + SPI_CTL_REG) &
+	priv->cs_pols = readl_be(priv->regs + SPI_CTL_REG) &
 			SPI_CTL_CS_POL_MASK;
 
 	return 0;
@@ -403,7 +401,7 @@ U_BOOT_DRIVER(bcm63xx_hsspi) = {
 	.id = UCLASS_SPI,
 	.of_match = bcm63xx_hsspi_ids,
 	.ops = &bcm63xx_hsspi_ops,
-	.priv_auto	= sizeof(struct bcm63xx_hsspi_priv),
+	.priv_auto_alloc_size = sizeof(struct bcm63xx_hsspi_priv),
 	.child_pre_probe = bcm63xx_hsspi_child_pre_probe,
 	.probe = bcm63xx_hsspi_probe,
 };

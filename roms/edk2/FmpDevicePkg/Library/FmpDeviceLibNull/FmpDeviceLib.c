@@ -2,15 +2,14 @@
   Provides firmware device specific services to support updates of a firmware
   image stored in a firmware device.
 
-  Copyright (c) Microsoft Corporation.<BR>
-  Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2016, Microsoft Corporation. All rights reserved.<BR>
+  Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #include <PiDxe.h>
-#include <Guid/SystemResourceTable.h>
 #include <Library/FmpDeviceLib.h>
 
 /**
@@ -36,68 +35,6 @@ EFI_STATUS
 EFIAPI
 RegisterFmpInstaller (
   IN FMP_DEVICE_LIB_REGISTER_FMP_INSTALLER  Function
-  )
-{
-  return EFI_UNSUPPORTED;
-}
-
-/**
-  Provide a function to uninstall the Firmware Management Protocol instance from a
-  device handle when the device is managed by a driver that follows the UEFI
-  Driver Model.  If the device is not managed by a driver that follows the UEFI
-  Driver Model, then EFI_UNSUPPORTED is returned.
-
-  @param[in] FmpUninstaller  Function that installs the Firmware Management
-                             Protocol.
-
-  @retval EFI_SUCCESS      The device is managed by a driver that follows the
-                           UEFI Driver Model.  FmpUninstaller must be called on
-                           each Driver Binding Stop().
-  @retval EFI_UNSUPPORTED  The device is not managed by a driver that follows
-                           the UEFI Driver Model.
-  @retval other            The Firmware Management Protocol for this firmware
-                           device is not installed.  The firmware device is
-                           still locked using FmpDeviceLock().
-
-**/
-EFI_STATUS
-EFIAPI
-RegisterFmpUninstaller (
-  IN FMP_DEVICE_LIB_REGISTER_FMP_UNINSTALLER  Function
-  )
-{
-  return EFI_UNSUPPORTED;
-}
-
-/**
-  Set the device context for the FmpDeviceLib services when the device is
-  managed by a driver that follows the UEFI Driver Model.  If the device is not
-  managed by a driver that follows the UEFI Driver Model, then EFI_UNSUPPORTED
-  is returned.  Once a device context is set, the FmpDeviceLib services
-  operate on the currently set device context.
-
-  @param[in]      Handle   Device handle for the FmpDeviceLib services.
-                           If Handle is NULL, then Context is freed.
-  @param[in, out] Context  Device context for the FmpDeviceLib services.
-                           If Context is NULL, then a new context is allocated
-                           for Handle and the current device context is set and
-                           returned in Context.  If Context is not NULL, then
-                           the current device context is set.
-
-  @retval EFI_SUCCESS      The device is managed by a driver that follows the
-                           UEFI Driver Model.
-  @retval EFI_UNSUPPORTED  The device is not managed by a driver that follows
-                           the UEFI Driver Model.
-  @retval other            The Firmware Management Protocol for this firmware
-                           device is not installed.  The firmware device is
-                           still locked using FmpDeviceLock().
-
-**/
-EFI_STATUS
-EFIAPI
-FmpDeviceSetContext (
-  IN EFI_HANDLE  Handle,
-  IN OUT VOID    **Context
   )
 {
   return EFI_UNSUPPORTED;
@@ -131,7 +68,6 @@ FmpDeviceGetSize (
   if (Size == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-
   *Size = 0;
   return EFI_SUCCESS;
 }
@@ -185,14 +121,13 @@ FmpDeviceGetImageTypeIdGuidPtr (
 EFI_STATUS
 EFIAPI
 FmpDeviceGetAttributes (
-  OUT UINT64  *Supported,
-  OUT UINT64  *Setting
+  OUT UINT64    *Supported,
+  OUT UINT64    *Setting
   )
 {
-  if ((Supported == NULL) || (Setting == NULL)) {
+  if (Supported == NULL || Setting == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-
   *Supported = 0;
   *Setting   = 0;
   return EFI_SUCCESS;
@@ -270,7 +205,6 @@ FmpDeviceGetVersionString (
   if (VersionString == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-
   *VersionString = NULL;
   return EFI_UNSUPPORTED;
 }
@@ -305,35 +239,6 @@ EFI_STATUS
 EFIAPI
 FmpDeviceGetVersion (
   OUT UINT32  *Version
-  )
-{
-  return EFI_UNSUPPORTED;
-}
-
-/**
-  Returns the value used to fill in the HardwareInstance field of the
-  EFI_FIRMWARE_IMAGE_DESCRIPTOR structure that is returned by the GetImageInfo()
-  service of the Firmware Management Protocol.  If EFI_SUCCESS is returned, then
-  the firmware device supports a method to report the HardwareInstance value.
-  If the value can not be reported for the firmware device, then EFI_UNSUPPORTED
-  must be returned.  EFI_DEVICE_ERROR is returned if an error occurs attempting
-  to retrieve the HardwareInstance value for the firmware device.
-
-  @param[out] HardwareInstance  The hardware instance value for the firmware
-                                device.
-
-  @retval EFI_SUCCESS       The hardware instance for the current firmware
-                            device is returned in HardwareInstance.
-  @retval EFI_UNSUPPORTED   The firmware device does not support a method to
-                            report the hardware instance value.
-  @retval EFI_DEVICE_ERROR  An error occurred attempting to retrieve the hardware
-                            instance value.
-
-**/
-EFI_STATUS
-EFIAPI
-FmpDeviceGetHardwareInstance (
-  OUT UINT64  *HardwareInstance
   )
 {
   return EFI_UNSUPPORTED;
@@ -411,56 +316,6 @@ FmpDeviceCheckImage (
   OUT UINT32      *ImageUpdatable
   )
 {
-  UINT32  LastAttemptStatus;
-
-  return FmpDeviceCheckImageWithStatus (Image, ImageSize, ImageUpdatable, &LastAttemptStatus);
-}
-
-/**
-  Checks if a new firmware image is valid for the firmware device.  This
-  function allows firmware update operation to validate the firmware image
-  before FmpDeviceSetImage() is called.
-
-  @param[in]  Image               Points to a new firmware image.
-  @param[in]  ImageSize           Size, in bytes, of a new firmware image.
-  @param[out] ImageUpdatable      Indicates if a new firmware image is valid for
-                                  a firmware update to the firmware device.  The
-                                  following values from the Firmware Management
-                                  Protocol are supported:
-                                    IMAGE_UPDATABLE_VALID
-                                    IMAGE_UPDATABLE_INVALID
-                                    IMAGE_UPDATABLE_INVALID_TYPE
-                                    IMAGE_UPDATABLE_INVALID_OLD
-                                    IMAGE_UPDATABLE_VALID_WITH_VENDOR_CODE
-  @param[out] LastAttemptStatus   A pointer to a UINT32 that holds the last attempt
-                                  status to report back to the ESRT table in case
-                                  of error.
-
-                                  The return status code must fall in the range of
-                                  LAST_ATTEMPT_STATUS_DEVICE_LIBRARY_MIN_ERROR_CODE_VALUE to
-                                  LAST_ATTEMPT_STATUS_DEVICE_LIBRARY_MAX_ERROR_CODE_VALUE.
-
-                                  If the value falls outside this range, it will be converted
-                                  to LAST_ATTEMPT_STATUS_ERROR_UNSUCCESSFUL.
-
-  @retval EFI_SUCCESS            The image was successfully checked.  Additional
-                                 status information is returned in
-                                 ImageUpdatable.
-  @retval EFI_INVALID_PARAMETER  Image is NULL.
-  @retval EFI_INVALID_PARAMETER  ImageUpdatable is NULL.
-
-**/
-EFI_STATUS
-EFIAPI
-FmpDeviceCheckImageWithStatus (
-  IN  CONST VOID  *Image,
-  IN  UINTN       ImageSize,
-  OUT UINT32      *ImageUpdatable,
-  OUT UINT32      *LastAttemptStatus
-  )
-{
-  *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
-
   return EFI_SUCCESS;
 }
 
@@ -521,102 +376,12 @@ EFIAPI
 FmpDeviceSetImage (
   IN  CONST VOID                                     *Image,
   IN  UINTN                                          ImageSize,
-  IN  CONST VOID                                     *VendorCode        OPTIONAL,
-  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress           OPTIONAL,
+  IN  CONST VOID                                     *VendorCode,       OPTIONAL
+  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress,          OPTIONAL
   IN  UINT32                                         CapsuleFwVersion,
   OUT CHAR16                                         **AbortReason
   )
 {
-  UINT32  LastAttemptStatus;
-
-  return FmpDeviceSetImageWithStatus (
-           Image,
-           ImageSize,
-           VendorCode,
-           Progress,
-           CapsuleFwVersion,
-           AbortReason,
-           &LastAttemptStatus
-           );
-}
-
-/**
-  Updates a firmware device with a new firmware image.  This function returns
-  EFI_UNSUPPORTED if the firmware image is not updatable.  If the firmware image
-  is updatable, the function should perform the following minimal validations
-  before proceeding to do the firmware image update.
-    - Validate that the image is a supported image for this firmware device.
-      Return EFI_ABORTED if the image is not supported.  Additional details
-      on why the image is not a supported image may be returned in AbortReason.
-    - Validate the data from VendorCode if is not NULL.  Firmware image
-      validation must be performed before VendorCode data validation.
-      VendorCode data is ignored or considered invalid if image validation
-      fails.  Return EFI_ABORTED if the VendorCode data is invalid.
-
-  VendorCode enables vendor to implement vendor-specific firmware image update
-  policy.  Null if the caller did not specify the policy or use the default
-  policy.  As an example, vendor can implement a policy to allow an option to
-  force a firmware image update when the abort reason is due to the new firmware
-  image version is older than the current firmware image version or bad image
-  checksum.  Sensitive operations such as those wiping the entire firmware image
-  and render the device to be non-functional should be encoded in the image
-  itself rather than passed with the VendorCode.  AbortReason enables vendor to
-  have the option to provide a more detailed description of the abort reason to
-  the caller.
-
-  @param[in]  Image             Points to the new firmware image.
-  @param[in]  ImageSize         Size, in bytes, of the new firmware image.
-  @param[in]  VendorCode        This enables vendor to implement vendor-specific
-                                firmware image update policy.  NULL indicates
-                                the caller did not specify the policy or use the
-                                default policy.
-  @param[in]  Progress          A function used to report the progress of
-                                updating the firmware device with the new
-                                firmware image.
-  @param[in]  CapsuleFwVersion  The version of the new firmware image from the
-                                update capsule that provided the new firmware
-                                image.
-  @param[out] AbortReason       A pointer to a pointer to a Null-terminated
-                                Unicode string providing more details on an
-                                aborted operation. The buffer is allocated by
-                                this function with
-                                EFI_BOOT_SERVICES.AllocatePool().  It is the
-                                caller's responsibility to free this buffer with
-                                EFI_BOOT_SERVICES.FreePool().
-  @param[out] LastAttemptStatus A pointer to a UINT32 that holds the last attempt
-                                status to report back to the ESRT table in case
-                                of error. This value will only be checked when this
-                                function returns an error.
-
-                                The return status code must fall in the range of
-                                LAST_ATTEMPT_STATUS_DEVICE_LIBRARY_MIN_ERROR_CODE_VALUE to
-                                LAST_ATTEMPT_STATUS_DEVICE_LIBRARY_MAX_ERROR_CODE_VALUE.
-
-                                If the value falls outside this range, it will be converted
-                                to LAST_ATTEMPT_STATUS_ERROR_UNSUCCESSFUL.
-
-  @retval EFI_SUCCESS            The firmware device was successfully updated
-                                 with the new firmware image.
-  @retval EFI_ABORTED            The operation is aborted.  Additional details
-                                 are provided in AbortReason.
-  @retval EFI_INVALID_PARAMETER  The Image was NULL.
-  @retval EFI_UNSUPPORTED        The operation is not supported.
-
-**/
-EFI_STATUS
-EFIAPI
-FmpDeviceSetImageWithStatus (
-  IN  CONST VOID                                     *Image,
-  IN  UINTN                                          ImageSize,
-  IN  CONST VOID                                     *VendorCode        OPTIONAL,
-  IN  EFI_FIRMWARE_MANAGEMENT_UPDATE_IMAGE_PROGRESS  Progress           OPTIONAL,
-  IN  UINT32                                         CapsuleFwVersion,
-  OUT CHAR16                                         **AbortReason,
-  OUT UINT32                                         *LastAttemptStatus
-  )
-{
-  *LastAttemptStatus = LAST_ATTEMPT_STATUS_SUCCESS;
-
   return EFI_UNSUPPORTED;
 }
 

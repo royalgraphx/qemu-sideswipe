@@ -1,12 +1,13 @@
 /** @file
 
-  Copyright (c) 2014 - 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2014 - 2018, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
 #ifndef _SEC_CORE_H_
 #define _SEC_CORE_H_
+
 
 #include <PiPei.h>
 #include <Ppi/TemporaryRamSupport.h>
@@ -20,23 +21,16 @@
 #include <Library/SerialPortLib.h>
 #include <Library/FspSwitchStackLib.h>
 #include <Library/FspCommonLib.h>
-#include <Library/UefiCpuLib.h>
 #include <FspEas.h>
 
 typedef VOID (*PEI_CORE_ENTRY) ( \
   IN CONST  EFI_SEC_PEI_HAND_OFF    *SecCoreData, \
   IN CONST  EFI_PEI_PPI_DESCRIPTOR  *PpiList \
-  );
+);
 
 typedef struct _SEC_IDT_TABLE {
-  //
-  // Reserved 8 bytes preceding IDT to store EFI_PEI_SERVICES**, since IDT base
-  // address should be 8-byte alignment.
-  // Note: For IA32, only the 4 bytes immediately preceding IDT is used to store
-  // EFI_PEI_SERVICES**
-  //
-  UINT64    PeiService;
-  UINT64    IdtTable[FixedPcdGet8 (PcdFspMaxInterruptSupported)];
+  EFI_PEI_SERVICES  *PeiService;
+  UINT64            IdtTable[FixedPcdGet8 (PcdFspMaxInterruptSupported)];
 } SEC_IDT_TABLE;
 
 /**
@@ -51,8 +45,8 @@ typedef struct _SEC_IDT_TABLE {
 VOID
 EFIAPI
 SecSwitchStack (
-  IN UINT32  TemporaryMemoryBase,
-  IN UINT32  PermenentMemoryBase
+  IN UINT32   TemporaryMemoryBase,
+  IN UINT32   PermenentMemoryBase
   );
 
 /**
@@ -74,10 +68,25 @@ SecSwitchStack (
 EFI_STATUS
 EFIAPI
 SecTemporaryRamSupport (
-  IN CONST EFI_PEI_SERVICES  **PeiServices,
-  IN EFI_PHYSICAL_ADDRESS    TemporaryMemoryBase,
-  IN EFI_PHYSICAL_ADDRESS    PermanentMemoryBase,
-  IN UINTN                   CopySize
+  IN CONST EFI_PEI_SERVICES   **PeiServices,
+  IN EFI_PHYSICAL_ADDRESS     TemporaryMemoryBase,
+  IN EFI_PHYSICAL_ADDRESS     PermanentMemoryBase,
+  IN UINTN                    CopySize
+  );
+
+/**
+  Initializes floating point units for requirement of UEFI specification.
+
+  This function initializes floating-point control word to 0x027F (all exceptions
+  masked,double-precision, round-to-nearest) and multimedia-extensions control word
+  (if supported) to 0x1F80 (all exceptions masked, round-to-nearest, flush to zero
+  for masked underflow).
+
+**/
+VOID
+EFIAPI
+InitializeFloatingPointUnits (
+  VOID
   );
 
 /**
@@ -100,12 +109,12 @@ SecTemporaryRamSupport (
 VOID
 EFIAPI
 SecStartup (
-  IN UINT32          SizeOfRam,
-  IN UINT32          TempRamBase,
-  IN VOID            *BootFirmwareVolume,
-  IN PEI_CORE_ENTRY  PeiCore,
-  IN UINT32          BootLoaderStack,
-  IN UINT32          ApiIdx
+  IN UINT32                   SizeOfRam,
+  IN UINT32                   TempRamBase,
+  IN VOID                    *BootFirmwareVolume,
+  IN PEI_CORE_ENTRY           PeiCore,
+  IN UINT32                   BootLoaderStack,
+  IN UINT32                   ApiIdx
   );
 
 /**

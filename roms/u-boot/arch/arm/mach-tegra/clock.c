@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2010-2019, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2015, NVIDIA CORPORATION.  All rights reserved.
  */
 
 /* Tegra SoC common clock control functions */
@@ -9,8 +9,6 @@
 #include <div64.h>
 #include <dm.h>
 #include <errno.h>
-#include <log.h>
-#include <time.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/tegra.h>
@@ -18,7 +16,6 @@
 #include <asm/arch-tegra/clk_rst.h>
 #include <asm/arch-tegra/pmc.h>
 #include <asm/arch-tegra/timer.h>
-#include <linux/delay.h>
 
 /*
  * This is our record of the current clock rate of each clock. We don't
@@ -480,7 +477,6 @@ unsigned clock_start_periph_pll(enum periph_id periph_id,
 
 	reset_set_enable(periph_id, 1);
 	clock_enable(periph_id);
-	udelay(2);
 
 	effective_rate = clock_adjust_periph_pll_div(periph_id, parent, rate,
 						 NULL);
@@ -818,16 +814,11 @@ void tegra30_set_up_pllp(void)
 
 int clock_external_output(int clk_id)
 {
-	u32 val;
+	struct pmc_ctlr *pmc = (struct pmc_ctlr *)NV_PA_PMC_BASE;
 
 	if (clk_id >= 1 && clk_id <= 3) {
-		val = tegra_pmc_readl(offsetof(struct pmc_ctlr,
-				      pmc_clk_out_cntrl));
-		val |= 1 << (2 + (clk_id - 1) * 8);
-		tegra_pmc_writel(val,
-				 offsetof(struct pmc_ctlr,
-				 pmc_clk_out_cntrl));
-
+		setbits_le32(&pmc->pmc_clk_out_cntrl,
+			     1 << (2 + (clk_id - 1) * 8));
 	} else {
 		printf("%s: Unknown output clock id %d\n", __func__, clk_id);
 		return -EINVAL;

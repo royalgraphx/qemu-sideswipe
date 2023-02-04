@@ -10,39 +10,39 @@
 #include <Library/IoLib.h>
 #include <Library/SerialPortLib.h>
 
-// ---------------------------------------------
+//---------------------------------------------
 // UART Register Offsets
-// ---------------------------------------------
-#define BAUD_LOW_OFFSET    0x00
-#define BAUD_HIGH_OFFSET   0x01
-#define IER_OFFSET         0x01
-#define LCR_SHADOW_OFFSET  0x01
-#define FCR_SHADOW_OFFSET  0x02
-#define IR_CONTROL_OFFSET  0x02
-#define FCR_OFFSET         0x02
-#define EIR_OFFSET         0x02
-#define BSR_OFFSET         0x03
-#define LCR_OFFSET         0x03
-#define MCR_OFFSET         0x04
-#define LSR_OFFSET         0x05
-#define MSR_OFFSET         0x06
+//---------------------------------------------
+#define BAUD_LOW_OFFSET         0x00
+#define BAUD_HIGH_OFFSET        0x01
+#define IER_OFFSET              0x01
+#define LCR_SHADOW_OFFSET       0x01
+#define FCR_SHADOW_OFFSET       0x02
+#define IR_CONTROL_OFFSET       0x02
+#define FCR_OFFSET              0x02
+#define EIR_OFFSET              0x02
+#define BSR_OFFSET              0x03
+#define LCR_OFFSET              0x03
+#define MCR_OFFSET              0x04
+#define LSR_OFFSET              0x05
+#define MSR_OFFSET              0x06
 
-// ---------------------------------------------
+//---------------------------------------------
 // UART Register Bit Defines
-// ---------------------------------------------
-#define LSR_TXRDY  0x20
-#define LSR_RXDA   0x01
-#define DLAB       0x01
-#define MCR_DTRC   0x01
-#define MCR_RTS    0x02
-#define MSR_CTS    0x10
-#define MSR_DSR    0x20
-#define MSR_RI     0x40
-#define MSR_DCD    0x80
+//---------------------------------------------
+#define LSR_TXRDY               0x20
+#define LSR_RXDA                0x01
+#define DLAB                    0x01
+#define MCR_DTRC                0x01
+#define MCR_RTS                 0x02
+#define MSR_CTS                 0x10
+#define MSR_DSR                 0x20
+#define MSR_RI                  0x40
+#define MSR_DCD                 0x80
 
-// ---------------------------------------------
+//---------------------------------------------
 // UART Settings
-// ---------------------------------------------
+//---------------------------------------------
 UINT16  gUartBase = 0x3F8;
 UINTN   gBps      = 115200;
 UINT8   gData     = 8;
@@ -58,7 +58,7 @@ UINT8   gBreakSet = 0;
   If the serial device could not be initialized, then return RETURN_DEVICE_ERROR.
 
   @retval RETURN_SUCCESS        The serial device was initialized.
-  @retval RETURN_DEVICE_ERROR   The serial device could not be initialized.
+  @retval RETURN_DEVICE_ERROR   The serail device could not be initialized.
 
 **/
 RETURN_STATUS
@@ -74,7 +74,7 @@ SerialPortInitialize (
   //
   // Map 5..8 to 0..3
   //
-  Data = (UINT8)(gData - (UINT8)5);
+  Data = (UINT8) (gData - (UINT8) 5);
 
   //
   // Calculate divisor for baud generator
@@ -84,19 +84,19 @@ SerialPortInitialize (
   //
   // Set communications format
   //
-  OutputData = (UINT8)((DLAB << 7) | (gBreakSet << 6) | (gParity << 3) | (gStop << 2) | Data);
+  OutputData = (UINT8) ((DLAB << 7) | (gBreakSet << 6) | (gParity << 3) | (gStop << 2) | Data);
   IoWrite8 (gUartBase + LCR_OFFSET, OutputData);
 
   //
   // Configure baud rate
   //
-  IoWrite8 (gUartBase + BAUD_HIGH_OFFSET, (UINT8)(Divisor >> 8));
-  IoWrite8 (gUartBase + BAUD_LOW_OFFSET, (UINT8)(Divisor & 0xff));
+  IoWrite8 (gUartBase + BAUD_HIGH_OFFSET, (UINT8) (Divisor >> 8));
+  IoWrite8 (gUartBase + BAUD_LOW_OFFSET, (UINT8) (Divisor & 0xff));
 
   //
   // Switch back to bank 0
   //
-  OutputData = (UINT8)((gBreakSet << 6) | (gParity << 3) | (gStop << 2) | Data);
+  OutputData = (UINT8) ( (gBreakSet << 6) | (gParity << 3) | (gStop << 2) | Data);
   IoWrite8 (gUartBase + LCR_OFFSET, OutputData);
 
   return RETURN_SUCCESS;
@@ -124,9 +124,9 @@ SerialPortInitialize (
 UINTN
 EFIAPI
 SerialPortWrite (
-  IN UINT8  *Buffer,
-  IN UINTN  NumberOfBytes
-  )
+  IN UINT8     *Buffer,
+  IN UINTN     NumberOfBytes
+)
 {
   UINTN  Result;
   UINT8  Data;
@@ -139,17 +139,17 @@ SerialPortWrite (
 
   while ((NumberOfBytes--) != 0) {
     //
-    // Wait for the serial port to be ready.
+    // Wait for the serail port to be ready.
     //
     do {
-      Data = IoRead8 ((UINT16)gUartBase + LSR_OFFSET);
+      Data = IoRead8 ((UINT16) gUartBase + LSR_OFFSET);
     } while ((Data & LSR_TXRDY) == 0);
-
-    IoWrite8 ((UINT16)gUartBase, *Buffer++);
+    IoWrite8 ((UINT16) gUartBase, *Buffer++);
   }
 
   return Result;
 }
+
 
 /**
   Reads data from a serial device into a buffer.
@@ -165,9 +165,9 @@ SerialPortWrite (
 UINTN
 EFIAPI
 SerialPortRead (
-  OUT UINT8  *Buffer,
-  IN  UINTN  NumberOfBytes
-  )
+  OUT UINT8     *Buffer,
+  IN  UINTN     NumberOfBytes
+)
 {
   UINTN  Result;
   UINT8  Data;
@@ -180,13 +180,13 @@ SerialPortRead (
 
   while ((NumberOfBytes--) != 0) {
     //
-    // Wait for the serial port to be ready.
+    // Wait for the serail port to be ready.
     //
     do {
-      Data = IoRead8 ((UINT16)gUartBase + LSR_OFFSET);
+      Data = IoRead8 ((UINT16) gUartBase + LSR_OFFSET);
     } while ((Data & LSR_RXDA) == 0);
 
-    *Buffer++ = IoRead8 ((UINT16)gUartBase);
+    *Buffer++ = IoRead8 ((UINT16) gUartBase);
   }
 
   return Result;
@@ -195,7 +195,7 @@ SerialPortRead (
 /**
   Polls a serial device to see if there is any data waiting to be read.
 
-  Polls a serial device to see if there is any data waiting to be read.
+  Polls aserial device to see if there is any data waiting to be read.
   If there is data waiting to be read from the serial device, then TRUE is returned.
   If there is no data waiting to be read from the serial device, then FALSE is returned.
 
@@ -214,9 +214,9 @@ SerialPortPoll (
   //
   // Read the serial port status.
   //
-  Data = IoRead8 ((UINT16)gUartBase + LSR_OFFSET);
+  Data = IoRead8 ((UINT16) gUartBase + LSR_OFFSET);
 
-  return (BOOLEAN)((Data & LSR_RXDA) != 0);
+  return (BOOLEAN) ((Data & LSR_RXDA) != 0);
 }
 
 /**
@@ -232,10 +232,10 @@ SerialPortPoll (
 RETURN_STATUS
 EFIAPI
 SerialPortSetControl (
-  IN UINT32  Control
+  IN UINT32 Control
   )
 {
-  UINT8  Mcr;
+  UINT8 Mcr;
 
   //
   // First determine the parameter is invalid.
@@ -247,7 +247,7 @@ SerialPortSetControl (
   //
   // Read the Modem Control Register.
   //
-  Mcr  = IoRead8 ((UINT16)gUartBase + MCR_OFFSET);
+  Mcr = IoRead8 ((UINT16) gUartBase + MCR_OFFSET);
   Mcr &= (~(MCR_DTRC | MCR_RTS));
 
   if ((Control & EFI_SERIAL_DATA_TERMINAL_READY) == EFI_SERIAL_DATA_TERMINAL_READY) {
@@ -261,7 +261,7 @@ SerialPortSetControl (
   //
   // Write the Modem Control Register.
   //
-  IoWrite8 ((UINT16)gUartBase + MCR_OFFSET, Mcr);
+  IoWrite8 ((UINT16) gUartBase + MCR_OFFSET, Mcr);
 
   return RETURN_SUCCESS;
 }
@@ -279,19 +279,19 @@ SerialPortSetControl (
 RETURN_STATUS
 EFIAPI
 SerialPortGetControl (
-  OUT UINT32  *Control
+  OUT UINT32 *Control
   )
 {
-  UINT8  Msr;
-  UINT8  Mcr;
-  UINT8  Lsr;
+  UINT8 Msr;
+  UINT8 Mcr;
+  UINT8 Lsr;
 
   *Control = 0;
 
   //
   // Read the Modem Status Register.
   //
-  Msr = IoRead8 ((UINT16)gUartBase + MSR_OFFSET);
+  Msr = IoRead8 ((UINT16) gUartBase + MSR_OFFSET);
 
   if ((Msr & MSR_CTS) == MSR_CTS) {
     *Control |= EFI_SERIAL_CLEAR_TO_SEND;
@@ -312,7 +312,7 @@ SerialPortGetControl (
   //
   // Read the Modem Control Register.
   //
-  Mcr = IoRead8 ((UINT16)gUartBase + MCR_OFFSET);
+  Mcr = IoRead8 ((UINT16) gUartBase + MCR_OFFSET);
 
   if ((Mcr & MCR_DTRC) == MCR_DTRC) {
     *Control |= EFI_SERIAL_DATA_TERMINAL_READY;
@@ -325,7 +325,7 @@ SerialPortGetControl (
   //
   // Read the Line Status Register.
   //
-  Lsr = IoRead8 ((UINT16)gUartBase + LSR_OFFSET);
+  Lsr = IoRead8 ((UINT16) gUartBase + LSR_OFFSET);
 
   if ((Lsr & LSR_TXRDY) == LSR_TXRDY) {
     *Control |= EFI_SERIAL_OUTPUT_BUFFER_EMPTY;
@@ -339,13 +339,13 @@ SerialPortGetControl (
 }
 
 /**
-  Sets the baud rate, receive FIFO depth, transmit/receive time out, parity,
+  Sets the baud rate, receive FIFO depth, transmit/receice time out, parity,
   data bits, and stop bits on a serial device.
 
   @param BaudRate           The requested baud rate. A BaudRate value of 0 will use the
                             device's default interface speed.
                             On output, the value actually set.
-  @param ReceiveFifoDepth   The requested depth of the FIFO on the receive side of the
+  @param ReveiveFifoDepth   The requested depth of the FIFO on the receive side of the
                             serial interface. A ReceiveFifoDepth value of 0 will use
                             the device's default FIFO depth.
                             On output, the value actually set.
@@ -358,7 +358,7 @@ SerialPortGetControl (
                             DefaultParity will use the device's default parity value.
                             On output, the value actually set.
   @param DataBits           The number of data bits to use on the serial device. A DataBits
-                            value of 0 will use the device's default data bit setting.
+                            vaule of 0 will use the device's default data bit setting.
                             On output, the value actually set.
   @param StopBits           The number of stop bits to use on this serial device. A StopBits
                             value of DefaultStopBits will use the device's default number of
@@ -374,19 +374,19 @@ SerialPortGetControl (
 RETURN_STATUS
 EFIAPI
 SerialPortSetAttributes (
-  IN OUT UINT64              *BaudRate,
-  IN OUT UINT32              *ReceiveFifoDepth,
-  IN OUT UINT32              *Timeout,
-  IN OUT EFI_PARITY_TYPE     *Parity,
-  IN OUT UINT8               *DataBits,
-  IN OUT EFI_STOP_BITS_TYPE  *StopBits
+  IN OUT UINT64             *BaudRate,
+  IN OUT UINT32             *ReceiveFifoDepth,
+  IN OUT UINT32             *Timeout,
+  IN OUT EFI_PARITY_TYPE    *Parity,
+  IN OUT UINT8              *DataBits,
+  IN OUT EFI_STOP_BITS_TYPE *StopBits
   )
 {
-  UINTN  Divisor;
-  UINT8  OutputData;
-  UINT8  LcrData;
-  UINT8  LcrParity;
-  UINT8  LcrStop;
+  UINTN Divisor;
+  UINT8 OutputData;
+  UINT8 LcrData;
+  UINT8 LcrParity;
+  UINT8 LcrStop;
 
   //
   // Check for default settings and fill in actual values.
@@ -414,7 +414,7 @@ SerialPortSetAttributes (
   //
   // Map 5..8 to 0..3
   //
-  LcrData = (UINT8)(*DataBits - (UINT8)5);
+  LcrData = (UINT8) (*DataBits - (UINT8) 5);
 
   switch (*Parity) {
     case NoParity:
@@ -458,25 +458,26 @@ SerialPortSetAttributes (
   //
   // Calculate divisor for baud generator
   //
-  Divisor = 115200 / (UINTN)*BaudRate;
+  Divisor = 115200 / (UINTN) *BaudRate;
 
   //
   // Set communications format
   //
-  OutputData = (UINT8)((DLAB << 7) | (gBreakSet << 6) | (LcrParity << 3) | (LcrStop << 2) | LcrData);
+  OutputData = (UINT8) ((DLAB << 7) | (gBreakSet << 6) | (LcrParity << 3) | (LcrStop << 2) | LcrData);
   IoWrite8 (gUartBase + LCR_OFFSET, OutputData);
 
   //
   // Configure baud rate
   //
-  IoWrite8 (gUartBase + BAUD_HIGH_OFFSET, (UINT8)(Divisor >> 8));
-  IoWrite8 (gUartBase + BAUD_LOW_OFFSET, (UINT8)(Divisor & 0xff));
+  IoWrite8 (gUartBase + BAUD_HIGH_OFFSET, (UINT8) (Divisor >> 8));
+  IoWrite8 (gUartBase + BAUD_LOW_OFFSET, (UINT8) (Divisor & 0xff));
 
   //
   // Switch back to bank 0
   //
-  OutputData = (UINT8)((gBreakSet << 6) | (LcrParity << 3) | (LcrStop << 2) | LcrData);
+  OutputData = (UINT8) ((gBreakSet << 6) | (LcrParity << 3) | (LcrStop << 2) | LcrData);
   IoWrite8 (gUartBase + LCR_OFFSET, OutputData);
 
   return RETURN_SUCCESS;
 }
+

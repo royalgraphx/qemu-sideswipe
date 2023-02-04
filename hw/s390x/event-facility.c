@@ -28,7 +28,7 @@ typedef struct SCLPEventsBus {
 } SCLPEventsBus;
 
 /* we need to save 32 bit chunks for compatibility */
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
 #define RECV_MASK_LOWER 1
 #define RECV_MASK_UPPER 0
 #else /* little endian host */
@@ -213,7 +213,7 @@ static uint16_t handle_sccb_read_events(SCLPEventFacility *ef, SCCB *sccb,
 
     event_buf = &red->ebh;
     event_buf->length = 0;
-    slen = sccb_data_len(sccb);
+    slen = sizeof(sccb->data);
 
     rc = SCLP_RC_NO_EVENT_BUFFERS_STORED;
 
@@ -427,8 +427,8 @@ static void init_event_facility(Object *obj)
                              sclp_event_set_allow_all_mask_sizes);
 
     /* Spawn a new bus for SCLP events */
-    qbus_init(&event_facility->sbus, sizeof(event_facility->sbus),
-              TYPE_SCLP_EVENTS_BUS, sdev, NULL);
+    qbus_create_inplace(&event_facility->sbus, sizeof(event_facility->sbus),
+                        TYPE_SCLP_EVENTS_BUS, sdev, NULL);
 
     object_initialize_child(obj, TYPE_SCLP_QUIESCE,
                             &event_facility->quiesce,

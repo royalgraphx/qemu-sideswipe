@@ -9,20 +9,15 @@
  */
 
 #include <common.h>
-#include <clock_legacy.h>
 #include <div64.h>
-#include <init.h>
-#include <net.h>
 #include <netdev.h>
-#include <vsprintf.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch-imx/cpu.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/clock.h>
 
-#ifdef CONFIG_FSL_ESDHC_IMX
-#include <fsl_esdhc_imx.h>
+#ifdef CONFIG_FSL_ESDHC
+#include <fsl_esdhc.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 #endif
@@ -224,7 +219,7 @@ int print_cpuinfo(void)
  * Initializes on-chip ethernet controllers.
  * to override, implement board_eth_init()
  */
-int cpu_eth_init(struct bd_info *bis)
+int cpu_eth_init(bd_t *bis)
 {
 	struct ccm_regs *ccm = (struct ccm_regs *)IMX_CCM_BASE;
 	ulong val;
@@ -238,7 +233,7 @@ int cpu_eth_init(struct bd_info *bis)
 
 int get_clocks(void)
 {
-#ifdef CONFIG_FSL_ESDHC_IMX
+#ifdef CONFIG_FSL_ESDHC
 #if CONFIG_SYS_FSL_ESDHC_ADDR == IMX_MMC_SDHC2_BASE
 	gd->arch.sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
 #else
@@ -248,12 +243,12 @@ int get_clocks(void)
 	return 0;
 }
 
-#ifdef CONFIG_FSL_ESDHC_IMX
+#ifdef CONFIG_FSL_ESDHC
 /*
  * Initializes on-chip MMC controllers.
  * to override, implement board_mmc_init()
  */
-int cpu_mmc_init(struct bd_info *bis)
+int cpu_mmc_init(bd_t *bis)
 {
 	return fsl_esdhc_mmc_init(bis);
 }

@@ -19,6 +19,7 @@
 
 #include "qemu/osdep.h"
 #include "qapi/error.h"
+#include "cpu.h"
 #include "qemu/error-report.h"
 #include "qemu/main-loop.h"
 #include "qemu/module.h"
@@ -27,9 +28,9 @@
 #include "hw/ppc/spapr.h"
 #include "hw/qdev-properties.h"
 #include "kvm_ppc.h"
-#include "qom/object.h"
 
-OBJECT_DECLARE_SIMPLE_TYPE(SpaprRngState, SPAPR_RNG)
+#define SPAPR_RNG(obj) \
+    OBJECT_CHECK(SpaprRngState, (obj), TYPE_SPAPR_RNG)
 
 struct SpaprRngState {
     /*< private >*/
@@ -37,6 +38,7 @@ struct SpaprRngState {
     RngBackend *backend;
     bool use_kvm;
 };
+typedef struct SpaprRngState SpaprRngState;
 
 struct HRandomData {
     QemuSemaphore sem;

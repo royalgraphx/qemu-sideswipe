@@ -29,21 +29,19 @@
 #include "qemu/base64.h"
 #include "qemu/module.h"
 #include "qemu/option.h"
-#include "qom/object.h"
 
 /* Ring buffer chardev */
 
-struct RingBufChardev {
+typedef struct {
     Chardev parent;
     size_t size;
     size_t prod;
     size_t cons;
     uint8_t *cbuf;
-};
-typedef struct RingBufChardev RingBufChardev;
+} RingBufChardev;
 
-DECLARE_INSTANCE_CHECKER(RingBufChardev, RINGBUF_CHARDEV,
-                         TYPE_CHARDEV_RINGBUF)
+#define RINGBUF_CHARDEV(obj)                                    \
+    OBJECT_CHECK(RingBufChardev, (obj), TYPE_CHARDEV_RINGBUF)
 
 static size_t ringbuf_count(const Chardev *chr)
 {

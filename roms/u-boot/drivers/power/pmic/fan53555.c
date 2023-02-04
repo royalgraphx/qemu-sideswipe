@@ -5,12 +5,9 @@
 
 #include <common.h>
 #include <dm.h>
-#include <log.h>
 #include <dm/device-internal.h>
-#include <dm/device_compat.h>
 #include <dm/lists.h>
 #include <i2c.h>
-#include <power/fan53555.h>
 #include <power/pmic.h>
 #include <power/regulator.h>
 
@@ -61,7 +58,7 @@ static int pmic_fan53555_bind(struct udevice *dev)
 		return -ENOENT;
 	}
 
-	return device_bind_with_driver_data(dev, drv, "SW", dev->driver_data,
+	return device_bind_with_driver_data(dev, drv, "SW", 0,
 					    dev_ofnode(dev), &child);
 };
 
@@ -72,9 +69,7 @@ static struct dm_pmic_ops pmic_fan53555_ops = {
 };
 
 static const struct udevice_id pmic_fan53555_match[] = {
-	{ .compatible = "fcs,fan53555", .data = FAN53555_VENDOR_FAIRCHILD, },
-	{ .compatible = "silergy,syr827", .data = FAN53555_VENDOR_SILERGY, },
-	{ .compatible = "silergy,syr828", .data = FAN53555_VENDOR_SILERGY, },
+	{ .compatible = "fcs,fan53555" },
 	{ },
 };
 

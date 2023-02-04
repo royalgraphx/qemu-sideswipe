@@ -3,13 +3,11 @@
  * Copyright 2013 Broadcom Corporation.
  *
  * NOTE: This driver should be converted to driver model before June 2017.
- * Please see doc/driver-model/i2c-howto.rst for instructions.
+ * Please see doc/driver-model/i2c-howto.txt for instructions.
  */
 
 #include <common.h>
-#include <log.h>
 #include <asm/io.h>
-#include <linux/delay.h>
 #include <linux/errno.h>
 #include <asm/arch/sysmap.h>
 #include <asm/kona-common/clk.h>
@@ -100,6 +98,12 @@ enum bcm_kona_cmd_t {
 	BCM_CMD_STOP,
 };
 
+enum bus_speed_index {
+	BCM_SPD_100K = 0,
+	BCM_SPD_400K,
+	BCM_SPD_1MHZ,
+};
+
 /* Internal divider settings for standard mode, fast mode and fast mode plus */
 struct bus_speed_cfg {
 	uint8_t time_m;		/* Number of cycles for setup time */
@@ -111,9 +115,9 @@ struct bus_speed_cfg {
 };
 
 static const struct bus_speed_cfg std_cfg_table[] = {
-	[IC_SPEED_MODE_STANDARD] = {0x01, 0x01, 0x03, 0x06, 0x00, 0x02},
-	[IC_SPEED_MODE_FAST] = {0x05, 0x01, 0x03, 0x05, 0x01, 0x02},
-	[IC_SPEED_MODE_FAST_PLUS] = {0x01, 0x01, 0x03, 0x01, 0x01, 0x03},
+	[BCM_SPD_100K] = {0x01, 0x01, 0x03, 0x06, 0x00, 0x02},
+	[BCM_SPD_400K] = {0x05, 0x01, 0x03, 0x05, 0x01, 0x02},
+	[BCM_SPD_1MHZ] = {0x01, 0x01, 0x03, 0x01, 0x01, 0x03},
 };
 
 struct bcm_kona_i2c_dev {
@@ -123,8 +127,8 @@ struct bcm_kona_i2c_dev {
 };
 
 /* Keep these two defines in sync */
-#define DEF_SPD I2C_SPEED_STANDARD_RATE
-#define DEF_SPD_ENUM IC_SPEED_MODE_STANDARD
+#define DEF_SPD 100000
+#define DEF_SPD_ENUM BCM_SPD_100K
 
 #define DEF_DEVICE(num) \
 {(void *)CONFIG_SYS_I2C_BASE##num, DEF_SPD, &std_cfg_table[DEF_SPD_ENUM]}
@@ -556,14 +560,14 @@ static uint bcm_kona_i2c_assign_bus_speed(struct bcm_kona_i2c_dev *dev,
 					  uint speed)
 {
 	switch (speed) {
-	case I2C_SPEED_STANDARD_RATE:
-		dev->std_cfg = &std_cfg_table[IC_SPEED_MODE_STANDARD];
+	case 100000:
+		dev->std_cfg = &std_cfg_table[BCM_SPD_100K];
 		break;
-	case I2C_SPEED_FAST_RATE:
-		dev->std_cfg = &std_cfg_table[IC_SPEED_MODE_FAST];
+	case 400000:
+		dev->std_cfg = &std_cfg_table[BCM_SPD_400K];
 		break;
-	case I2C_SPEED_FAST_PLUS_RATE:
-		dev->std_cfg = &std_cfg_table[IC_SPEED_MODE_FAST_PLUS];
+	case 1000000:
+		dev->std_cfg = &std_cfg_table[BCM_SPD_1MHZ];
 		break;
 	default:
 		printf("%d hz bus speed not supported\n", speed);

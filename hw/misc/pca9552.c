@@ -22,20 +22,20 @@
 #include "qapi/error.h"
 #include "qapi/visitor.h"
 #include "trace.h"
-#include "qom/object.h"
 
-struct PCA955xClass {
+typedef struct PCA955xClass {
     /*< private >*/
     I2CSlaveClass parent_class;
     /*< public >*/
 
     uint8_t pin_count;
     uint8_t max_reg;
-};
-typedef struct PCA955xClass PCA955xClass;
+} PCA955xClass;
 
-DECLARE_CLASS_CHECKERS(PCA955xClass, PCA955X,
-                       TYPE_PCA955X)
+#define PCA955X_CLASS(klass) \
+    OBJECT_CLASS_CHECK(PCA955xClass, (klass), TYPE_PCA955X)
+#define PCA955X_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(PCA955xClass, (obj), TYPE_PCA955X)
 
 #define PCA9552_LED_ON   0x0
 #define PCA9552_LED_OFF  0x1
@@ -272,7 +272,7 @@ static void pca955x_get_led(Object *obj, Visitor *v, const char *name,
      * reading the INPUTx reg
      */
     reg = PCA9552_LS0 + led / 4;
-    state = (pca955x_read(s, reg) >> ((led % 4) * 2)) & 0x3;
+    state = (pca955x_read(s, reg) >> (led % 8)) & 0x3;
     visit_type_str(v, name, (char **)&led_state[state], errp);
 }
 

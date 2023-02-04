@@ -25,6 +25,8 @@
 #define PHYS_SDRAM_2_SIZE		(gd->bd->bi_dram[1].size)
 #define PHYS_SDRAM_SIZE			(gd->ram_size)
 #define CONFIG_SYS_MALLOC_LEN		(10 * 1024 * 1024)
+#define CONFIG_SYS_MEMTEST_START	0x70000000
+#define CONFIG_SYS_MEMTEST_END		0x8ff00000
 
 #define CONFIG_SYS_SDRAM_BASE		(PHYS_SDRAM_1)
 #define CONFIG_SYS_INIT_RAM_ADDR	(IRAM_BASE_ADDR)
@@ -46,6 +48,7 @@
 /*
  * Serial Driver
  */
+#define CONFIG_MXC_UART
 #define CONFIG_MXC_UART_BASE		UART1_BASE
 
 /*
@@ -59,6 +62,7 @@
 /*
  * NAND
  */
+#define CONFIG_ENV_SIZE			(16 * 1024)
 #ifdef CONFIG_CMD_NAND
 #define CONFIG_SYS_MAX_NAND_DEVICE	1
 #define CONFIG_SYS_NAND_BASE		NFC_BASE_ADDR_AXI
@@ -66,9 +70,15 @@
 #define CONFIG_MXC_NAND_IP_REGS_BASE	NFC_BASE_ADDR
 #define CONFIG_SYS_NAND_LARGEPAGE
 #define CONFIG_MXC_NAND_HWECC
+#define CONFIG_SYS_NAND_USE_FLASH_BBT
 
 /* Environment is in NAND */
-#define CONFIG_ENV_RANGE		(0x00080000) /* 512 KiB */
+#define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
+#define CONFIG_ENV_SECT_SIZE		(128 * 1024)
+#define CONFIG_ENV_RANGE		(4 * CONFIG_ENV_SECT_SIZE)
+#define CONFIG_ENV_OFFSET		(8 * CONFIG_ENV_SECT_SIZE) /* 1 MiB */
+#define CONFIG_ENV_OFFSET_REDUND	\
+		(CONFIG_ENV_OFFSET + CONFIG_ENV_RANGE)
 #endif
 
 /*
@@ -108,6 +118,7 @@
  * USB
  */
 #ifdef CONFIG_CMD_USB
+#define CONFIG_USB_EHCI_MX5
 #define CONFIG_MXC_USB_PORT		1
 #define CONFIG_MXC_USB_PORTSC		(PORT_PTS_UTMI | PORT_PTS_PTW)
 #define CONFIG_MXC_USB_FLAGS		0
@@ -126,17 +137,28 @@
 /*
  * LCD
  */
+#ifdef CONFIG_VIDEO
+#define CONFIG_VIDEO_IPUV3
+#define CONFIG_VIDEO_BMP_RLE8
+#define CONFIG_VIDEO_BMP_GZIP
+#define CONFIG_SPLASH_SCREEN
+#define CONFIG_SPLASHIMAGE_GUARD
+#define CONFIG_SPLASH_SCREEN_ALIGN
+#define CONFIG_BMP_16BPP
 #define CONFIG_VIDEO_LOGO
 #define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE	(2 << 20)
+#endif
 
 /* LVDS display */
 #define CONFIG_SYS_LDB_CLOCK			33260000
 #define CONFIG_IMX_VIDEO_SKIP
+#define CONFIG_SPLASH_SOURCE
 
 /* IIM Fuses */
 #define CONFIG_FSL_IIM
 
 /* Watchdog */
+#define CONFIG_WATCHDOG_TIMEOUT_MSECS 8000
 
 /*
  * Boot Linux
@@ -154,6 +176,7 @@
  * NAND SPL
  */
 #define CONFIG_SPL_TARGET		"u-boot-with-nand-spl.imx"
+#define CONFIG_SPL_TEXT_BASE		0x70008000
 #define CONFIG_SPL_PAD_TO		0x8000
 #define CONFIG_SPL_STACK		0x70004000
 
@@ -167,6 +190,7 @@
 /*
  * Extra Environments
  */
+#define CONFIG_PREBOOT		"run try_bootscript"
 #define CONFIG_HOSTNAME		"m53menlo"
 
 #define CONFIG_EXTRA_ENV_SETTINGS					\
@@ -181,11 +205,9 @@
 	"mtdparts=" CONFIG_MTDPARTS_DEFAULT "\0"			\
 	"netdev=eth0\0"							\
 	"splashsource=mmc_fs\0"						\
-	"splashfile=boot/usplash.bmp.gz\0"				\
+	"splashfile=usplash.bmp.gz\0"					\
 	"splashimage=0x88000000\0"					\
 	"splashpos=m,m\0"						\
-	"stdout=serial,vidconsole\0"					\
-	"stderr=serial,vidconsole\0"					\
 	"addcons="							\
 		"setenv bootargs ${bootargs} "				\
 		"console=${consdev},${baudrate}\0"			\
@@ -193,7 +215,7 @@
 		"setenv bootargs ${bootargs} "				\
 		"ip=${ipaddr}:${serverip}:${gatewayip}:${netmask}"	\
 		":${hostname}:${netdev}:off\0"				\
-	"addmtd=setenv bootargs ${bootargs} ${mtdparts}\0"		\
+	"addmtd=setenv bootargs ${bootargs} mtdparts=${mtdparts}\0"	\
 	"addmisc="							\
 		"setenv bootargs ${bootargs} ${miscargs}\0"		\
 	"addargs=run addcons addmisc addmtd\0"				\
@@ -222,10 +244,5 @@
 			"source ${kernel_addr_r} ; "			\
 		"fi ; "							\
 		"fi\0"
-
-#if defined(CONFIG_SPL_BUILD)
-#undef CONFIG_WATCHDOG
-#define CONFIG_HW_WATCHDOG
-#endif
 
 #endif	/* __M53MENLO_CONFIG_H__ */

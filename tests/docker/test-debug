@@ -14,7 +14,7 @@
 
 . common.rc
 
-requires_binary clang
+requires clang asan
 
 cd "$BUILD_DIR"
 

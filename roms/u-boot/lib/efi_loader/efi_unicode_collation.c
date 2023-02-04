@@ -11,8 +11,8 @@
 #include <cp437.h>
 #include <efi_loader.h>
 
-/* Characters that may not be used in FAT 8.3 file names */
-static const char illegal[] = "+,<=>:;\"/\\|?*[]\x7f";
+/* Characters that may not be used in file names */
+static const char illegal[] = "<>:\"/\\|?*";
 
 /*
  * EDK2 assumes codepage 1250 when creating FAT 8.3 file names.
@@ -23,11 +23,11 @@ static const char illegal[] = "+,<=>:;\"/\\|?*[]\x7f";
 static const u16 codepage[] = CP1250;
 #else
 /* Unicode code points for code page 437 characters 0x80 - 0xff */
-static const u16 *codepage = codepage_437;
+static const u16 codepage[] = CP437;
 #endif
 
-/* GUID of the EFI_UNICODE_COLLATION_PROTOCOL2 */
-const efi_guid_t efi_guid_unicode_collation_protocol2 =
+/* GUID of the EFI_UNICODE_COLLATION_PROTOCOL */
+const efi_guid_t efi_guid_unicode_collation_protocol =
 	EFI_UNICODE_COLLATION_PROTOCOL2_GUID;
 
 /**
@@ -38,10 +38,15 @@ const efi_guid_t efi_guid_unicode_collation_protocol2 =
  * @s2:		second string
  *
  * This function implements the StriColl() service of the
- * EFI_UNICODE_COLLATION_PROTOCOL2.
+ * EFI_UNICODE_COLLATION_PROTOCOL.
  *
  * See the Unified Extensible Firmware Interface (UEFI) specification for
  * details.
+ *
+ * TODO:
+ * The implementation does not follow the Unicode collation algorithm.
+ * For ASCII characters it results in the same sort order as EDK2.
+ * We could use table UNICODE_CAPITALIZATION_TABLE for better results.
  *
  * Return:	0: s1 == s2, > 0: s1 > s2, < 0: s1 < s2
  */
@@ -69,21 +74,10 @@ out:
 }
 
 /**
- * next_lower() - get next codepoint converted to lower case
- *
- * @string:	pointer to u16 string, on return advanced by one codepoint
- * Return:	first codepoint of string converted to lower case
- */
-static s32 next_lower(const u16 **string)
-{
-	return utf_to_lower(utf16_get(string));
-}
-
-/**
  * metai_match() - compare utf-16 string with a pattern string case-insenitively
  *
- * @string:	string to compare
- * @pattern:	pattern string
+ * @s:		string to compare
+ * @p:		pattern string
  *
  * The pattern string may use these:
  *	- * matches >= 0 characters
@@ -99,67 +93,61 @@ static s32 next_lower(const u16 **string)
  *
  * Return:	true if the string is matched.
  */
-static bool metai_match(const u16 *string, const u16 *pattern)
+static bool metai_match(const u16 *s, const u16 *p)
 {
-	s32 first, s, p;
+	u16 first;
 
-	for (; *string && *pattern;) {
-		const u16 *string_old = string;
-
-		s = next_lower(&string);
-		p = next_lower(&pattern);
-
-		switch (p) {
+	for (; *s && *p; ++s, ++p) {
+		switch (*p) {
 		case '*':
 			/* Match 0 or more characters */
-			for (;; s = next_lower(&string)) {
-				if (metai_match(string_old, pattern))
+			++p;
+			for (;; ++s) {
+				if (metai_match(s, p))
 					return true;
-				if (!s)
+				if (!*s)
 					return false;
-				string_old = string;
 			}
 		case '?':
 			/* Match any one character */
 			break;
 		case '[':
 			/* Match any character in the set */
-			p = next_lower(&pattern);
-			first = p;
+			++p;
+			first = *p;
 			if (first == ']')
 				/* Empty set */
 				return false;
-			p = next_lower(&pattern);
-			if (p == '-') {
+			++p;
+			if (*p == '-') {
 				/* Range */
-				p = next_lower(&pattern);
-				if (s < first || s > p)
+				++p;
+				if (*s < first || *s > *p)
 					return false;
-				p = next_lower(&pattern);
-				if (p != ']')
+				++p;
+				if (*p != ']')
 					return false;
 			} else {
 				/* Set */
 				bool hit = false;
 
-				if (s == first)
+				if (*s == first)
 					hit = true;
-				for (; p && p != ']';
-				     p = next_lower(&pattern)) {
-					if (p == s)
+				for (; *p && *p != ']'; ++p) {
+					if (*p == *s)
 						hit = true;
 				}
-				if (!hit || p != ']')
+				if (!hit || *p != ']')
 					return false;
 			}
 			break;
 		default:
 			/* Match one character */
-			if (p != s)
+			if (*p != *s)
 				return false;
 		}
 	}
-	if (!*pattern && !*string)
+	if (!*p && !*s)
 		return true;
 	return false;
 }
@@ -169,8 +157,8 @@ static bool metai_match(const u16 *string, const u16 *pattern)
  *		       case-insenitively
  *
  * @this:	unicode collation protocol instance
- * @string:	string to compare
- * @pattern:	pattern string
+ * @s:		string to compare
+ * @p:		pattern string
  *
  * The pattern string may use these:
  *	- * matches >= 0 characters
@@ -179,7 +167,7 @@ static bool metai_match(const u16 *string, const u16 *pattern)
  *	- [<char1>-<char2>] matches any character in the range
  *
  * This function implements the MetaMatch() service of the
- * EFI_UNICODE_COLLATION_PROTOCOL2.
+ * EFI_UNICODE_COLLATION_PROTOCOL.
  *
  * Return:	true if the string is matched.
  */
@@ -199,12 +187,13 @@ static bool EFIAPI efi_metai_match(struct efi_unicode_collation_protocol *this,
  *
  * @this:	unicode collation protocol instance
  * @string:	string to convert
+ * @p:		pattern string
  *
  * The conversion is done in place. As long as upper and lower letters use the
  * same number of words this does not pose a problem.
  *
  * This function implements the StrLwr() service of the
- * EFI_UNICODE_COLLATION_PROTOCOL2.
+ * EFI_UNICODE_COLLATION_PROTOCOL.
  */
 static void EFIAPI efi_str_lwr(struct efi_unicode_collation_protocol *this,
 			       u16 *string)
@@ -220,12 +209,13 @@ static void EFIAPI efi_str_lwr(struct efi_unicode_collation_protocol *this,
  *
  * @this:	unicode collation protocol instance
  * @string:	string to convert
+ * @p:		pattern string
  *
  * The conversion is done in place. As long as upper and lower letters use the
  * same number of words this does not pose a problem.
  *
  * This function implements the StrUpr() service of the
- * EFI_UNICODE_COLLATION_PROTOCOL2.
+ * EFI_UNICODE_COLLATION_PROTOCOL.
  */
 static void EFIAPI efi_str_upr(struct efi_unicode_collation_protocol *this,
 			       u16 *string)
@@ -245,7 +235,7 @@ static void EFIAPI efi_str_upr(struct efi_unicode_collation_protocol *this,
  * @string:	converted string
  *
  * This function implements the FatToStr() service of the
- * EFI_UNICODE_COLLATION_PROTOCOL2.
+ * EFI_UNICODE_COLLATION_PROTOCOL.
  */
 static void EFIAPI efi_fat_to_str(struct efi_unicode_collation_protocol *this,
 				  efi_uintn_t fat_size, char *fat, u16 *string)
@@ -276,7 +266,7 @@ static void EFIAPI efi_fat_to_str(struct efi_unicode_collation_protocol *this,
  * @fat:	converted string
  *
  * This function implements the StrToFat() service of the
- * EFI_UNICODE_COLLATION_PROTOCOL2.
+ * EFI_UNICODE_COLLATION_PROTOCOL.
  *
  * Return:	true if an illegal character was substituted by '_'.
  */
@@ -300,10 +290,23 @@ static bool EFIAPI efi_str_to_fat(struct efi_unicode_collation_protocol *this,
 			break;
 		}
 		c = utf_to_upper(c);
-		if (utf_to_cp(&c, codepage) ||
-		    (c && (c < 0x20 || strchr(illegal, c)))) {
-			ret = true;
+		if (c >= 0x80) {
+			int j;
+
+			/* Look for codepage translation */
+			for (j = 0; j < 0x80; ++j) {
+				if (c == codepage[j]) {
+					c = j + 0x80;
+					break;
+				}
+			}
+			if (j >= 0x80) {
+				c = '_';
+				ret = true;
+			}
+		} else if (c && (c < 0x20 || strchr(illegal, c))) {
 			c = '_';
+			ret = true;
 		}
 
 		fat[i] = c;
@@ -315,7 +318,7 @@ static bool EFIAPI efi_str_to_fat(struct efi_unicode_collation_protocol *this,
 	return ret;
 }
 
-const struct efi_unicode_collation_protocol efi_unicode_collation_protocol2 = {
+const struct efi_unicode_collation_protocol efi_unicode_collation_protocol = {
 	.stri_coll = efi_stri_coll,
 	.metai_match = efi_metai_match,
 	.str_lwr = efi_str_lwr,

@@ -16,17 +16,16 @@
 #include "qemu/timer.h"
 #include "hw/rtc/sun4v-rtc.h"
 #include "trace.h"
-#include "qom/object.h"
 
 
 #define TYPE_SUN4V_RTC "sun4v_rtc"
-OBJECT_DECLARE_SIMPLE_TYPE(Sun4vRtc, SUN4V_RTC)
+#define SUN4V_RTC(obj) OBJECT_CHECK(Sun4vRtc, (obj), TYPE_SUN4V_RTC)
 
-struct Sun4vRtc {
+typedef struct Sun4vRtc {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
-};
+} Sun4vRtc;
 
 static uint64_t sun4v_rtc_read(void *opaque, hwaddr addr,
                                 unsigned size)

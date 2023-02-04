@@ -13,11 +13,7 @@
 #define XOR_UNIT(chan)			((chan) >> 1)
 #define XOR_CHAN(chan)			((chan) & 1)
 
-#ifdef CONFIG_ARMADA_MSYS
-#define MV_XOR_REGS_OFFSET(unit)	(0xF0800)
-#else
 #define MV_XOR_REGS_OFFSET(unit)	(0x60900)
-#endif
 #define MV_XOR_REGS_BASE(unit)		(MV_XOR_REGS_OFFSET(unit))
 
 /* XOR Engine Control Register Map */

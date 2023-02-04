@@ -48,8 +48,9 @@ GetLastBootVarErrorFlag (
 EFI_STATUS
 EFIAPI
 PlatformVarCleanup (
-  IN VAR_ERROR_FLAG    Flag,
-  IN VAR_CLEANUP_TYPE  Type
+  IN VAR_ERROR_FLAG     Flag,
+  IN VAR_CLEANUP_TYPE   Type
   );
 
 #endif
+

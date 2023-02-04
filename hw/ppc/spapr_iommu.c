@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -25,6 +25,7 @@
 #include "kvm_ppc.h"
 #include "migration/vmstate.h"
 #include "sysemu/dma.h"
+#include "exec/address-spaces.h"
 #include "trace.h"
 
 #include "hw/ppc/spapr.h"
@@ -211,11 +212,6 @@ static int spapr_tce_notify_flag_changed(IOMMUMemoryRegion *iommu,
 {
     struct SpaprTceTable *tbl = container_of(iommu, SpaprTceTable, iommu);
 
-    if (new & IOMMU_NOTIFIER_DEVIOTLB_UNMAP) {
-        error_setg(errp, "spart_tce does not support dev-iotlb yet");
-        return -EINVAL;
-    }
-
     if (old == IOMMU_NOTIFIER_NONE && new != IOMMU_NOTIFIER_NONE) {
         spapr_tce_set_need_vfio(tbl, true);
     } else if (old != IOMMU_NOTIFIER_NONE && new == IOMMU_NOTIFIER_NONE) {
@@ -279,7 +275,7 @@ static const VMStateDescription vmstate_spapr_tce_table_ex = {
 
 static const VMStateDescription vmstate_spapr_tce_table = {
     .name = "spapr_iommu",
-    .version_id = 3,
+    .version_id = 2,
     .minimum_version_id = 2,
     .pre_save = spapr_tce_table_pre_save,
     .post_load = spapr_tce_table_post_load,
@@ -292,7 +288,6 @@ static const VMStateDescription vmstate_spapr_tce_table = {
         VMSTATE_BOOL(bypass, SpaprTceTable),
         VMSTATE_VARRAY_UINT32_ALLOC(mig_table, SpaprTceTable, mig_nb_table, 0,
                                     vmstate_info_uint64, uint64_t),
-        VMSTATE_BOOL_V(def_win, SpaprTceTable, 3),
 
         VMSTATE_END_OF_LIST()
     },
@@ -450,7 +445,7 @@ static void spapr_tce_reset(DeviceState *dev)
 static target_ulong put_tce_emu(SpaprTceTable *tcet, target_ulong ioba,
                                 target_ulong tce)
 {
-    IOMMUTLBEvent event;
+    IOMMUTLBEntry entry;
     hwaddr page_mask = IOMMU_PAGE_MASK(tcet->page_shift);
     unsigned long index = (ioba - tcet->bus_offset) >> tcet->page_shift;
 
@@ -462,13 +457,12 @@ static target_ulong put_tce_emu(SpaprTceTable *tcet, target_ulong ioba,
 
     tcet->table[index] = tce;
 
-    event.entry.target_as = &address_space_memory,
-    event.entry.iova = (ioba - tcet->bus_offset) & page_mask;
-    event.entry.translated_addr = tce & page_mask;
-    event.entry.addr_mask = ~page_mask;
-    event.entry.perm = spapr_tce_iommu_access_flags(tce);
-    event.type = event.entry.perm ? IOMMU_NOTIFIER_MAP : IOMMU_NOTIFIER_UNMAP;
-    memory_region_notify_iommu(&tcet->iommu, 0, event);
+    entry.target_as = &address_space_memory,
+    entry.iova = (ioba - tcet->bus_offset) & page_mask;
+    entry.translated_addr = tce & page_mask;
+    entry.addr_mask = ~page_mask;
+    entry.perm = spapr_tce_iommu_access_flags(tce);
+    memory_region_notify_iommu(&tcet->iommu, 0, entry);
 
     return H_SUCCESS;
 }
@@ -686,7 +680,7 @@ static void spapr_tce_table_class_init(ObjectClass *klass, void *data)
     spapr_register_hypercall(H_STUFF_TCE, h_stuff_tce);
 }
 
-static const TypeInfo spapr_tce_table_info = {
+static TypeInfo spapr_tce_table_info = {
     .name = TYPE_SPAPR_TCE_TABLE,
     .parent = TYPE_DEVICE,
     .instance_size = sizeof(SpaprTceTable),

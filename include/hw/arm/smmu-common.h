@@ -21,7 +21,6 @@
 
 #include "hw/sysbus.h"
 #include "hw/pci/pci.h"
-#include "qom/object.h"
 
 #define SMMU_PCI_BUS_MAX      256
 #define SMMU_PCI_DEVFN_MAX    256
@@ -51,14 +50,7 @@ typedef struct SMMUTransTableInfo {
     uint64_t ttb;              /* TT base address */
     uint8_t tsz;               /* input range, ie. 2^(64 -tsz)*/
     uint8_t granule_sz;        /* granule page shift */
-    bool had;                  /* hierarchical attribute disable */
 } SMMUTransTableInfo;
-
-typedef struct SMMUTLBEntry {
-    IOMMUTLBEntry entry;
-    uint8_t level;
-    uint8_t granule;
-} SMMUTLBEntry;
 
 /*
  * Generic structure populated by derived SMMU devices
@@ -71,7 +63,6 @@ typedef struct SMMUTransCfg {
     bool disabled;             /* smmu is disabled */
     bool bypassed;             /* translation is bypassed */
     bool aborted;              /* translation is aborted */
-    bool record_faults;        /* record fault events */
     uint64_t ttb;              /* TT base address */
     uint8_t oas;               /* output address width */
     uint8_t tbi;               /* Top Byte Ignore */
@@ -100,11 +91,9 @@ typedef struct SMMUPciBus {
 typedef struct SMMUIOTLBKey {
     uint64_t iova;
     uint16_t asid;
-    uint8_t tg;
-    uint8_t level;
 } SMMUIOTLBKey;
 
-struct SMMUState {
+typedef struct SMMUState {
     /* <private> */
     SysBusDevice  dev;
     const char *mrtypename;
@@ -118,9 +107,9 @@ struct SMMUState {
     QLIST_HEAD(, SMMUDevice) devices_with_notifiers;
     uint8_t bus_num;
     PCIBus *primary_bus;
-};
+} SMMUState;
 
-struct SMMUBaseClass {
+typedef struct {
     /* <private> */
     SysBusDeviceClass parent_class;
 
@@ -128,10 +117,14 @@ struct SMMUBaseClass {
 
     DeviceRealize parent_realize;
 
-};
+} SMMUBaseClass;
 
 #define TYPE_ARM_SMMU "arm-smmu"
-OBJECT_DECLARE_TYPE(SMMUState, SMMUBaseClass, ARM_SMMU)
+#define ARM_SMMU(obj) OBJECT_CHECK(SMMUState, (obj), TYPE_ARM_SMMU)
+#define ARM_SMMU_CLASS(klass)                                    \
+    OBJECT_CLASS_CHECK(SMMUBaseClass, (klass), TYPE_ARM_SMMU)
+#define ARM_SMMU_GET_CLASS(obj)                              \
+    OBJECT_GET_CLASS(SMMUBaseClass, (obj), TYPE_ARM_SMMU)
 
 /* Return the SMMUPciBus handle associated to a PCI bus number */
 SMMUPciBus *smmu_find_smmu_pcibus(SMMUState *s, uint8_t bus_num);
@@ -147,7 +140,7 @@ static inline uint16_t smmu_get_sid(SMMUDevice *sdev)
  * pair, according to @cfg translation config
  */
 int smmu_ptw(SMMUTransCfg *cfg, dma_addr_t iova, IOMMUAccessFlags perm,
-             SMMUTLBEntry *tlbe, SMMUPTWEventInfo *info);
+             IOMMUTLBEntry *tlbe, SMMUPTWEventInfo *info);
 
 /**
  * select_tt - compute which translation table shall be used according to
@@ -160,15 +153,9 @@ IOMMUMemoryRegion *smmu_iommu_mr(SMMUState *s, uint32_t sid);
 
 #define SMMU_IOTLB_MAX_SIZE 256
 
-SMMUTLBEntry *smmu_iotlb_lookup(SMMUState *bs, SMMUTransCfg *cfg,
-                                SMMUTransTableInfo *tt, hwaddr iova);
-void smmu_iotlb_insert(SMMUState *bs, SMMUTransCfg *cfg, SMMUTLBEntry *entry);
-SMMUIOTLBKey smmu_get_iotlb_key(uint16_t asid, uint64_t iova,
-                                uint8_t tg, uint8_t level);
 void smmu_iotlb_inv_all(SMMUState *s);
 void smmu_iotlb_inv_asid(SMMUState *s, uint16_t asid);
-void smmu_iotlb_inv_iova(SMMUState *s, int asid, dma_addr_t iova,
-                         uint8_t tg, uint64_t num_pages, uint8_t ttl);
+void smmu_iotlb_inv_iova(SMMUState *s, uint16_t asid, dma_addr_t iova);
 
 /* Unmap the range of all the notifiers registered to any IOMMU mr */
 void smmu_inv_notifiers_all(SMMUState *s);

@@ -22,8 +22,9 @@
 EFI_STATUS
 EFIAPI
 ConnectNvVarsToFileSystem (
-  IN EFI_HANDLE  FsHandle
+  IN EFI_HANDLE    FsHandle
   );
+
 
 /**
   Update non-volatile variables stored on the file system.
@@ -39,4 +40,6 @@ EFIAPI
 UpdateNvVarsOnFileSystem (
   );
 
+
 #endif
+

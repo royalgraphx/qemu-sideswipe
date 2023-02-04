@@ -14,6 +14,7 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 
+
 #ifndef __EDKII_PLATFORM_HAS_ACPI_H__
 #define __EDKII_PLATFORM_HAS_ACPI_H__
 
@@ -23,6 +24,6 @@
     { 0x96, 0x04, 0x0f, 0xf7, 0xe1, 0x11, 0x96, 0x5a } \
   }
 
-extern EFI_GUID  gEdkiiPlatformHasAcpiGuid;
+extern EFI_GUID gEdkiiPlatformHasAcpiGuid;
 
 #endif

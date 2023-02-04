@@ -6,11 +6,12 @@
 
 **/
 
+
 #ifndef _SHELL_ENVIRONMENT_2_PROTOCOL_H_
 #define _SHELL_ENVIRONMENT_2_PROTOCOL_H_
 
-#define DEFAULT_INIT_ROW  1
-#define DEFAULT_AUTO_LF   FALSE
+#define DEFAULT_INIT_ROW    1
+#define DEFAULT_AUTO_LF     FALSE
 
 /**
   This function is a prototype for a function that dumps information on a protocol
@@ -23,7 +24,7 @@
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_DUMP_PROTOCOL_INFO)(
+(EFIAPI *SHELLENV_DUMP_PROTOCOL_INFO) (
   IN EFI_HANDLE                   Handle,
   IN VOID                         *Interface
   );
@@ -44,7 +45,7 @@ VOID
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_INTERNAL_COMMAND)(
+(EFIAPI *SHELLENV_INTERNAL_COMMAND) (
   IN EFI_HANDLE                   ImageHandle,
   IN EFI_SYSTEM_TABLE             *SystemTable
   );
@@ -61,7 +62,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLCMD_GET_LINE_HELP)(
+(EFIAPI *SHELLCMD_GET_LINE_HELP) (
   IN OUT CHAR16                 **Str
   );
 
@@ -69,20 +70,20 @@ EFI_STATUS
 Structure returned from functions that open multiple files.
 **/
 typedef struct {
-  UINT32                      Signature;          ///< SHELL_FILE_ARG_SIGNATURE.
-  LIST_ENTRY                  Link;               ///< Linked list helper.
-  EFI_STATUS                  Status;             ///< File's status.
+  UINT32                    Signature;            ///< SHELL_FILE_ARG_SIGNATURE.
+  LIST_ENTRY                Link;                 ///< Linked list helper.
+  EFI_STATUS                Status;               ///< File's status.
 
-  EFI_FILE_HANDLE             Parent;             ///< What is the Parent file of this file.
-  UINT64                      OpenMode;           ///< How was the file opened.
-  CHAR16                      *ParentName;        ///< String representation of parent.
-  EFI_DEVICE_PATH_PROTOCOL    *ParentDevicePath;  ///< DevicePath for Parent.
+  EFI_FILE_HANDLE           Parent;               ///< What is the Parent file of this file.
+  UINT64                    OpenMode;             ///< How was the file opened.
+  CHAR16                    *ParentName;          ///< String representation of parent.
+  EFI_DEVICE_PATH_PROTOCOL  *ParentDevicePath;    ///< DevicePath for Parent.
 
-  CHAR16                      *FullName;          ///< Path and file name for this file.
-  CHAR16                      *FileName;          ///< File name for this file.
+  CHAR16                    *FullName;            ///< Path and file name for this file.
+  CHAR16                    *FileName;            ///< File name for this file.
 
-  EFI_FILE_HANDLE             Handle;             ///< Handle to this file.
-  EFI_FILE_INFO               *Info;              ///< Pointer to file info for this file.
+  EFI_FILE_HANDLE           Handle;               ///< Handle to this file.
+  EFI_FILE_INFO             *Info;                ///< Pointer to file info for this file.
 } SHELL_FILE_ARG;
 
 /// Signature for SHELL_FILE_ARG.
@@ -104,8 +105,8 @@ GUID for the shell environment2 extension (main GUID above).
     0xd2c18636, 0x40e5, 0x4eb5, {0xa3, 0x1b, 0x36, 0x69, 0x5f, 0xd4, 0x2c, 0x87} \
   }
 
-#define EFI_SHELL_MAJOR_VER  0x00000001 ///< Major version of the EFI_SHELL_ENVIRONMENT2.
-#define EFI_SHELL_MINOR_VER  0x00000000 ///< Minor version of the EFI_SHELL_ENVIRONMENT2.
+#define EFI_SHELL_MAJOR_VER 0x00000001 ///< Major version of the EFI_SHELL_ENVIRONMENT2.
+#define EFI_SHELL_MINOR_VER 0x00000000 ///< Minor version of the EFI_SHELL_ENVIRONMENT2.
 
 /**
   Execute a command line.
@@ -128,7 +129,7 @@ GUID for the shell environment2 extension (main GUID above).
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_EXECUTE)(
+(EFIAPI *SHELLENV_EXECUTE) (
   IN EFI_HANDLE   *ParentImageHandle,
   IN CHAR16       *CommandLine,
   IN BOOLEAN      DebugOutput
@@ -146,7 +147,7 @@ EFI_STATUS
 **/
 typedef
 CHAR16 *
-(EFIAPI *SHELLENV_GET_ENV)(
+(EFIAPI *SHELLENV_GET_ENV) (
   IN CHAR16 *Name
   );
 
@@ -162,7 +163,7 @@ CHAR16 *
 **/
 typedef
 CHAR16 *
-(EFIAPI *SHELLENV_GET_MAP)(
+(EFIAPI *SHELLENV_GET_MAP) (
   IN CHAR16 *Name
   );
 
@@ -183,7 +184,7 @@ CHAR16 *
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_ADD_CMD)(
+(EFIAPI *SHELLENV_ADD_CMD) (
   IN SHELLENV_INTERNAL_COMMAND    Handler,
   IN CHAR16                       *Cmd,
   IN SHELLCMD_GET_LINE_HELP       GetLineHelp
@@ -205,7 +206,7 @@ EFI_STATUS
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_ADD_PROT)(
+(EFIAPI *SHELLENV_ADD_PROT) (
   IN EFI_GUID                     *Protocol,
   IN SHELLENV_DUMP_PROTOCOL_INFO  DumpToken OPTIONAL,
   IN SHELLENV_DUMP_PROTOCOL_INFO  DumpInfo OPTIONAL,
@@ -226,8 +227,8 @@ VOID
   @retval NULL                 The Name was not found, and GenId was not TRUE.
 **/
 typedef
-CHAR16 *
-(EFIAPI *SHELLENV_GET_PROT)(
+CHAR16*
+(EFIAPI *SHELLENV_GET_PROT) (
   IN EFI_GUID *Protocol,
   IN BOOLEAN GenId
   );
@@ -248,8 +249,8 @@ CHAR16 *
 
 **/
 typedef
-CHAR16 *
-(EFIAPI *SHELLENV_CUR_DIR)(
+CHAR16*
+(EFIAPI *SHELLENV_CUR_DIR) (
   IN CHAR16 *DeviceName OPTIONAL
   );
 
@@ -274,7 +275,7 @@ CHAR16 *
   @sa SHELLENV_FREE_FILE_LIST
 **/typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_FILE_META_ARG)(
+(EFIAPI *SHELLENV_FILE_META_ARG) (
   IN CHAR16               *Arg,
   IN OUT LIST_ENTRY       *ListHead
   );
@@ -288,7 +289,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_FREE_FILE_LIST)(
+(EFIAPI *SHELLENV_FREE_FILE_LIST) (
   IN OUT LIST_ENTRY       *ListHead
   );
 
@@ -307,8 +308,8 @@ EFI_STATUS
 
 **/
 typedef
-EFI_SHELL_INTERFACE *
-(EFIAPI *SHELLENV_NEW_SHELL)(
+EFI_SHELL_INTERFACE*
+(EFIAPI *SHELLENV_NEW_SHELL) (
   IN EFI_HANDLE ImageHandle
   );
 
@@ -324,7 +325,7 @@ EFI_SHELL_INTERFACE *
 **/
 typedef
 BOOLEAN
-(EFIAPI *SHELLENV_BATCH_IS_ACTIVE)(
+(EFIAPI *SHELLENV_BATCH_IS_ACTIVE) (
   VOID
   );
 
@@ -334,7 +335,7 @@ BOOLEAN
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_FREE_RESOURCES)(
+(EFIAPI *SHELLENV_FREE_RESOURCES) (
   VOID
   );
 
@@ -351,7 +352,7 @@ VOID
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_ENABLE_PAGE_BREAK)(
+(EFIAPI *SHELLENV_ENABLE_PAGE_BREAK) (
   IN INT32      StartRow,
   IN BOOLEAN    AutoWrap
   );
@@ -364,7 +365,7 @@ VOID
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_DISABLE_PAGE_BREAK)(
+(EFIAPI *SHELLENV_DISABLE_PAGE_BREAK) (
   VOID
   );
 
@@ -376,7 +377,7 @@ VOID
 **/
 typedef
 BOOLEAN
-(EFIAPI *SHELLENV_GET_PAGE_BREAK)(
+(EFIAPI *SHELLENV_GET_PAGE_BREAK) (
   VOID
   );
 
@@ -392,7 +393,7 @@ BOOLEAN
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_SET_KEY_FILTER)(
+(EFIAPI *SHELLENV_SET_KEY_FILTER) (
   IN UINT32      KeyFilter
   );
 
@@ -408,7 +409,7 @@ VOID
 **/
 typedef
 UINT32
-(EFIAPI *SHELLENV_GET_KEY_FILTER)(
+(EFIAPI *SHELLENV_GET_KEY_FILTER) (
   VOID
   );
 
@@ -424,7 +425,7 @@ UINT32
 **/
 typedef
 BOOLEAN
-(EFIAPI *SHELLENV_GET_EXECUTION_BREAK)(
+(EFIAPI *SHELLENV_GET_EXECUTION_BREAK) (
   VOID
   );
 
@@ -434,7 +435,7 @@ BOOLEAN
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_INCREMENT_SHELL_NESTING_LEVEL)(
+(EFIAPI *SHELLENV_INCREMENT_SHELL_NESTING_LEVEL) (
   VOID
   );
 
@@ -443,7 +444,7 @@ VOID
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_DECREMENT_SHELL_NESTING_LEVEL)(
+(EFIAPI *SHELLENV_DECREMENT_SHELL_NESTING_LEVEL) (
   VOID
   );
 
@@ -456,7 +457,7 @@ VOID
 **/
 typedef
 BOOLEAN
-(EFIAPI *SHELLENV_IS_ROOT_SHELL)(
+(EFIAPI *SHELLENV_IS_ROOT_SHELL) (
   VOID
   );
 
@@ -475,7 +476,7 @@ BOOLEAN
 **/
 typedef
 VOID
-(EFIAPI *SHELLENV_CLOSE_CONSOLE_PROXY)(
+(EFIAPI *SHELLENV_CLOSE_CONSOLE_PROXY) (
   IN     EFI_HANDLE                       ConInHandle,
   IN OUT EFI_SIMPLE_TEXT_INPUT_PROTOCOL   **ConIn,
   IN     EFI_HANDLE                       ConOutHandle,
@@ -485,7 +486,6 @@ VOID
 //
 // declarations of handle enumerator
 //
-
 /**
   For ease of use the shell maps handle #'s to short numbers.
   This is only done on request for various internal commands and the references
@@ -493,7 +493,7 @@ VOID
 **/
 typedef
 VOID
-(EFIAPI *INIT_HANDLE_ENUMERATOR)(
+(EFIAPI *INIT_HANDLE_ENUMERATOR) (
   VOID
   );
 
@@ -514,7 +514,7 @@ VOID
 **/
 typedef
 EFI_STATUS
-(EFIAPI *NEXT_HANDLE)(
+(EFIAPI *NEXT_HANDLE) (
   IN OUT EFI_HANDLE             **Handle
   );
 
@@ -534,7 +534,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SKIP_HANDLE)(
+(EFIAPI *SKIP_HANDLE) (
   IN UINTN                   SkipNum
   );
 
@@ -552,7 +552,7 @@ EFI_STATUS
 **/
 typedef
 UINTN
-(EFIAPI *RESET_HANDLE_ENUMERATOR)(
+(EFIAPI *RESET_HANDLE_ENUMERATOR) (
   IN UINTN                  EnumIndex
   );
 
@@ -567,7 +567,7 @@ UINTN
 **/
 typedef
 VOID
-(EFIAPI *CLOSE_HANDLE_ENUMERATOR)(
+(EFIAPI *CLOSE_HANDLE_ENUMERATOR) (
   VOID
   );
 
@@ -582,7 +582,7 @@ VOID
 **/
 typedef
 UINTN
-(EFIAPI *GET_NUM)(
+(EFIAPI *GET_NUM) (
   VOID
   );
 
@@ -590,43 +590,43 @@ UINTN
 Handle Enumerator structure.
 **/
 typedef struct {
-  INIT_HANDLE_ENUMERATOR     Init;   ///< The pointer to INIT_HANDLE_ENUMERATOR function.
-  NEXT_HANDLE                Next;   ///< The pointer to NEXT_HANDLE function.
-  SKIP_HANDLE                Skip;   ///< The pointer to SKIP_HANDLE function.
-  RESET_HANDLE_ENUMERATOR    Reset;  ///< The pointer to RESET_HANDLE_ENUMERATOR function.
-  CLOSE_HANDLE_ENUMERATOR    Close;  ///< The pointer to CLOSE_HANDLE_ENUMERATOR function.
-  GET_NUM                    GetNum; ///< The pointer to GET_NUM function.
+  INIT_HANDLE_ENUMERATOR  Init;   ///< The pointer to INIT_HANDLE_ENUMERATOR function.
+  NEXT_HANDLE             Next;   ///< The pointer to NEXT_HANDLE function.
+  SKIP_HANDLE             Skip;   ///< The pointer to SKIP_HANDLE function.
+  RESET_HANDLE_ENUMERATOR Reset;  ///< The pointer to RESET_HANDLE_ENUMERATOR function.
+  CLOSE_HANDLE_ENUMERATOR Close;  ///< The pointer to CLOSE_HANDLE_ENUMERATOR function.
+  GET_NUM                 GetNum; ///< The pointer to GET_NUM function.
 } HANDLE_ENUMERATOR;
 
 /**
   Signature for the PROTOCOL_INFO structure.
 **/
-#define PROTOCOL_INFO_SIGNATURE  SIGNATURE_32 ('s', 'p', 'i', 'n')
+#define PROTOCOL_INFO_SIGNATURE SIGNATURE_32 ('s', 'p', 'i', 'n')
 
 /**
   PROTOCOL_INFO structure for protocol enumerator functions.
 **/
 typedef struct {
-  UINTN                          Signature; ///< PROTOCOL_INFO_SIGNATURE.
-  LIST_ENTRY                     Link;      ///< Standard linked list helper member.
+  UINTN                       Signature;   ///< PROTOCOL_INFO_SIGNATURE.
+  LIST_ENTRY                  Link;        ///< Standard linked list helper member.
   //
   // The parsing info for the protocol.
   //
-  EFI_GUID                       ProtocolId; ///< The GUID for the protocol.
-  CHAR16                         *IdString;  ///< The name of the protocol.
-  SHELLENV_DUMP_PROTOCOL_INFO    DumpToken;  ///< The pointer to DumpToken function for the protocol.
-  SHELLENV_DUMP_PROTOCOL_INFO    DumpInfo;   ///< The pointer to DumpInfo function for the protocol.
+  EFI_GUID                    ProtocolId;  ///< The GUID for the protocol.
+  CHAR16                      *IdString;   ///< The name of the protocol.
+  SHELLENV_DUMP_PROTOCOL_INFO DumpToken;   ///< The pointer to DumpToken function for the protocol.
+  SHELLENV_DUMP_PROTOCOL_INFO DumpInfo;    ///< The pointer to DumpInfo function for the protocol.
   //
   // Patabase info on which handles are supporting this protocol.
   //
-  UINTN                          NoHandles; ///< The number of handles producing this protocol.
-  EFI_HANDLE                     *Handles;  ///< The array of handles.
+  UINTN                       NoHandles;   ///< The number of handles producing this protocol.
+  EFI_HANDLE                  *Handles;    ///< The array of handles.
+
 } PROTOCOL_INFO;
 
 //
 // Declarations of protocol info enumerator.
 //
-
 /**
   This is an internal shell function to initialize the protocol enumerator.
 
@@ -636,7 +636,7 @@ typedef struct {
 **/
 typedef
 VOID
-(EFIAPI *INIT_PROTOCOL_INFO_ENUMERATOR)(
+(EFIAPI *INIT_PROTOCOL_INFO_ENUMERATOR) (
   VOID
   );
 
@@ -657,7 +657,7 @@ VOID
 **/
 typedef
 EFI_STATUS
-(EFIAPI *NEXT_PROTOCOL_INFO)(
+(EFIAPI *NEXT_PROTOCOL_INFO) (
   IN OUT PROTOCOL_INFO            **ProtocolInfo
   );
 
@@ -673,7 +673,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SKIP_PROTOCOL_INFO)(
+(EFIAPI *SKIP_PROTOCOL_INFO) (
   IN UINTN                         SkipNum
   );
 
@@ -688,9 +688,10 @@ EFI_STATUS
 **/
 typedef
 VOID
-(EFIAPI *RESET_PROTOCOL_INFO_ENUMERATOR)(
+(EFIAPI *RESET_PROTOCOL_INFO_ENUMERATOR) (
   VOID
   );
+
 
 /**
   This function is an internal shell function for enumeration of protocols.
@@ -703,7 +704,7 @@ VOID
 **/
 typedef
 VOID
-(EFIAPI *CLOSE_PROTOCOL_INFO_ENUMERATOR)(
+(EFIAPI *CLOSE_PROTOCOL_INFO_ENUMERATOR) (
   VOID
   );
 
@@ -711,11 +712,11 @@ VOID
   Protocol enumerator structure of function pointers.
 **/
 typedef struct {
-  INIT_PROTOCOL_INFO_ENUMERATOR     Init;  ///< The pointer to INIT_PROTOCOL_INFO_ENUMERATOR function.
-  NEXT_PROTOCOL_INFO                Next;  ///< The pointer to NEXT_PROTOCOL_INFO function.
-  SKIP_PROTOCOL_INFO                Skip;  ///< The pointer to SKIP_PROTOCOL_INFO function.
-  RESET_PROTOCOL_INFO_ENUMERATOR    Reset; ///< The pointer to RESET_PROTOCOL_INFO_ENUMERATOR function.
-  CLOSE_PROTOCOL_INFO_ENUMERATOR    Close; ///< The pointer to CLOSE_PROTOCOL_INFO_ENUMERATOR function.
+  INIT_PROTOCOL_INFO_ENUMERATOR   Init;   ///< The pointer to INIT_PROTOCOL_INFO_ENUMERATOR function.
+  NEXT_PROTOCOL_INFO              Next;   ///< The pointer to NEXT_PROTOCOL_INFO function.
+  SKIP_PROTOCOL_INFO              Skip;   ///< The pointer to SKIP_PROTOCOL_INFO function.
+  RESET_PROTOCOL_INFO_ENUMERATOR  Reset;  ///< The pointer to RESET_PROTOCOL_INFO_ENUMERATOR function.
+  CLOSE_PROTOCOL_INFO_ENUMERATOR  Close;  ///< The pointer to CLOSE_PROTOCOL_INFO_ENUMERATOR function.
 } PROTOCOL_INFO_ENUMERATOR;
 
 /**
@@ -751,7 +752,7 @@ typedef struct {
 **/
 typedef
 EFI_STATUS
-(EFIAPI *GET_DEVICE_NAME)(
+(EFIAPI *GET_DEVICE_NAME) (
   IN EFI_HANDLE  DeviceHandle,
   IN BOOLEAN     UseComponentName,
   IN BOOLEAN     UseDevicePath,
@@ -763,8 +764,8 @@ EFI_STATUS
   IN UINTN       Indent
   );
 
-#define EFI_SHELL_COMPATIBLE_MODE_VER  L"1.1.1" ///< The string for lowest version this shell supports.
-#define EFI_SHELL_ENHANCED_MODE_VER    L"1.1.2" ///< The string for highest version this shell supports.
+#define EFI_SHELL_COMPATIBLE_MODE_VER L"1.1.1" ///< The string for lowest version this shell supports.
+#define EFI_SHELL_ENHANCED_MODE_VER   L"1.1.2" ///< The string for highest version this shell supports.
 
 /**
   This function gets the shell mode as stored in the shell environment
@@ -777,7 +778,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *GET_SHELL_MODE)(
+(EFIAPI *GET_SHELL_MODE) (
   OUT CHAR16     **Mode
   );
 
@@ -797,8 +798,8 @@ EFI_STATUS
   @retval NULL                  The operation could not be completed.
 **/
 typedef
-EFI_DEVICE_PATH_PROTOCOL *
-(EFIAPI *SHELLENV_NAME_TO_PATH)(
+EFI_DEVICE_PATH_PROTOCOL*
+(EFIAPI *SHELLENV_NAME_TO_PATH) (
   IN CHAR16 *Path
   );
 
@@ -826,8 +827,8 @@ EFI_DEVICE_PATH_PROTOCOL *
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_GET_FS_NAME)(
-  IN EFI_DEVICE_PATH_PROTOCOL     *DevPath,
+(EFIAPI *SHELLENV_GET_FS_NAME) (
+  IN EFI_DEVICE_PATH_PROTOCOL     * DevPath,
   IN BOOLEAN                      ConsistMapping,
   OUT CHAR16                      **Name
   );
@@ -854,7 +855,7 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_FILE_META_ARG_NO_WILDCARD)(
+(EFIAPI *SHELLENV_FILE_META_ARG_NO_WILDCARD) (
   IN CHAR16               *Arg,
   IN OUT LIST_ENTRY       *ListHead
   );
@@ -876,8 +877,8 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_DEL_DUP_FILE)(
-  IN LIST_ENTRY   *ListHead
+(EFIAPI *SHELLENV_DEL_DUP_FILE) (
+  IN LIST_ENTRY   * ListHead
   );
 
 /**
@@ -904,65 +905,65 @@ EFI_STATUS
 **/
 typedef
 EFI_STATUS
-(EFIAPI *SHELLENV_GET_FS_DEVICE_PATH)(
+(EFIAPI *SHELLENV_GET_FS_DEVICE_PATH) (
   IN CHAR16                        *Name,
   OUT EFI_DEVICE_PATH_PROTOCOL     **DevPath
   );
 
 /// EFI_SHELL_ENVIRONMENT2 protocol structure.
 typedef struct {
-  SHELLENV_EXECUTE                          Execute;
-  SHELLENV_GET_ENV                          GetEnv;
-  SHELLENV_GET_MAP                          GetMap;
-  SHELLENV_ADD_CMD                          AddCmd;
-  SHELLENV_ADD_PROT                         AddProt;
-  SHELLENV_GET_PROT                         GetProt;
-  SHELLENV_CUR_DIR                          CurDir;
-  SHELLENV_FILE_META_ARG                    FileMetaArg;
-  SHELLENV_FREE_FILE_LIST                   FreeFileList;
+  SHELLENV_EXECUTE                        Execute;
+  SHELLENV_GET_ENV                        GetEnv;
+  SHELLENV_GET_MAP                        GetMap;
+  SHELLENV_ADD_CMD                        AddCmd;
+  SHELLENV_ADD_PROT                       AddProt;
+  SHELLENV_GET_PROT                       GetProt;
+  SHELLENV_CUR_DIR                        CurDir;
+  SHELLENV_FILE_META_ARG                  FileMetaArg;
+  SHELLENV_FREE_FILE_LIST                 FreeFileList;
 
   //
   // The following services are only used by the shell itself.
   //
-  SHELLENV_NEW_SHELL                        NewShell;
-  SHELLENV_BATCH_IS_ACTIVE                  BatchIsActive;
+  SHELLENV_NEW_SHELL                      NewShell;
+  SHELLENV_BATCH_IS_ACTIVE                BatchIsActive;
 
-  SHELLENV_FREE_RESOURCES                   FreeResources;
+  SHELLENV_FREE_RESOURCES                 FreeResources;
 
   //
   // GUID to differentiate ShellEnvironment2 from ShellEnvironment.
   //
-  EFI_GUID                                  SESGuid;
+  EFI_GUID                                SESGuid;
   //
   // Major Version grows if shell environment interface has been changes.
   //
-  UINT32                                    MajorVersion;
-  UINT32                                    MinorVersion;
-  SHELLENV_ENABLE_PAGE_BREAK                EnablePageBreak;
-  SHELLENV_DISABLE_PAGE_BREAK               DisablePageBreak;
-  SHELLENV_GET_PAGE_BREAK                   GetPageBreak;
+  UINT32                                  MajorVersion;
+  UINT32                                  MinorVersion;
+  SHELLENV_ENABLE_PAGE_BREAK              EnablePageBreak;
+  SHELLENV_DISABLE_PAGE_BREAK             DisablePageBreak;
+  SHELLENV_GET_PAGE_BREAK                 GetPageBreak;
 
-  SHELLENV_SET_KEY_FILTER                   SetKeyFilter;
-  SHELLENV_GET_KEY_FILTER                   GetKeyFilter;
+  SHELLENV_SET_KEY_FILTER                 SetKeyFilter;
+  SHELLENV_GET_KEY_FILTER                 GetKeyFilter;
 
-  SHELLENV_GET_EXECUTION_BREAK              GetExecutionBreak;
-  SHELLENV_INCREMENT_SHELL_NESTING_LEVEL    IncrementShellNestingLevel;
-  SHELLENV_DECREMENT_SHELL_NESTING_LEVEL    DecrementShellNestingLevel;
-  SHELLENV_IS_ROOT_SHELL                    IsRootShell;
+  SHELLENV_GET_EXECUTION_BREAK            GetExecutionBreak;
+  SHELLENV_INCREMENT_SHELL_NESTING_LEVEL  IncrementShellNestingLevel;
+  SHELLENV_DECREMENT_SHELL_NESTING_LEVEL  DecrementShellNestingLevel;
+  SHELLENV_IS_ROOT_SHELL                  IsRootShell;
 
-  SHELLENV_CLOSE_CONSOLE_PROXY              CloseConsoleProxy;
-  HANDLE_ENUMERATOR                         HandleEnumerator;
-  PROTOCOL_INFO_ENUMERATOR                  ProtocolInfoEnumerator;
-  GET_DEVICE_NAME                           GetDeviceName;
-  GET_SHELL_MODE                            GetShellMode;
-  SHELLENV_NAME_TO_PATH                     NameToPath;
-  SHELLENV_GET_FS_NAME                      GetFsName;
-  SHELLENV_FILE_META_ARG_NO_WILDCARD        FileMetaArgNoWildCard;
-  SHELLENV_DEL_DUP_FILE                     DelDupFileArg;
-  SHELLENV_GET_FS_DEVICE_PATH               GetFsDevicePath;
+  SHELLENV_CLOSE_CONSOLE_PROXY            CloseConsoleProxy;
+  HANDLE_ENUMERATOR                       HandleEnumerator;
+  PROTOCOL_INFO_ENUMERATOR                ProtocolInfoEnumerator;
+  GET_DEVICE_NAME                         GetDeviceName;
+  GET_SHELL_MODE                          GetShellMode;
+  SHELLENV_NAME_TO_PATH                   NameToPath;
+  SHELLENV_GET_FS_NAME                    GetFsName;
+  SHELLENV_FILE_META_ARG_NO_WILDCARD      FileMetaArgNoWildCard;
+  SHELLENV_DEL_DUP_FILE                   DelDupFileArg;
+  SHELLENV_GET_FS_DEVICE_PATH             GetFsDevicePath;
 } EFI_SHELL_ENVIRONMENT2;
 
-extern EFI_GUID  gEfiShellEnvironment2Guid;
-extern EFI_GUID  gEfiShellEnvironment2ExtGuid;
+extern EFI_GUID gEfiShellEnvironment2Guid;
+extern EFI_GUID gEfiShellEnvironment2ExtGuid;
 
 #endif // _SHELL_ENVIRONMENT_2_PROTOCOL_H_

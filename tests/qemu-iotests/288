@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: quick
 #
 # qemu-img measure tests for LUKS images
 #

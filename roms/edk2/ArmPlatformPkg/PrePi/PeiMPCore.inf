@@ -15,7 +15,6 @@
   VERSION_STRING                 = 1.0
 
 [Sources]
-  PrePi.h
   PrePi.c
   MainMPCore.c
 
@@ -37,7 +36,6 @@
 
 [LibraryClasses]
   BaseLib
-  CacheMaintenanceLib
   DebugLib
   DebugAgentLib
   ArmLib

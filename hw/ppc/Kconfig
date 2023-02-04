@@ -3,17 +3,15 @@ config PSERIES
     imply PCI_DEVICES
     imply TEST_DEVICES
     imply VIRTIO_VGA
-    imply NVDIMM
     select DIMM
     select PCI
     select SPAPR_VSCSI
     select VFIO if LINUX   # needed by spapr_pci_vfio.c
-    select XICS
-    select XIVE
+    select XICS_SPAPR
+    select XIVE_SPAPR
     select MSI_NONBROKEN
     select FDT_PPC
     select CHRP_NVRAM
-    select VOF
 
 config SPAPR_RNG
     bool
@@ -31,7 +29,8 @@ config POWERNV
     select XICS
     select XIVE
     select FDT_PPC
-    select PCI_POWERNV
+    select PCI_EXPRESS
+    select MSI_NONBROKEN
 
 config PPC405
     bool
@@ -54,10 +53,10 @@ config PPC4XX
     bool
     select BITBANG_I2C
     select PCI
-    select PPC_UIC
 
 config SAM460EX
     bool
+    select PPC405
     select PFLASH_CFI01
     select IDE_SII3112
     select M41T80
@@ -69,22 +68,12 @@ config SAM460EX
     select USB_OHCI
     select FDT_PPC
 
-config PEGASOS2
-    bool
-    imply ATI_VGA
-    select MV64361
-    select VT82C686
-    select SMBUS_EEPROM
-    select VOF
-# This should come with VT82C686
-    select ACPI_X86
-
 config PREP
     bool
     imply PCI_DEVICES
     imply TEST_DEVICES
     select CS4231A
-    select RAVEN_PCI
+    select PREP_PCI
     select I82378
     select LSI_SCSI_PCI
     select M48T59
@@ -123,23 +112,12 @@ config E500
     imply AT24C
     imply VIRTIO_PCI
     select ETSEC
-    select GPIO_MPC8XXX
     select OPENPIC
-    select PFLASH_CFI01
     select PLATFORM_BUS
     select PPCE500_PCI
     select SERIAL
     select MPC_I2C
     select FDT_PPC
-    select DS1338
-
-config E500PLAT
-    bool
-    select E500
-
-config MPC8544DS
-    bool
-    select E500
 
 config VIRTEX
     bool
@@ -150,12 +128,24 @@ config VIRTEX
     select XILINX_ETHLITE
     select FDT_PPC
 
+config XIVE
+    bool
+    depends on POWERNV || PSERIES
+
+config XIVE_SPAPR
+    bool
+    default y
+    depends on PSERIES
+    select XIVE
+
+config XIVE_KVM
+    bool
+    default y
+    depends on XIVE_SPAPR && KVM
+
 # Only used by 64-bit targets
 config FW_CFG_PPC
     bool
 
 config FDT_PPC
-    bool
-
-config VOF
     bool

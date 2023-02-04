@@ -16,21 +16,21 @@ typedef struct {
   ///
   /// Beginning of the hypercall page.
   ///
-  VOID      *HyperPages;
+  VOID *HyperPages;
+  ///
+  /// Location of the hvm_info page.
+  ///
+  VOID *HvmInfo;
   ///
   /// Hypervisor major version.
   ///
-  UINT16    VersionMajor;
+  UINT16 VersionMajor;
   ///
   /// Hypervisor minor version.
   ///
-  UINT16    VersionMinor;
-  ///
-  /// Pointer to the RSDP found in the hvm_start_info provided to a PVH guest
-  ///
-  VOID      *RsdpPvh;
+  UINT16 VersionMinor;
 } EFI_XEN_INFO;
 
-extern EFI_GUID  gEfiXenInfoGuid;
+extern EFI_GUID gEfiXenInfoGuid;
 
 #endif

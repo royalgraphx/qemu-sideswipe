@@ -27,32 +27,30 @@
   @param FromBackend  Read frontend or backend value.
   @param ValuePtr     Where to put the value.
 
-  @retval XENSTORE_STATUS_SUCCESS  If successful, will update ValuePtr.
+  @retval XENSTORE_STATUS_SUCCESS  If succefull, will update ValuePtr.
   @return                          Any other return value indicate the error,
                                    ValuePtr is not updated in this case.
 **/
 STATIC
 XENSTORE_STATUS
 XenBusReadUint64 (
-  IN  XENBUS_PROTOCOL  *This,
-  IN  CONST CHAR8      *Node,
-  IN  BOOLEAN          FromBackend,
-  OUT UINT64           *ValuePtr
+  IN  XENBUS_PROTOCOL *This,
+  IN  CONST CHAR8     *Node,
+  IN  BOOLEAN         FromBackend,
+  OUT UINT64          *ValuePtr
   )
 {
-  XENSTORE_STATUS  Status;
-  CHAR8            *Ptr;
+  XENSTORE_STATUS Status;
+  CHAR8 *Ptr;
 
   if (!FromBackend) {
-    Status = This->XsRead (This, XST_NIL, Node, (VOID **)&Ptr);
+    Status = This->XsRead (This, XST_NIL, Node, (VOID**)&Ptr);
   } else {
-    Status = This->XsBackendRead (This, XST_NIL, Node, (VOID **)&Ptr);
+    Status = This->XsBackendRead (This, XST_NIL, Node, (VOID**)&Ptr);
   }
-
   if (Status != XENSTORE_STATUS_SUCCESS) {
     return Status;
   }
-
   // AsciiStrDecimalToUint64 will ASSERT if Ptr overflow UINT64.
   *ValuePtr = AsciiStrDecimalToUint64 (Ptr);
   FreePool (Ptr);
@@ -67,23 +65,20 @@ XenBusReadUint64 (
 STATIC
 VOID
 XenPvBlockFree (
-  IN XEN_BLOCK_FRONT_DEVICE  *Dev
+  IN XEN_BLOCK_FRONT_DEVICE *Dev
   )
 {
-  XENBUS_PROTOCOL  *XenBusIo = Dev->XenBusIo;
+  XENBUS_PROTOCOL *XenBusIo = Dev->XenBusIo;
 
   if (Dev->RingRef != 0) {
     XenBusIo->GrantEndAccess (XenBusIo, Dev->RingRef);
   }
-
   if (Dev->Ring.sring != NULL) {
     FreePages (Dev->Ring.sring, 1);
   }
-
   if (Dev->EventChannel != 0) {
     XenBusIo->EventChannelClose (XenBusIo, Dev->EventChannel);
   }
-
   FreePool (Dev);
 }
 
@@ -100,29 +95,27 @@ XenPvBlockFree (
 STATIC
 XENSTORE_STATUS
 XenPvBlkWaitForBackendState (
-  IN  XEN_BLOCK_FRONT_DEVICE  *Dev,
-  IN  XenbusState             ExpectedState,
-  OUT XenbusState             *LastStatePtr OPTIONAL
+  IN  XEN_BLOCK_FRONT_DEVICE *Dev,
+  IN  XenbusState            ExpectedState,
+  OUT XenbusState            *LastStatePtr OPTIONAL
   )
 {
-  XENBUS_PROTOCOL  *XenBusIo = Dev->XenBusIo;
-  XenbusState      State;
-  UINT64           Value;
-  XENSTORE_STATUS  Status = XENSTORE_STATUS_SUCCESS;
+  XENBUS_PROTOCOL *XenBusIo = Dev->XenBusIo;
+  XenbusState State;
+  UINT64 Value;
+  XENSTORE_STATUS Status = XENSTORE_STATUS_SUCCESS;
 
   while (TRUE) {
     Status = XenBusReadUint64 (XenBusIo, "state", TRUE, &Value);
     if (Status != XENSTORE_STATUS_SUCCESS) {
       return Status;
     }
-
     if (Value > XenbusStateReconfigured) {
       //
       // Value is not a State value.
       //
       return XENSTORE_STATUS_EIO;
     }
-
     State = Value;
     if (State == ExpectedState) {
       break;
@@ -130,13 +123,9 @@ XenPvBlkWaitForBackendState (
       Status = XENSTORE_STATUS_FAIL;
       break;
     }
-
-    DEBUG ((
-      DEBUG_INFO,
-      "XenPvBlk: waiting backend state %d, current: %d\n",
-      ExpectedState,
-      State
-      ));
+    DEBUG ((EFI_D_INFO,
+            "XenPvBlk: waiting backend state %d, current: %d\n",
+            ExpectedState, State));
     XenBusIo->WaitForWatch (XenBusIo, Dev->StateWatchToken);
   }
 
@@ -154,125 +143,92 @@ XenPvBlockFrontInitialization (
   OUT XEN_BLOCK_FRONT_DEVICE  **DevPtr
   )
 {
-  XENSTORE_TRANSACTION    Transaction;
-  CHAR8                   *DeviceType;
-  blkif_sring_t           *SharedRing;
-  XENSTORE_STATUS         Status;
-  XEN_BLOCK_FRONT_DEVICE  *Dev;
-  XenbusState             State;
-  UINT64                  Value;
-  CHAR8                   *Params;
+  XENSTORE_TRANSACTION Transaction;
+  CHAR8 *DeviceType;
+  blkif_sring_t *SharedRing;
+  XENSTORE_STATUS Status;
+  XEN_BLOCK_FRONT_DEVICE *Dev;
+  XenbusState State;
+  UINT64 Value;
+  CHAR8 *Params;
 
   ASSERT (NodeName != NULL);
 
   Dev = AllocateZeroPool (sizeof (XEN_BLOCK_FRONT_DEVICE));
-  if (Dev == NULL) {
-    return EFI_OUT_OF_RESOURCES;
-  }
-
   Dev->Signature = XEN_BLOCK_FRONT_SIGNATURE;
-  Dev->NodeName  = NodeName;
-  Dev->XenBusIo  = XenBusIo;
-  Dev->DeviceId  = XenBusIo->DeviceId;
+  Dev->NodeName = NodeName;
+  Dev->XenBusIo = XenBusIo;
+  Dev->DeviceId = XenBusIo->DeviceId;
 
-  XenBusIo->XsRead (XenBusIo, XST_NIL, "device-type", (VOID **)&DeviceType);
+  XenBusIo->XsRead (XenBusIo, XST_NIL, "device-type", (VOID**)&DeviceType);
   if (AsciiStrCmp (DeviceType, "cdrom") == 0) {
     Dev->MediaInfo.CdRom = TRUE;
   } else {
     Dev->MediaInfo.CdRom = FALSE;
   }
-
   FreePool (DeviceType);
 
   if (Dev->MediaInfo.CdRom) {
-    Status = XenBusIo->XsBackendRead (XenBusIo, XST_NIL, "params", (VOID **)&Params);
+    Status = XenBusIo->XsBackendRead (XenBusIo, XST_NIL, "params", (VOID**)&Params);
     if (Status != XENSTORE_STATUS_SUCCESS) {
-      DEBUG ((DEBUG_ERROR, "%a: Failed to read params (%d)\n", __FUNCTION__, Status));
+      DEBUG ((EFI_D_ERROR, "%a: Failed to read params (%d)\n", __FUNCTION__, Status));
       goto Error;
     }
-
-    if ((AsciiStrLen (Params) == 0) || (AsciiStrCmp (Params, "aio:") == 0)) {
+    if (AsciiStrLen (Params) == 0 || AsciiStrCmp (Params, "aio:") == 0) {
       FreePool (Params);
-      DEBUG ((DEBUG_INFO, "%a: Empty cdrom\n", __FUNCTION__));
+      DEBUG ((EFI_D_INFO, "%a: Empty cdrom\n", __FUNCTION__));
       goto Error;
     }
-
     FreePool (Params);
   }
 
   Status = XenBusReadUint64 (XenBusIo, "backend-id", FALSE, &Value);
-  if ((Status != XENSTORE_STATUS_SUCCESS) || (Value > MAX_UINT16)) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "XenPvBlk: Failed to get backend-id (%d)\n",
-      Status
-      ));
+  if (Status != XENSTORE_STATUS_SUCCESS || Value > MAX_UINT16) {
+    DEBUG ((EFI_D_ERROR, "XenPvBlk: Failed to get backend-id (%d)\n",
+            Status));
     goto Error;
   }
-
   Dev->DomainId = (domid_t)Value;
   XenBusIo->EventChannelAllocate (XenBusIo, Dev->DomainId, &Dev->EventChannel);
 
-  SharedRing = (blkif_sring_t *)AllocatePages (1);
+  SharedRing = (blkif_sring_t*) AllocatePages (1);
   SHARED_RING_INIT (SharedRing);
   FRONT_RING_INIT (&Dev->Ring, SharedRing, EFI_PAGE_SIZE);
-  XenBusIo->GrantAccess (
-              XenBusIo,
-              Dev->DomainId,
-              (INTN)SharedRing >> EFI_PAGE_SHIFT,
-              FALSE,
-              &Dev->RingRef
-              );
+  XenBusIo->GrantAccess (XenBusIo,
+                         Dev->DomainId,
+                         (INTN) SharedRing >> EFI_PAGE_SHIFT,
+                         FALSE,
+                         &Dev->RingRef);
 
 Again:
   Status = XenBusIo->XsTransactionStart (XenBusIo, &Transaction);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((DEBUG_WARN, "XenPvBlk: Failed to start transaction, %d\n", Status));
+    DEBUG ((EFI_D_WARN, "XenPvBlk: Failed to start transaction, %d\n", Status));
     goto Error;
   }
 
-  Status = XenBusIo->XsPrintf (
-                       XenBusIo,
-                       &Transaction,
-                       NodeName,
-                       "ring-ref",
-                       "%d",
-                       Dev->RingRef
-                       );
+  Status = XenBusIo->XsPrintf (XenBusIo, &Transaction, NodeName, "ring-ref", "%d",
+                               Dev->RingRef);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "XenPvBlk: Failed to write ring-ref.\n"));
+    DEBUG ((EFI_D_ERROR, "XenPvBlk: Failed to write ring-ref.\n"));
     goto AbortTransaction;
   }
-
-  Status = XenBusIo->XsPrintf (
-                       XenBusIo,
-                       &Transaction,
-                       NodeName,
-                       "event-channel",
-                       "%d",
-                       Dev->EventChannel
-                       );
+  Status = XenBusIo->XsPrintf (XenBusIo, &Transaction, NodeName,
+                               "event-channel", "%d", Dev->EventChannel);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "XenPvBlk: Failed to write event-channel.\n"));
+    DEBUG ((EFI_D_ERROR, "XenPvBlk: Failed to write event-channel.\n"));
     goto AbortTransaction;
   }
-
-  Status = XenBusIo->XsPrintf (
-                       XenBusIo,
-                       &Transaction,
-                       NodeName,
-                       "protocol",
-                       "%a",
-                       XEN_IO_PROTO_ABI_NATIVE
-                       );
+  Status = XenBusIo->XsPrintf (XenBusIo, &Transaction, NodeName,
+                               "protocol", "%a", XEN_IO_PROTO_ABI_NATIVE);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "XenPvBlk: Failed to write protocol.\n"));
+    DEBUG ((EFI_D_ERROR, "XenPvBlk: Failed to write protocol.\n"));
     goto AbortTransaction;
   }
 
   Status = XenBusIo->SetState (XenBusIo, &Transaction, XenbusStateConnected);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((DEBUG_ERROR, "XenPvBlk: Failed to switch state.\n"));
+    DEBUG ((EFI_D_ERROR, "XenPvBlk: Failed to switch state.\n"));
     goto AbortTransaction;
   }
 
@@ -288,22 +244,16 @@ Again:
   //
   Status = XenPvBlkWaitForBackendState (Dev, XenbusStateConnected, &State);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "XenPvBlk: backend for %a/%d not available, rc=%d state=%d\n",
-      XenBusIo->Type,
-      XenBusIo->DeviceId,
-      Status,
-      State
-      ));
+    DEBUG ((EFI_D_ERROR,
+            "XenPvBlk: backend for %a/%d not available, rc=%d state=%d\n",
+            XenBusIo->Type, XenBusIo->DeviceId, Status, State));
     goto Error2;
   }
 
   Status = XenBusReadUint64 (XenBusIo, "info", TRUE, &Value);
-  if ((Status != XENSTORE_STATUS_SUCCESS) || (Value > MAX_UINT32)) {
+  if (Status != XENSTORE_STATUS_SUCCESS || Value > MAX_UINT32) {
     goto Error2;
   }
-
   Dev->MediaInfo.VDiskInfo = (UINT32)Value;
   if (Dev->MediaInfo.VDiskInfo & VDISK_READONLY) {
     Dev->MediaInfo.ReadWrite = FALSE;
@@ -317,23 +267,17 @@ Again:
   }
 
   Status = XenBusReadUint64 (XenBusIo, "sector-size", TRUE, &Value);
-  if ((Status != XENSTORE_STATUS_SUCCESS) || (Value > MAX_UINT32)) {
+  if (Status != XENSTORE_STATUS_SUCCESS || Value > MAX_UINT32) {
     goto Error2;
   }
-
   if ((UINT32)Value % 512 != 0) {
     //
     // This is not supported by the driver.
     //
-    DEBUG ((
-      DEBUG_ERROR,
-      "XenPvBlk: Unsupported sector-size value %Lu, "
-      "it must be a multiple of 512\n",
-      Value
-      ));
+    DEBUG ((EFI_D_ERROR, "XenPvBlk: Unsupported sector-size value %Lu, "
+            "it must be a multiple of 512\n", Value));
     goto Error2;
   }
-
   Dev->MediaInfo.SectorSize = (UINT32)Value;
 
   // Default value
@@ -354,12 +298,8 @@ Again:
     Dev->MediaInfo.FeatureFlushCache = FALSE;
   }
 
-  DEBUG ((
-    DEBUG_INFO,
-    "XenPvBlk: New disk with %ld sectors of %d bytes\n",
-    Dev->MediaInfo.Sectors,
-    Dev->MediaInfo.SectorSize
-    ));
+  DEBUG ((EFI_D_INFO, "XenPvBlk: New disk with %ld sectors of %d bytes\n",
+          Dev->MediaInfo.Sectors, Dev->MediaInfo.SectorSize));
 
   *DevPtr = Dev;
   return EFI_SUCCESS;
@@ -379,86 +319,69 @@ Error:
 
 VOID
 XenPvBlockFrontShutdown (
-  IN XEN_BLOCK_FRONT_DEVICE  *Dev
+  IN XEN_BLOCK_FRONT_DEVICE *Dev
   )
 {
-  XENBUS_PROTOCOL  *XenBusIo = Dev->XenBusIo;
-  XENSTORE_STATUS  Status;
-  UINT64           Value;
+  XENBUS_PROTOCOL *XenBusIo = Dev->XenBusIo;
+  XENSTORE_STATUS Status;
+  UINT64 Value;
 
   XenPvBlockSync (Dev);
 
   Status = XenBusIo->SetState (XenBusIo, XST_NIL, XenbusStateClosing);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "XenPvBlk: error while changing state to Closing: %d\n",
-      Status
-      ));
+    DEBUG ((EFI_D_ERROR,
+            "XenPvBlk: error while changing state to Closing: %d\n",
+            Status));
     goto Close;
   }
 
   Status = XenPvBlkWaitForBackendState (Dev, XenbusStateClosing, NULL);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "XenPvBlk: error while waiting for closing backend state: %d\n",
-      Status
-      ));
+    DEBUG ((EFI_D_ERROR,
+            "XenPvBlk: error while waiting for closing backend state: %d\n",
+            Status));
     goto Close;
   }
 
   Status = XenBusIo->SetState (XenBusIo, XST_NIL, XenbusStateClosed);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "XenPvBlk: error while changing state to Closed: %d\n",
-      Status
-      ));
+    DEBUG ((EFI_D_ERROR,
+            "XenPvBlk: error while changing state to Closed: %d\n",
+            Status));
     goto Close;
   }
 
   Status = XenPvBlkWaitForBackendState (Dev, XenbusStateClosed, NULL);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "XenPvBlk: error while waiting for closed backend state: %d\n",
-      Status
-      ));
+    DEBUG ((EFI_D_ERROR,
+            "XenPvBlk: error while waiting for closed backend state: %d\n",
+            Status));
     goto Close;
   }
 
   Status = XenBusIo->SetState (XenBusIo, XST_NIL, XenbusStateInitialising);
   if (Status != XENSTORE_STATUS_SUCCESS) {
-    DEBUG ((
-      DEBUG_ERROR,
-      "XenPvBlk: error while changing state to initialising: %d\n",
-      Status
-      ));
+    DEBUG ((EFI_D_ERROR,
+            "XenPvBlk: error while changing state to initialising: %d\n",
+            Status));
     goto Close;
   }
 
   while (TRUE) {
     Status = XenBusReadUint64 (XenBusIo, "state", TRUE, &Value);
     if (Status != XENSTORE_STATUS_SUCCESS) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "XenPvBlk: error while waiting for new backend state: %d\n",
-        Status
-        ));
+      DEBUG ((EFI_D_ERROR,
+              "XenPvBlk: error while waiting for new backend state: %d\n",
+              Status));
       goto Close;
     }
-
-    if ((Value <= XenbusStateInitWait) || (Value >= XenbusStateClosed)) {
+    if (Value <= XenbusStateInitWait || Value >= XenbusStateClosed) {
       break;
     }
-
-    DEBUG ((
-      DEBUG_INFO,
-      "XenPvBlk: waiting backend state %d, current: %Lu\n",
-      XenbusStateInitWait,
-      Value
-      ));
+    DEBUG ((EFI_D_INFO,
+            "XenPvBlk: waiting backend state %d, current: %Lu\n",
+            XenbusStateInitWait, Value));
     XenBusIo->WaitForWatch (XenBusIo, Dev->StateWatchToken);
   }
 
@@ -474,7 +397,7 @@ Close:
 STATIC
 VOID
 XenPvBlockWaitSlot (
-  IN XEN_BLOCK_FRONT_DEVICE  *Dev
+  IN XEN_BLOCK_FRONT_DEVICE *Dev
   )
 {
   /* Wait for a slot */
@@ -484,7 +407,6 @@ XenPvBlockWaitSlot (
       if (!RING_FULL (&Dev->Ring)) {
         break;
       }
-
       /* Really no slot, could wait for an event on Dev->EventChannel. */
     }
   }
@@ -492,58 +414,53 @@ XenPvBlockWaitSlot (
 
 VOID
 XenPvBlockAsyncIo (
-  IN OUT XEN_BLOCK_FRONT_IO  *IoData,
-  IN     BOOLEAN             IsWrite
+  IN OUT XEN_BLOCK_FRONT_IO *IoData,
+  IN     BOOLEAN            IsWrite
   )
 {
-  XEN_BLOCK_FRONT_DEVICE  *Dev      = IoData->Dev;
-  XENBUS_PROTOCOL         *XenBusIo = Dev->XenBusIo;
-  blkif_request_t         *Request;
-  RING_IDX                RingIndex;
-  BOOLEAN                 Notify;
-  INT32                   NumSegments, Index;
-  UINTN                   Start, End;
+  XEN_BLOCK_FRONT_DEVICE *Dev = IoData->Dev;
+  XENBUS_PROTOCOL *XenBusIo = Dev->XenBusIo;
+  blkif_request_t *Request;
+  RING_IDX RingIndex;
+  BOOLEAN Notify;
+  INT32 NumSegments, Index;
+  UINTN Start, End;
 
   // Can't io at non-sector-aligned location
-  ASSERT (!(IoData->Sector & ((Dev->MediaInfo.SectorSize / 512) - 1)));
+  ASSERT(!(IoData->Sector & ((Dev->MediaInfo.SectorSize / 512) - 1)));
   // Can't io non-sector-sized amounts
-  ASSERT (!(IoData->Size & (Dev->MediaInfo.SectorSize - 1)));
+  ASSERT(!(IoData->Size & (Dev->MediaInfo.SectorSize - 1)));
   // Can't io non-sector-aligned buffer
-  ASSERT (!((UINTN)IoData->Buffer & (Dev->MediaInfo.SectorSize - 1)));
+  ASSERT(!((UINTN) IoData->Buffer & (Dev->MediaInfo.SectorSize - 1)));
 
-  Start          = (UINTN)IoData->Buffer & ~EFI_PAGE_MASK;
-  End            = ((UINTN)IoData->Buffer + IoData->Size + EFI_PAGE_SIZE - 1) & ~EFI_PAGE_MASK;
+  Start = (UINTN) IoData->Buffer & ~EFI_PAGE_MASK;
+  End = ((UINTN) IoData->Buffer + IoData->Size + EFI_PAGE_SIZE - 1) & ~EFI_PAGE_MASK;
   IoData->NumRef = NumSegments = (INT32)((End - Start) / EFI_PAGE_SIZE);
 
   ASSERT (NumSegments <= BLKIF_MAX_SEGMENTS_PER_REQUEST);
 
   XenPvBlockWaitSlot (Dev);
   RingIndex = Dev->Ring.req_prod_pvt;
-  Request   = RING_GET_REQUEST (&Dev->Ring, RingIndex);
+  Request = RING_GET_REQUEST (&Dev->Ring, RingIndex);
 
-  Request->operation     = IsWrite ? BLKIF_OP_WRITE : BLKIF_OP_READ;
-  Request->nr_segments   = (UINT8)NumSegments;
-  Request->handle        = Dev->DeviceId;
-  Request->id            = (UINTN)IoData;
+  Request->operation = IsWrite ? BLKIF_OP_WRITE : BLKIF_OP_READ;
+  Request->nr_segments = (UINT8)NumSegments;
+  Request->handle = Dev->DeviceId;
+  Request->id = (UINTN) IoData;
   Request->sector_number = IoData->Sector;
 
   for (Index = 0; Index < NumSegments; Index++) {
     Request->seg[Index].first_sect = 0;
-    Request->seg[Index].last_sect  = EFI_PAGE_SIZE / 512 - 1;
+    Request->seg[Index].last_sect = EFI_PAGE_SIZE / 512 - 1;
   }
-
-  Request->seg[0].first_sect              = (UINT8)(((UINTN)IoData->Buffer & EFI_PAGE_MASK) / 512);
+  Request->seg[0].first_sect = (UINT8)(((UINTN) IoData->Buffer & EFI_PAGE_MASK) / 512);
   Request->seg[NumSegments - 1].last_sect =
-    (UINT8)((((UINTN)IoData->Buffer + IoData->Size - 1) & EFI_PAGE_MASK) / 512);
+      (UINT8)((((UINTN) IoData->Buffer + IoData->Size - 1) & EFI_PAGE_MASK) / 512);
   for (Index = 0; Index < NumSegments; Index++) {
-    UINTN  Data = Start + Index * EFI_PAGE_SIZE;
-    XenBusIo->GrantAccess (
-                XenBusIo,
-                Dev->DomainId,
-                Data >> EFI_PAGE_SHIFT,
-                IsWrite,
-                &Request->seg[Index].gref
-                );
+    UINTN Data = Start + Index * EFI_PAGE_SIZE;
+    XenBusIo->GrantAccess (XenBusIo, Dev->DomainId,
+                           Data >> EFI_PAGE_SHIFT, IsWrite,
+                           &Request->seg[Index].gref);
     IoData->GrantRef[Index] = Request->seg[Index].gref;
   }
 
@@ -553,22 +470,20 @@ XenPvBlockAsyncIo (
   RING_PUSH_REQUESTS_AND_CHECK_NOTIFY (&Dev->Ring, Notify);
 
   if (Notify) {
-    UINT32  ReturnCode;
+    UINT32 ReturnCode;
     ReturnCode = XenBusIo->EventChannelNotify (XenBusIo, Dev->EventChannel);
     if (ReturnCode != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "XenPvBlk: Unexpected return value from EventChannelNotify: %d\n",
-        ReturnCode
-        ));
+      DEBUG ((EFI_D_ERROR,
+              "XenPvBlk: Unexpected return value from EventChannelNotify: %d\n",
+              ReturnCode));
     }
   }
 }
 
 EFI_STATUS
 XenPvBlockIo (
-  IN OUT XEN_BLOCK_FRONT_IO  *IoData,
-  IN     BOOLEAN             IsWrite
+  IN OUT XEN_BLOCK_FRONT_IO *IoData,
+  IN     BOOLEAN            IsWrite
   )
 {
   //
@@ -587,44 +502,42 @@ XenPvBlockIo (
 STATIC
 VOID
 XenPvBlockPushOperation (
-  IN XEN_BLOCK_FRONT_DEVICE  *Dev,
-  IN UINT8                   Operation,
-  IN UINT64                  Id
+  IN XEN_BLOCK_FRONT_DEVICE *Dev,
+  IN UINT8                  Operation,
+  IN UINT64                 Id
   )
 {
-  INT32            Index;
-  blkif_request_t  *Request;
-  BOOLEAN          Notify;
+  INT32 Index;
+  blkif_request_t *Request;
+  BOOLEAN Notify;
 
   XenPvBlockWaitSlot (Dev);
-  Index                = Dev->Ring.req_prod_pvt;
-  Request              = RING_GET_REQUEST (&Dev->Ring, Index);
-  Request->operation   = Operation;
+  Index = Dev->Ring.req_prod_pvt;
+  Request = RING_GET_REQUEST(&Dev->Ring, Index);
+  Request->operation = Operation;
   Request->nr_segments = 0;
-  Request->handle      = Dev->DeviceId;
-  Request->id          = Id;
+  Request->handle = Dev->DeviceId;
+  Request->id = Id;
   /* Not needed anyway, but the backend will check it */
   Request->sector_number = 0;
   Dev->Ring.req_prod_pvt = Index + 1;
   MemoryFence ();
   RING_PUSH_REQUESTS_AND_CHECK_NOTIFY (&Dev->Ring, Notify);
   if (Notify) {
-    XENBUS_PROTOCOL  *XenBusIo = Dev->XenBusIo;
-    UINT32           ReturnCode;
+    XENBUS_PROTOCOL *XenBusIo = Dev->XenBusIo;
+    UINT32 ReturnCode;
     ReturnCode = XenBusIo->EventChannelNotify (XenBusIo, Dev->EventChannel);
     if (ReturnCode != 0) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "XenPvBlk: Unexpected return value from EventChannelNotify: %d\n",
-        ReturnCode
-        ));
+      DEBUG ((EFI_D_ERROR,
+              "XenPvBlk: Unexpected return value from EventChannelNotify: %d\n",
+              ReturnCode));
     }
   }
 }
 
 VOID
 XenPvBlockSync (
-  IN XEN_BLOCK_FRONT_DEVICE  *Dev
+  IN XEN_BLOCK_FRONT_DEVICE *Dev
   )
 {
   if (Dev->MediaInfo.ReadWrite) {
@@ -648,12 +561,12 @@ XenPvBlockSync (
 
 VOID
 XenPvBlockAsyncIoPoll (
-  IN XEN_BLOCK_FRONT_DEVICE  *Dev
+  IN XEN_BLOCK_FRONT_DEVICE *Dev
   )
 {
-  RING_IDX          ProducerIndex, ConsumerIndex;
-  blkif_response_t  *Response;
-  INT32             More;
+  RING_IDX ProducerIndex, ConsumerIndex;
+  blkif_response_t *Response;
+  INT32 More;
 
   do {
     ProducerIndex = Dev->Ring.sring->rsp_prod;
@@ -662,31 +575,28 @@ XenPvBlockAsyncIoPoll (
     ConsumerIndex = Dev->Ring.rsp_cons;
 
     while (ConsumerIndex != ProducerIndex) {
-      XEN_BLOCK_FRONT_IO  *IoData = NULL;
-      INT16               Status;
+      XEN_BLOCK_FRONT_IO *IoData = NULL;
+      INT16 Status;
 
       Response = RING_GET_RESPONSE (&Dev->Ring, ConsumerIndex);
 
-      IoData = (VOID *)(UINTN)Response->id;
+      IoData = (VOID *) (UINTN) Response->id;
       Status = Response->status;
 
       switch (Response->operation) {
-        case BLKIF_OP_READ:
-        case BLKIF_OP_WRITE:
+      case BLKIF_OP_READ:
+      case BLKIF_OP_WRITE:
         {
-          INT32  Index;
+          INT32 Index;
 
           if (Status != BLKIF_RSP_OKAY) {
-            DEBUG ((
-              DEBUG_ERROR,
-              "XenPvBlk: "
-              "%a error %d on %a at sector %Lx, num bytes %Lx\n",
-              Response->operation == BLKIF_OP_READ ? "read" : "write",
-              Status,
-              IoData->Dev->NodeName,
-              (UINT64)IoData->Sector,
-              (UINT64)IoData->Size
-              ));
+            DEBUG ((EFI_D_ERROR,
+                    "XenPvBlk: "
+                    "%a error %d on %a at sector %Lx, num bytes %Lx\n",
+                    Response->operation == BLKIF_OP_READ ? "read" : "write",
+                    Status, IoData->Dev->NodeName,
+                    (UINT64)IoData->Sector,
+                    (UINT64)IoData->Size));
           }
 
           for (Index = 0; Index < IoData->NumRef; Index++) {
@@ -696,34 +606,28 @@ XenPvBlockAsyncIoPoll (
           break;
         }
 
-        case BLKIF_OP_WRITE_BARRIER:
-          if (Status != BLKIF_RSP_OKAY) {
-            DEBUG ((DEBUG_ERROR, "XenPvBlk: write barrier error %d\n", Status));
-          }
+      case BLKIF_OP_WRITE_BARRIER:
+        if (Status != BLKIF_RSP_OKAY) {
+          DEBUG ((EFI_D_ERROR, "XenPvBlk: write barrier error %d\n", Status));
+        }
+        break;
+      case BLKIF_OP_FLUSH_DISKCACHE:
+        if (Status != BLKIF_RSP_OKAY) {
+          DEBUG ((EFI_D_ERROR, "XenPvBlk: flush error %d\n", Status));
+        }
+        break;
 
-          break;
-        case BLKIF_OP_FLUSH_DISKCACHE:
-          if (Status != BLKIF_RSP_OKAY) {
-            DEBUG ((DEBUG_ERROR, "XenPvBlk: flush error %d\n", Status));
-          }
-
-          break;
-
-        default:
-          DEBUG ((
-            DEBUG_ERROR,
-            "XenPvBlk: unrecognized block operation %d response (status %d)\n",
-            Response->operation,
-            Status
-            ));
-          break;
+      default:
+        DEBUG ((EFI_D_ERROR,
+                "XenPvBlk: unrecognized block operation %d response (status %d)\n",
+                Response->operation, Status));
+        break;
       }
 
       Dev->Ring.rsp_cons = ++ConsumerIndex;
       if (IoData != NULL) {
         IoData->Status = Status ? EFI_DEVICE_ERROR : EFI_SUCCESS;
       }
-
       if (Dev->Ring.rsp_cons != ConsumerIndex) {
         /* We reentered, we must not continue here */
         break;

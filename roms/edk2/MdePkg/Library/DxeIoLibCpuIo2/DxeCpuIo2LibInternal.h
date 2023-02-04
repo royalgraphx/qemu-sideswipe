@@ -20,6 +20,7 @@
 #include <Library/DebugLib.h>
 #include <Library/BaseLib.h>
 
+
 /**
   Reads registers in the EFI CPU I/O space.
 
@@ -135,8 +136,8 @@ IoWriteFifoWorker (
 UINT64
 EFIAPI
 MmioReadWorker (
-  IN      UINTN                      Address,
-  IN      EFI_CPU_IO_PROTOCOL_WIDTH  Width
+  IN      UINTN                     Address,
+  IN      EFI_CPU_IO_PROTOCOL_WIDTH Width
   );
 
 /**
@@ -157,9 +158,9 @@ MmioReadWorker (
 UINT64
 EFIAPI
 MmioWriteWorker (
-  IN      UINTN                      Address,
-  IN      EFI_CPU_IO_PROTOCOL_WIDTH  Width,
-  IN      UINT64                     Data
+  IN      UINTN                     Address,
+  IN      EFI_CPU_IO_PROTOCOL_WIDTH Width,
+  IN      UINT64                    Data
   );
 
 #endif

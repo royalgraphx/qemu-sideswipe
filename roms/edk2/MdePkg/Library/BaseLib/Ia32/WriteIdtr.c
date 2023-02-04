@@ -6,6 +6,7 @@
 
 **/
 
+
 #include "BaseLibInternals.h"
 
 /**
@@ -20,7 +21,7 @@
 VOID
 EFIAPI
 InternalX86WriteIdtr (
-  IN      CONST IA32_DESCRIPTOR  *Idtr
+  IN      CONST IA32_DESCRIPTOR     *Idtr
   )
 {
   _asm {
@@ -31,3 +32,4 @@ InternalX86WriteIdtr (
     popfd
   }
 }
+

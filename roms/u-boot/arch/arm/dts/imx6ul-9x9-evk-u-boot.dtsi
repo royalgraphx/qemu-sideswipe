@@ -5,6 +5,6 @@
 
 &qspi {
 	flash0: n25q256a@0 {
-		compatible = "jedec,spi-nor";
+		compatible = "spi-flash";
 	};
 };

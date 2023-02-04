@@ -214,12 +214,8 @@ def _IsCopyrightLine (LineContent):
     LineContent = LineContent.upper()
     Result = False
 
-    #Support below Copyright format
-    # Copyright (C) 2020 Hewlett Packard Enterprise Development LP<BR>
-    # (C) Copyright 2020 Hewlett Packard Enterprise Development LP<BR>
     ReIsCopyrightRe = re.compile(r"""(^|\s)COPYRIGHT *\(""", re.DOTALL)
-    ReIsCopyrightTypeB = re.compile(r"""(^|\s)\(C\)\s*COPYRIGHT""", re.DOTALL)
-    if ReIsCopyrightRe.search(LineContent) or ReIsCopyrightTypeB.search(LineContent):
+    if ReIsCopyrightRe.search(LineContent):
         Result = True
 
     return Result

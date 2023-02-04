@@ -17,10 +17,10 @@
  */
 
 #include "qemu/osdep.h"
-#include "../libqtest.h"
+#include "libqtest.h"
 #include "qemu/module.h"
-#include "qgraph.h"
-#include "virtio-balloon.h"
+#include "libqos/qgraph.h"
+#include "libqos/virtio-balloon.h"
 
 /* virtio-balloon-device */
 static void *qvirtio_balloon_get_driver(QVirtioBalloon *v_balloon,

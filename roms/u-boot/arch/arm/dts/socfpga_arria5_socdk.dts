@@ -67,9 +67,9 @@
 	rxd2-skew-ps = <0>;
 	rxd3-skew-ps = <0>;
 	txen-skew-ps = <0>;
-	txc-skew-ps = <1560>;
+	txc-skew-ps = <2600>;
 	rxdv-skew-ps = <0>;
-	rxc-skew-ps = <1200>;
+	rxc-skew-ps = <2000>;
 };
 
 &gpio0 {

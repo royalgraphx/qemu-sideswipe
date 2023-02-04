@@ -26,17 +26,17 @@
 #include "qapi/error.h"
 #include "hw/ipmi/ipmi_bt.h"
 #include "hw/pci/pci.h"
-#include "qom/object.h"
 
 #define TYPE_PCI_IPMI_BT "pci-ipmi-bt"
-OBJECT_DECLARE_SIMPLE_TYPE(PCIIPMIBTDevice, PCI_IPMI_BT)
+#define PCI_IPMI_BT(obj) OBJECT_CHECK(PCIIPMIBTDevice, (obj), \
+                                       TYPE_PCI_IPMI_BT)
 
-struct PCIIPMIBTDevice {
+typedef struct PCIIPMIBTDevice {
     PCIDevice dev;
     IPMIBT bt;
     bool irq_enabled;
     uint32_t uuid;
-};
+} PCIIPMIBTDevice;
 
 static void pci_ipmi_raise_irq(IPMIBT *ik)
 {

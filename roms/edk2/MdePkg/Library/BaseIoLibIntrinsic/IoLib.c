@@ -1,7 +1,7 @@
 /** @file
   Common I/O Library routines.
 
-  Copyright (c) 2006 - 2021, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -26,7 +26,7 @@
 UINT64
 EFIAPI
 IoRead64 (
-  IN      UINTN  Port
+  IN      UINTN                     Port
   )
 {
   ASSERT (FALSE);
@@ -52,13 +52,14 @@ IoRead64 (
 UINT64
 EFIAPI
 IoWrite64 (
-  IN      UINTN   Port,
-  IN      UINT64  Value
+  IN      UINTN                     Port,
+  IN      UINT64                    Value
   )
 {
   ASSERT (FALSE);
   return 0;
 }
+
 
 /**
   Reads an 8-bit MMIO register.
@@ -77,20 +78,14 @@ IoWrite64 (
 UINT8
 EFIAPI
 MmioRead8 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
-  UINT8    Value;
-  BOOLEAN  Flag;
+  UINT8                             Value;
 
-  Flag = FilterBeforeMmIoRead (FilterWidth8, Address, &Value);
-  if (Flag) {
-    MemoryFence ();
-    Value = *(volatile UINT8 *)Address;
-    MemoryFence ();
-  }
-
-  FilterAfterMmIoRead (FilterWidth8, Address, &Value);
+  MemoryFence ();
+  Value = *(volatile UINT8*)Address;
+  MemoryFence ();
 
   return Value;
 }
@@ -113,20 +108,13 @@ MmioRead8 (
 UINT8
 EFIAPI
 MmioWrite8 (
-  IN      UINTN  Address,
-  IN      UINT8  Value
+  IN      UINTN                     Address,
+  IN      UINT8                     Value
   )
 {
-  BOOLEAN  Flag;
-
-  Flag = FilterBeforeMmIoWrite (FilterWidth8, Address, &Value);
-  if (Flag) {
-    MemoryFence ();
-    *(volatile UINT8 *)Address = Value;
-    MemoryFence ();
-  }
-
-  FilterAfterMmIoWrite (FilterWidth8, Address, &Value);
+  MemoryFence ();
+  *(volatile UINT8*)Address = Value;
+  MemoryFence ();
 
   return Value;
 }
@@ -149,21 +137,16 @@ MmioWrite8 (
 UINT16
 EFIAPI
 MmioRead16 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
-  UINT16   Value;
-  BOOLEAN  Flag;
+  UINT16                            Value;
 
   ASSERT ((Address & 1) == 0);
-  Flag = FilterBeforeMmIoRead (FilterWidth16, Address, &Value);
-  if (Flag) {
-    MemoryFence ();
-    Value = *(volatile UINT16 *)Address;
-    MemoryFence ();
-  }
 
-  FilterAfterMmIoRead (FilterWidth16, Address, &Value);
+  MemoryFence ();
+  Value = *(volatile UINT16*)Address;
+  MemoryFence ();
 
   return Value;
 }
@@ -187,22 +170,15 @@ MmioRead16 (
 UINT16
 EFIAPI
 MmioWrite16 (
-  IN      UINTN   Address,
-  IN      UINT16  Value
+  IN      UINTN                     Address,
+  IN      UINT16                    Value
   )
 {
-  BOOLEAN  Flag;
-
   ASSERT ((Address & 1) == 0);
 
-  Flag = FilterBeforeMmIoWrite (FilterWidth16, Address, &Value);
-  if (Flag) {
-    MemoryFence ();
-    *(volatile UINT16 *)Address = Value;
-    MemoryFence ();
-  }
-
-  FilterAfterMmIoWrite (FilterWidth16, Address, &Value);
+  MemoryFence ();
+  *(volatile UINT16*)Address = Value;
+  MemoryFence ();
 
   return Value;
 }
@@ -225,22 +201,16 @@ MmioWrite16 (
 UINT32
 EFIAPI
 MmioRead32 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
-  UINT32   Value;
-  BOOLEAN  Flag;
+  UINT32                            Value;
 
   ASSERT ((Address & 3) == 0);
 
-  Flag = FilterBeforeMmIoRead (FilterWidth32, Address, &Value);
-  if (Flag) {
-    MemoryFence ();
-    Value = *(volatile UINT32 *)Address;
-    MemoryFence ();
-  }
-
-  FilterAfterMmIoRead (FilterWidth32, Address, &Value);
+  MemoryFence ();
+  Value = *(volatile UINT32*)Address;
+  MemoryFence ();
 
   return Value;
 }
@@ -264,22 +234,15 @@ MmioRead32 (
 UINT32
 EFIAPI
 MmioWrite32 (
-  IN      UINTN   Address,
-  IN      UINT32  Value
+  IN      UINTN                     Address,
+  IN      UINT32                    Value
   )
 {
-  BOOLEAN  Flag;
-
   ASSERT ((Address & 3) == 0);
 
-  Flag = FilterBeforeMmIoWrite (FilterWidth32, Address, &Value);
-  if (Flag) {
-    MemoryFence ();
-    *(volatile UINT32 *)Address = Value;
-    MemoryFence ();
-  }
-
-  FilterAfterMmIoWrite (FilterWidth32, Address, &Value);
+  MemoryFence ();
+  *(volatile UINT32*)Address = Value;
+  MemoryFence ();
 
   return Value;
 }
@@ -302,22 +265,16 @@ MmioWrite32 (
 UINT64
 EFIAPI
 MmioRead64 (
-  IN      UINTN  Address
+  IN      UINTN                     Address
   )
 {
-  UINT64   Value;
-  BOOLEAN  Flag;
+  UINT64                            Value;
 
   ASSERT ((Address & 7) == 0);
 
-  Flag = FilterBeforeMmIoRead (FilterWidth64, Address, &Value);
-  if (Flag) {
-    MemoryFence ();
-    Value = *(volatile UINT64 *)Address;
-    MemoryFence ();
-  }
-
-  FilterAfterMmIoRead (FilterWidth64, Address, &Value);
+  MemoryFence ();
+  Value = *(volatile UINT64*)Address;
+  MemoryFence ();
 
   return Value;
 }
@@ -339,22 +296,16 @@ MmioRead64 (
 UINT64
 EFIAPI
 MmioWrite64 (
-  IN      UINTN   Address,
-  IN      UINT64  Value
+  IN      UINTN                     Address,
+  IN      UINT64                    Value
   )
 {
-  BOOLEAN  Flag;
-
   ASSERT ((Address & 7) == 0);
 
-  Flag = FilterBeforeMmIoWrite (FilterWidth64, Address, &Value);
-  if (Flag) {
-    MemoryFence ();
-    *(volatile UINT64 *)Address = Value;
-    MemoryFence ();
-  }
-
-  FilterAfterMmIoWrite (FilterWidth64, Address, &Value);
+  MemoryFence ();
+  *(volatile UINT64*)Address = Value;
+  MemoryFence ();
 
   return Value;
 }
+

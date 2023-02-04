@@ -6,7 +6,6 @@
 # of EDKII network library classes.
 #
 # Copyright (c) 2019, Intel Corporation. All rights reserved.<BR>
-# (C) Copyright 2020 Hewlett Packard Enterprise Development LP<BR>
 #
 #    SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -17,7 +16,5 @@
   IpIoLib|NetworkPkg/Library/DxeIpIoLib/DxeIpIoLib.inf
   UdpIoLib|NetworkPkg/Library/DxeUdpIoLib/DxeUdpIoLib.inf
   TcpIoLib|NetworkPkg/Library/DxeTcpIoLib/DxeTcpIoLib.inf
-  # HttpLib and HttpIoLib are used for Http Boot and other
-  # HTTP applications.
+  # HttpLib is used for Http Boot
   HttpLib|NetworkPkg/Library/DxeHttpLib/DxeHttpLib.inf
-  HttpIoLib|NetworkPkg/Library/DxeHttpIoLib/DxeHttpIoLib.inf

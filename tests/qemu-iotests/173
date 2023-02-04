@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw
 #
 # Test QAPI commands looking up protocol based images with relative
 # filename backing strings
@@ -20,7 +19,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # creator
-owner=codyprime@gmail.com
+owner=jcody@redhat.com
 
 seq=`basename $0`
 echo "QA output created by $seq"

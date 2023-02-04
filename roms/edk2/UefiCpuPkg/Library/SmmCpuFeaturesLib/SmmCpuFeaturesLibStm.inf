@@ -18,11 +18,9 @@
   CONSTRUCTOR                    = SmmCpuFeaturesLibStmConstructor
 
 [Sources]
-  CpuFeaturesLib.h
-  SmmCpuFeaturesLibCommon.c
+  SmmCpuFeaturesLib.c
   SmmStm.c
   SmmStm.h
-  TraditionalMmCpuFeaturesLib.c
 
 [Sources.Ia32]
   Ia32/SmmStmSupport.c

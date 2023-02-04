@@ -2,7 +2,7 @@
   This library is intended to be used by BDS modules.
   This library will execute TPM2 request.
 
-Copyright (c) 2015 - 2020, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -18,19 +18,19 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 // UEFI TCG2 library definition bit of the BIOS TPM Management Flags
 //
 // BIT0 is reserved
-#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CLEAR  BIT1
+#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CLEAR               BIT1
 // BIT2 is reserved
-#define TCG2_LIB_PP_FLAG_RESET_TRACK                               BIT3
-#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_TURN_ON      BIT4
-#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_TURN_OFF     BIT5
-#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CHANGE_EPS   BIT6
-#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CHANGE_PCRS  BIT7
+#define TCG2_LIB_PP_FLAG_RESET_TRACK                                      BIT3
+#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_TURN_ON             BIT4
+#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_TURN_OFF            BIT5
+#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CHANGE_EPS          BIT6
+#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CHANGE_PCRS         BIT7
 
 //
 // UEFI TCG2 library definition bit of the BIOS Information Flags
 //
-#define TCG2_BIOS_INFORMATION_FLAG_HIERARCHY_CONTROL_STORAGE_DISABLE      BIT8
-#define TCG2_BIOS_INFORMATION_FLAG_HIERARCHY_CONTROL_ENDORSEMENT_DISABLE  BIT9
+#define TCG2_BIOS_INFORMATION_FLAG_HIERACHY_CONTROL_STORAGE_DISABLE      BIT8
+#define TCG2_BIOS_INFORMATION_FLAG_HIERACHY_CONTROL_ENDORSEMENT_DISABLE  BIT9
 
 //
 // UEFI TCG2 library definition bit of the BIOS Storage Management Flags
@@ -38,6 +38,21 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #define TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_PP_REQUIRED_FOR_ENABLE_BLOCK_SID   BIT16
 #define TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_PP_REQUIRED_FOR_DISABLE_BLOCK_SID  BIT17
 #define TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_ENABLE_BLOCK_SID                   BIT18
+
+//
+// Default value
+//
+#define TCG2_BIOS_TPM_MANAGEMENT_FLAG_DEFAULT  (TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_TURN_OFF | \
+                                                TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CLEAR | \
+                                                TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CHANGE_EPS | \
+                                                TCG2_BIOS_TPM_MANAGEMENT_FLAG_PP_REQUIRED_FOR_CHANGE_PCRS)
+
+//
+// Default value
+//
+#define TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_DEFAULT (TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_PP_REQUIRED_FOR_ENABLE_BLOCK_SID | \
+                                                   TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_PP_REQUIRED_FOR_DISABLE_BLOCK_SID |\
+                                                   TCG2_BIOS_STORAGE_MANAGEMENT_FLAG_ENABLE_BLOCK_SID)
 
 /**
   Check and execute the pending TPM request.
@@ -55,7 +70,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 VOID
 EFIAPI
 Tcg2PhysicalPresenceLibProcessRequest (
-  IN      TPM2B_AUTH  *PlatformAuth  OPTIONAL
+  IN      TPM2B_AUTH                     *PlatformAuth  OPTIONAL
   );
 
 /**
@@ -99,8 +114,8 @@ Tcg2PhysicalPresenceLibGetManagementFlags (
 UINT32
 EFIAPI
 Tcg2PhysicalPresenceLibReturnOperationResponseToOsFunction (
-  OUT UINT32  *MostRecentRequest,
-  OUT UINT32  *Response
+  OUT UINT32                *MostRecentRequest,
+  OUT UINT32                *Response
   );
 
 /**
@@ -120,8 +135,8 @@ Tcg2PhysicalPresenceLibReturnOperationResponseToOsFunction (
   **/
 UINT32
 Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunctionEx (
-  IN OUT UINT32  *OperationRequest,
-  IN OUT UINT32  *RequestParameter
+  IN OUT UINT32               *OperationRequest,
+  IN OUT UINT32               *RequestParameter
   );
 
 /**
@@ -142,8 +157,8 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunctionEx (
 UINT32
 EFIAPI
 Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
-  IN UINT32  OperationRequest,
-  IN UINT32  RequestParameter
+  IN UINT32                 OperationRequest,
+  IN UINT32                 RequestParameter
   );
 
 /**
@@ -161,7 +176,7 @@ Tcg2PhysicalPresenceLibSubmitRequestToPreOSFunction (
 UINT32
 EFIAPI
 Tcg2PhysicalPresenceLibGetUserConfirmationStatusFunction (
-  IN UINT32  OperationRequest
+  IN UINT32                 OperationRequest
   );
 
 #endif

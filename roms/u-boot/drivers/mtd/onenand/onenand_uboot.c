@@ -43,7 +43,7 @@ void onenand_init(void)
 			puts("Flex-");
 		puts("OneNAND: ");
 
-#ifdef CONFIG_MTD
+#ifdef CONFIG_MTD_DEVICE
 		/*
 		 * Add MTD device so that we can reference it later
 		 * via the mtdcore infrastructure (e.g. ubi).

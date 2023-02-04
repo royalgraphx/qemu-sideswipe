@@ -5,13 +5,11 @@
 
 #include <common.h>
 #include <fdtdec.h>
-#include <log.h>
-#include <asm/fsp1/fsp_support.h>
-#include <asm/global_data.h>
+#include <asm/fsp/fsp_support.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-void fsp_update_configs(struct fsp_config_data *config,
+void update_fsp_configs(struct fsp_config_data *config,
 			struct fspinit_rtbuf *rt_buf)
 {
 	struct platform_config *plat_config = &config->plat_config;

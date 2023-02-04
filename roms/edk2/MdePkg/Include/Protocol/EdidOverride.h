@@ -19,8 +19,8 @@
 
 typedef struct _EFI_EDID_OVERRIDE_PROTOCOL EFI_EDID_OVERRIDE_PROTOCOL;
 
-#define EFI_EDID_OVERRIDE_DONT_OVERRIDE    0x01
-#define EFI_EDID_OVERRIDE_ENABLE_HOT_PLUG  0x02
+#define EFI_EDID_OVERRIDE_DONT_OVERRIDE   0x01
+#define EFI_EDID_OVERRIDE_ENABLE_HOT_PLUG 0x02
 
 /**
   Returns policy information and potentially a replacement EDID for the specified video output device.
@@ -44,8 +44,8 @@ EFI_STATUS
   IN  EFI_EDID_OVERRIDE_PROTOCOL          *This,
   IN  EFI_HANDLE                          *ChildHandle,
   OUT UINT32                              *Attributes,
-  OUT UINTN                               *EdidSize,
-  OUT UINT8                               **Edid
+  IN OUT UINTN                            *EdidSize,
+  IN OUT UINT8                            **Edid
   );
 
 ///
@@ -53,9 +53,9 @@ EFI_STATUS
 /// EDID information to the producer of the Graphics Output protocol.
 ///
 struct _EFI_EDID_OVERRIDE_PROTOCOL {
-  EFI_EDID_OVERRIDE_PROTOCOL_GET_EDID    GetEdid;
+  EFI_EDID_OVERRIDE_PROTOCOL_GET_EDID   GetEdid;
 };
 
-extern EFI_GUID  gEfiEdidOverrideProtocolGuid;
+extern EFI_GUID gEfiEdidOverrideProtocolGuid;
 
 #endif

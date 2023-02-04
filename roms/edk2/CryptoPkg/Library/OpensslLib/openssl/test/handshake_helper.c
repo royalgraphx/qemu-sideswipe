@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2019 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -16,7 +16,7 @@
 #include <openssl/srp.h>
 #endif
 
-#include "../ssl/ssl_local.h"
+#include "../ssl/ssl_locl.h"
 #include "internal/sockets.h"
 #include "internal/nelem.h"
 #include "handshake_helper.h"
@@ -637,8 +637,7 @@ static int configure_handshake_ctx(SSL_CTX *server_ctx, SSL_CTX *server2_ctx,
     }
     if (extra->client.alpn_protocols != NULL) {
         unsigned char *alpn_protos = NULL;
-        size_t alpn_protos_len = 0;
-
+        size_t alpn_protos_len;
         if (!TEST_true(parse_protos(extra->client.alpn_protocols,
                                     &alpn_protos, &alpn_protos_len))
                 /* Reversed return value convention... */

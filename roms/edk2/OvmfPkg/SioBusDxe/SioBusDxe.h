@@ -37,11 +37,13 @@ typedef struct {
   UINT64                 OriginalAttributes;
 } SIO_BUS_DRIVER_PRIVATE_DATA;
 
+
 //
 // Global Variables
 //
-extern EFI_COMPONENT_NAME_PROTOCOL   gSioBusComponentName;
-extern EFI_COMPONENT_NAME2_PROTOCOL  gSioBusComponentName2;
+extern EFI_COMPONENT_NAME_PROTOCOL  gSioBusComponentName;
+extern EFI_COMPONENT_NAME2_PROTOCOL gSioBusComponentName2;
+
 
 //
 // EFI Component Name Functions
@@ -84,9 +86,9 @@ extern EFI_COMPONENT_NAME2_PROTOCOL  gSioBusComponentName2;
 EFI_STATUS
 EFIAPI
 SioBusComponentNameGetDriverName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **DriverName
+  IN  EFI_COMPONENT_NAME_PROTOCOL    *This,
+  IN  CHAR8                          *Language,
+  OUT CHAR16                         **DriverName
   );
 
 /**
@@ -151,12 +153,13 @@ SioBusComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 SioBusComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL    *This,
+  IN  EFI_HANDLE                     ControllerHandle,
+  IN  EFI_HANDLE                     ChildHandle        OPTIONAL,
+  IN  CHAR8                          *Language,
+  OUT CHAR16                         **ControllerName
   );
+
 
 //
 // Driver Binding Protocol interfaces
@@ -218,9 +221,9 @@ SioBusComponentNameGetControllerName (
 EFI_STATUS
 EFIAPI
 SioBusDriverBindingSupported (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN EFI_HANDLE                     Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
   );
 
 /**
@@ -272,9 +275,9 @@ SioBusDriverBindingSupported (
 EFI_STATUS
 EFIAPI
 SioBusDriverBindingStart (
-  IN EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN EFI_HANDLE                   Controller,
-  IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
+  IN EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN EFI_HANDLE                     Controller,
+  IN EFI_DEVICE_PATH_PROTOCOL       *RemainingDevicePath
   );
 
 /**
@@ -313,10 +316,10 @@ SioBusDriverBindingStart (
 EFI_STATUS
 EFIAPI
 SioBusDriverBindingStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN  EFI_HANDLE                   Controller,
-  IN  UINTN                        NumberOfChildren,
-  IN  EFI_HANDLE                   *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN  EFI_HANDLE                     Controller,
+  IN  UINTN                          NumberOfChildren,
+  IN  EFI_HANDLE                     *ChildHandleBuffer
   );
 
-#endif // __SIO_BUS_DXE_H__
+#endif  // __SIO_BUS_DXE_H__

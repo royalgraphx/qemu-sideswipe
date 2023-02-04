@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Reads the current value of Data Segment Register (DS).
 
@@ -26,3 +29,4 @@ AsmReadDs (
     mov     ax, ds
   }
 }
+

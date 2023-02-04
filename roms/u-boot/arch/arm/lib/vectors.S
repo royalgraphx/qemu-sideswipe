@@ -68,6 +68,7 @@
  *   (2) inserts the vector table using ARM_VECTORS as appropriate
  */
 #include <asm/arch/boot0.h>
+
 #else
 
 /*

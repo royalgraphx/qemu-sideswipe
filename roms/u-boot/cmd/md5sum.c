@@ -9,8 +9,6 @@
 
 #include <common.h>
 #include <command.h>
-#include <env.h>
-#include <image.h>
 #include <mapmem.h>
 #include <u-boot/md5.h>
 #include <asm/io.h>
@@ -73,7 +71,7 @@ static int parse_verify_sum(char *verify_str, u8 *vsum)
 	return 0;
 }
 
-int do_md5sum(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+int do_md5sum(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	ulong addr, len;
 	unsigned int i;
@@ -136,8 +134,7 @@ int do_md5sum(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	return 0;
 }
 #else
-static int do_md5sum(struct cmd_tbl *cmdtp, int flag, int argc,
-		     char *const argv[])
+static int do_md5sum(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned long addr, len;
 	unsigned int i;

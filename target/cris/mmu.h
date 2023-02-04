@@ -17,6 +17,6 @@ void cris_mmu_init(CPUCRISState *env);
 void cris_mmu_flush_pid(CPUCRISState *env, uint32_t pid);
 int cris_mmu_translate(struct cris_mmu_result *res,
                        CPUCRISState *env, uint32_t vaddr,
-                       MMUAccessType access_type, int mmu_idx, int debug);
+                       int rw, int mmu_idx, int debug);
 
 #endif

@@ -22,7 +22,7 @@
 
 /* clang-format off */
 
-#ifdef __ASSEMBLER__
+#ifdef __ASSEMBLY__
 #define _AC(X,Y)	X
 #define _AT(T,X)	X
 #else

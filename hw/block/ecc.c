@@ -78,7 +78,7 @@ void ecc_reset(ECCState *s)
 }
 
 /* Save/restore */
-const VMStateDescription vmstate_ecc_state = {
+VMStateDescription vmstate_ecc_state = {
     .name = "ecc-state",
     .version_id = 0,
     .minimum_version_id = 0,

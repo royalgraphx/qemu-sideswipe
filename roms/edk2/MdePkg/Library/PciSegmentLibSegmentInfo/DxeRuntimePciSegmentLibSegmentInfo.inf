@@ -45,3 +45,6 @@
   MemoryAllocationLib
   DxeServicesTableLib
   UefiBootServicesTableLib
+
+[Guids]
+  gEfiEventVirtualAddressChangeGuid         ## CONSUMES ## Event

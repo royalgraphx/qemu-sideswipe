@@ -26,3 +26,4 @@ IsPersistAcrossResetCapsuleSupported (
 {
   return FeaturePcdGet (PcdSupportUpdateCapsuleReset);
 }
+

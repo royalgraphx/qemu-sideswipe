@@ -10,10 +10,13 @@
 
 #include <PiDxe.h>
 
+#include <Library/ArmMmuLib.h>
 #include <Library/ArmSmcLib.h>
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
 #include <Library/ResetSystemLib.h>
+#include <Library/UefiBootServicesTableLib.h>
+#include <Library/UefiRuntimeLib.h>
 
 #include <IndustryStandard/ArmStdSmc.h>
 
@@ -31,8 +34,11 @@ ResetCold (
   VOID
   )
 {
+  ARM_SMC_ARGS ArmSmcArgs;
+
   // Send a PSCI 0.2 SYSTEM_RESET command
-  ArmCallSmc0 (ARM_SMC_ID_PSCI_SYSTEM_RESET, NULL, NULL, NULL);
+  ArmSmcArgs.Arg0 = ARM_SMC_ID_PSCI_SYSTEM_RESET;
+  ArmCallSmc (&ArmSmcArgs);
 }
 
 /**
@@ -63,8 +69,84 @@ ResetShutdown (
   VOID
   )
 {
+  ARM_SMC_ARGS ArmSmcArgs;
+
   // Send a PSCI 0.2 SYSTEM_OFF command
-  ArmCallSmc0 (ARM_SMC_ID_PSCI_SYSTEM_OFF, NULL, NULL, NULL);
+  ArmSmcArgs.Arg0 = ARM_SMC_ID_PSCI_SYSTEM_OFF;
+  ArmCallSmc (&ArmSmcArgs);
+}
+
+VOID DisableMmuAndReenterPei (VOID);
+
+/**
+  This function causes the system to enter S3 and then wake up immediately.
+
+  If this function returns, it means that the system does not support S3 feature.
+**/
+VOID
+EFIAPI
+EnterS3WithImmediateWake (
+  VOID
+  )
+{
+  EFI_PHYSICAL_ADDRESS        Alloc;
+  EFI_MEMORY_DESCRIPTOR       *MemMap;
+  UINTN                       MemMapSize;
+  UINTN                       MapKey, DescriptorSize;
+  UINT32                      DescriptorVersion;
+  EFI_STATUS                  Status;
+
+  if (FeaturePcdGet (PcdArmReenterPeiForCapsuleWarmReboot) &&
+      !EfiAtRuntime ()) {
+    //
+    // At boot time, we are the only core running, so we can implement the
+    // immediate wake (which is used by capsule update) by disabling the MMU
+    // and interrupts, and jumping to the PEI entry point.
+    //
+
+    //
+    // Obtain the size of the memory map
+    //
+    MemMapSize = 0;
+    MemMap = NULL;
+    Status = gBS->GetMemoryMap (&MemMapSize, MemMap, &MapKey, &DescriptorSize,
+                    &DescriptorVersion);
+    ASSERT (Status == EFI_BUFFER_TOO_SMALL);
+
+    //
+    // Add some slack to the allocation to cater for changes in the memory
+    // map if ExitBootServices () fails the first time around.
+    //
+    MemMapSize += SIZE_4KB;
+    Status = gBS->AllocatePages (AllocateAnyPages, EfiBootServicesData,
+                    EFI_SIZE_TO_PAGES (MemMapSize), &Alloc);
+    ASSERT_EFI_ERROR (Status);
+
+    MemMap = (EFI_MEMORY_DESCRIPTOR *)(UINTN)Alloc;
+
+    Status = gBS->GetMemoryMap (&MemMapSize, MemMap, &MapKey, &DescriptorSize,
+                    &DescriptorVersion);
+    ASSERT_EFI_ERROR (Status);
+
+    Status = gBS->ExitBootServices (gImageHandle, MapKey);
+    if (EFI_ERROR (Status)) {
+      //
+      // ExitBootServices () may fail the first time around if an event fired
+      // right after the call to GetMemoryMap() which allocated or freed memory.
+      // Since that first call to ExitBootServices () will disarm the timer,
+      // this is guaranteed not to happen again, so one additional attempt
+      // should suffice.
+      //
+      Status = gBS->GetMemoryMap (&MemMapSize, MemMap, &MapKey, &DescriptorSize,
+                      &DescriptorVersion);
+      ASSERT_EFI_ERROR (Status);
+
+      Status = gBS->ExitBootServices (gImageHandle, MapKey);
+      ASSERT_EFI_ERROR (Status);
+    }
+
+    DisableMmuAndReenterPei ();
+  }
 }
 
 /**
@@ -81,8 +163,8 @@ ResetShutdown (
 VOID
 EFIAPI
 ResetPlatformSpecific (
-  IN UINTN  DataSize,
-  IN VOID   *ResetData
+  IN UINTN   DataSize,
+  IN VOID    *ResetData
   )
 {
   // Map the platform specific reset as reboot
@@ -104,30 +186,30 @@ ResetPlatformSpecific (
 VOID
 EFIAPI
 ResetSystem (
-  IN EFI_RESET_TYPE  ResetType,
-  IN EFI_STATUS      ResetStatus,
-  IN UINTN           DataSize,
-  IN VOID            *ResetData OPTIONAL
+  IN EFI_RESET_TYPE               ResetType,
+  IN EFI_STATUS                   ResetStatus,
+  IN UINTN                        DataSize,
+  IN VOID                         *ResetData OPTIONAL
   )
 {
   switch (ResetType) {
-    case EfiResetWarm:
-      ResetWarm ();
-      break;
+  case EfiResetWarm:
+    ResetWarm ();
+    break;
 
-    case EfiResetCold:
-      ResetCold ();
-      break;
+  case EfiResetCold:
+    ResetCold ();
+    break;
 
-    case EfiResetShutdown:
-      ResetShutdown ();
-      return;
+  case EfiResetShutdown:
+    ResetShutdown ();
+    return;
 
-    case EfiResetPlatformSpecific:
-      ResetPlatformSpecific (DataSize, ResetData);
-      return;
+  case EfiResetPlatformSpecific:
+    ResetPlatformSpecific (DataSize, ResetData);
+    return;
 
-    default:
-      return;
+  default:
+    return;
   }
 }

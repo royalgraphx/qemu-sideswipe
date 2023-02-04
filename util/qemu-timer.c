@@ -26,7 +26,6 @@
 #include "qemu/main-loop.h"
 #include "qemu/timer.h"
 #include "qemu/lockable.h"
-#include "sysemu/cpu-timers.h"
 #include "sysemu/replay.h"
 #include "sysemu/cpus.h"
 
@@ -100,7 +99,7 @@ QEMUTimerList *timerlist_new(QEMUClockType type,
     QEMUTimerList *timer_list;
     QEMUClock *clock = qemu_clock_ptr(type);
 
-    timer_list = g_new0(QEMUTimerList, 1);
+    timer_list = g_malloc0(sizeof(QEMUTimerList));
     qemu_event_init(&timer_list->timers_done_ev, true);
     timer_list->clock = clock;
     timer_list->notify_cb = cb;
@@ -135,7 +134,7 @@ static void qemu_clock_init(QEMUClockType type, QEMUTimerListNotifyCB *notify_cb
 
 bool qemu_clock_use_for_deadline(QEMUClockType type)
 {
-    return !(icount_enabled() && (type == QEMU_CLOCK_VIRTUAL));
+    return !(use_icount && (type == QEMU_CLOCK_VIRTUAL));
 }
 
 void qemu_clock_notify(QEMUClockType type)
@@ -171,7 +170,7 @@ void qemu_clock_enable(QEMUClockType type, bool enabled)
 
 bool timerlist_has_timers(QEMUTimerList *timer_list)
 {
-    return !!qatomic_read(&timer_list->active_timers);
+    return !!atomic_read(&timer_list->active_timers);
 }
 
 bool qemu_clock_has_timers(QEMUClockType type)
@@ -184,7 +183,7 @@ bool timerlist_expired(QEMUTimerList *timer_list)
 {
     int64_t expire_time;
 
-    if (!qatomic_read(&timer_list->active_timers)) {
+    if (!atomic_read(&timer_list->active_timers)) {
         return false;
     }
 
@@ -214,7 +213,7 @@ int64_t timerlist_deadline_ns(QEMUTimerList *timer_list)
     int64_t delta;
     int64_t expire_time;
 
-    if (!qatomic_read(&timer_list->active_timers)) {
+    if (!atomic_read(&timer_list->active_timers)) {
         return -1;
     }
 
@@ -261,9 +260,6 @@ int64_t qemu_clock_deadline_ns_all(QEMUClockType type, int attr_mask)
     }
 
     QLIST_FOREACH(timer_list, &clock->timerlists, list) {
-        if (!qatomic_read(&timer_list->active_timers)) {
-            continue;
-        }
         qemu_mutex_lock(&timer_list->active_timers_lock);
         ts = timer_list->active_timers;
         /* Skip all external timers */
@@ -389,7 +385,7 @@ static void timer_del_locked(QEMUTimerList *timer_list, QEMUTimer *ts)
         if (!t)
             break;
         if (t == ts) {
-            qatomic_set(pt, t->next);
+            atomic_set(pt, t->next);
             break;
         }
         pt = &t->next;
@@ -412,7 +408,7 @@ static bool timer_mod_ns_locked(QEMUTimerList *timer_list,
     }
     ts->expire_time = MAX(expire_time, 0);
     ts->next = *pt;
-    qatomic_set(pt, ts);
+    atomic_set(pt, ts);
 
     return pt == &timer_list->active_timers;
 }
@@ -420,8 +416,8 @@ static bool timer_mod_ns_locked(QEMUTimerList *timer_list,
 static void timerlist_rearm(QEMUTimerList *timer_list)
 {
     /* Interrupt execution to force deadline recalculation.  */
-    if (icount_enabled() && timer_list->clock->type == QEMU_CLOCK_VIRTUAL) {
-        icount_start_warp_timer();
+    if (timer_list->clock->type == QEMU_CLOCK_VIRTUAL) {
+        qemu_start_warp_timer();
     }
     timerlist_notify(timer_list);
 }
@@ -506,7 +502,7 @@ bool timerlist_run_timers(QEMUTimerList *timer_list)
     QEMUTimerCB *cb;
     void *opaque;
 
-    if (!qatomic_read(&timer_list->active_timers)) {
+    if (!atomic_read(&timer_list->active_timers)) {
         return false;
     }
 
@@ -534,7 +530,7 @@ bool timerlist_run_timers(QEMUTimerList *timer_list)
     }
 
     /*
-     * Extract expired timers from active timers list and process them.
+     * Extract expired timers from active timers list and and process them.
      *
      * In rr mode we need "filtered" checkpointing for virtual clock.  The
      * checkpoint must be recorded/replayed before processing any non-EXTERNAL timer,
@@ -637,7 +633,11 @@ int64_t qemu_clock_get_ns(QEMUClockType type)
         return get_clock();
     default:
     case QEMU_CLOCK_VIRTUAL:
-        return cpus_get_virtual_clock();
+        if (use_icount) {
+            return cpu_get_icount();
+        } else {
+            return cpu_get_clock();
+        }
     case QEMU_CLOCK_HOST:
         return REPLAY_CLOCK(REPLAY_CLOCK_HOST, get_clock_realtime());
     case QEMU_CLOCK_VIRTUAL_RT:

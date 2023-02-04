@@ -28,6 +28,7 @@
 
 #define CONFIG_PCI_INDIRECT_BRIDGE
 #define CONFIG_SYS_PCI_64BIT	1	/* enable 64-bit PCI resources */
+#define CONFIG_ENV_OVERWRITE
 
 /*
  * sysclk for MPC85xx
@@ -57,12 +58,16 @@
 #define CONFIG_L2_CACHE			/* toggle L2 cache */
 #define CONFIG_BTB			/* toggle branch predition */
 
+#define CONFIG_SYS_MEMTEST_START	0x00200000	/* memtest region */
+#define CONFIG_SYS_MEMTEST_END		0x00400000
+
 #define CONFIG_SYS_CCSRBAR		0xe0000000
 #define CONFIG_SYS_CCSRBAR_PHYS_LOW	CONFIG_SYS_CCSRBAR
 
 /* DDR Setup */
 #define CONFIG_SPD_EEPROM		/* Use SPD EEPROM for DDR setup*/
 #define CONFIG_DDR_SPD
+#undef CONFIG_FSL_DDR_INTERACTIVE
 
 #define CONFIG_MEM_INIT_VALUE		0xDeadBeef
 
@@ -110,6 +115,8 @@
 #endif
 
 #define CONFIG_SYS_FLASH_EMPTY_INFO
+
+#undef CONFIG_CLOCKS_IN_MHZ
 
 /*
  * Local Bus Definitions
@@ -233,6 +240,8 @@
 #define CONFIG_SYS_PCI1_IO_SIZE	0x100000	/* 1M */
 
 #if defined(CONFIG_PCI)
+#undef CONFIG_EEPRO100
+#undef CONFIG_TULIP
 
 #if !defined(CONFIG_PCI_PNP)
     #define PCI_ENET0_IOADDR	0xe0000000
@@ -274,6 +283,14 @@
 /*
  * Environment
  */
+#ifndef CONFIG_SYS_RAMBOOT
+  #define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE + 0x40000)
+  #define CONFIG_ENV_SECT_SIZE	0x40000	/* 256K(one sector) for env */
+  #define CONFIG_ENV_SIZE		0x2000
+#else
+  #define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE - 0x1000)
+  #define CONFIG_ENV_SIZE		0x2000
+#endif
 
 #define CONFIG_LOADS_ECHO	1	/* echo on for serial download */
 #define CONFIG_SYS_LOADS_BAUD_CHANGE	1	/* allow baudrate change */
@@ -282,6 +299,10 @@
  * BOOTP options
  */
 #define CONFIG_BOOTP_BOOTFILESIZE
+
+/*
+ * Command line configuration.
+ */
 
 #undef CONFIG_WATCHDOG			/* watchdog disabled */
 

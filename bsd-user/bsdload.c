@@ -1,23 +1,10 @@
-/*
- *  Load BSD executables.
- *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, see <http://www.gnu.org/licenses/>.
- */
+/* Code for loading BSD executables.  Mostly linux kernel code.  */
 
 #include "qemu/osdep.h"
 
 #include "qemu.h"
+
+#define TARGET_NGROUPS 32
 
 /* ??? This should really be somewhere else.  */
 abi_long memcpy_to_target(abi_ulong dest, const void *src,
@@ -26,48 +13,47 @@ abi_long memcpy_to_target(abi_ulong dest, const void *src,
     void *host_ptr;
 
     host_ptr = lock_user(VERIFY_WRITE, dest, len, 0);
-    if (!host_ptr) {
+    if (!host_ptr)
         return -TARGET_EFAULT;
-    }
     memcpy(host_ptr, src, len);
     unlock_user(host_ptr, dest, 1);
     return 0;
 }
 
-static int count(char **vec)
+static int count(char ** vec)
 {
     int         i;
 
-    for (i = 0; *vec; i++) {
+    for(i = 0; *vec; i++) {
         vec++;
     }
 
-    return i;
+    return(i);
 }
 
-static int prepare_binprm(struct bsd_binprm *bprm)
+static int prepare_binprm(struct linux_binprm *bprm)
 {
     struct stat         st;
     int mode;
     int retval;
 
-    if (fstat(bprm->fd, &st) < 0) {
-        return -errno;
+    if(fstat(bprm->fd, &st) < 0) {
+        return(-errno);
     }
 
     mode = st.st_mode;
-    if (!S_ISREG(mode)) {        /* Must be regular file */
-        return -EACCES;
+    if(!S_ISREG(mode)) {        /* Must be regular file */
+        return(-EACCES);
     }
-    if (!(mode & 0111)) {        /* Must have at least one execute bit set */
-        return -EACCES;
+    if(!(mode & 0111)) {        /* Must have at least one execute bit set */
+        return(-EACCES);
     }
 
     bprm->e_uid = geteuid();
     bprm->e_gid = getegid();
 
     /* Set-uid? */
-    if (mode & S_ISUID) {
+    if(mode & S_ISUID) {
         bprm->e_uid = st.st_uid;
     }
 
@@ -83,20 +69,22 @@ static int prepare_binprm(struct bsd_binprm *bprm)
 
     memset(bprm->buf, 0, sizeof(bprm->buf));
     retval = lseek(bprm->fd, 0L, SEEK_SET);
-    if (retval >= 0) {
+    if(retval >= 0) {
         retval = read(bprm->fd, bprm->buf, 128);
     }
-    if (retval < 0) {
+    if(retval < 0) {
         perror("prepare_binprm");
         exit(-1);
-    } else {
-        return retval;
+        /* return(-errno); */
+    }
+    else {
+        return(retval);
     }
 }
 
 /* Construct the envp and argv tables on the target stack.  */
 abi_ulong loader_build_argptr(int envc, int argc, abi_ulong sp,
-                              abi_ulong stringp)
+                              abi_ulong stringp, int push_ptr)
 {
     int n = sizeof(abi_ulong);
     abi_ulong envp;
@@ -106,6 +94,13 @@ abi_ulong loader_build_argptr(int envc, int argc, abi_ulong sp,
     envp = sp;
     sp -= (argc + 1) * n;
     argv = sp;
+    if (push_ptr) {
+        /* FIXME - handle put_user() failures */
+        sp -= n;
+        put_user_ual(envp, sp);
+        sp -= n;
+        put_user_ual(argv, sp);
+    }
     sp -= n;
     /* FIXME - handle put_user() failures */
     put_user_ual(argc, sp);
@@ -130,85 +125,49 @@ abi_ulong loader_build_argptr(int envc, int argc, abi_ulong sp,
     return sp;
 }
 
-static bool is_there(const char *candidate)
+int loader_exec(const char * filename, char ** argv, char ** envp,
+             struct target_pt_regs * regs, struct image_info *infop)
 {
-    struct stat fin;
+    struct linux_binprm bprm;
+    int retval;
+    int i;
 
-    /* XXX work around access(2) false positives for superuser */
-    if (access(candidate, X_OK) == 0 && stat(candidate, &fin) == 0 &&
-            S_ISREG(fin.st_mode) && (getuid() != 0 ||
-                (fin.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) != 0)) {
-        return true;
-    }
-
-    return false;
-}
-
-int loader_exec(const char *filename, char **argv, char **envp,
-                struct target_pt_regs *regs, struct image_info *infop,
-                struct bsd_binprm *bprm)
-{
-    char *path, fullpath[PATH_MAX];
-    int retval, i;
-
-    bprm->p = TARGET_PAGE_SIZE * MAX_ARG_PAGES;
-    for (i = 0; i < MAX_ARG_PAGES; i++) {       /* clear page-table */
-        bprm->page[i] = NULL;
-    }
-
-    if (strchr(filename, '/') != NULL) {
-        path = realpath(filename, fullpath);
-        if (path == NULL) {
-            /* Failed to resolve. */
-            return -1;
-        }
-        if (!is_there(path)) {
-            return -1;
-        }
-    } else {
-        path = g_find_program_in_path(filename);
-        if (path == NULL) {
-            return -1;
-        }
-    }
-
-    retval = open(path, O_RDONLY);
-    if (retval < 0) {
-        g_free(path);
+    bprm.p = TARGET_PAGE_SIZE*MAX_ARG_PAGES-sizeof(unsigned int);
+    for (i=0 ; i<MAX_ARG_PAGES ; i++)       /* clear page-table */
+            bprm.page[i] = NULL;
+    retval = open(filename, O_RDONLY);
+    if (retval < 0)
         return retval;
-    }
+    bprm.fd = retval;
+    bprm.filename = (char *)filename;
+    bprm.argc = count(argv);
+    bprm.argv = argv;
+    bprm.envc = count(envp);
+    bprm.envp = envp;
 
-    bprm->fullpath = path;
-    bprm->fd = retval;
-    bprm->filename = (char *)filename;
-    bprm->argc = count(argv);
-    bprm->argv = argv;
-    bprm->envc = count(envp);
-    bprm->envp = envp;
+    retval = prepare_binprm(&bprm);
 
-    retval = prepare_binprm(bprm);
-
-    if (retval >= 0) {
-        if (bprm->buf[0] == 0x7f
-                && bprm->buf[1] == 'E'
-                && bprm->buf[2] == 'L'
-                && bprm->buf[3] == 'F') {
-            retval = load_elf_binary(bprm, regs, infop);
+    if(retval>=0) {
+        if (bprm.buf[0] == 0x7f
+                && bprm.buf[1] == 'E'
+                && bprm.buf[2] == 'L'
+                && bprm.buf[3] == 'F') {
+            retval = load_elf_binary(&bprm,regs,infop);
         } else {
             fprintf(stderr, "Unknown binary format\n");
             return -1;
         }
     }
 
-    if (retval >= 0) {
+    if(retval>=0) {
         /* success.  Initialize important registers */
         do_init_thread(regs, infop);
         return retval;
     }
 
     /* Something went wrong, return the inode and free the argument pages*/
-    for (i = 0 ; i < MAX_ARG_PAGES ; i++) {
-        g_free(bprm->page[i]);
+    for (i=0 ; i<MAX_ARG_PAGES ; i++) {
+        g_free(bprm.page[i]);
     }
-    return retval;
+    return(retval);
 }

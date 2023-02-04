@@ -54,7 +54,7 @@ void sound_create_square_wave(uint sample_rate, unsigned short *data, int size,
 /* Operations for sound */
 struct sound_ops {
 	/**
-	 * setup() - Set up to play a sound (optional)
+	 * setup() - Set up to play a sound
 	 */
 	int (*setup)(struct udevice *dev);
 
@@ -67,40 +67,6 @@ struct sound_ops {
 	 * @return 0 if OK, -ve on error
 	 */
 	int (*play)(struct udevice *dev, void *data, uint data_size);
-
-	/**
-	 * stop_play() - Indicate that there is no more data coming
-	 *
-	 * This is called once play() has finished sending all the data to the
-	 * output device. This may be used to tell the hardware to turn off the
-	 * codec, for example.
-	 *
-	 * @dev: Sound device
-	 * @return 0 if OK, -ve on error
-	 */
-	int (*stop_play)(struct udevice *dev);
-
-	/**
-	 * start_beep() - Start beeping (optional)
-	 *
-	 * This tells the sound hardware to start a beep. It will continue until
-	 * stopped by sound_stop_beep().
-	 *
-	 * @dev: Sound device
-	 * @frequency_hz: Beep frequency in hertz
-	 * @return if OK, -ENOSYS if not supported, -ve on error
-	 */
-	int (*start_beep)(struct udevice *dev, int frequency_hz);
-
-	/**
-	 * stop_beep() - Stop beeping (optional)
-	 *
-	 * This tells the sound hardware to stop a previously started beep.
-	 *
-	 * @dev: Sound device
-	 * @return if OK, -ve on error
-	 */
-	int (*stop_beep)(struct udevice *dev);
 };
 
 #define sound_get_ops(dev)	((struct sound_ops *)(dev)->driver->ops)
@@ -119,28 +85,6 @@ int sound_setup(struct udevice *dev);
  * @return 0 if OK, -ve on error
  */
 int sound_beep(struct udevice *dev, int msecs, int frequency_hz);
-
-/**
- * sound_start_beep() - Start beeping
- *
- * This tells the sound hardware to start a beep. It will continue until stopped
- * by sound_stop_beep().
- *
- * @dev: Sound device
- * @frequency_hz: Beep frequency in hertz
- * @return if OK, -ve on error
- */
-int sound_start_beep(struct udevice *dev, int frequency_hz);
-
-/**
- * sound_stop_beep() - Stop beeping
- *
- * This tells the sound hardware to stop a previously started beep.
- *
- * @dev: Sound device
- * @return if OK, -ve on error
- */
-int sound_stop_beep(struct udevice *dev);
 
 /**
  * sound_find_codec_i2s() - Called by sound drivers to locate codec and i2s

@@ -1,4 +1,4 @@
-OpenSBI Firmware with Dynamic Information (FW_DYNAMIC)
+OpenSBI Firmware with Dynamic Information *FW_DYNAMIC*
 ======================================================
 
 OpenSBI **firmware with dynamic info (FW_DYNAMIC)** is a firmware which gets
@@ -6,9 +6,8 @@ information about next booting stage (e.g. a bootloader or an OS) and runtime
 OpenSBI library options from previous booting stage.
 
 The previous booting stage will pass information to *FW_DYNAMIC* by creating
-*struct fw_dynamic_info* in memory and passing its address to *FW_DYNAMIC*
-via *a2* register of RISC-V CPU. The address must be aligned to 8 bytes on
-RV64 and 4 bytes on RV32.
+*struct fw_dynamic_info* in memory and passing it's address to *FW_DYNAMIC*
+via *a2* register of RISC-V CPU.
 
 A *FW_DYNAMIC* firmware is particularly useful when the booting stage executed
 prior to OpenSBI firmware is capable of loading both the OpenSBI firmware and

@@ -5,7 +5,6 @@
 
 #include <common.h>
 #include <dm.h>
-#include <log.h>
 #include <pwm.h>
 #include <asm/io.h>
 #include <asm/arch/clk.h>
@@ -88,11 +87,11 @@ static int exynos_pwm_probe(struct udevice *dev)
 	return 0;
 }
 
-static int exynos_pwm_of_to_plat(struct udevice *dev)
+static int exynos_pwm_ofdata_to_platdata(struct udevice *dev)
 {
 	struct exynos_pwm_priv *priv = dev_get_priv(dev);
 
-	priv->regs = dev_read_addr_ptr(dev);
+	priv->regs = (struct s5p_timer *)devfdt_get_addr(dev);
 
 	return 0;
 }
@@ -113,6 +112,6 @@ U_BOOT_DRIVER(exynos_pwm) = {
 	.of_match = exynos_channels,
 	.ops	= &exynos_pwm_ops,
 	.probe	= exynos_pwm_probe,
-	.of_to_plat	= exynos_pwm_of_to_plat,
-	.priv_auto	= sizeof(struct exynos_pwm_priv),
+	.ofdata_to_platdata	= exynos_pwm_ofdata_to_platdata,
+	.priv_auto_alloc_size	= sizeof(struct exynos_pwm_priv),
 };

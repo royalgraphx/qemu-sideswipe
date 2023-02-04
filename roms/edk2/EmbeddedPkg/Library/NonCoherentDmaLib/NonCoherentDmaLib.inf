@@ -38,7 +38,6 @@
 
 [Pcd]
   gEmbeddedTokenSpaceGuid.PcdDmaDeviceOffset
-  gEmbeddedTokenSpaceGuid.PcdDmaDeviceLimit
 
 [Depex]
   gEfiCpuArchProtocolGuid

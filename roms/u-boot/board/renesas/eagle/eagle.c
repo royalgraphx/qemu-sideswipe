@@ -7,13 +7,9 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <hang.h>
-#include <init.h>
 #include <malloc.h>
 #include <netdev.h>
 #include <dm.h>
-#include <asm/global_data.h>
 #include <dm/platform_data/serial_sh.h>
 #include <asm/processor.h>
 #include <asm/mach-types.h>
@@ -71,6 +67,21 @@ int board_init(void)
 	return 0;
 }
 
+int dram_init(void)
+{
+	if (fdtdec_setup_mem_size_base() != 0)
+		return -EINVAL;
+
+	return 0;
+}
+
+int dram_init_banksize(void)
+{
+	fdtdec_setup_memory_banksize();
+
+	return 0;
+}
+
 #define RST_BASE	0xE6160000
 #define RST_CA57RESCNT	(RST_BASE + 0x40)
 #define RST_CA53RESCNT	(RST_BASE + 0x44)
@@ -78,7 +89,7 @@ int board_init(void)
 #define RST_CA57_CODE	0xA5A5000F
 #define RST_CA53_CODE	0x5A5A000F
 
-void reset_cpu(void)
+void reset_cpu(ulong addr)
 {
 	unsigned long midr, cputype;
 

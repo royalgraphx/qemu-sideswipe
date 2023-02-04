@@ -1,7 +1,7 @@
 ## @file
 #  CPU driver installs CPU PI Multi-processor PPI.
 #
-#  Copyright (c) 2015 - 2021, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2015 - 2019, Intel Corporation. All rights reserved.<BR>
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
@@ -26,7 +26,6 @@
   CpuMpPei.c
   CpuBist.c
   CpuPaging.c
-  CpuMp2Pei.c
 
 [Packages]
   MdePkg/MdePkg.dec
@@ -45,10 +44,6 @@
   MpInitLib
   BaseMemoryLib
   CpuLib
-  MemoryAllocationLib
-
-[Guids]
-  gEdkiiMigratedFvInfoGuid                                             ## SOMETIMES_CONSUMES     ## HOB
 
 [Ppis]
   gEfiPeiMpServicesPpiGuid                      ## PRODUCES
@@ -59,7 +54,6 @@
   gEfiSecPlatformInformation2PpiGuid
   gEfiVectorHandoffInfoPpiGuid                  ## SOMETIMES_CONSUMES
   gEfiPeiMemoryDiscoveredPpiGuid                ## CONSUMES
-  gEdkiiPeiMpServices2PpiGuid                   ## PRODUCES
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdPteMemoryEncryptionAddressOrMask    ## CONSUMES

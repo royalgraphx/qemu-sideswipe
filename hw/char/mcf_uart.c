@@ -13,11 +13,9 @@
 #include "qapi/error.h"
 #include "hw/m68k/mcf.h"
 #include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
 #include "chardev/char-fe.h"
-#include "qom/object.h"
 
-struct mcf_uart_state {
+typedef struct {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -35,10 +33,10 @@ struct mcf_uart_state {
     int rx_enabled;
     qemu_irq irq;
     CharBackend chr;
-};
+} mcf_uart_state;
 
 #define TYPE_MCF_UART "mcf-uart"
-OBJECT_DECLARE_SIMPLE_TYPE(mcf_uart_state, MCF_UART)
+#define MCF_UART(obj) OBJECT_CHECK(mcf_uart_state, (obj), TYPE_MCF_UART)
 
 /* UART Status Register bits.  */
 #define MCF_UART_RxRDY  0x01

@@ -15,7 +15,6 @@
 #include <Ppi/TemporaryRamDone.h>
 #include <Ppi/SecPerformance.h>
 #include <Ppi/PeiCoreFvLocation.h>
-#include <Ppi/RepublishSecPpi.h>
 
 #include <Guid/FirmwarePerformance.h>
 
@@ -42,8 +41,8 @@ typedef struct _SEC_IDT_TABLE {
   // Note: For IA32, only the 4 bytes immediately preceding IDT is used to store
   // EFI_PEI_SERVICES**
   //
-  UINT64    PeiService;
-  UINT64    IdtTable[SEC_IDT_ENTRY_COUNT];
+  UINT64            PeiService;
+  UINT64            IdtTable[SEC_IDT_ENTRY_COUNT];
 } SEC_IDT_TABLE;
 
 /**
@@ -73,9 +72,9 @@ VOID
 NORETURN
 EFIAPI
 SecStartup (
-  IN UINT32  SizeOfRam,
-  IN UINT32  TempRamBase,
-  IN VOID    *BootFirmwareVolume
+  IN UINT32                   SizeOfRam,
+  IN UINT32                   TempRamBase,
+  IN VOID                     *BootFirmwareVolume
   );
 
 /**
@@ -92,9 +91,9 @@ SecStartup (
 VOID
 EFIAPI
 FindAndReportEntryPoints (
-  IN  EFI_FIRMWARE_VOLUME_HEADER  *SecCoreFirmwareVolumePtr,
-  IN  EFI_FIRMWARE_VOLUME_HEADER  *PeiCoreFirmwareVolumePtr,
-  OUT EFI_PEI_CORE_ENTRY_POINT    *PeiCoreEntryPoint
+  IN  EFI_FIRMWARE_VOLUME_HEADER       *SecCoreFirmwareVolumePtr,
+  IN  EFI_FIRMWARE_VOLUME_HEADER       *PeiCoreFirmwareVolumePtr,
+  OUT EFI_PEI_CORE_ENTRY_POINT         *PeiCoreEntryPoint
   );
 
 /**
@@ -123,9 +122,9 @@ ProcessLibraryConstructorList (
 EFI_STATUS
 EFIAPI
 SecPlatformInformationBist (
-  IN CONST EFI_PEI_SERVICES                **PeiServices,
-  IN OUT UINT64                            *StructureSize,
-  OUT EFI_SEC_PLATFORM_INFORMATION_RECORD  *PlatformInformationRecord
+  IN CONST EFI_PEI_SERVICES                  **PeiServices,
+  IN OUT UINT64                              *StructureSize,
+     OUT EFI_SEC_PLATFORM_INFORMATION_RECORD *PlatformInformationRecord
   );
 
 /**
@@ -143,9 +142,9 @@ SecPlatformInformationBist (
 EFI_STATUS
 EFIAPI
 SecPlatformInformation2Bist (
-  IN CONST EFI_PEI_SERVICES                 **PeiServices,
-  IN OUT UINT64                             *StructureSize,
-  OUT EFI_SEC_PLATFORM_INFORMATION_RECORD2  *PlatformInformationRecord2
+  IN CONST EFI_PEI_SERVICES                   **PeiServices,
+  IN OUT UINT64                               *StructureSize,
+     OUT EFI_SEC_PLATFORM_INFORMATION_RECORD2 *PlatformInformationRecord2
   );
 
 /**

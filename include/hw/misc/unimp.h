@@ -11,19 +11,18 @@
 #include "hw/qdev-properties.h"
 #include "hw/sysbus.h"
 #include "qapi/error.h"
-#include "qom/object.h"
 
 #define TYPE_UNIMPLEMENTED_DEVICE "unimplemented-device"
 
-OBJECT_DECLARE_SIMPLE_TYPE(UnimplementedDeviceState, UNIMPLEMENTED_DEVICE)
+#define UNIMPLEMENTED_DEVICE(obj) \
+    OBJECT_CHECK(UnimplementedDeviceState, (obj), TYPE_UNIMPLEMENTED_DEVICE)
 
-struct UnimplementedDeviceState {
+typedef struct {
     SysBusDevice parent_obj;
     MemoryRegion iomem;
-    unsigned offset_fmt_width;
     char *name;
     uint64_t size;
-};
+} UnimplementedDeviceState;
 
 /**
  * create_unimplemented_device: create and map a dummy device

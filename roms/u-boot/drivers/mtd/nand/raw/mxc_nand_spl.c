@@ -11,7 +11,6 @@
  */
 
 #include <common.h>
-#include <hang.h>
 #include <nand.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/io.h>
@@ -326,7 +325,7 @@ int nand_spl_load_image(uint32_t from, unsigned int size, void *buf)
  * configured and available since this code loads the main U-Boot image
  * from NAND into SDRAM and starts it from there.
  */
-__used void nand_boot(void)
+void nand_boot(void)
 {
 	__attribute__((noreturn)) void (*uboot)(void);
 

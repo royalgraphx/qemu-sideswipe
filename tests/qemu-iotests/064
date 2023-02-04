@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw quick
 #
 # Test VHDX read/write from a sample image created with Hyper-V
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=codyprime@gmail.com
+owner=jcody@redhat.com
 
 seq=`basename $0`
 echo "QA output created by $seq"

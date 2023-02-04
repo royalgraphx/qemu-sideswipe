@@ -10,16 +10,16 @@
 
 #include "Tftp.h"
 
-#define IP4_CONFIG2_INTERFACE_INFO_NAME_LENGTH  32
-EFI_HII_HANDLE  mTftpHiiHandle;
+#define IP4_CONFIG2_INTERFACE_INFO_NAME_LENGTH 32
+EFI_HANDLE   mTftpHiiHandle;
 
 /*
    Constant strings and definitions related to the message indicating the amount of
-   progress in the downloading of a TFTP file.
+   progress in the dowloading of a TFTP file.
 */
 
 // Frame for the progression slider
-STATIC CONST CHAR16  mTftpProgressFrame[] = L"[                                        ]";
+STATIC CONST CHAR16 mTftpProgressFrame[] = L"[                                        ]";
 
 // Number of steps in the progression slider
 #define TFTP_PROGRESS_SLIDER_STEPS  ((sizeof (mTftpProgressFrame) / sizeof (CHAR16)) - 3)
@@ -33,13 +33,13 @@ STATIC CONST CHAR16  mTftpProgressFrame[] = L"[                                 
 
 // String to delete the TFTP progress message to be able to update it :
 // (TFTP_PROGRESS_MESSAGE_SIZE-1) '\b'
-STATIC CONST CHAR16  mTftpProgressDelete[] = L"\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b";
+STATIC CONST CHAR16 mTftpProgressDelete[] = L"\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b";
 
 // Local File Handle
-SHELL_FILE_HANDLE  mFileHandle;
+SHELL_FILE_HANDLE     mFileHandle;
 
 // Path of the local file, Unicode encoded
-CONST CHAR16  *mLocalFilePath;
+CONST CHAR16         *mLocalFilePath;
 
 /**
   Check and convert the UINT16 option values of the 'tftp' command
@@ -48,7 +48,7 @@ CONST CHAR16  *mLocalFilePath;
   @param[out] Value     UINT16 value
 
   @return     TRUE      The value was returned.
-  @return     FALSE     A parsing error occurred.
+  @return     FALSE     A parsing error occured.
 **/
 STATIC
 BOOLEAN
@@ -206,57 +206,49 @@ CheckPacket (
   IN EFI_MTFTP4_PACKET    *Packet
   );
 
-EFI_MTFTP4_CONFIG_DATA  DefaultMtftp4ConfigData = {
+EFI_MTFTP4_CONFIG_DATA DefaultMtftp4ConfigData = {
   TRUE,                             // Use default setting
-  {
-    { 0, 0, 0, 0 }
-  },                                // StationIp         - Not relevant as UseDefaultSetting=TRUE
-  {
-    { 0, 0, 0, 0 }
-  },                                // SubnetMask        - Not relevant as UseDefaultSetting=TRUE
+  { { 0, 0, 0, 0 } },               // StationIp         - Not relevant as UseDefaultSetting=TRUE
+  { { 0, 0, 0, 0 } },               // SubnetMask        - Not relevant as UseDefaultSetting=TRUE
   0,                                // LocalPort         - Automatically assigned port number.
-  {
-    { 0, 0, 0, 0 }
-  },                                // GatewayIp         - Not relevant as UseDefaultSetting=TRUE
-  {
-    { 0, 0, 0, 0 }
-  },                                // ServerIp          - Not known yet
+  { { 0, 0, 0, 0 } },               // GatewayIp         - Not relevant as UseDefaultSetting=TRUE
+  { { 0, 0, 0, 0 } },               // ServerIp          - Not known yet
   69,                               // InitialServerPort - Standard TFTP server port
   6,                                // TryCount          - The number of times to transmit request packets and wait for a response.
   4                                 // TimeoutValue      - Retransmission timeout in seconds.
 };
 
-STATIC CONST SHELL_PARAM_ITEM  ParamList[] = {
-  { L"-i", TypeValue },
-  { L"-l", TypeValue },
-  { L"-r", TypeValue },
-  { L"-c", TypeValue },
-  { L"-t", TypeValue },
-  { L"-s", TypeValue },
-  { L"-w", TypeValue },
-  { NULL,  TypeMax   }
-};
+STATIC CONST SHELL_PARAM_ITEM ParamList[] = {
+  {L"-i", TypeValue},
+  {L"-l", TypeValue},
+  {L"-r", TypeValue},
+  {L"-c", TypeValue},
+  {L"-t", TypeValue},
+  {L"-s", TypeValue},
+  {L"-w", TypeValue},
+  {NULL , TypeMax}
+  };
 
 ///
 /// The default block size (512) of tftp is defined in the RFC1350.
 ///
-#define MTFTP_DEFAULT_BLKSIZE  512
+#define MTFTP_DEFAULT_BLKSIZE      512
 ///
 /// The valid range of block size option is defined in the RFC2348.
 ///
-#define MTFTP_MIN_BLKSIZE  8
-#define MTFTP_MAX_BLKSIZE  65464
+#define MTFTP_MIN_BLKSIZE          8
+#define MTFTP_MAX_BLKSIZE          65464
 ///
 /// The default windowsize (1) of tftp.
 ///
-#define MTFTP_DEFAULT_WINDOWSIZE  1
+#define MTFTP_DEFAULT_WINDOWSIZE   1
 ///
 /// The valid range of window size option.
 /// Note that: RFC 7440 does not mention max window size value, but for the
 /// stability reason, the value is limited to 64.
 ///
-#define MTFTP_MIN_WINDOWSIZE  1
-#define MTFTP_MAX_WINDOWSIZE  64
+#define MTFTP_MIN_WINDOWSIZE       1
+#define MTFTP_MAX_WINDOWSIZE       64
 
 /**
   Function for 'tftp' command.
@@ -327,22 +319,15 @@ RunTftp (
   Status = ShellCommandLineParse (ParamList, &CheckPackage, &ProblemParam, TRUE);
   if (EFI_ERROR (Status)) {
     if ((Status == EFI_VOLUME_CORRUPTED) &&
-        (ProblemParam != NULL))
-    {
+        (ProblemParam != NULL) ) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_GEN_PROBLEM),
-        mTftpHiiHandle,
-        L"tftp",
-        ProblemParam
+        -1, -1, NULL, STRING_TOKEN (STR_GEN_PROBLEM), mTftpHiiHandle,
+        L"tftp", ProblemParam
         );
       FreePool (ProblemParam);
     } else {
       ASSERT (FALSE);
     }
-
     goto Error;
   }
 
@@ -352,24 +337,15 @@ RunTftp (
   ParamCount = ShellCommandLineGetCount (CheckPackage);
   if (ParamCount > 4) {
     ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_GEN_TOO_MANY),
-      mTftpHiiHandle,
-      L"tftp"
+      -1, -1, NULL, STRING_TOKEN (STR_GEN_TOO_MANY),
+      mTftpHiiHandle, L"tftp"
       );
     goto Error;
   }
-
   if (ParamCount < 3) {
     ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_GEN_TOO_FEW),
-      mTftpHiiHandle,
-      L"tftp"
+      -1, -1, NULL, STRING_TOKEN (STR_GEN_TOO_FEW),
+      mTftpHiiHandle, L"tftp"
       );
     goto Error;
   }
@@ -380,29 +356,23 @@ RunTftp (
   // Check the host IPv4 address
   //
   ValueStr = ShellCommandLineGetRawValue (CheckPackage, 1);
-  Status   = NetLibStrToIp4 (ValueStr, &Mtftp4ConfigData.ServerIp);
+  Status = NetLibStrToIp4 (ValueStr, &Mtftp4ConfigData.ServerIp);
   if (EFI_ERROR (Status)) {
     ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_GEN_PARAM_INV),
-      mTftpHiiHandle,
-      L"tftp",
-      ValueStr
-      );
+      -1, -1, NULL, STRING_TOKEN (STR_GEN_PARAM_INV),
+      mTftpHiiHandle, L"tftp", ValueStr
+    );
     goto Error;
   }
 
   RemoteFilePath = ShellCommandLineGetRawValue (CheckPackage, 2);
-  ASSERT (RemoteFilePath != NULL);
-  FilePathSize        = StrLen (RemoteFilePath) + 1;
+  ASSERT(RemoteFilePath != NULL);
+  FilePathSize = StrLen (RemoteFilePath) + 1;
   AsciiRemoteFilePath = AllocatePool (FilePathSize);
   if (AsciiRemoteFilePath == NULL) {
     ShellStatus = SHELL_OUT_OF_RESOURCES;
     goto Error;
   }
-
   UnicodeStrToAsciiStrS (RemoteFilePath, AsciiRemoteFilePath, FilePathSize);
 
   if (ParamCount == 4) {
@@ -411,12 +381,10 @@ RunTftp (
     Walker = RemoteFilePath + StrLen (RemoteFilePath);
     while ((--Walker) >= RemoteFilePath) {
       if ((*Walker == L'\\') ||
-          (*Walker == L'/'))
-      {
+          (*Walker == L'/' )    ) {
         break;
       }
     }
-
     mLocalFilePath = Walker + 1;
   }
 
@@ -455,17 +423,11 @@ RunTftp (
     if (!StringToUint16 (ValueStr, &Mtftp4ConfigData.TimeoutValue)) {
       goto Error;
     }
-
     if (Mtftp4ConfigData.TimeoutValue == 0) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_GEN_PARAM_INV),
-        mTftpHiiHandle,
-        L"tftp",
-        ValueStr
-        );
+        -1, -1, NULL, STRING_TOKEN (STR_GEN_PARAM_INV),
+        mTftpHiiHandle, L"tftp", ValueStr
+      );
       goto Error;
     }
   }
@@ -475,17 +437,11 @@ RunTftp (
     if (!StringToUint16 (ValueStr, &BlockSize)) {
       goto Error;
     }
-
-    if ((BlockSize < MTFTP_MIN_BLKSIZE) || (BlockSize > MTFTP_MAX_BLKSIZE)) {
+    if (BlockSize < MTFTP_MIN_BLKSIZE || BlockSize > MTFTP_MAX_BLKSIZE) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_GEN_PARAM_INV),
-        mTftpHiiHandle,
-        L"tftp",
-        ValueStr
-        );
+        -1, -1, NULL, STRING_TOKEN (STR_GEN_PARAM_INV),
+        mTftpHiiHandle, L"tftp", ValueStr
+      );
       goto Error;
     }
   }
@@ -495,17 +451,11 @@ RunTftp (
     if (!StringToUint16 (ValueStr, &WindowSize)) {
       goto Error;
     }
-
-    if ((WindowSize < MTFTP_MIN_WINDOWSIZE) || (WindowSize > MTFTP_MAX_WINDOWSIZE)) {
+    if (WindowSize < MTFTP_MIN_WINDOWSIZE || WindowSize > MTFTP_MAX_WINDOWSIZE) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_GEN_PARAM_INV),
-        mTftpHiiHandle,
-        L"tftp",
-        ValueStr
-        );
+        -1, -1, NULL, STRING_TOKEN (STR_GEN_PARAM_INV),
+        mTftpHiiHandle, L"tftp", ValueStr
+      );
       goto Error;
     }
   }
@@ -514,41 +464,32 @@ RunTftp (
   // Locate all MTFTP4 Service Binding protocols
   //
   ShellStatus = SHELL_NOT_FOUND;
-  Status      = gBS->LocateHandleBuffer (
-                       ByProtocol,
-                       &gEfiManagedNetworkServiceBindingProtocolGuid,
-                       NULL,
-                       &HandleCount,
-                       &Handles
-                       );
+  Status = gBS->LocateHandleBuffer (
+                 ByProtocol,
+                 &gEfiManagedNetworkServiceBindingProtocolGuid,
+                 NULL,
+                 &HandleCount,
+                 &Handles
+                 );
   if (EFI_ERROR (Status) || (HandleCount == 0)) {
     ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_TFTP_ERR_NO_NIC),
+      -1, -1, NULL, STRING_TOKEN (STR_TFTP_ERR_NO_NIC),
       mTftpHiiHandle
-      );
+    );
     goto Error;
   }
 
   for (NicNumber = 0;
        (NicNumber < HandleCount) && (ShellStatus != SHELL_SUCCESS);
-       NicNumber++)
-  {
+       NicNumber++) {
     ControllerHandle = Handles[NicNumber];
 
     Status = GetNicName (ControllerHandle, NicNumber, NicName);
     if (EFI_ERROR (Status)) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_TFTP_ERR_NIC_NAME),
-        mTftpHiiHandle,
-        NicNumber,
-        Status
-        );
+        -1, -1, NULL, STRING_TOKEN (STR_TFTP_ERR_NIC_NAME),
+        mTftpHiiHandle, NicNumber, Status
+      );
       continue;
     }
 
@@ -556,7 +497,6 @@ RunTftp (
       if (StrCmp (NicName, UserNicName) != 0) {
         continue;
       }
-
       NicFound = TRUE;
     }
 
@@ -565,68 +505,46 @@ RunTftp (
                &gEfiMtftp4ServiceBindingProtocolGuid,
                &gEfiMtftp4ProtocolGuid,
                &Mtftp4ChildHandle,
-               (VOID **)&Mtftp4
+               (VOID**)&Mtftp4
                );
     if (EFI_ERROR (Status)) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_TFTP_ERR_OPEN_PROTOCOL),
-        mTftpHiiHandle,
-        NicName,
-        Status
-        );
+        -1, -1, NULL, STRING_TOKEN (STR_TFTP_ERR_OPEN_PROTOCOL),
+        mTftpHiiHandle, NicName, Status
+      );
       continue;
     }
 
     Status = Mtftp4->Configure (Mtftp4, &Mtftp4ConfigData);
     if (EFI_ERROR (Status)) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_TFTP_ERR_CONFIGURE),
-        mTftpHiiHandle,
-        NicName,
-        Status
-        );
+        -1, -1, NULL, STRING_TOKEN (STR_TFTP_ERR_CONFIGURE),
+        mTftpHiiHandle, NicName, Status
+      );
       goto NextHandle;
     }
 
     Status = GetFileSize (Mtftp4, AsciiRemoteFilePath, &FileSize);
     if (EFI_ERROR (Status)) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_TFTP_ERR_FILE_SIZE),
-        mTftpHiiHandle,
-        RemoteFilePath,
-        NicName,
-        Status
-        );
+        -1, -1, NULL, STRING_TOKEN (STR_TFTP_ERR_FILE_SIZE),
+        mTftpHiiHandle, RemoteFilePath, NicName, Status
+      );
       goto NextHandle;
     }
 
     Status = DownloadFile (Mtftp4, RemoteFilePath, AsciiRemoteFilePath, FileSize, BlockSize, WindowSize);
     if (EFI_ERROR (Status)) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_TFTP_ERR_DOWNLOAD),
-        mTftpHiiHandle,
-        RemoteFilePath,
-        NicName,
-        Status
-        );
+        -1, -1, NULL, STRING_TOKEN (STR_TFTP_ERR_DOWNLOAD),
+        mTftpHiiHandle, RemoteFilePath, NicName, Status
+      );
       goto NextHandle;
     }
 
     ShellStatus = SHELL_SUCCESS;
 
-NextHandle:
+    NextHandle:
 
     CloseProtocolAndDestroyServiceChild (
       ControllerHandle,
@@ -638,27 +556,22 @@ NextHandle:
 
   if ((UserNicName != NULL) && (!NicFound)) {
     ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_TFTP_ERR_NIC_NOT_FOUND),
-      mTftpHiiHandle,
-      UserNicName
-      );
+      -1, -1, NULL, STRING_TOKEN (STR_TFTP_ERR_NIC_NOT_FOUND),
+      mTftpHiiHandle, UserNicName
+    );
   }
 
-Error:
+  Error:
 
   ShellCommandLineFreeVarList (CheckPackage);
   if (AsciiRemoteFilePath != NULL) {
     FreePool (AsciiRemoteFilePath);
   }
-
   if (Handles != NULL) {
     FreePool (Handles);
   }
 
-  if ((ShellStatus != SHELL_SUCCESS) && (EFI_ERROR (Status))) {
+  if ((ShellStatus != SHELL_SUCCESS) && (EFI_ERROR(Status))) {
     ShellStatus = Status & ~MAX_BIT;
   }
 
@@ -672,7 +585,7 @@ Error:
   @param[out] Value     UINT16 value
 
   @return     TRUE      The value was returned.
-  @return     FALSE     A parsing error occurred.
+  @return     FALSE     A parsing error occured.
 **/
 STATIC
 BOOLEAN
@@ -686,14 +599,9 @@ StringToUint16 (
   Val = ShellStrToUintn (ValueStr);
   if (Val > MAX_UINT16) {
     ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_GEN_PARAM_INV),
-      mTftpHiiHandle,
-      L"tftp",
-      ValueStr
-      );
+      -1, -1, NULL, STRING_TOKEN (STR_GEN_PARAM_INV),
+      mTftpHiiHandle, L"tftp", ValueStr
+    );
     return FALSE;
   }
 
@@ -737,7 +645,7 @@ GetNicName (
              &gEfiManagedNetworkServiceBindingProtocolGuid,
              &gEfiManagedNetworkProtocolGuid,
              &MnpHandle,
-             (VOID **)&Mnp
+             (VOID**)&Mnp
              );
   if (EFI_ERROR (Status)) {
     goto Error;
@@ -753,7 +661,7 @@ GetNicName (
     IP4_CONFIG2_INTERFACE_INFO_NAME_LENGTH,
     SnpMode.IfType == NET_IFTYPE_ETHERNET ?
     L"eth%d" :
-    L"unk%d",
+    L"unk%d" ,
     NicNumber
     );
 
@@ -805,12 +713,12 @@ CreateServiceChildAndOpenProtocol (
   EFI_STATUS  Status;
 
   *ChildHandle = NULL;
-  Status       = NetLibCreateServiceChild (
-                   ControllerHandle,
-                   gImageHandle,
-                   ServiceBindingProtocolGuid,
-                   ChildHandle
-                   );
+  Status = NetLibCreateServiceChild (
+             ControllerHandle,
+             gImageHandle,
+             ServiceBindingProtocolGuid,
+             ChildHandle
+             );
   if (!EFI_ERROR (Status)) {
     Status = gBS->OpenProtocol (
                     *ChildHandle,
@@ -902,21 +810,21 @@ GetFileSize (
   UINT32             OptCnt;
   UINT8              OptBuf[128];
 
-  ReqOpt[0].OptionStr = (UINT8 *)"tsize";
-  OptBuf[0]           = '0';
-  OptBuf[1]           = 0;
-  ReqOpt[0].ValueStr  = OptBuf;
+  ReqOpt[0].OptionStr = (UINT8*)"tsize";
+  OptBuf[0] = '0';
+  OptBuf[1] = 0;
+  ReqOpt[0].ValueStr = OptBuf;
 
   Status = Mtftp4->GetInfo (
-                     Mtftp4,
-                     NULL,
-                     (UINT8 *)FilePath,
-                     NULL,
-                     1,
-                     ReqOpt,
-                     &PktLen,
-                     &Packet
-                     );
+             Mtftp4,
+             NULL,
+             (UINT8*)FilePath,
+             NULL,
+             1,
+             ReqOpt,
+             &PktLen,
+             &Packet
+             );
 
   if (EFI_ERROR (Status)) {
     goto Error;
@@ -926,7 +834,7 @@ GetFileSize (
                      Mtftp4,
                      PktLen,
                      Packet,
-                     (UINT32 *)&OptCnt,
+                     (UINT32 *) &OptCnt,
                      &TableOfOptions
                      );
   if (EFI_ERROR (Status)) {
@@ -939,18 +847,16 @@ GetFileSize (
       *FileSize = AsciiStrDecimalToUintn ((CHAR8 *)Option->ValueStr);
       break;
     }
-
     OptCnt--;
     Option++;
   }
-
   FreePool (TableOfOptions);
 
   if (OptCnt == 0) {
     Status = EFI_UNSUPPORTED;
   }
 
-Error:
+Error :
 
   return Status;
 }
@@ -983,11 +889,11 @@ DownloadFile (
   IN   UINT16               WindowSize
   )
 {
-  EFI_STATUS        Status;
-  DOWNLOAD_CONTEXT  *TftpContext;
-  EFI_MTFTP4_TOKEN  Mtftp4Token;
-  UINT8             BlksizeBuf[10];
-  UINT8             WindowsizeBuf[10];
+  EFI_STATUS            Status;
+  DOWNLOAD_CONTEXT      *TftpContext;
+  EFI_MTFTP4_TOKEN      Mtftp4Token;
+  UINT8                 BlksizeBuf[10];
+  UINT8                 WindowsizeBuf[10];
 
   ZeroMem (&Mtftp4Token, sizeof (EFI_MTFTP4_TOKEN));
 
@@ -996,14 +902,13 @@ DownloadFile (
     Status = EFI_OUT_OF_RESOURCES;
     goto Error;
   }
-
-  TftpContext->FileSize              = FileSize;
+  TftpContext->FileSize = FileSize;
   TftpContext->DownloadedNbOfBytes   = 0;
   TftpContext->LastReportedNbOfBytes = 0;
 
-  Mtftp4Token.Filename    = (UINT8 *)AsciiFilePath;
+  Mtftp4Token.Filename    = (UINT8*)AsciiFilePath;
   Mtftp4Token.CheckPacket = CheckPacket;
-  Mtftp4Token.Context     = (VOID *)TftpContext;
+  Mtftp4Token.Context     = (VOID*)TftpContext;
   Mtftp4Token.OptionCount = 0;
   Mtftp4Token.OptionList  = AllocatePool (sizeof (EFI_MTFTP4_OPTION) * 2);
   if (Mtftp4Token.OptionList == NULL) {
@@ -1012,26 +917,22 @@ DownloadFile (
   }
 
   if (BlockSize != MTFTP_DEFAULT_BLKSIZE) {
-    Mtftp4Token.OptionList[Mtftp4Token.OptionCount].OptionStr = (UINT8 *)"blksize";
-    AsciiSPrint ((CHAR8 *)BlksizeBuf, sizeof (BlksizeBuf), "%d", BlockSize);
-    Mtftp4Token.OptionList[Mtftp4Token.OptionCount].ValueStr = BlksizeBuf;
-    Mtftp4Token.OptionCount++;
+    Mtftp4Token.OptionList[Mtftp4Token.OptionCount].OptionStr = (UINT8 *) "blksize";
+    AsciiSPrint ((CHAR8 *) BlksizeBuf, sizeof (BlksizeBuf), "%d", BlockSize);
+    Mtftp4Token.OptionList[Mtftp4Token.OptionCount].ValueStr  = BlksizeBuf;
+    Mtftp4Token.OptionCount ++;
   }
 
   if (WindowSize != MTFTP_DEFAULT_WINDOWSIZE) {
-    Mtftp4Token.OptionList[Mtftp4Token.OptionCount].OptionStr = (UINT8 *)"windowsize";
-    AsciiSPrint ((CHAR8 *)WindowsizeBuf, sizeof (WindowsizeBuf), "%d", WindowSize);
-    Mtftp4Token.OptionList[Mtftp4Token.OptionCount].ValueStr = WindowsizeBuf;
-    Mtftp4Token.OptionCount++;
+    Mtftp4Token.OptionList[Mtftp4Token.OptionCount].OptionStr = (UINT8 *) "windowsize";
+    AsciiSPrint ((CHAR8 *) WindowsizeBuf, sizeof (WindowsizeBuf), "%d", WindowSize);
+    Mtftp4Token.OptionList[Mtftp4Token.OptionCount].ValueStr  = WindowsizeBuf;
+    Mtftp4Token.OptionCount ++;
   }
 
   ShellPrintHiiEx (
-    -1,
-    -1,
-    NULL,
-    STRING_TOKEN (STR_TFTP_DOWNLOADING),
-    mTftpHiiHandle,
-    FilePath
+    -1, -1, NULL, STRING_TOKEN (STR_TFTP_DOWNLOADING),
+    mTftpHiiHandle, FilePath
     );
 
   //
@@ -1042,32 +943,24 @@ DownloadFile (
   }
 
   Status = ShellOpenFileByName (
-             mLocalFilePath,
-             &mFileHandle,
-             EFI_FILE_MODE_CREATE |
-             EFI_FILE_MODE_WRITE  |
-             EFI_FILE_MODE_READ,
-             0
-             );
+              mLocalFilePath,
+              &mFileHandle,
+              EFI_FILE_MODE_CREATE |
+              EFI_FILE_MODE_WRITE  |
+              EFI_FILE_MODE_READ,
+              0
+              );
   if (EFI_ERROR (Status)) {
     ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_GEN_FILE_OPEN_FAIL),
-      mTftpHiiHandle,
-      L"tftp",
-      mLocalFilePath
-      );
+      -1, -1, NULL, STRING_TOKEN (STR_GEN_FILE_OPEN_FAIL),
+      mTftpHiiHandle, L"tftp", mLocalFilePath
+    );
     goto Error;
   }
 
   Status = Mtftp4->ReadFile (Mtftp4, &Mtftp4Token);
   ShellPrintHiiEx (
-    -1,
-    -1,
-    NULL,
-    STRING_TOKEN (STR_GEN_CRLF),
+    -1, -1, NULL, STRING_TOKEN (STR_GEN_CRLF),
     mTftpHiiHandle
     );
 
@@ -1076,7 +969,7 @@ DownloadFile (
   //
   ShellCloseFile (&mFileHandle);
 
-Error:
+Error :
   if (TftpContext != NULL) {
     FreePool (TftpContext);
   }
@@ -1123,7 +1016,7 @@ CheckPacket (
     return EFI_SUCCESS;
   }
 
-  Context = (DOWNLOAD_CONTEXT *)Token->Context;
+  Context = (DOWNLOAD_CONTEXT*)Token->Context;
 
   //
   // The data in the packet are prepended with two UINT16 :
@@ -1132,28 +1025,19 @@ CheckPacket (
   //
   DownloadLen = (UINTN)PacketLen - sizeof (Packet->OpCode) - sizeof (Packet->Data.Block);
 
-  ShellSetFilePosition (mFileHandle, Context->DownloadedNbOfBytes);
+  ShellSetFilePosition(mFileHandle, Context->DownloadedNbOfBytes);
   Status = ShellWriteFile (mFileHandle, &DownloadLen, Packet->Data.Data);
   if (EFI_ERROR (Status)) {
     if (Context->DownloadedNbOfBytes > 0) {
       ShellPrintHiiEx (
-        -1,
-        -1,
-        NULL,
-        STRING_TOKEN (STR_GEN_CRLF),
+        -1, -1, NULL, STRING_TOKEN (STR_GEN_CRLF),
         mTftpHiiHandle
-        );
-    }
-
-    ShellPrintHiiEx (
-      -1,
-      -1,
-      NULL,
-      STRING_TOKEN (STR_TFTP_ERR_WRITE),
-      mTftpHiiHandle,
-      mLocalFilePath,
-      Status
       );
+    }
+    ShellPrintHiiEx (
+      -1, -1, NULL, STRING_TOKEN (STR_TFTP_ERR_WRITE),
+      mTftpHiiHandle, mLocalFilePath, Status
+    );
     return Status;
   }
 
@@ -1162,11 +1046,11 @@ CheckPacket (
   }
 
   Context->DownloadedNbOfBytes += DownloadLen;
-  NbOfKb                        = Context->DownloadedNbOfBytes / 1024;
+  NbOfKb = Context->DownloadedNbOfBytes / 1024;
 
   Progress[0] = L'\0';
-  LastStep    = (Context->LastReportedNbOfBytes * TFTP_PROGRESS_SLIDER_STEPS) / Context->FileSize;
-  Step        = (Context->DownloadedNbOfBytes * TFTP_PROGRESS_SLIDER_STEPS) / Context->FileSize;
+  LastStep  = (Context->LastReportedNbOfBytes * TFTP_PROGRESS_SLIDER_STEPS) / Context->FileSize;
+  Step      = (Context->DownloadedNbOfBytes * TFTP_PROGRESS_SLIDER_STEPS) / Context->FileSize;
 
   if (Step <= LastStep) {
     return EFI_SUCCESS;
@@ -1175,14 +1059,12 @@ CheckPacket (
   ShellPrintEx (-1, -1, L"%s", mTftpProgressDelete);
 
   Status = StrCpyS (Progress, TFTP_PROGRESS_MESSAGE_SIZE, mTftpProgressFrame);
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR(Status)) {
     return Status;
   }
-
   for (Index = 1; Index < Step; Index++) {
     Progress[Index] = L'=';
   }
-
   Progress[Step] = L'>';
 
   UnicodeSPrint (
@@ -1199,20 +1081,20 @@ CheckPacket (
 }
 
 /**
-  Retrieve HII package list from ImageHandle and publish to HII database.
+  Retrive HII package list from ImageHandle and publish to HII database.
 
   @param ImageHandle            The image handle of the process.
 
   @return HII handle.
 **/
-EFI_HII_HANDLE
+EFI_HANDLE
 InitializeHiiPackage (
-  EFI_HANDLE  ImageHandle
+  EFI_HANDLE                  ImageHandle
   )
 {
-  EFI_STATUS                   Status;
-  EFI_HII_PACKAGE_LIST_HEADER  *PackageList;
-  EFI_HII_HANDLE               HiiHandle;
+  EFI_STATUS                  Status;
+  EFI_HII_PACKAGE_LIST_HEADER *PackageList;
+  EFI_HANDLE                  HiiHandle;
 
   //
   // Retrieve HII package list from ImageHandle
@@ -1243,6 +1125,5 @@ InitializeHiiPackage (
   if (EFI_ERROR (Status)) {
     return NULL;
   }
-
   return HiiHandle;
 }

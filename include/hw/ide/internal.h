@@ -17,28 +17,17 @@
 
 /* debug IDE devices */
 #define USE_DMA_CDROM
-#include "qom/object.h"
 
+typedef struct IDEBus IDEBus;
 typedef struct IDEDevice IDEDevice;
 typedef struct IDEState IDEState;
 typedef struct IDEDMA IDEDMA;
 typedef struct IDEDMAOps IDEDMAOps;
 
 #define TYPE_IDE_BUS "IDE"
-OBJECT_DECLARE_SIMPLE_TYPE(IDEBus, IDE_BUS)
+#define IDE_BUS(obj) OBJECT_CHECK(IDEBus, (obj), TYPE_IDE_BUS)
 
 #define MAX_IDE_DEVS 2
-
-/* Device/Head ("select") Register */
-#define ATA_DEV_SELECT          0x10
-/* ATA1,3: Defined as '1'.
- * ATA2:   Reserved.
- * ATA3-7: obsolete. */
-#define ATA_DEV_ALWAYS_ON       0xA0
-#define ATA_DEV_LBA             0x40
-#define ATA_DEV_LBA_MSB         0x0F  /* LBA 24:27 */
-#define ATA_DEV_HS              0x0F  /* HS 3:0 */
-
 
 /* Bits of HD_STATUS */
 #define ERR_STAT		0x01
@@ -68,10 +57,8 @@ OBJECT_DECLARE_SIMPLE_TYPE(IDEBus, IDE_BUS)
 #define REL			0x04
 #define TAG_MASK		0xf8
 
-/* Bits of Device Control register */
-#define IDE_CTRL_HOB            0x80
-#define IDE_CTRL_RESET          0x04
-#define IDE_CTRL_DISABLE_IRQ    0x02
+#define IDE_CMD_RESET           0x04
+#define IDE_CMD_DISABLE_IRQ     0x02
 
 /* ACS-2 T13/2015-D Table B.2 Command codes */
 #define WIN_NOP				0x00
@@ -375,7 +362,6 @@ struct IDEState {
     uint8_t unit;
     /* ide config */
     IDEDriveKind drive_kind;
-    int drive_heads, drive_sectors;
     int cylinders, heads, sectors, chs_trans;
     int64_t nb_sectors;
     int mult_sectors;
@@ -401,8 +387,6 @@ struct IDEState {
 
     uint8_t select;
     uint8_t status;
-
-    bool reset_reverts;
 
     /* set for lba48 access */
     uint8_t lba48;
@@ -502,12 +486,17 @@ struct IDEBus {
 };
 
 #define TYPE_IDE_DEVICE "ide-device"
-OBJECT_DECLARE_TYPE(IDEDevice, IDEDeviceClass, IDE_DEVICE)
+#define IDE_DEVICE(obj) \
+     OBJECT_CHECK(IDEDevice, (obj), TYPE_IDE_DEVICE)
+#define IDE_DEVICE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(IDEDeviceClass, (klass), TYPE_IDE_DEVICE)
+#define IDE_DEVICE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(IDEDeviceClass, (obj), TYPE_IDE_DEVICE)
 
-struct IDEDeviceClass {
+typedef struct IDEDeviceClass {
     DeviceClass parent_class;
     void (*realize)(IDEDevice *dev, Error **errp);
-};
+} IDEDeviceClass;
 
 struct IDEDevice {
     DeviceState qdev;
@@ -575,7 +564,7 @@ static inline IDEState *idebus_active_if(IDEBus *bus)
 
 static inline void ide_set_irq(IDEBus *bus)
 {
-    if (!(bus->cmd & IDE_CTRL_DISABLE_IRQ)) {
+    if (!(bus->cmd & IDE_CMD_DISABLE_IRQ)) {
         qemu_irq_raise(bus->irq);
     }
 }
@@ -614,7 +603,7 @@ void ide_atapi_io_error(IDEState *s, int ret);
 void ide_ioport_write(void *opaque, uint32_t addr, uint32_t val);
 uint32_t ide_ioport_read(void *opaque, uint32_t addr1);
 uint32_t ide_status_read(void *opaque, uint32_t addr);
-void ide_ctrl_write(void *opaque, uint32_t addr, uint32_t val);
+void ide_cmd_write(void *opaque, uint32_t addr, uint32_t val);
 void ide_data_writew(void *opaque, uint32_t addr, uint32_t val);
 uint32_t ide_data_readw(void *opaque, uint32_t addr);
 void ide_data_writel(void *opaque, uint32_t addr, uint32_t val);
@@ -627,7 +616,7 @@ int ide_init_drive(IDEState *s, BlockBackend *blk, IDEDriveKind kind,
                    int chs_trans, Error **errp);
 void ide_init2(IDEBus *bus, qemu_irq irq);
 void ide_exit(IDEState *s);
-int ide_init_ioport(IDEBus *bus, ISADevice *isa, int iobase, int iobase2);
+void ide_init_ioport(IDEBus *bus, ISADevice *isa, int iobase, int iobase2);
 void ide_register_restart_cb(IDEBus *bus);
 
 void ide_exec_cmd(IDEBus *bus, uint32_t val);
@@ -651,8 +640,8 @@ void ide_atapi_cmd(IDEState *s);
 void ide_atapi_cmd_reply_end(IDEState *s);
 
 /* hw/ide/qdev.c */
-void ide_bus_init(IDEBus *idebus, size_t idebus_size, DeviceState *dev,
-                  int bus_id, int max_units);
+void ide_bus_new(IDEBus *idebus, size_t idebus_size, DeviceState *dev,
+                 int bus_id, int max_units);
 IDEDevice *ide_create_drive(IDEBus *bus, int unit, DriveInfo *drive);
 
 int ide_handle_rw_error(IDEState *s, int error, int op);

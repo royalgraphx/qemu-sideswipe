@@ -8,7 +8,7 @@
 #
 #  This module will initialize TPM device, measure reported FVs and BIOS version.
 #
-# Copyright (c) 2015 - 2020, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
 # Copyright (c) 2017, Microsoft Corporation.  All rights reserved. <BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -54,7 +54,6 @@
   MemoryAllocationLib
   ReportStatusCodeLib
   ResetSystemLib
-  PrintLib
 
 [Guids]
   gTcgEventEntryHobGuid                                                ## PRODUCES               ## HOB
@@ -63,7 +62,6 @@
   gTcgEvent2EntryHobGuid                                               ## PRODUCES               ## HOB
   gEfiTpmDeviceInstanceNoneGuid                                        ## SOMETIMES_PRODUCES     ## GUID       # TPM device identifier
   gEfiTpmDeviceInstanceTpm12Guid                                       ## SOMETIMES_PRODUCES     ## GUID       # TPM device identifier
-  gEdkiiMigratedFvInfoGuid                                             ## SOMETIMES_CONSUMES     ## HOB
 
 [Ppis]
   gEfiPeiFirmwareVolumeInfoPpiGuid                                     ## SOMETIMES_CONSUMES     ## NOTIFY
@@ -73,11 +71,9 @@
   gPeiTpmInitializationDonePpiGuid                                     ## PRODUCES
   gEfiEndOfPeiSignalPpiGuid                                            ## SOMETIMES_CONSUMES     ## NOTIFY
   gEdkiiPeiFirmwareVolumeInfoPrehashedFvPpiGuid                        ## SOMETIMES_CONSUMES
-  gEdkiiTcgPpiGuid                                                     ## PRODUCES
 
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdFirmwareVersionString              ## SOMETIMES_CONSUMES
-  gEfiMdeModulePkgTokenSpaceGuid.PcdTcgPfpMeasurementRevision          ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpmInstanceGuid                     ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2InitializationPolicy            ## CONSUMES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2SelfTestPolicy                  ## SOMETIMES_CONSUMES
@@ -86,7 +82,6 @@
   ## SOMETIMES_CONSUMES
   ## SOMETIMES_PRODUCES
   gEfiSecurityPkgTokenSpaceGuid.PcdTpm2HashMask
-  gEfiSecurityPkgTokenSpaceGuid.PcdTcg2HashAlgorithmBitmap                  ## CONSUMES
 
 [Depex]
   gEfiPeiMasterBootModePpiGuid AND

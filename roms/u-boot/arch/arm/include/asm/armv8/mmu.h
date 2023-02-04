@@ -7,7 +7,6 @@
 #ifndef _ASM_ARMV8_MMU_H_
 #define _ASM_ARMV8_MMU_H_
 
-#include <hang.h>
 #include <linux/const.h>
 
 /*

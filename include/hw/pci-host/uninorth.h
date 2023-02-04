@@ -26,7 +26,7 @@
 #define UNINORTH_H
 
 #include "hw/pci/pci_host.h"
-#include "qom/object.h"
+#include "hw/ppc/openpic.h"
 
 /* UniNorth version */
 #define UNINORTH_VERSION_10A    0x7
@@ -36,33 +36,34 @@
 #define TYPE_UNI_NORTH_INTERNAL_PCI_HOST_BRIDGE "uni-north-internal-pci-pcihost"
 #define TYPE_U3_AGP_HOST_BRIDGE "u3-agp-pcihost"
 
-typedef struct UNINHostState UNINHostState;
-DECLARE_INSTANCE_CHECKER(UNINHostState, UNI_NORTH_PCI_HOST_BRIDGE,
-                         TYPE_UNI_NORTH_PCI_HOST_BRIDGE)
-DECLARE_INSTANCE_CHECKER(UNINHostState, UNI_NORTH_AGP_HOST_BRIDGE,
-                         TYPE_UNI_NORTH_AGP_HOST_BRIDGE)
-DECLARE_INSTANCE_CHECKER(UNINHostState, UNI_NORTH_INTERNAL_PCI_HOST_BRIDGE,
-                         TYPE_UNI_NORTH_INTERNAL_PCI_HOST_BRIDGE)
-DECLARE_INSTANCE_CHECKER(UNINHostState, U3_AGP_HOST_BRIDGE,
-                         TYPE_U3_AGP_HOST_BRIDGE)
+#define UNI_NORTH_PCI_HOST_BRIDGE(obj) \
+    OBJECT_CHECK(UNINHostState, (obj), TYPE_UNI_NORTH_PCI_HOST_BRIDGE)
+#define UNI_NORTH_AGP_HOST_BRIDGE(obj) \
+    OBJECT_CHECK(UNINHostState, (obj), TYPE_UNI_NORTH_AGP_HOST_BRIDGE)
+#define UNI_NORTH_INTERNAL_PCI_HOST_BRIDGE(obj) \
+    OBJECT_CHECK(UNINHostState, (obj), TYPE_UNI_NORTH_INTERNAL_PCI_HOST_BRIDGE)
+#define U3_AGP_HOST_BRIDGE(obj) \
+    OBJECT_CHECK(UNINHostState, (obj), TYPE_U3_AGP_HOST_BRIDGE)
 
-struct UNINHostState {
+typedef struct UNINHostState {
     PCIHostState parent_obj;
 
     uint32_t ofw_addr;
+    OpenPICState *pic;
     qemu_irq irqs[4];
     MemoryRegion pci_mmio;
     MemoryRegion pci_hole;
     MemoryRegion pci_io;
-};
+} UNINHostState;
 
-struct UNINState {
+typedef struct UNINState {
     SysBusDevice parent_obj;
 
     MemoryRegion mem;
-};
+} UNINState;
 
 #define TYPE_UNI_NORTH "uni-north"
-OBJECT_DECLARE_SIMPLE_TYPE(UNINState, UNI_NORTH)
+#define UNI_NORTH(obj) \
+    OBJECT_CHECK(UNINState, (obj), TYPE_UNI_NORTH)
 
 #endif /* UNINORTH_H */

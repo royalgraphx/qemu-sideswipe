@@ -8,21 +8,19 @@
  */
 
 #include <libfdt.h>
+#include <sbi/riscv_asm.h>
 #include <sbi/sbi_console.h>
-#include <sbi/sbi_domain.h>
-#include <sbi/sbi_math.h>
-#include <sbi/sbi_hart.h>
+#include <sbi/sbi_platform.h>
 #include <sbi/sbi_scratch.h>
 #include <sbi/sbi_string.h>
-#include <sbi_utils/fdt/fdt_fixup.h>
-#include <sbi_utils/fdt/fdt_pmu.h>
-#include <sbi_utils/fdt/fdt_helper.h>
 
 void fdt_cpu_fixup(void *fdt)
 {
-	struct sbi_domain *dom = sbi_domain_thishart_ptr();
-	int err, cpu_offset, cpus_offset, len;
-	const char *mmu_type;
+	struct sbi_scratch *scratch = sbi_scratch_thishart_ptr();
+	const struct sbi_platform *plat = sbi_platform_ptr(scratch);
+	int err, len, cpu_offset, cpus_offset;
+	const fdt32_t *val;
+	const void *prop;
 	u32 hartid;
 
 	err = fdt_open_into(fdt, fdt, fdt_totalsize(fdt) + 32);
@@ -34,76 +32,35 @@ void fdt_cpu_fixup(void *fdt)
 		return;
 
 	fdt_for_each_subnode(cpu_offset, fdt, cpus_offset) {
-		err = fdt_parse_hart_id(fdt, cpu_offset, &hartid);
-		if (err)
+		prop = fdt_getprop(fdt, cpu_offset, "device_type", &len);
+		if (!prop || !len)
+			continue;
+		if (sbi_strcmp(prop, "cpu"))
 			continue;
 
-		if (!fdt_node_is_enabled(fdt, cpu_offset))
+		val = fdt_getprop(fdt, cpu_offset, "reg", &len);
+		if (!val || len < sizeof(fdt32_t))
 			continue;
 
-		/*
-		 * Disable a HART DT node if one of the following is true:
-		 * 1. The HART is not assigned to the current domain
-		 * 2. MMU is not available for the HART
-		 */
+		if (len > sizeof(fdt32_t))
+			val++;
+		hartid = fdt32_to_cpu(*val);
 
-		mmu_type = fdt_getprop(fdt, cpu_offset, "mmu-type", &len);
-		if (!sbi_domain_is_assigned_hart(dom, hartid) ||
-		    !mmu_type || !len)
+		if (sbi_platform_hart_invalid(plat, hartid))
 			fdt_setprop_string(fdt, cpu_offset, "status",
 					   "disabled");
 	}
 }
 
-static void fdt_domain_based_fixup_one(void *fdt, int nodeoff)
-{
-	int rc;
-	uint64_t reg_addr, reg_size;
-	struct sbi_domain *dom = sbi_domain_thishart_ptr();
-
-	rc = fdt_get_node_addr_size(fdt, nodeoff, 0, &reg_addr, &reg_size);
-	if (rc < 0 || !reg_addr || !reg_size)
-		return;
-
-	if (!sbi_domain_check_addr(dom, reg_addr, dom->next_mode,
-				    SBI_DOMAIN_READ | SBI_DOMAIN_WRITE)) {
-		rc = fdt_open_into(fdt, fdt, fdt_totalsize(fdt) + 32);
-		if (rc < 0)
-			return;
-		fdt_setprop_string(fdt, nodeoff, "status", "disabled");
-	}
-}
-
-void fdt_aplic_fixup(void *fdt)
-{
-	int noff = 0;
-
-	while ((noff = fdt_node_offset_by_compatible(fdt, noff,
-						     "riscv,aplic")) >= 0)
-		fdt_domain_based_fixup_one(fdt, noff);
-}
-
-void fdt_imsic_fixup(void *fdt)
-{
-	int noff = 0;
-
-	while ((noff = fdt_node_offset_by_compatible(fdt, noff,
-						     "riscv,imsics")) >= 0)
-		fdt_domain_based_fixup_one(fdt, noff);
-}
-
-void fdt_plic_fixup(void *fdt)
+void fdt_plic_fixup(void *fdt, const char *compat)
 {
 	u32 *cells;
 	int i, cells_count;
 	int plic_off;
 
-	plic_off = fdt_node_offset_by_compatible(fdt, 0, "sifive,plic-1.0.0");
-	if (plic_off < 0) {
-		plic_off = fdt_node_offset_by_compatible(fdt, 0, "riscv,plic0");
-		if (plic_off < 0)
-			return;
-	}
+	plic_off = fdt_node_offset_by_compatible(fdt, 0, compat);
+	if (plic_off < 0)
+		return;
 
 	cells = (u32 *)fdt_getprop(fdt, plic_off,
 				   "interrupts-extended", &cells_count);
@@ -118,65 +75,6 @@ void fdt_plic_fixup(void *fdt)
 		if (fdt32_to_cpu(cells[2 * i + 1]) == IRQ_M_EXT)
 			cells[2 * i + 1] = cpu_to_fdt32(0xffffffff);
 	}
-}
-
-static int fdt_resv_memory_update_node(void *fdt, unsigned long addr,
-				       unsigned long size, int index,
-				       int parent, bool no_map)
-{
-	int na = fdt_address_cells(fdt, 0);
-	int ns = fdt_size_cells(fdt, 0);
-	fdt32_t addr_high, addr_low;
-	fdt32_t size_high, size_low;
-	int subnode, err;
-	fdt32_t reg[4];
-	fdt32_t *val;
-	char name[32];
-
-	addr_high = (u64)addr >> 32;
-	addr_low = addr;
-	size_high = (u64)size >> 32;
-	size_low = size;
-
-	if (na > 1 && addr_high)
-		sbi_snprintf(name, sizeof(name),
-			     "mmode_resv%d@%x,%x", index,
-			     addr_high, addr_low);
-	else
-		sbi_snprintf(name, sizeof(name),
-			     "mmode_resv%d@%x", index,
-			     addr_low);
-
-	subnode = fdt_add_subnode(fdt, parent, name);
-	if (subnode < 0)
-		return subnode;
-
-	if (no_map) {
-		/*
-		 * Tell operating system not to create a virtual
-		 * mapping of the region as part of its standard
-		 * mapping of system memory.
-		 */
-		err = fdt_setprop_empty(fdt, subnode, "no-map");
-		if (err < 0)
-			return err;
-	}
-
-	/* encode the <reg> property value */
-	val = reg;
-	if (na > 1)
-		*val++ = cpu_to_fdt32(addr_high);
-	*val++ = cpu_to_fdt32(addr_low);
-	if (ns > 1)
-		*val++ = cpu_to_fdt32(size_high);
-	*val++ = cpu_to_fdt32(size_low);
-
-	err = fdt_setprop(fdt, subnode, "reg", reg,
-			  (na + ns) * sizeof(fdt32_t));
-	if (err < 0)
-		return err;
-
-	return 0;
 }
 
 /**
@@ -196,22 +94,25 @@ static int fdt_resv_memory_update_node(void *fdt, unsigned long addr,
  */
 int fdt_reserved_memory_fixup(void *fdt)
 {
-	struct sbi_domain_memregion *reg;
-	struct sbi_domain *dom = sbi_domain_thishart_ptr();
 	struct sbi_scratch *scratch = sbi_scratch_thishart_ptr();
-	unsigned long addr, size;
-	int err, parent, i;
+	const struct sbi_platform *plat = sbi_platform_ptr(scratch);
+	unsigned long prot, addr, size;
 	int na = fdt_address_cells(fdt, 0);
 	int ns = fdt_size_cells(fdt, 0);
+	fdt32_t addr_high, addr_low;
+	fdt32_t size_high, size_low;
+	fdt32_t reg[4];
+	fdt32_t *val;
+	char name[32];
+	int parent, subnode;
+	int i, j;
+	int err;
 
-	/*
-	 * Expand the device tree to accommodate new node
-	 * by the following estimated size:
-	 *
-	 * Each PMP memory region entry occupies 64 bytes.
-	 * With 16 PMP memory regions we need 64 * 16 = 1024 bytes.
-	 */
-	err = fdt_open_into(fdt, fdt, fdt_totalsize(fdt) + 1024);
+	if (!sbi_platform_has_pmp(plat))
+		return 0;
+
+	/* expand the device tree to accommodate new node */
+	err  = fdt_open_into(fdt, fdt, fdt_totalsize(fdt) + 256);
 	if (err < 0)
 		return err;
 
@@ -247,53 +148,59 @@ int fdt_reserved_memory_fixup(void *fdt)
 	 * We assume the given device tree does not contain any memory region
 	 * child node protected by PMP. Normally PMP programming happens at
 	 * M-mode firmware. The memory space used by OpenSBI is protected.
-	 * Some additional memory spaces may be protected by domain memory
-	 * regions.
+	 * Some additional memory spaces may be protected by platform codes.
 	 *
 	 * With above assumption, we create child nodes directly.
 	 */
 
-	i = 0;
-	sbi_domain_for_each_memregion(dom, reg) {
-		/* Ignore MMIO or READABLE or WRITABLE or EXECUTABLE regions */
-		if (reg->flags & SBI_DOMAIN_MEMREGION_MMIO)
+	for (i = 0, j = 0; i < PMP_COUNT; i++) {
+		pmp_get(i, &prot, &addr, &size);
+		if (!(prot & PMP_A))
 			continue;
-		if (reg->flags & SBI_DOMAIN_MEMREGION_READABLE)
-			continue;
-		if (reg->flags & SBI_DOMAIN_MEMREGION_WRITEABLE)
-			continue;
-		if (reg->flags & SBI_DOMAIN_MEMREGION_EXECUTABLE)
-			continue;
+		if (!(prot & (PMP_R | PMP_W | PMP_X))) {
+			addr_high = (u64)addr >> 32;
+			addr_low = addr;
+			size_high = (u64)size >> 32;
+			size_low = size;
 
-		addr = reg->base;
-		size = 1UL << reg->order;
-		fdt_resv_memory_update_node(fdt, addr, size, i, parent,
-			(sbi_hart_pmp_count(scratch)) ? false : true);
-		i++;
-	}
+			if (na > 1 && addr_high)
+				sbi_snprintf(name, sizeof(name),
+					     "mmode_pmp%d@%x,%x", j,
+					     addr_high, addr_low);
+			else
+				sbi_snprintf(name, sizeof(name),
+					     "mmode_pmp%d@%x", j,
+					     addr_low);
 
-	return 0;
-}
+			subnode = fdt_add_subnode(fdt, parent, name);
+			if (subnode < 0)
+				return subnode;
 
-int fdt_reserved_memory_nomap_fixup(void *fdt)
-{
-	int parent, subnode;
-	int err;
+			/*
+			 * Tell operating system not to create a virtual
+			 * mapping of the region as part of its standard
+			 * mapping of system memory.
+			 */
+			err = fdt_setprop_empty(fdt, subnode, "no-map");
+			if (err < 0)
+				return err;
 
-	/* Locate the reserved memory node */
-	parent = fdt_path_offset(fdt, "/reserved-memory");
-	if (parent < 0)
-		return parent;
+			/* encode the <reg> property value */
+			val = reg;
+			if (na > 1)
+				*val++ = cpu_to_fdt32(addr_high);
+			*val++ = cpu_to_fdt32(addr_low);
+			if (ns > 1)
+				*val++ = cpu_to_fdt32(size_high);
+			*val++ = cpu_to_fdt32(size_low);
 
-	fdt_for_each_subnode(subnode, fdt, parent) {
-		/*
-		 * Tell operating system not to create a virtual
-		 * mapping of the region as part of its standard
-		 * mapping of system memory.
-		 */
-		err = fdt_setprop_empty(fdt, subnode, "no-map");
-		if (err < 0)
-			return err;
+			err = fdt_setprop(fdt, subnode, "reg", reg,
+					  (na + ns) * sizeof(fdt32_t));
+			if (err < 0)
+				return err;
+
+			j++;
+		}
 	}
 
 	return 0;
@@ -301,12 +208,9 @@ int fdt_reserved_memory_nomap_fixup(void *fdt)
 
 void fdt_fixups(void *fdt)
 {
-	fdt_aplic_fixup(fdt);
-
-	fdt_imsic_fixup(fdt);
-
-	fdt_plic_fixup(fdt);
+	fdt_plic_fixup(fdt, "riscv,plic0");
 
 	fdt_reserved_memory_fixup(fdt);
-	fdt_pmu_fixup(fdt);
 }
+
+

@@ -2,7 +2,7 @@
 #
 #  DXE MM Communicate driver
 #
-#  Copyright (c) 2016 - 2021, Arm Limited. All rights reserved.<BR>
+#  Copyright (c) 2016 - 2018, ARM Limited. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -14,7 +14,7 @@
   FILE_GUID                      = 09EE81D3-F15E-43F4-85B4-CB9873DA5D6B
   MODULE_TYPE                    = DXE_RUNTIME_DRIVER
   VERSION_STRING                 = 1.0
-  ENTRY_POINT                    = MmCommunication2Initialize
+  ENTRY_POINT                    = MmCommunicationInitialize
 
 #
 # The following is for reference only and not required by
@@ -24,7 +24,6 @@
 #
 
 [Sources.AARCH64]
-  MmCommunicate.h
   MmCommunication.c
 
 [Packages]
@@ -41,12 +40,7 @@
   UefiDriverEntryPoint
 
 [Protocols]
-  gEfiMmCommunication2ProtocolGuid              ## PRODUCES
-
-[Guids]
-  gEfiEndOfDxeEventGroupGuid
-  gEfiEventExitBootServicesGuid
-  gEfiEventReadyToBootGuid
+  gEfiMmCommunicationProtocolGuid              ## PRODUCES
 
 [Pcd.common]
   gArmTokenSpaceGuid.PcdMmBufferBase

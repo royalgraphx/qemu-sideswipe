@@ -26,8 +26,6 @@ static inline QNull *qnull(void)
     return qobject_ref(&qnull_);
 }
 
-void qnull_unref(QNull *q);
-
-G_DEFINE_AUTOPTR_CLEANUP_FUNC(QNull, qnull_unref)
+bool qnull_is_equal(const QObject *x, const QObject *y);
 
 #endif /* QNULL_H */

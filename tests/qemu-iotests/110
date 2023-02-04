@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto backing quick
 #
 # Test case for relative backing file names in complex BDS trees
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"

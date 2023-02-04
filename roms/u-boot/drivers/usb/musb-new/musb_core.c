@@ -65,9 +65,6 @@
  */
 
 #ifndef __UBOOT__
-#include <log.h>
-#include <dm/device_compat.h>
-#include <dm/devres.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/sched.h>
@@ -80,11 +77,7 @@
 #include <linux/io.h>
 #else
 #include <common.h>
-#include <dm.h>
-#include <dm/device_compat.h>
 #include <usb.h>
-#include <linux/bitops.h>
-#include <linux/bug.h>
 #include <linux/errno.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -1866,11 +1859,7 @@ allocate_instance(struct device *dev,
 	musb->ctrl_base = mbase;
 	musb->nIrq = -ENODEV;
 	musb->config = config;
-#ifdef __UBOOT__
-	assert_noisy(musb->config->num_eps <= MUSB_C_NUM_EPS);
-#else
 	BUG_ON(musb->config->num_eps > MUSB_C_NUM_EPS);
-#endif
 	for (epnum = 0, ep = musb->endpoints;
 			epnum < musb->config->num_eps;
 			epnum++, ep++) {

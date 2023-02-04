@@ -36,7 +36,7 @@
 
   @par Revision Reference:
   This PPI is defined in UEFI Platform Initialization Specification 1.2 Errata B Volume 1:
-  Pre-EFI Initialization Core Interface
+  Pre-EFI Initalization Core Interface
 
 **/
 
@@ -73,9 +73,9 @@ EFI_STATUS
 ///  Finds and loads the recovery files.
 ///
 struct _EFI_PEI_RECOVERY_MODULE_PPI {
-  EFI_PEI_LOAD_RECOVERY_CAPSULE    LoadRecoveryCapsule; ///< Loads a DXE binary capsule into memory.
+  EFI_PEI_LOAD_RECOVERY_CAPSULE LoadRecoveryCapsule;  ///< Loads a DXE binary capsule into memory.
 };
 
-extern EFI_GUID  gEfiPeiRecoveryModulePpiGuid;
+extern EFI_GUID gEfiPeiRecoveryModulePpiGuid;
 
 #endif

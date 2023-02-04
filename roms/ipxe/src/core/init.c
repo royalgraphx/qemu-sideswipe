@@ -36,9 +36,6 @@ FILE_LICENCE ( GPL2_OR_LATER_OR_UBDL );
 /** "startup() has been called" flag */
 static int started = 0;
 
-/** Colour for debug messages */
-#define colour table_start ( INIT_FNS )
-
 /**
  * Initialise iPXE
  *
@@ -72,15 +69,11 @@ void startup ( void ) {
 
 	/* Call registered startup functions */
 	for_each_table_entry ( startup_fn, STARTUP_FNS ) {
-		if ( startup_fn->startup ) {
-			DBGC ( colour, "INIT startup %s...\n",
-			       startup_fn->name );
+		if ( startup_fn->startup )
 			startup_fn->startup();
-		}
 	}
 
 	started = 1;
-	DBGC ( colour, "INIT startup complete\n" );
 }
 
 /**
@@ -103,16 +96,12 @@ void shutdown ( int flags ) {
 
 	/* Call registered shutdown functions (in reverse order) */
 	for_each_table_entry_reverse ( startup_fn, STARTUP_FNS ) {
-		if ( startup_fn->shutdown ) {
-			DBGC ( colour, "INIT shutdown %s...\n",
-			       startup_fn->name );
+		if ( startup_fn->shutdown )
 			startup_fn->shutdown ( flags );
-		}
 	}
 
 	/* Reset console */
 	console_reset();
 
 	started = 0;
-	DBGC ( colour, "INIT shutdown complete\n" );
 }

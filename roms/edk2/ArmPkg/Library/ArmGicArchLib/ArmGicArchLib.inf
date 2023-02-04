@@ -14,8 +14,11 @@
   LIBRARY_CLASS                  = ArmGicArchLib|DXE_DRIVER UEFI_DRIVER UEFI_APPLICATION
   CONSTRUCTOR                    = ArmGicArchLibInitialize
 
-[Sources]
-  ArmGicArchLib.c
+[Sources.ARM]
+  Arm/ArmGicArchLib.c
+
+[Sources.AARCH64]
+  AArch64/ArmGicArchLib.c
 
 [Packages]
   MdePkg/MdePkg.dec

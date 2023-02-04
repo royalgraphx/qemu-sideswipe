@@ -1,18 +1,18 @@
 /** @file
 
-  Copyright (c) 2012 - 2021, Arm Limited. All rights reserved.<BR>
+  Copyright (c) 2012-2014, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#ifndef ARM_CORTEX_A5X_H_
-#define ARM_CORTEX_A5X_H_
+#ifndef __ARM_CORTEX_A5x_H__
+#define __ARM_CORTEX_A5x_H__
 
 //
 // Cortex A5x feature bit definitions
 //
-#define A5X_FEATURE_SMP  (1 << 6)
+#define A5X_FEATURE_SMP     (1 << 6)
 
 //
 // Helper functions to access CPU Extended Control Register
@@ -26,19 +26,19 @@ ArmReadCpuExCr (
 VOID
 EFIAPI
 ArmWriteCpuExCr (
-  IN  UINT64  Val
+  IN  UINT64 Val
   );
 
 VOID
 EFIAPI
 ArmSetCpuExCrBit (
-  IN  UINT64  Bits
+  IN  UINT64    Bits
   );
 
 VOID
 EFIAPI
 ArmUnsetCpuExCrBit (
-  IN  UINT64  Bits
+  IN  UINT64    Bits
   );
 
-#endif // ARM_CORTEX_A5X_H_
+#endif

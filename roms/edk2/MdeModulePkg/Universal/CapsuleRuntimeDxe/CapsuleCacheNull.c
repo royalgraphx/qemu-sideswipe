@@ -25,7 +25,8 @@
 **/
 VOID
 CapsuleCacheWriteBack (
-  IN  EFI_PHYSICAL_ADDRESS  ScatterGatherList
+  IN  EFI_PHYSICAL_ADDRESS    ScatterGatherList
   )
 {
 }
+

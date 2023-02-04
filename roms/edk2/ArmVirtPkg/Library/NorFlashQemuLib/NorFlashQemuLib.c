@@ -13,9 +13,9 @@
 
 #include <Protocol/FdtClient.h>
 
-#define QEMU_NOR_BLOCK_SIZE  SIZE_256KB
+#define QEMU_NOR_BLOCK_SIZE    SIZE_256KB
 
-#define MAX_FLASH_BANKS  4
+#define MAX_FLASH_BANKS        4
 
 EFI_STATUS
 NorFlashPlatformInitialization (
@@ -25,59 +25,40 @@ NorFlashPlatformInitialization (
   return EFI_SUCCESS;
 }
 
-NOR_FLASH_DESCRIPTION  mNorFlashDevices[MAX_FLASH_BANKS];
+NOR_FLASH_DESCRIPTION mNorFlashDevices[MAX_FLASH_BANKS];
 
 EFI_STATUS
 NorFlashPlatformGetDevices (
-  OUT NOR_FLASH_DESCRIPTION  **NorFlashDescriptions,
-  OUT UINT32                 *Count
+  OUT NOR_FLASH_DESCRIPTION   **NorFlashDescriptions,
+  OUT UINT32                  *Count
   )
 {
-  FDT_CLIENT_PROTOCOL  *FdtClient;
-  INT32                Node;
-  EFI_STATUS           Status;
-  EFI_STATUS           FindNodeStatus;
-  CONST UINT32         *Reg;
-  UINT32               PropSize;
-  UINT32               Num;
-  UINT64               Base;
-  UINT64               Size;
+  FDT_CLIENT_PROTOCOL         *FdtClient;
+  INT32                       Node;
+  EFI_STATUS                  Status;
+  EFI_STATUS                  FindNodeStatus;
+  CONST UINT32                *Reg;
+  UINT32                      PropSize;
+  UINT32                      Num;
+  UINT64                      Base;
+  UINT64                      Size;
 
-  Status = gBS->LocateProtocol (
-                  &gFdtClientProtocolGuid,
-                  NULL,
-                  (VOID **)&FdtClient
-                  );
+  Status = gBS->LocateProtocol (&gFdtClientProtocolGuid, NULL,
+                  (VOID **)&FdtClient);
   ASSERT_EFI_ERROR (Status);
 
   Num = 0;
-  for (FindNodeStatus = FdtClient->FindCompatibleNode (
-                                     FdtClient,
-                                     "cfi-flash",
-                                     &Node
-                                     );
+  for (FindNodeStatus = FdtClient->FindCompatibleNode (FdtClient,
+                                     "cfi-flash", &Node);
        !EFI_ERROR (FindNodeStatus) && Num < MAX_FLASH_BANKS;
-       FindNodeStatus = FdtClient->FindNextCompatibleNode (
-                                     FdtClient,
-                                     "cfi-flash",
-                                     Node,
-                                     &Node
-                                     ))
-  {
-    Status = FdtClient->GetNodeProperty (
-                          FdtClient,
-                          Node,
-                          "reg",
-                          (CONST VOID **)&Reg,
-                          &PropSize
-                          );
+       FindNodeStatus = FdtClient->FindNextCompatibleNode (FdtClient,
+                                     "cfi-flash", Node, &Node)) {
+
+    Status = FdtClient->GetNodeProperty (FdtClient, Node, "reg",
+                          (CONST VOID **)&Reg, &PropSize);
     if (EFI_ERROR (Status)) {
-      DEBUG ((
-        DEBUG_ERROR,
-        "%a: GetNodeProperty () failed (Status == %r)\n",
-        __FUNCTION__,
-        Status
-        ));
+      DEBUG ((DEBUG_ERROR, "%a: GetNodeProperty () failed (Status == %r)\n",
+        __FUNCTION__, Status));
       continue;
     }
 
@@ -95,8 +76,7 @@ NorFlashPlatformGetDevices (
       // The firmware is not updatable from inside the guest anyway.
       //
       if ((PcdGet64 (PcdFvBaseAddress) + PcdGet32 (PcdFvSize) > Base) &&
-          ((Base + Size) > PcdGet64 (PcdFvBaseAddress)))
-      {
+          (Base + Size) > PcdGet64 (PcdFvBaseAddress)) {
         continue;
       }
 
@@ -106,31 +86,10 @@ NorFlashPlatformGetDevices (
       mNorFlashDevices[Num].BlockSize         = QEMU_NOR_BLOCK_SIZE;
       Num++;
     }
-
-    //
-    // UEFI takes ownership of the NOR flash, and exposes its functionality
-    // through the UEFI Runtime Services GetVariable, SetVariable, etc. This
-    // means we need to disable it in the device tree to prevent the OS from
-    // attaching its device driver as well.
-    // Note that this also hides other flash banks, but the only other flash
-    // bank we expect to encounter is the one that carries the UEFI executable
-    // code, which is not intended to be guest updatable, and is usually backed
-    // in a readonly manner by QEMU anyway.
-    //
-    Status = FdtClient->SetNodeProperty (
-                          FdtClient,
-                          Node,
-                          "status",
-                          "disabled",
-                          sizeof ("disabled")
-                          );
-    if (EFI_ERROR (Status)) {
-      DEBUG ((DEBUG_WARN, "Failed to set NOR flash status to 'disabled'\n"));
-    }
   }
 
   *NorFlashDescriptions = mNorFlashDevices;
-  *Count                = Num;
+  *Count = Num;
 
   return EFI_SUCCESS;
 }

@@ -106,7 +106,7 @@ static int qxl_log_image(PCIQXLDevice *qxl, QXLPHYSICAL addr, int group_id)
     QXLImage *image;
     QXLImageDescriptor *desc;
 
-    image = qxl_phys2virt(qxl, addr, group_id, sizeof(QXLImage));
+    image = qxl_phys2virt(qxl, addr, group_id);
     if (!image) {
         return 1;
     }
@@ -161,6 +161,7 @@ static int qxl_log_cmd_draw(PCIQXLDevice *qxl, QXLDrawable *draw, int group_id)
     switch (draw->type) {
     case QXL_DRAW_COPY:
         return qxl_log_cmd_draw_copy(qxl, &draw->u.copy, group_id);
+        break;
     }
     return 0;
 }
@@ -179,6 +180,7 @@ static int qxl_log_cmd_draw_compat(PCIQXLDevice *qxl, QXLCompatDrawable *draw,
     switch (draw->type) {
     case QXL_DRAW_COPY:
         return qxl_log_cmd_draw_copy(qxl, &draw->u.copy, group_id);
+        break;
     }
     return 0;
 }
@@ -189,7 +191,7 @@ static void qxl_log_cmd_surface(PCIQXLDevice *qxl, QXLSurfaceCmd *cmd)
             qxl_name(qxl_surface_cmd, cmd->type),
             cmd->surface_id);
     if (cmd->type == QXL_SURFACE_CMD_CREATE) {
-        fprintf(stderr, " size %dx%d stride %d format %s (count %u, max %u)",
+        fprintf(stderr, " size %dx%d stride %d format %s (count %d, max %d)",
                 cmd->u.surface_create.width,
                 cmd->u.surface_create.height,
                 cmd->u.surface_create.stride,
@@ -197,7 +199,7 @@ static void qxl_log_cmd_surface(PCIQXLDevice *qxl, QXLSurfaceCmd *cmd)
                 qxl->guest_surfaces.count, qxl->guest_surfaces.max);
     }
     if (cmd->type == QXL_SURFACE_CMD_DESTROY) {
-        fprintf(stderr, " (count %u)", qxl->guest_surfaces.count);
+        fprintf(stderr, " (count %d)", qxl->guest_surfaces.count);
     }
 }
 
@@ -214,8 +216,7 @@ int qxl_log_cmd_cursor(PCIQXLDevice *qxl, QXLCursorCmd *cmd, int group_id)
                 cmd->u.set.position.y,
                 cmd->u.set.visible ? "yes" : "no",
                 cmd->u.set.shape);
-        cursor = qxl_phys2virt(qxl, cmd->u.set.shape, group_id,
-                               sizeof(QXLCursor));
+        cursor = qxl_phys2virt(qxl, cmd->u.set.shape, group_id);
         if (!cursor) {
             return 1;
         }
@@ -237,7 +238,6 @@ int qxl_log_command(PCIQXLDevice *qxl, const char *ring, QXLCommandExt *ext)
 {
     bool compat = ext->flags & QXL_COMMAND_FLAG_COMPAT;
     void *data;
-    size_t datasz;
     int ret;
 
     if (!qxl->cmdlog) {
@@ -249,20 +249,7 @@ int qxl_log_command(PCIQXLDevice *qxl, const char *ring, QXLCommandExt *ext)
             qxl_name(qxl_type, ext->cmd.type),
             compat ? "(compat)" : "");
 
-    switch (ext->cmd.type) {
-    case QXL_CMD_DRAW:
-        datasz = compat ? sizeof(QXLCompatDrawable) : sizeof(QXLDrawable);
-        break;
-    case QXL_CMD_SURFACE:
-        datasz = sizeof(QXLSurfaceCmd);
-        break;
-    case QXL_CMD_CURSOR:
-        datasz = sizeof(QXLCursorCmd);
-        break;
-    default:
-        goto out;
-    }
-    data = qxl_phys2virt(qxl, ext->cmd.data, ext->group_id, datasz);
+    data = qxl_phys2virt(qxl, ext->cmd.data, ext->group_id);
     if (!data) {
         return 1;
     }
@@ -284,7 +271,6 @@ int qxl_log_command(PCIQXLDevice *qxl, const char *ring, QXLCommandExt *ext)
         qxl_log_cmd_cursor(qxl, data, ext->group_id);
         break;
     }
-out:
     fprintf(stderr, "\n");
     return 0;
 }

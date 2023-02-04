@@ -12,14 +12,16 @@
 #define HW_S390X_S390_VIRTIO_CCW_H
 
 #include "hw/boards.h"
-#include "qom/object.h"
 
 #define TYPE_S390_CCW_MACHINE               "s390-ccw-machine"
 
-OBJECT_DECLARE_TYPE(S390CcwMachineState, S390CcwMachineClass, S390_CCW_MACHINE)
+#define S390_CCW_MACHINE(obj) \
+    OBJECT_CHECK(S390CcwMachineState, (obj), TYPE_S390_CCW_MACHINE)
 
+#define S390_MACHINE_CLASS(klass) \
+    OBJECT_CLASS_CHECK(S390CcwMachineClass, (klass), TYPE_S390_CCW_MACHINE)
 
-struct S390CcwMachineState {
+typedef struct S390CcwMachineState {
     /*< private >*/
     MachineState parent_obj;
 
@@ -28,9 +30,9 @@ struct S390CcwMachineState {
     bool dea_key_wrap;
     bool pv;
     uint8_t loadparm[8];
-};
+} S390CcwMachineState;
 
-struct S390CcwMachineClass {
+typedef struct S390CcwMachineClass {
     /*< private >*/
     MachineClass parent_class;
 
@@ -39,8 +41,7 @@ struct S390CcwMachineClass {
     bool cpu_model_allowed;
     bool css_migration_enabled;
     bool hpage_1m_allowed;
-    int max_threads;
-};
+} S390CcwMachineClass;
 
 /* runtime-instrumentation allowed by the machine */
 bool ri_allowed(void);

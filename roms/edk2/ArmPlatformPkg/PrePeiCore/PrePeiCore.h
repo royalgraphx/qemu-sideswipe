@@ -1,12 +1,11 @@
 /** @file
-  Main file supporting the transition to PEI Core in Normal World for Versatile Express
-
-  Copyright (c) 2011, ARM Limited. All rights reserved.
-
-  SPDX-License-Identifier: BSD-2-Clause-Patent
-
+*  Main file supporting the transition to PEI Core in Normal World for Versatile Express
+*
+*  Copyright (c) 2011, ARM Limited. All rights reserved.
+*
+*  SPDX-License-Identifier: BSD-2-Clause-Patent
+*
 **/
-
 #ifndef __PREPEICORE_H_
 #define __PREPEICORE_H_
 
@@ -29,22 +28,19 @@ CreatePpiList (
 EFI_STATUS
 EFIAPI
 PrePeiCoreTemporaryRamSupport (
-  IN CONST EFI_PEI_SERVICES  **PeiServices,
-  IN EFI_PHYSICAL_ADDRESS    TemporaryMemoryBase,
-  IN EFI_PHYSICAL_ADDRESS    PermanentMemoryBase,
-  IN UINTN                   CopySize
+  IN CONST EFI_PEI_SERVICES   **PeiServices,
+  IN EFI_PHYSICAL_ADDRESS     TemporaryMemoryBase,
+  IN EFI_PHYSICAL_ADDRESS     PermanentMemoryBase,
+  IN UINTN                    CopySize
   );
 
 VOID
 SecSwitchStack (
-  INTN  StackDelta
+  INTN    StackDelta
   );
 
 // Vector Table for Pei Phase
-VOID
-PeiVectorTable (
-  VOID
-  );
+VOID  PeiVectorTable (VOID);
 
 VOID
 EFIAPI
@@ -64,13 +60,13 @@ PrimaryMain (
 VOID
 EFIAPI
 SecondaryMain (
-  IN UINTN  MpId
+  IN UINTN MpId
   );
 
 VOID
 PeiCommonExceptionEntry (
-  IN UINT32  Entry,
-  IN UINTN   LR
+  IN UINT32 Entry,
+  IN UINTN LR
   );
 
 #endif

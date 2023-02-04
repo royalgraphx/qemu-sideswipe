@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2017-2021, Arm Limited. All rights reserved.<BR>
+  Copyright (c) 2017-2018, Arm Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -35,7 +35,7 @@ PerformanceGetVersion (
   OUT UINT32                     *Version
   )
 {
-  return ScmiGetProtocolVersion (ScmiProtocolIdPerformance, Version);
+  return ScmiGetProtocolVersion (SCMI_PROTOCOL_ID_PERFORMANCE, Version);
 }
 
 /** Return protocol attributes of the performance management protocol.
@@ -51,15 +51,15 @@ PerformanceGetVersion (
 STATIC
 EFI_STATUS
 PerformanceGetAttributes (
-  IN  SCMI_PERFORMANCE_PROTOCOL             *This,
-  OUT SCMI_PERFORMANCE_PROTOCOL_ATTRIBUTES  *Attributes
+  IN  SCMI_PERFORMANCE_PROTOCOL              *This,
+  OUT SCMI_PERFORMANCE_PROTOCOL_ATTRIBUTES   *Attributes
   )
 {
   EFI_STATUS  Status;
-  UINT32      *ReturnValues;
+  UINT32* ReturnValues;
 
   Status = ScmiGetProtocolAttributes (
-             ScmiProtocolIdPerformance,
+             SCMI_PROTOCOL_ID_PERFORMANCE,
              &ReturnValues
              );
   if (EFI_ERROR (Status)) {
@@ -90,7 +90,7 @@ STATIC
 EFI_STATUS
 PerformanceDomainAttributes (
   IN  SCMI_PERFORMANCE_PROTOCOL           *This,
-  IN  UINT32                              DomainId,
+  IN  UINT32                               DomainId,
   OUT SCMI_PERFORMANCE_DOMAIN_ATTRIBUTES  *DomainAttributes
   )
 {
@@ -107,8 +107,8 @@ PerformanceDomainAttributes (
 
   *MessageParams = DomainId;
 
-  Cmd.ProtocolId = ScmiProtocolIdPerformance;
-  Cmd.MessageId  = ScmiMessageIdPerformanceDomainAttributes;
+  Cmd.ProtocolId = SCMI_PROTOCOL_ID_PERFORMANCE;
+  Cmd.MessageId  = SCMI_MESSAGE_ID_PERFORMANCE_DOMAIN_ATTRIBUTES;
 
   PayloadLength = sizeof (DomainId);
 
@@ -160,29 +160,30 @@ PerformanceDescribeLevels (
   EFI_STATUS    Status;
   UINT32        PayloadLength;
   SCMI_COMMAND  Cmd;
-  UINT32        *MessageParams;
+  UINT32*       MessageParams;
   UINT32        LevelIndex;
   UINT32        RequiredSize;
   UINT32        LevelNo;
   UINT32        ReturnNumLevels;
   UINT32        ReturnRemainNumLevels;
 
-  PERF_DESCRIBE_LEVELS  *Levels;
+  PERF_DESCRIBE_LEVELS *Levels;
 
   Status = ScmiCommandGetPayload (&MessageParams);
   if (EFI_ERROR (Status)) {
     return Status;
   }
 
-  LevelIndex   = 0;
+  LevelIndex = 0;
   RequiredSize = 0;
 
   *MessageParams++ = DomainId;
 
-  Cmd.ProtocolId = ScmiProtocolIdPerformance;
-  Cmd.MessageId  = ScmiMessageIdPerformanceDescribeLevels;
+  Cmd.ProtocolId = SCMI_PROTOCOL_ID_PERFORMANCE;
+  Cmd.MessageId  = SCMI_MESSAGE_ID_PERFORMANCE_DESCRIBE_LEVELS;
 
   do {
+
     *MessageParams = LevelIndex;
 
     // Note, PayloadLength is an IN/OUT parameter.
@@ -191,13 +192,13 @@ PerformanceDescribeLevels (
     Status = ScmiCommandExecute (
                &Cmd,
                &PayloadLength,
-               (UINT32 **)&Levels
+               (UINT32**)&Levels
                );
     if (EFI_ERROR (Status)) {
       return Status;
     }
 
-    ReturnNumLevels       = NUM_PERF_LEVELS (Levels->NumLevels);
+    ReturnNumLevels = NUM_PERF_LEVELS (Levels->NumLevels);
     ReturnRemainNumLevels = NUM_REMAIN_PERF_LEVELS (Levels->NumLevels);
 
     if (RequiredSize == 0) {
@@ -212,12 +213,13 @@ PerformanceDescribeLevels (
     }
 
     for (LevelNo = 0; LevelNo < ReturnNumLevels; LevelNo++) {
-      CopyMem (
-        &LevelArray[LevelIndex++],
-        &Levels->PerfLevel[LevelNo],
-        sizeof (SCMI_PERFORMANCE_LEVEL)
-        );
+       CopyMem (
+         &LevelArray[LevelIndex++],
+         &Levels->PerfLevel[LevelNo],
+         sizeof (SCMI_PERFORMANCE_LEVEL)
+         );
     }
+
   } while (ReturnRemainNumLevels != 0);
 
   *LevelArraySize = RequiredSize;
@@ -237,9 +239,9 @@ PerformanceDescribeLevels (
 **/
 EFI_STATUS
 PerformanceLimitsSet (
-  IN SCMI_PERFORMANCE_PROTOCOL  *This,
-  IN UINT32                     DomainId,
-  IN SCMI_PERFORMANCE_LIMITS    *Limits
+  IN SCMI_PERFORMANCE_PROTOCOL *This,
+  IN UINT32                    DomainId,
+  IN SCMI_PERFORMANCE_LIMITS   *Limits
   )
 {
   EFI_STATUS    Status;
@@ -256,8 +258,8 @@ PerformanceLimitsSet (
   *MessageParams++ = Limits->RangeMax;
   *MessageParams   = Limits->RangeMin;
 
-  Cmd.ProtocolId = ScmiProtocolIdPerformance;
-  Cmd.MessageId  = ScmiMessageIdPerformanceLimitsSet;
+  Cmd.ProtocolId = SCMI_PROTOCOL_ID_PERFORMANCE;
+  Cmd.MessageId  = SCMI_MESSAGE_ID_PERFORMANCE_LIMITS_SET;
 
   PayloadLength = sizeof (DomainId) + sizeof (SCMI_PERFORMANCE_LIMITS);
 
@@ -283,9 +285,9 @@ PerformanceLimitsSet (
 **/
 EFI_STATUS
 PerformanceLimitsGet (
-  SCMI_PERFORMANCE_PROTOCOL  *This,
-  UINT32                     DomainId,
-  SCMI_PERFORMANCE_LIMITS    *Limits
+  SCMI_PERFORMANCE_PROTOCOL *This,
+  UINT32                    DomainId,
+  SCMI_PERFORMANCE_LIMITS   *Limits
   )
 {
   EFI_STATUS    Status;
@@ -302,15 +304,15 @@ PerformanceLimitsGet (
 
   *MessageParams = DomainId;
 
-  Cmd.ProtocolId = ScmiProtocolIdPerformance;
-  Cmd.MessageId  = ScmiMessageIdPerformanceLimitsGet;
+  Cmd.ProtocolId = SCMI_PROTOCOL_ID_PERFORMANCE;
+  Cmd.MessageId  = SCMI_MESSAGE_ID_PERFORMANCE_LIMITS_GET;
 
   PayloadLength = sizeof (DomainId);
 
   Status = ScmiCommandExecute (
              &Cmd,
              &PayloadLength,
-             (UINT32 **)&ReturnValues
+             (UINT32**)&ReturnValues
              );
   if (EFI_ERROR (Status)) {
     return Status;
@@ -334,9 +336,9 @@ PerformanceLimitsGet (
 **/
 EFI_STATUS
 PerformanceLevelSet (
-  IN SCMI_PERFORMANCE_PROTOCOL  *This,
-  IN UINT32                     DomainId,
-  IN UINT32                     Level
+  IN SCMI_PERFORMANCE_PROTOCOL *This,
+  IN UINT32                    DomainId,
+  IN UINT32                    Level
   )
 {
   EFI_STATUS    Status;
@@ -352,8 +354,8 @@ PerformanceLevelSet (
   *MessageParams++ = DomainId;
   *MessageParams   = Level;
 
-  Cmd.ProtocolId = ScmiProtocolIdPerformance;
-  Cmd.MessageId  = ScmiMessageIdPerformanceLevelSet;
+  Cmd.ProtocolId = SCMI_PROTOCOL_ID_PERFORMANCE;
+  Cmd.MessageId  = SCMI_MESSAGE_ID_PERFORMANCE_LEVEL_SET;
 
   PayloadLength = sizeof (DomainId) + sizeof (Level);
 
@@ -379,9 +381,9 @@ PerformanceLevelSet (
 **/
 EFI_STATUS
 PerformanceLevelGet (
-  IN  SCMI_PERFORMANCE_PROTOCOL  *This,
-  IN  UINT32                     DomainId,
-  OUT UINT32                     *Level
+  IN  SCMI_PERFORMANCE_PROTOCOL *This,
+  IN  UINT32                    DomainId,
+  OUT UINT32                    *Level
   )
 {
   EFI_STATUS    Status;
@@ -397,8 +399,8 @@ PerformanceLevelGet (
 
   *MessageParams = DomainId;
 
-  Cmd.ProtocolId = ScmiProtocolIdPerformance;
-  Cmd.MessageId  = ScmiMessageIdPerformanceLevelGet;
+  Cmd.ProtocolId = SCMI_PROTOCOL_ID_PERFORMANCE;
+  Cmd.MessageId  = SCMI_MESSAGE_ID_PERFORMANCE_LEVEL_GET;
 
   PayloadLength = sizeof (DomainId);
 
@@ -417,7 +419,7 @@ PerformanceLevelGet (
 }
 
 // Instance of the SCMI performance management protocol.
-STATIC CONST SCMI_PERFORMANCE_PROTOCOL  PerformanceProtocol = {
+STATIC CONST SCMI_PERFORMANCE_PROTOCOL PerformanceProtocol = {
   PerformanceGetVersion,
   PerformanceGetAttributes,
   PerformanceDomainAttributes,
@@ -437,7 +439,7 @@ STATIC CONST SCMI_PERFORMANCE_PROTOCOL  PerformanceProtocol = {
 **/
 EFI_STATUS
 ScmiPerformanceProtocolInit (
-  IN EFI_HANDLE  *Handle
+  IN EFI_HANDLE* Handle
   )
 {
   return gBS->InstallMultipleProtocolInterfaces (

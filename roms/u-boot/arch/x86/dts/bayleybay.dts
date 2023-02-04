@@ -16,8 +16,6 @@
 /include/ "rtc.dtsi"
 /include/ "tsc_timer.dtsi"
 
-#include "smbios.dtsi"
-
 / {
 	model = "Intel Bayley Bay";
 	compatible = "intel,bayleybay", "intel,baytrail";
@@ -177,7 +175,7 @@
 					#size-cells = <1>;
 					reg = <0>;
 					compatible = "winbond,w25q64dw",
-						"jedec,spi-nor";
+						"spi-flash";
 					memory-map = <0xff800000 0x00800000>;
 					rw-mrc-cache {
 						label = "rw-mrc-cache";

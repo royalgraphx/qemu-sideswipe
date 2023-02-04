@@ -14,7 +14,6 @@
 
 #include "hw/misc/imx_ccm.h"
 #include "qemu/bitops.h"
-#include "qom/object.h"
 
 enum IMX7AnalogRegisters {
     ANALOG_PLL_ARM,
@@ -105,9 +104,9 @@ enum IMX7PMURegisters {
 };
 
 #define TYPE_IMX7_CCM "imx7.ccm"
-OBJECT_DECLARE_SIMPLE_TYPE(IMX7CCMState, IMX7_CCM)
+#define IMX7_CCM(obj) OBJECT_CHECK(IMX7CCMState, (obj), TYPE_IMX7_CCM)
 
-struct IMX7CCMState {
+typedef struct IMX7CCMState {
     /* <private> */
     IMXCCMState parent_obj;
 
@@ -115,13 +114,13 @@ struct IMX7CCMState {
     MemoryRegion iomem;
 
     uint32_t ccm[CCM_MAX];
-};
+} IMX7CCMState;
 
 
 #define TYPE_IMX7_ANALOG "imx7.analog"
-OBJECT_DECLARE_SIMPLE_TYPE(IMX7AnalogState, IMX7_ANALOG)
+#define IMX7_ANALOG(obj) OBJECT_CHECK(IMX7AnalogState, (obj), TYPE_IMX7_ANALOG)
 
-struct IMX7AnalogState {
+typedef struct IMX7AnalogState {
     /* <private> */
     IMXCCMState parent_obj;
 
@@ -135,6 +134,6 @@ struct IMX7AnalogState {
 
     uint32_t analog[ANALOG_MAX];
     uint32_t pmu[PMU_MAX];
-};
+} IMX7AnalogState;
 
 #endif /* IMX7_CCM_H */

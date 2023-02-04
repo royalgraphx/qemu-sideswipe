@@ -18,10 +18,10 @@
  */
 
 #include "qemu/osdep.h"
-#include "i2c.h"
+#include "libqos/i2c.h"
 
 
-#include "../libqtest.h"
+#include "libqtest.h"
 
 #include "hw/i2c/imx_i2c.h"
 

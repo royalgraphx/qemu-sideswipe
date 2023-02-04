@@ -144,12 +144,6 @@ int socket(int domain, int type, int proto, char *mac_addr)
 	int prop_len;
 	int fd;
 
-	if (!(domain == AF_INET || domain == AF_INET6))
-		return -1;
-
-	if (type != SOCK_DGRAM || proto != 0)
-		return -1;
-
 	/* search free file descriptor (and skip stdio handlers) */
 	for (fd = 3; fd < FILEIO_MAX; ++fd) {
 		if (fd_array[fd].type == FILEIO_TYPE_EMPTY) {
@@ -223,7 +217,7 @@ int close(int fd)
  */
 int recv(int fd, void *buf, int len, int flags)
 {
-	if (!is_valid_fd(fd) || flags)
+	if (!is_valid_fd(fd))
 		return -1;
 
 	forth_push((unsigned long)buf);
@@ -243,7 +237,7 @@ int recv(int fd, void *buf, int len, int flags)
  */
 int send(int fd, const void *buf, int len, int flags)
 {
-	if (!is_valid_fd(fd) || flags)
+	if (!is_valid_fd(fd))
 		return -1;
 
 	forth_push((unsigned long)buf);
@@ -264,7 +258,7 @@ int send(int fd, const void *buf, int len, int flags)
 ssize_t read(int fd, void *buf, size_t len)
 {
 	char *ptr = (char *)buf;
-	unsigned cnt = 0;
+	int cnt = 0;
 	char code;
 
 	if (fd == 0 || fd == 2) {

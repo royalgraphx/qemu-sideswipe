@@ -6,7 +6,6 @@ struct cris_load_info
     const char *image_filename;
     const char *cmdline;
     int image_size;
-    ram_addr_t ram_size;
 
     hwaddr entry;
 };

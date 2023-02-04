@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -21,31 +21,28 @@
 #define PPC_PNV_HOMER_H
 
 #include "hw/ppc/pnv.h"
-#include "qom/object.h"
 
 #define TYPE_PNV_HOMER "pnv-homer"
-OBJECT_DECLARE_TYPE(PnvHomer, PnvHomerClass,
-                    PNV_HOMER)
+#define PNV_HOMER(obj) OBJECT_CHECK(PnvHomer, (obj), TYPE_PNV_HOMER)
 #define TYPE_PNV8_HOMER TYPE_PNV_HOMER "-POWER8"
-DECLARE_INSTANCE_CHECKER(PnvHomer, PNV8_HOMER,
-                         TYPE_PNV8_HOMER)
+#define PNV8_HOMER(obj) OBJECT_CHECK(PnvHomer, (obj), TYPE_PNV8_HOMER)
 #define TYPE_PNV9_HOMER TYPE_PNV_HOMER "-POWER9"
-DECLARE_INSTANCE_CHECKER(PnvHomer, PNV9_HOMER,
-                         TYPE_PNV9_HOMER)
-#define TYPE_PNV10_HOMER TYPE_PNV_HOMER "-POWER10"
-DECLARE_INSTANCE_CHECKER(PnvHomer, PNV10_HOMER,
-                         TYPE_PNV10_HOMER)
+#define PNV9_HOMER(obj) OBJECT_CHECK(PnvHomer, (obj), TYPE_PNV9_HOMER)
 
-struct PnvHomer {
+typedef struct PnvHomer {
     DeviceState parent;
 
     struct PnvChip *chip;
     MemoryRegion pba_regs;
     MemoryRegion regs;
-};
+} PnvHomer;
 
+#define PNV_HOMER_CLASS(klass)   \
+     OBJECT_CLASS_CHECK(PnvHomerClass, (klass), TYPE_PNV_HOMER)
+#define PNV_HOMER_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(PnvHomerClass, (obj), TYPE_PNV_HOMER)
 
-struct PnvHomerClass {
+typedef struct PnvHomerClass {
     DeviceClass parent_class;
 
     int pba_size;
@@ -54,6 +51,6 @@ struct PnvHomerClass {
     const MemoryRegionOps *homer_ops;
 
     hwaddr core_max_base;
-};
+} PnvHomerClass;
 
 #endif /* PPC_PNV_HOMER_H */

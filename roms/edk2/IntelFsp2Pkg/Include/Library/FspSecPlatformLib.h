@@ -1,6 +1,6 @@
 /** @file
 
-  Copyright (c) 2015 - 2020, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -43,7 +43,7 @@ SecPlatformInit (
 UINT32
 EFIAPI
 LoadMicrocode (
-  IN  VOID  *FsptUpdDataPtr
+  IN  VOID    *FsptUpdDataPtr
   );
 
 /**
@@ -62,11 +62,11 @@ LoadMicrocode (
 UINT32
 EFIAPI
 SecCarInit (
-  IN  VOID  *FsptUpdDataPtr
+  IN  VOID    *FsptUpdDataPtr
   );
 
 /**
-  This function check the signature of UPD.
+  This function check the signture of UPD.
 
   @param[in]  ApiIdx           Internal index of the FSP API.
   @param[in]  ApiParam         Parameter of the FSP API.
@@ -75,22 +75,8 @@ SecCarInit (
 EFI_STATUS
 EFIAPI
 FspUpdSignatureCheck (
-  IN UINT32  ApiIdx,
-  IN VOID    *ApiParam
-  );
-
-/**
-  This function handles FspMultiPhaseSiInitApi.
-
-  @param[in]  ApiIdx           Internal index of the FSP API.
-  @param[in]  ApiParam         Parameter of the FSP API.
-
-**/
-EFI_STATUS
-EFIAPI
-FspMultiPhaseSiInitApiHandler (
-  IN UINT32  ApiIdx,
-  IN VOID    *ApiParam
+  IN UINT32   ApiIdx,
+  IN VOID     *ApiParam
   );
 
 #endif

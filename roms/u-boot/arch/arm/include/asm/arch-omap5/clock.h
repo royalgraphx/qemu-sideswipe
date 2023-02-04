@@ -8,6 +8,7 @@
  */
 #ifndef _CLOCKS_OMAP5_H_
 #define _CLOCKS_OMAP5_H_
+#include <common.h>
 #include <asm/omap_common.h>
 
 /*

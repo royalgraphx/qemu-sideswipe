@@ -7,7 +7,6 @@
  *   Anup Patel <anup.patel@wdc.com>
  */
 
-#include <sbi/sbi_console.h>
 #include <sbi/sbi_ecall.h>
 #include <sbi/sbi_ecall_interface.h>
 #include <sbi/sbi_error.h>
@@ -101,11 +100,19 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 	struct sbi_trap_info trap = {0};
 	unsigned long out_val = 0;
 	bool is_0_1_spec = 0;
+	unsigned long args[6];
+
+	args[0] = regs->a0;
+	args[1] = regs->a1;
+	args[2] = regs->a2;
+	args[3] = regs->a3;
+	args[4] = regs->a4;
+	args[5] = regs->a5;
 
 	ext = sbi_ecall_find_extension(extension_id);
 	if (ext && ext->handle) {
 		ret = ext->handle(extension_id, func_id,
-				  regs, &out_val, &trap);
+				  args, &out_val, &trap);
 		if (extension_id >= SBI_EXT_0_1_SET_TIMER &&
 		    extension_id <= SBI_EXT_0_1_SHUTDOWN)
 			is_0_1_spec = 1;
@@ -117,13 +124,6 @@ int sbi_ecall_handler(struct sbi_trap_regs *regs)
 		trap.epc = regs->mepc;
 		sbi_trap_redirect(regs, &trap);
 	} else {
-		if (ret < SBI_LAST_ERR) {
-			sbi_printf("%s: Invalid error %d for ext=0x%lx "
-				   "func=0x%lx\n", __func__, ret,
-				   extension_id, func_id);
-			ret = SBI_ERR_FAILED;
-		}
-
 		/*
 		 * This function should return non-zero value only in case of
 		 * fatal error. However, there is no good way to distinguish
@@ -159,12 +159,6 @@ int sbi_ecall_init(void)
 	if (ret)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_hsm);
-	if (ret)
-		return ret;
-	ret = sbi_ecall_register_extension(&ecall_srst);
-	if (ret)
-		return ret;
-	ret = sbi_ecall_register_extension(&ecall_pmu);
 	if (ret)
 		return ret;
 	ret = sbi_ecall_register_extension(&ecall_legacy);

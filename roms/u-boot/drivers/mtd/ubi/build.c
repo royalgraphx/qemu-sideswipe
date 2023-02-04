@@ -17,8 +17,6 @@
  */
 
 #ifndef __UBOOT__
-#include <log.h>
-#include <dm/devres.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/stringify.h>

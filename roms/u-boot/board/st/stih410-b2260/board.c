@@ -1,14 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
  * Copyright (C) 2017, STMicroelectronics - All Rights Reserved
- * Author(s): Patrice Chotard, <patrice.chotard@foss.st.com> for STMicroelectronics.
+ * Author(s): Patrice Chotard, <patrice.chotard@st.com> for STMicroelectronics.
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <init.h>
-#include <asm/cache.h>
-#include <asm/global_data.h>
 #include <linux/usb/otg.h>
 #include <dwc3-sti-glue.h>
 #include <dwc3-uboot.h>
@@ -30,7 +26,7 @@ int dram_init_banksize(void)
 	return 0;
 }
 
-#if !CONFIG_IS_ENABLED(SYS_DCACHE_OFF)
+#ifndef CONFIG_SYS_DCACHE_OFF
 void enable_caches(void)
 {
 	/* Enable D-cache. I-cache is already enabled in start.S */

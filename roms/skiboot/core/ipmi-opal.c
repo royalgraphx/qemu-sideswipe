@@ -1,8 +1,17 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * IPMI OPAL calls
+/* Copyright 2013-2014 IBM Corp.
  *
- * Copyright 2013-2018 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <stdlib.h>
@@ -57,7 +66,7 @@ static int64_t opal_ipmi_send(uint64_t interface,
 }
 
 static int64_t opal_ipmi_recv(uint64_t interface,
-			      struct opal_ipmi_msg *opal_ipmi_msg, __be64 *msg_len)
+			      struct opal_ipmi_msg *opal_ipmi_msg, uint64_t *msg_len)
 {
 	struct ipmi_msg *msg;
 	int64_t rc;
@@ -82,7 +91,7 @@ static int64_t opal_ipmi_recv(uint64_t interface,
 		goto out_del_msg;
 	}
 
-	if (be64_to_cpu(*msg_len) - sizeof(struct opal_ipmi_msg) < msg->resp_size + 1) {
+	if (*msg_len - sizeof(struct opal_ipmi_msg) < msg->resp_size + 1) {
 		rc = OPAL_RESOURCE;
 		goto out_del_msg;
 	}
@@ -101,7 +110,7 @@ static int64_t opal_ipmi_recv(uint64_t interface,
 	      msg->cmd, msg->netfn >> 2, msg->resp_size);
 
 	/* Add one as the completion code is returned in the message data */
-	*msg_len = cpu_to_be64(msg->resp_size + sizeof(struct opal_ipmi_msg) + 1);
+	*msg_len = msg->resp_size + sizeof(struct opal_ipmi_msg) + 1;
 	ipmi_free_msg(msg);
 
 	return OPAL_SUCCESS;

@@ -174,7 +174,7 @@ static void net_tx_packets(struct XenNetDev *netdev)
                     tmpbuf = g_malloc(XC_PAGE_SIZE);
                 }
                 memcpy(tmpbuf, page + txreq.offset, txreq.size);
-                net_checksum_calculate(tmpbuf, txreq.size, CSUM_ALL);
+                net_checksum_calculate(tmpbuf, txreq.size);
                 qemu_send_packet(qemu_get_queue(netdev->nic), tmpbuf,
                                  txreq.size);
             } else {
@@ -296,8 +296,9 @@ static int net_init(struct XenLegacyDevice *xendev)
     netdev->nic = qemu_new_nic(&net_xen_info, &netdev->conf,
                                "xen", NULL, netdev);
 
-    qemu_set_info_str(qemu_get_queue(netdev->nic),
-                      "nic: xenbus vif macaddr=%s", netdev->mac);
+    snprintf(qemu_get_queue(netdev->nic)->info_str,
+             sizeof(qemu_get_queue(netdev->nic)->info_str),
+             "nic: xenbus vif macaddr=%s", netdev->mac);
 
     /* fill info */
     xenstore_write_be_int(&netdev->xendev, "feature-rx-copy", 1);

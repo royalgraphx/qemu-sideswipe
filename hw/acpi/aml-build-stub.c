@@ -26,16 +26,6 @@ void aml_append(Aml *parent_ctx, Aml *child)
 {
 }
 
-Aml *aml_return(Aml *val)
-{
-    return NULL;
-}
-
-Aml *aml_method(const char *name, int arg_count, AmlSerializeFlag sflag)
-{
-    return NULL;
-}
-
 Aml *aml_resource_template(void)
 {
     return NULL;
@@ -63,20 +53,6 @@ Aml *aml_io(AmlIODecode dec, uint16_t min_base, uint16_t max_base,
 }
 
 Aml *aml_irq_no_flags(uint8_t irq)
-{
-    return NULL;
-}
-
-Aml *aml_interrupt(AmlConsumerAndProducer con_and_pro,
-                   AmlLevelAndEdge level_and_edge,
-                   AmlActiveHighAndLow high_and_low, AmlShared shared,
-                   uint32_t *irq_list, uint8_t irq_count)
-{
-    return NULL;
-}
-
-Aml *aml_memory32_fixed(uint32_t addr, uint32_t size,
-                        AmlReadAndWrite read_and_write)
 {
     return NULL;
 }

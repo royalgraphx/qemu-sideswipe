@@ -21,24 +21,24 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 UINT8
 XhcReadCapReg8 (
-  IN  USB_XHCI_INSTANCE  *Xhc,
-  IN  UINT32             Offset
+  IN  USB_XHCI_INSTANCE   *Xhc,
+  IN  UINT32              Offset
   )
 {
-  UINT8       Data;
-  EFI_STATUS  Status;
+  UINT8                   Data;
+  EFI_STATUS              Status;
 
   Status = Xhc->PciIo->Mem.Read (
                              Xhc->PciIo,
                              EfiPciIoWidthUint8,
                              XHC_BAR_INDEX,
-                             (UINT64)Offset,
+                             (UINT64) Offset,
                              1,
                              &Data
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcReadCapReg: Pci Io read error - %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcReadCapReg: Pci Io read error - %r at %d\n", Status, Offset));
     Data = 0xFF;
   }
 
@@ -57,24 +57,24 @@ XhcReadCapReg8 (
 **/
 UINT32
 XhcReadCapReg (
-  IN  USB_XHCI_INSTANCE  *Xhc,
-  IN  UINT32             Offset
+  IN  USB_XHCI_INSTANCE   *Xhc,
+  IN  UINT32              Offset
   )
 {
-  UINT32      Data;
-  EFI_STATUS  Status;
+  UINT32                  Data;
+  EFI_STATUS              Status;
 
   Status = Xhc->PciIo->Mem.Read (
                              Xhc->PciIo,
                              EfiPciIoWidthUint32,
                              XHC_BAR_INDEX,
-                             (UINT64)Offset,
+                             (UINT64) Offset,
                              1,
                              &Data
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcReadCapReg: Pci Io read error - %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcReadCapReg: Pci Io read error - %r at %d\n", Status, Offset));
     Data = 0xFFFFFFFF;
   }
 
@@ -93,12 +93,12 @@ XhcReadCapReg (
 **/
 UINT32
 XhcReadOpReg (
-  IN  USB_XHCI_INSTANCE  *Xhc,
-  IN  UINT32             Offset
+  IN  USB_XHCI_INSTANCE   *Xhc,
+  IN  UINT32              Offset
   )
 {
-  UINT32      Data;
-  EFI_STATUS  Status;
+  UINT32                  Data;
+  EFI_STATUS              Status;
 
   ASSERT (Xhc->CapLength != 0);
 
@@ -112,7 +112,7 @@ XhcReadOpReg (
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcReadOpReg: Pci Io Read error - %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcReadOpReg: Pci Io Read error - %r at %d\n", Status, Offset));
     Data = 0xFFFFFFFF;
   }
 
@@ -129,12 +129,12 @@ XhcReadOpReg (
 **/
 VOID
 XhcWriteOpReg (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Data
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Data
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   ASSERT (Xhc->CapLength != 0);
 
@@ -148,9 +148,13 @@ XhcWriteOpReg (
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcWriteOpReg: Pci Io Write error: %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcWriteOpReg: Pci Io Write error: %r at %d\n", Status, Offset));
   }
 }
+
+
+
+
 
 /**
   Write the data to the XHCI door bell register.
@@ -162,12 +166,12 @@ XhcWriteOpReg (
 **/
 VOID
 XhcWriteDoorBellReg (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Data
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Data
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   ASSERT (Xhc->DBOff != 0);
 
@@ -181,7 +185,7 @@ XhcWriteDoorBellReg (
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcWriteOpReg: Pci Io Write error: %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcWriteOpReg: Pci Io Write error: %r at %d\n", Status, Offset));
   }
 }
 
@@ -196,12 +200,12 @@ XhcWriteDoorBellReg (
 **/
 UINT32
 XhcReadRuntimeReg (
-  IN  USB_XHCI_INSTANCE  *Xhc,
-  IN  UINT32             Offset
+  IN  USB_XHCI_INSTANCE   *Xhc,
+  IN  UINT32              Offset
   )
 {
-  UINT32      Data;
-  EFI_STATUS  Status;
+  UINT32                  Data;
+  EFI_STATUS              Status;
 
   ASSERT (Xhc->RTSOff != 0);
 
@@ -215,7 +219,7 @@ XhcReadRuntimeReg (
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcReadRuntimeReg: Pci Io Read error - %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcReadRuntimeReg: Pci Io Read error - %r at %d\n", Status, Offset));
     Data = 0xFFFFFFFF;
   }
 
@@ -232,12 +236,12 @@ XhcReadRuntimeReg (
 **/
 VOID
 XhcWriteRuntimeReg (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Data
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Data
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   ASSERT (Xhc->RTSOff != 0);
 
@@ -251,7 +255,7 @@ XhcWriteRuntimeReg (
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcWriteRuntimeReg: Pci Io Write error: %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcWriteRuntimeReg: Pci Io Write error: %r at %d\n", Status, Offset));
   }
 }
 
@@ -266,12 +270,12 @@ XhcWriteRuntimeReg (
 **/
 UINT32
 XhcReadExtCapReg (
-  IN  USB_XHCI_INSTANCE  *Xhc,
-  IN  UINT32             Offset
+  IN  USB_XHCI_INSTANCE   *Xhc,
+  IN  UINT32              Offset
   )
 {
-  UINT32      Data;
-  EFI_STATUS  Status;
+  UINT32                  Data;
+  EFI_STATUS              Status;
 
   ASSERT (Xhc->ExtCapRegBase != 0);
 
@@ -285,7 +289,7 @@ XhcReadExtCapReg (
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcReadExtCapReg: Pci Io Read error - %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcReadExtCapReg: Pci Io Read error - %r at %d\n", Status, Offset));
     Data = 0xFFFFFFFF;
   }
 
@@ -302,12 +306,12 @@ XhcReadExtCapReg (
 **/
 VOID
 XhcWriteExtCapReg (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Data
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Data
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   ASSERT (Xhc->ExtCapRegBase != 0);
 
@@ -321,9 +325,10 @@ XhcWriteExtCapReg (
                              );
 
   if (EFI_ERROR (Status)) {
-    DEBUG ((DEBUG_ERROR, "XhcWriteExtCapReg: Pci Io Write error: %r at %d\n", Status, Offset));
+    DEBUG ((EFI_D_ERROR, "XhcWriteExtCapReg: Pci Io Write error: %r at %d\n", Status, Offset));
   }
 }
+
 
 /**
   Set one bit of the runtime register while keeping other bits.
@@ -335,12 +340,12 @@ XhcWriteExtCapReg (
 **/
 VOID
 XhcSetRuntimeRegBit (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Bit
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Bit
   )
 {
-  UINT32  Data;
+  UINT32                  Data;
 
   Data  = XhcReadRuntimeReg (Xhc, Offset);
   Data |= Bit;
@@ -357,12 +362,12 @@ XhcSetRuntimeRegBit (
 **/
 VOID
 XhcClearRuntimeRegBit (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Bit
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Bit
   )
 {
-  UINT32  Data;
+  UINT32                  Data;
 
   Data  = XhcReadRuntimeReg (Xhc, Offset);
   Data &= ~Bit;
@@ -379,17 +384,18 @@ XhcClearRuntimeRegBit (
 **/
 VOID
 XhcSetOpRegBit (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Bit
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Bit
   )
 {
-  UINT32  Data;
+  UINT32                  Data;
 
   Data  = XhcReadOpReg (Xhc, Offset);
   Data |= Bit;
   XhcWriteOpReg (Xhc, Offset, Data);
 }
+
 
 /**
   Clear one bit of the operational register while keeping other bits.
@@ -401,12 +407,12 @@ XhcSetOpRegBit (
 **/
 VOID
 XhcClearOpRegBit (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Bit
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Bit
   )
 {
-  UINT32  Data;
+  UINT32                  Data;
 
   Data  = XhcReadOpReg (Xhc, Offset);
   Data &= ~Bit;
@@ -417,74 +423,39 @@ XhcClearOpRegBit (
   Wait the operation register's bit as specified by Bit
   to become set (or clear).
 
-  @param  Xhc                    The XHCI Instance.
-  @param  Offset                 The offset of the operation register.
-  @param  Bit                    The bit of the register to wait for.
-  @param  WaitToSet              Wait the bit to set or clear.
-  @param  Timeout                The time to wait before abort (in millisecond, ms).
+  @param  Xhc          The XHCI Instance.
+  @param  Offset       The offset of the operation register.
+  @param  Bit          The bit of the register to wait for.
+  @param  WaitToSet    Wait the bit to set or clear.
+  @param  Timeout      The time to wait before abort (in millisecond, ms).
 
-  @retval EFI_SUCCESS            The bit successfully changed by host controller.
-  @retval EFI_TIMEOUT            The time out occurred.
-  @retval EFI_OUT_OF_RESOURCES   Memory for the timer event could not be allocated.
+  @retval EFI_SUCCESS  The bit successfully changed by host controller.
+  @retval EFI_TIMEOUT  The time out occurred.
 
 **/
 EFI_STATUS
 XhcWaitOpRegBit (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Offset,
-  IN UINT32             Bit,
-  IN BOOLEAN            WaitToSet,
-  IN UINT32             Timeout
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Offset,
+  IN UINT32               Bit,
+  IN BOOLEAN              WaitToSet,
+  IN UINT32               Timeout
   )
 {
-  EFI_STATUS  Status;
-  EFI_EVENT   TimeoutEvent;
+  UINT32                  Index;
+  UINT64                  Loop;
 
-  TimeoutEvent = NULL;
+  Loop   = Timeout * XHC_1_MILLISECOND;
 
-  if (Timeout == 0) {
-    return EFI_TIMEOUT;
-  }
-
-  Status = gBS->CreateEvent (
-                  EVT_TIMER,
-                  TPL_CALLBACK,
-                  NULL,
-                  NULL,
-                  &TimeoutEvent
-                  );
-
-  if (EFI_ERROR (Status)) {
-    goto DONE;
-  }
-
-  Status = gBS->SetTimer (
-                  TimeoutEvent,
-                  TimerRelative,
-                  EFI_TIMER_PERIOD_MILLISECONDS (Timeout)
-                  );
-
-  if (EFI_ERROR (Status)) {
-    goto DONE;
-  }
-
-  do {
+  for (Index = 0; Index < Loop; Index++) {
     if (XHC_REG_BIT_IS_SET (Xhc, Offset, Bit) == WaitToSet) {
-      Status = EFI_SUCCESS;
-      goto DONE;
+      return EFI_SUCCESS;
     }
 
     gBS->Stall (XHC_1_MICROSECOND);
-  } while (EFI_ERROR (gBS->CheckEvent (TimeoutEvent)));
-
-  Status = EFI_TIMEOUT;
-
-DONE:
-  if (TimeoutEvent != NULL) {
-    gBS->CloseEvent (TimeoutEvent);
   }
 
-  return Status;
+  return EFI_TIMEOUT;
 }
 
 /**
@@ -495,16 +466,16 @@ DONE:
 **/
 VOID
 XhcSetBiosOwnership (
-  IN USB_XHCI_INSTANCE  *Xhc
+  IN USB_XHCI_INSTANCE    *Xhc
   )
 {
-  UINT32  Buffer;
+  UINT32                    Buffer;
 
   if (Xhc->UsbLegSupOffset == 0xFFFFFFFF) {
     return;
   }
 
-  DEBUG ((DEBUG_INFO, "XhcSetBiosOwnership: called to set BIOS ownership\n"));
+  DEBUG ((EFI_D_INFO, "XhcSetBiosOwnership: called to set BIOS ownership\n"));
 
   Buffer = XhcReadExtCapReg (Xhc, Xhc->UsbLegSupOffset);
   Buffer = ((Buffer & (~USBLEGSP_OS_SEMAPHORE)) | USBLEGSP_BIOS_SEMAPHORE);
@@ -519,16 +490,16 @@ XhcSetBiosOwnership (
 **/
 VOID
 XhcClearBiosOwnership (
-  IN USB_XHCI_INSTANCE  *Xhc
+  IN USB_XHCI_INSTANCE    *Xhc
   )
 {
-  UINT32  Buffer;
+  UINT32                    Buffer;
 
   if (Xhc->UsbLegSupOffset == 0xFFFFFFFF) {
     return;
   }
 
-  DEBUG ((DEBUG_INFO, "XhcClearBiosOwnership: called to clear BIOS ownership\n"));
+  DEBUG ((EFI_D_INFO, "XhcClearBiosOwnership: called to clear BIOS ownership\n"));
 
   Buffer = XhcReadExtCapReg (Xhc, Xhc->UsbLegSupOffset);
   Buffer = ((Buffer & (~USBLEGSP_BIOS_SEMAPHORE)) | USBLEGSP_OS_SEMAPHORE);
@@ -546,13 +517,13 @@ XhcClearBiosOwnership (
 **/
 UINT32
 XhcGetCapabilityAddr (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT8              CapId
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT8                CapId
   )
 {
-  UINT32  ExtCapOffset;
-  UINT8   NextExtCapReg;
-  UINT32  Data;
+  UINT32 ExtCapOffset;
+  UINT8  NextExtCapReg;
+  UINT32 Data;
 
   ExtCapOffset = 0;
 
@@ -564,7 +535,6 @@ XhcGetCapabilityAddr (
     if ((Data & 0xFF) == CapId) {
       return ExtCapOffset;
     }
-
     //
     // If not, then traverse all of the ext capability registers till finding out it.
     //
@@ -586,11 +556,12 @@ XhcGetCapabilityAddr (
 **/
 BOOLEAN
 XhcIsHalt (
-  IN USB_XHCI_INSTANCE  *Xhc
+  IN USB_XHCI_INSTANCE    *Xhc
   )
 {
   return XHC_REG_BIT_IS_SET (Xhc, XHC_USBSTS_OFFSET, XHC_USBSTS_HALT);
 }
+
 
 /**
   Whether system error occurred.
@@ -603,7 +574,7 @@ XhcIsHalt (
 **/
 BOOLEAN
 XhcIsSysError (
-  IN USB_XHCI_INSTANCE  *Xhc
+  IN USB_XHCI_INSTANCE    *Xhc
   )
 {
   return XHC_REG_BIT_IS_SET (Xhc, XHC_USBSTS_OFFSET, XHC_USBSTS_HSE);
@@ -623,11 +594,11 @@ XhcSetHsee (
   IN USB_XHCI_INSTANCE  *Xhc
   )
 {
-  EFI_STATUS           Status;
-  EFI_PCI_IO_PROTOCOL  *PciIo;
-  UINT16               XhciCmd;
+  EFI_STATUS            Status;
+  EFI_PCI_IO_PROTOCOL   *PciIo;
+  UINT16                XhciCmd;
 
-  PciIo  = Xhc->PciIo;
+  PciIo = Xhc->PciIo;
   Status = PciIo->Pci.Read (
                         PciIo,
                         EfiPciIoWidthUint16,
@@ -654,15 +625,15 @@ XhcSetHsee (
 **/
 EFI_STATUS
 XhcResetHC (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Timeout
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Timeout
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   Status = EFI_SUCCESS;
 
-  DEBUG ((DEBUG_INFO, "XhcResetHC!\n"));
+  DEBUG ((EFI_D_INFO, "XhcResetHC!\n"));
   //
   // Host can only be reset when it is halt. If not so, halt it
   //
@@ -675,8 +646,7 @@ XhcResetHC (
   }
 
   if ((Xhc->DebugCapSupOffset == 0xFFFFFFFF) || ((XhcReadExtCapReg (Xhc, Xhc->DebugCapSupOffset) & 0xFF) != XHC_CAP_USB_DEBUG) ||
-      ((XhcReadExtCapReg (Xhc, Xhc->DebugCapSupOffset + XHC_DC_DCCTRL) & BIT0) == 0))
-  {
+      ((XhcReadExtCapReg (Xhc, Xhc->DebugCapSupOffset + XHC_DC_DCCTRL) & BIT0) == 0)) {
     XhcSetOpRegBit (Xhc, XHC_USBCMD_OFFSET, XHC_USBCMD_RESET);
     //
     // Some XHCI host controllers require to have extra 1ms delay before accessing any MMIO register during reset.
@@ -698,6 +668,7 @@ XhcResetHC (
   return Status;
 }
 
+
 /**
   Halt the XHCI host controller.
 
@@ -710,16 +681,17 @@ XhcResetHC (
 **/
 EFI_STATUS
 XhcHaltHC (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Timeout
+  IN USB_XHCI_INSTANCE   *Xhc,
+  IN UINT32              Timeout
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   XhcClearOpRegBit (Xhc, XHC_USBCMD_OFFSET, XHC_USBCMD_RUN);
   Status = XhcWaitOpRegBit (Xhc, XHC_USBSTS_OFFSET, XHC_USBSTS_HALT, TRUE, Timeout);
   return Status;
 }
+
 
 /**
   Set the XHCI host controller to run.
@@ -733,13 +705,14 @@ XhcHaltHC (
 **/
 EFI_STATUS
 XhcRunHC (
-  IN USB_XHCI_INSTANCE  *Xhc,
-  IN UINT32             Timeout
+  IN USB_XHCI_INSTANCE    *Xhc,
+  IN UINT32               Timeout
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   XhcSetOpRegBit (Xhc, XHC_USBCMD_OFFSET, XHC_USBCMD_RUN);
   Status = XhcWaitOpRegBit (Xhc, XHC_USBSTS_OFFSET, XHC_USBSTS_HALT, FALSE, Timeout);
   return Status;
 }
+

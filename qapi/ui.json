@@ -6,80 +6,28 @@
 # = Remote desktop
 ##
 
-{ 'include': 'common.json' }
 { 'include': 'sockets.json' }
 
 ##
-# @DisplayProtocol:
+# @set_password:
 #
-# Display protocols which support changing password options.
-#
-# Since: 7.0
-##
-{ 'enum': 'DisplayProtocol',
-  'data': [ 'vnc', 'spice' ] }
-
-##
-# @SetPasswordAction:
-#
-# An action to take on changing a password on a connection with active clients.
-#
-# @keep: maintain existing clients
-#
-# @fail: fail the command if clients are connected
-#
-# @disconnect: disconnect existing clients
-#
-# Since: 7.0
-##
-{ 'enum': 'SetPasswordAction',
-  'data': [ 'keep', 'fail', 'disconnect' ] }
-
-##
-# @SetPasswordOptions:
-#
-# Options for set_password.
+# Sets the password of a remote display session.
 #
 # @protocol: - 'vnc' to modify the VNC server password
 #            - 'spice' to modify the Spice server password
 #
 # @password: the new password
 #
-# @connected: How to handle existing clients when changing the
-#             password. If nothing is specified, defaults to 'keep'.
-#             For VNC, only 'keep' is currently implemented.
-#
-# Since: 7.0
-##
-{ 'union': 'SetPasswordOptions',
-  'base': { 'protocol': 'DisplayProtocol',
-            'password': 'str',
-            '*connected': 'SetPasswordAction' },
-  'discriminator': 'protocol',
-  'data': { 'vnc': 'SetPasswordOptionsVnc' } }
-
-##
-# @SetPasswordOptionsVnc:
-#
-# Options for set_password specific to the VNC procotol.
-#
-# @display: The id of the display where the password should be changed.
-#           Defaults to the first.
-#
-# Since: 7.0
-##
-{ 'struct': 'SetPasswordOptionsVnc',
-  'data': { '*display': 'str' } }
-
-##
-# @set_password:
-#
-# Set the password of a remote display server.
+# @connected: how to handle existing clients when changing the
+#             password.  If nothing is specified, defaults to 'keep'
+#             'fail' to fail the command if clients are connected
+#             'disconnect' to disconnect existing clients
+#             'keep' to maintain existing clients
 #
 # Returns: - Nothing on success
 #          - If Spice is not enabled, DeviceNotFound
 #
-# Since: 0.14
+# Since: 0.14.0
 #
 # Example:
 #
@@ -88,15 +36,15 @@
 # <- { "return": {} }
 #
 ##
-{ 'command': 'set_password', 'boxed': true, 'data': 'SetPasswordOptions' }
+{ 'command': 'set_password',
+  'data': {'protocol': 'str', 'password': 'str', '*connected': 'str'} }
 
 ##
-# @ExpirePasswordOptions:
+# @expire_password:
 #
-# General options for expire_password.
+# Expire the password of a remote display server.
 #
-# @protocol: - 'vnc' to modify the VNC server expiration
-#            - 'spice' to modify the Spice server expiration
+# @protocol: the name of the remote display protocol 'vnc' or 'spice'
 #
 # @time: when to expire the password.
 #
@@ -105,41 +53,15 @@
 #        - '+INT' where INT is the number of seconds from now (integer)
 #        - 'INT' where INT is the absolute time in seconds
 #
+# Returns: - Nothing on success
+#          - If @protocol is 'spice' and Spice is not active, DeviceNotFound
+#
+# Since: 0.14.0
+#
 # Notes: Time is relative to the server and currently there is no way to
 #        coordinate server time with client time.  It is not recommended to
 #        use the absolute time version of the @time parameter unless you're
 #        sure you are on the same machine as the QEMU instance.
-#
-# Since: 7.0
-##
-{ 'union': 'ExpirePasswordOptions',
-  'base': { 'protocol': 'DisplayProtocol',
-            'time': 'str' },
-  'discriminator': 'protocol',
-  'data': { 'vnc': 'ExpirePasswordOptionsVnc' } }
-
-##
-# @ExpirePasswordOptionsVnc:
-#
-# Options for expire_password specific to the VNC procotol.
-#
-# @display: The id of the display where the expiration should be changed.
-#           Defaults to the first.
-#
-# Since: 7.0
-##
-{ 'struct': 'ExpirePasswordOptionsVnc',
-  'data': { '*display': 'str' } }
-
-##
-# @expire_password:
-#
-# Expire the password of a remote display server.
-#
-# Returns: - Nothing on success
-#          - If @protocol is 'spice' and Spice is not active, DeviceNotFound
-#
-# Since: 0.14
 #
 # Example:
 #
@@ -148,28 +70,14 @@
 # <- { "return": {} }
 #
 ##
-{ 'command': 'expire_password', 'boxed': true, 'data': 'ExpirePasswordOptions' }
-
-##
-# @ImageFormat:
-#
-# Supported image format types.
-#
-# @png: PNG format
-#
-# @ppm: PPM format
-#
-# Since: 7.1
-##
-{ 'enum': 'ImageFormat',
-  'data': ['ppm', 'png'] }
+{ 'command': 'expire_password', 'data': {'protocol': 'str', 'time': 'str'} }
 
 ##
 # @screendump:
 #
-# Capture the contents of a screen and write it to a file.
+# Write a PPM of the VGA screen to a file.
 #
-# @filename: the path of a new file to store the image
+# @filename: the path of a new PPM file to store the image
 #
 # @device: ID of the display device that should be dumped. If this parameter
 #          is missing, the primary display will be used. (Since 2.12)
@@ -178,11 +86,9 @@
 #        parameter is missing, head #0 will be used. Also note that the head
 #        can only be specified in conjunction with the device ID. (Since 2.12)
 #
-# @format: image format for screendump. (default: ppm) (Since 7.1)
-#
 # Returns: Nothing on success
 #
-# Since: 0.14
+# Since: 0.14.0
 #
 # Example:
 #
@@ -192,9 +98,7 @@
 #
 ##
 { 'command': 'screendump',
-  'data': {'filename': 'str', '*device': 'str', '*head': 'int',
-           '*format': 'ImageFormat'},
-  'coroutine': true }
+  'data': {'filename': 'str', '*device': 'str', '*head': 'int'} }
 
 ##
 # == Spice
@@ -217,7 +121,7 @@
   'data': { 'host': 'str',
             'port': 'str',
             'family': 'NetworkAddressFamily' },
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @SpiceServerInfo:
@@ -231,7 +135,7 @@
 { 'struct': 'SpiceServerInfo',
   'base': 'SpiceBasicInfo',
   'data': { '*auth': 'str' },
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @SpiceChannel:
@@ -251,13 +155,13 @@
 #
 # @tls: true if the channel is encrypted, false otherwise.
 #
-# Since: 0.14
+# Since: 0.14.0
 ##
 { 'struct': 'SpiceChannel',
   'base': 'SpiceBasicInfo',
   'data': {'connection-id': 'int', 'channel-type': 'int', 'channel-id': 'int',
            'tls': 'bool'},
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @SpiceQueryMouseMode:
@@ -277,7 +181,7 @@
 ##
 { 'enum': 'SpiceQueryMouseMode',
   'data': [ 'client', 'server', 'unknown' ],
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @SpiceInfo:
@@ -310,13 +214,13 @@
 #
 # @channels: a list of @SpiceChannel for each active spice channel
 #
-# Since: 0.14
+# Since: 0.14.0
 ##
 { 'struct': 'SpiceInfo',
   'data': {'enabled': 'bool', 'migrated': 'bool', '*host': 'str', '*port': 'int',
            '*tls-port': 'int', '*auth': 'str', '*compiled-version': 'str',
            'mouse-mode': 'SpiceQueryMouseMode', '*channels': ['SpiceChannel']},
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @query-spice:
@@ -325,7 +229,7 @@
 #
 # Returns: @SpiceInfo
 #
-# Since: 0.14
+# Since: 0.14.0
 #
 # Example:
 #
@@ -334,10 +238,8 @@
 #          "enabled": true,
 #          "auth": "spice",
 #          "port": 5920,
-#          "migrated":false,
 #          "tls-port": 5921,
 #          "host": "0.0.0.0",
-#          "mouse-mode":"client",
 #          "channels": [
 #             {
 #                "port": "54924",
@@ -364,7 +266,7 @@
 #
 ##
 { 'command': 'query-spice', 'returns': 'SpiceInfo',
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @SPICE_CONNECTED:
@@ -375,7 +277,7 @@
 #
 # @client: client information
 #
-# Since: 0.14
+# Since: 0.14.0
 #
 # Example:
 #
@@ -390,7 +292,7 @@
 { 'event': 'SPICE_CONNECTED',
   'data': { 'server': 'SpiceBasicInfo',
             'client': 'SpiceBasicInfo' },
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @SPICE_INITIALIZED:
@@ -402,7 +304,7 @@
 #
 # @client: client information
 #
-# Since: 0.14
+# Since: 0.14.0
 #
 # Example:
 #
@@ -419,7 +321,7 @@
 { 'event': 'SPICE_INITIALIZED',
   'data': { 'server': 'SpiceServerInfo',
             'client': 'SpiceChannel' },
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @SPICE_DISCONNECTED:
@@ -430,7 +332,7 @@
 #
 # @client: client information
 #
-# Since: 0.14
+# Since: 0.14.0
 #
 # Example:
 #
@@ -445,7 +347,7 @@
 { 'event': 'SPICE_DISCONNECTED',
   'data': { 'server': 'SpiceBasicInfo',
             'client': 'SpiceBasicInfo' },
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # @SPICE_MIGRATE_COMPLETED:
@@ -461,7 +363,7 @@
 #
 ##
 { 'event': 'SPICE_MIGRATE_COMPLETED',
-  'if': 'CONFIG_SPICE' }
+  'if': 'defined(CONFIG_SPICE)' }
 
 ##
 # == VNC
@@ -489,7 +391,7 @@
             'service': 'str',
             'family': 'NetworkAddressFamily',
             'websocket': 'bool' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VncServerInfo:
@@ -504,7 +406,7 @@
 { 'struct': 'VncServerInfo',
   'base': 'VncBasicInfo',
   'data': { '*auth': 'str' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VncClientInfo:
@@ -517,12 +419,12 @@
 # @sasl_username: If SASL authentication is in use, the SASL username
 #                 used for authentication.
 #
-# Since: 0.14
+# Since: 0.14.0
 ##
 { 'struct': 'VncClientInfo',
   'base': 'VncBasicInfo',
   'data': { '*x509_dname': 'str', '*sasl_username': 'str' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VncInfo:
@@ -559,13 +461,13 @@
 #
 # @clients: a list of @VncClientInfo of all currently connected clients
 #
-# Since: 0.14
+# Since: 0.14.0
 ##
 { 'struct': 'VncInfo',
   'data': {'enabled': 'bool', '*host': 'str',
            '*family': 'NetworkAddressFamily',
            '*service': 'str', '*auth': 'str', '*clients': ['VncClientInfo']},
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VncPrimaryAuth:
@@ -577,7 +479,7 @@
 { 'enum': 'VncPrimaryAuth',
   'data': [ 'none', 'vnc', 'ra2', 'ra2ne', 'tight', 'ultra',
             'tls', 'vencrypt', 'sasl' ],
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VncVencryptSubAuth:
@@ -592,7 +494,7 @@
             'tls-vnc',   'x509-vnc',
             'tls-plain', 'x509-plain',
             'tls-sasl',  'x509-sasl' ],
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VncServerInfo2:
@@ -610,7 +512,7 @@
   'base': 'VncBasicInfo',
   'data': { 'auth'      : 'VncPrimaryAuth',
             '*vencrypt' : 'VncVencryptSubAuth' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VncInfo2:
@@ -643,7 +545,7 @@
             'auth'      : 'VncPrimaryAuth',
             '*vencrypt' : 'VncVencryptSubAuth',
             '*display'  : 'str' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @query-vnc:
@@ -652,7 +554,7 @@
 #
 # Returns: @VncInfo
 #
-# Since: 0.14
+# Since: 0.14.0
 #
 # Example:
 #
@@ -667,8 +569,7 @@
 #             {
 #                "host":"127.0.0.1",
 #                "service":"50401",
-#                "family":"ipv4",
-#                "websocket":false
+#                "family":"ipv4"
 #             }
 #          ]
 #       }
@@ -676,7 +577,7 @@
 #
 ##
 { 'command': 'query-vnc', 'returns': 'VncInfo',
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 ##
 # @query-vnc-servers:
 #
@@ -687,7 +588,7 @@
 # Since: 2.3
 ##
 { 'command': 'query-vnc-servers', 'returns': ['VncInfo2'],
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @change-vnc-password:
@@ -703,7 +604,7 @@
 ##
 { 'command': 'change-vnc-password',
   'data': { 'password': 'str' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VNC_CONNECTED:
@@ -717,23 +618,23 @@
 # Note: This event is emitted before any authentication takes place, thus
 #       the authentication ID is not provided
 #
-# Since: 0.13
+# Since: 0.13.0
 #
 # Example:
 #
 # <- { "event": "VNC_CONNECTED",
 #      "data": {
-#            "server": { "auth": "sasl", "family": "ipv4", "websocket": false,
+#            "server": { "auth": "sasl", "family": "ipv4",
 #                        "service": "5901", "host": "0.0.0.0" },
 #            "client": { "family": "ipv4", "service": "58425",
-#                        "host": "127.0.0.1", "websocket": false } },
+#                        "host": "127.0.0.1" } },
 #      "timestamp": { "seconds": 1262976601, "microseconds": 975795 } }
 #
 ##
 { 'event': 'VNC_CONNECTED',
   'data': { 'server': 'VncServerInfo',
             'client': 'VncBasicInfo' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VNC_INITIALIZED:
@@ -745,15 +646,15 @@
 #
 # @client: client information
 #
-# Since: 0.13
+# Since: 0.13.0
 #
 # Example:
 #
 # <-  { "event": "VNC_INITIALIZED",
 #       "data": {
-#            "server": { "auth": "sasl", "family": "ipv4", "websocket": false,
+#            "server": { "auth": "sasl", "family": "ipv4",
 #                        "service": "5901", "host": "0.0.0.0"},
-#            "client": { "family": "ipv4", "service": "46089", "websocket": false,
+#            "client": { "family": "ipv4", "service": "46089",
 #                        "host": "127.0.0.1", "sasl_username": "luiz" } },
 #       "timestamp": { "seconds": 1263475302, "microseconds": 150772 } }
 #
@@ -761,7 +662,7 @@
 { 'event': 'VNC_INITIALIZED',
   'data': { 'server': 'VncServerInfo',
             'client': 'VncClientInfo' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # @VNC_DISCONNECTED:
@@ -772,15 +673,15 @@
 #
 # @client: client information
 #
-# Since: 0.13
+# Since: 0.13.0
 #
 # Example:
 #
 # <- { "event": "VNC_DISCONNECTED",
 #      "data": {
-#            "server": { "auth": "sasl", "family": "ipv4", "websocket": false,
+#            "server": { "auth": "sasl", "family": "ipv4",
 #                        "service": "5901", "host": "0.0.0.0" },
-#            "client": { "family": "ipv4", "service": "58425", "websocket": false,
+#            "client": { "family": "ipv4", "service": "58425",
 #                        "host": "127.0.0.1", "sasl_username": "luiz" } },
 #      "timestamp": { "seconds": 1262976601, "microseconds": 975795 } }
 #
@@ -788,7 +689,7 @@
 { 'event': 'VNC_DISCONNECTED',
   'data': { 'server': 'VncServerInfo',
             'client': 'VncClientInfo' },
-  'if': 'CONFIG_VNC' }
+  'if': 'defined(CONFIG_VNC)' }
 
 ##
 # = Input
@@ -807,7 +708,7 @@
 #
 # @absolute: true if this device supports absolute coordinates as input
 #
-# Since: 0.14
+# Since: 0.14.0
 ##
 { 'struct': 'MouseInfo',
   'data': {'name': 'str', 'index': 'int', 'current': 'bool',
@@ -820,7 +721,7 @@
 #
 # Returns: a list of @MouseInfo for each device
 #
-# Since: 0.14
+# Since: 0.14.0
 #
 # Example:
 #
@@ -883,9 +784,6 @@
 # @muhenkan: since 2.12
 # @katakanahiragana: since 2.12
 #
-# @lang1: since 6.1
-# @lang2: since 6.1
-#
 # 'sysrq' was mistakenly added to hack around the fact that
 # the ps2 driver was not generating correct scancodes sequences
 # when 'alt+print' was pressed. This flaw is now fixed and the
@@ -893,7 +791,8 @@
 # 'sysrq' will be transparently changed to 'print', so they
 # are effectively synonyms.
 #
-# Since: 1.3
+# Since: 1.3.0
+#
 ##
 { 'enum': 'QKeyCode',
   'data': [ 'unmapped',
@@ -917,46 +816,19 @@
             'audionext', 'audioprev', 'audiostop', 'audioplay', 'audiomute',
             'volumeup', 'volumedown', 'mediaselect',
             'mail', 'calculator', 'computer',
-            'ac_home', 'ac_back', 'ac_forward', 'ac_refresh', 'ac_bookmarks',
-            'lang1', 'lang2' ] }
-
-##
-# @KeyValueKind:
-#
-# Since: 1.3
-##
-{ 'enum': 'KeyValueKind',
-  'data': [ 'number', 'qcode' ] }
-
-##
-# @IntWrapper:
-#
-# Since: 1.3
-##
-{ 'struct': 'IntWrapper',
-  'data': { 'data': 'int' } }
-
-##
-# @QKeyCodeWrapper:
-#
-# Since: 1.3
-##
-{ 'struct': 'QKeyCodeWrapper',
-  'data': { 'data': 'QKeyCode' } }
+            'ac_home', 'ac_back', 'ac_forward', 'ac_refresh', 'ac_bookmarks' ] }
 
 ##
 # @KeyValue:
 #
 # Represents a keyboard key.
 #
-# Since: 1.3
+# Since: 1.3.0
 ##
 { 'union': 'KeyValue',
-  'base': { 'type': 'KeyValueKind' },
-  'discriminator': 'type',
   'data': {
-    'number': 'IntWrapper',
-    'qcode': 'QKeyCodeWrapper' } }
+    'number': 'int',
+    'qcode': 'QKeyCode' } }
 
 ##
 # @send-key:
@@ -974,7 +846,7 @@
 # Returns: - Nothing on success
 #          - If key is unknown or redundant, InvalidParameter
 #
-# Since: 1.3
+# Since: 1.3.0
 #
 # Example:
 #
@@ -1001,7 +873,7 @@
 ##
 { 'enum'  : 'InputButton',
   'data'  : [ 'left', 'middle', 'right', 'wheel-up', 'wheel-down', 'side',
-  'extra', 'wheel-left', 'wheel-right' ] }
+  'extra' ] }
 
 ##
 # @InputAxis:
@@ -1018,8 +890,8 @@
 #
 # Keyboard input event.
 #
-# @key: Which key this event is for.
-# @down: True for key-down and false for key-up events.
+# @key:    Which key this event is for.
+# @down:   True for key-down and false for key-up events.
 #
 # Since: 2.0
 ##
@@ -1033,7 +905,7 @@
 # Pointer button input event.
 #
 # @button: Which button this event is for.
-# @down: True for key-down and false for key-up events.
+# @down:   True for key-down and false for key-up events.
 #
 # Since: 2.0
 ##
@@ -1057,38 +929,6 @@
               'value'   : 'int' } }
 
 ##
-# @InputEventKind:
-#
-# Since: 2.0
-##
-{ 'enum': 'InputEventKind',
-  'data': [ 'key', 'btn', 'rel', 'abs' ] }
-
-##
-# @InputKeyEventWrapper:
-#
-# Since: 2.0
-##
-{ 'struct': 'InputKeyEventWrapper',
-  'data': { 'data': 'InputKeyEvent' } }
-
-##
-# @InputBtnEventWrapper:
-#
-# Since: 2.0
-##
-{ 'struct': 'InputBtnEventWrapper',
-  'data': { 'data': 'InputBtnEvent' } }
-
-##
-# @InputMoveEventWrapper:
-#
-# Since: 2.0
-##
-{ 'struct': 'InputMoveEventWrapper',
-  'data': { 'data': 'InputMoveEvent' } }
-
-##
 # @InputEvent:
 #
 # Input event union.
@@ -1103,12 +943,10 @@
 # Since: 2.0
 ##
 { 'union' : 'InputEvent',
-  'base': { 'type': 'InputEventKind' },
-  'discriminator': 'type',
-  'data'  : { 'key'     : 'InputKeyEventWrapper',
-              'btn'     : 'InputBtnEventWrapper',
-              'rel'     : 'InputMoveEventWrapper',
-              'abs'     : 'InputMoveEventWrapper' } }
+  'data'  : { 'key'     : 'InputKeyEvent',
+              'btn'     : 'InputBtnEvent',
+              'rel'     : 'InputMoveEvent',
+              'abs'     : 'InputMoveEvent' } }
 
 ##
 # @input-send-event:
@@ -1183,6 +1021,18 @@
             'events' : [ 'InputEvent' ] } }
 
 ##
+# @GrabToggleKeys:
+#
+# Keys to toggle input-linux between host and guest.
+#
+# Since: 4.0
+#
+##
+{ 'enum': 'GrabToggleKeys',
+  'data': [ 'ctrl-ctrl', 'alt-alt', 'shift-shift','meta-meta', 'scrolllock',
+            'ctrl-scrolllock' ] }
+
+##
 # @DisplayGTK:
 #
 # GTK display options.
@@ -1195,20 +1045,13 @@
 #               assuming the guest will resize the display to match
 #               the window size then.  Otherwise it defaults to "off".
 #               Since 3.1
-# @show-tabs:   Display the tab bar for switching between the various graphical
-#               interfaces (e.g. VGA and virtual console character devices)
-#               by default.
-#               Since 7.1
-# @show-menubar: Display the main window menubar. Defaults to "on".
-#                Since 8.0
 #
 # Since: 2.12
+#
 ##
 { 'struct'  : 'DisplayGTK',
   'data'    : { '*grab-on-hover' : 'bool',
-                '*zoom-to-fit'   : 'bool',
-                '*show-tabs'     : 'bool',
-                '*show-menubar'  : 'bool'  } }
+                '*zoom-to-fit'   : 'bool'  } }
 
 ##
 # @DisplayEGLHeadless:
@@ -1219,47 +1062,26 @@
 #              available node on the host.
 #
 # Since: 3.1
+#
 ##
 { 'struct'  : 'DisplayEGLHeadless',
   'data'    : { '*rendernode' : 'str' } }
 
-##
-# @DisplayDBus:
-#
-# DBus display options.
-#
-# @addr: The D-Bus bus address (default to the session bus).
-#
-# @rendernode: Which DRM render node should be used. Default is the first
-#              available node on the host.
-#
-# @p2p: Whether to use peer-to-peer connections (accepted through
-#       ``add_client``).
-#
-# @audiodev: Use the specified DBus audiodev to export audio.
-#
-# Since: 7.0
-##
-{ 'struct'  : 'DisplayDBus',
-  'data'    : { '*rendernode' : 'str',
-                '*addr': 'str',
-                '*p2p': 'bool',
-                '*audiodev': 'str' } }
-
-##
-# @DisplayGLMode:
-#
-# Display OpenGL mode.
-#
-# @off: Disable OpenGL (default).
-# @on: Use OpenGL, pick context type automatically.
-#      Would better be named 'auto' but is called 'on' for backward
-#      compatibility with bool type.
-# @core: Use OpenGL with Core (desktop) Context.
-# @es: Use OpenGL with ES (embedded systems) Context.
-#
-# Since: 3.0
-##
+ ##
+ # @DisplayGLMode:
+ #
+ # Display OpenGL mode.
+ #
+ # @off: Disable OpenGL (default).
+ # @on: Use OpenGL, pick context type automatically.
+ #      Would better be named 'auto' but is called 'on' for backward
+ #      compatibility with bool type.
+ # @core: Use OpenGL with Core (desktop) Context.
+ # @es: Use OpenGL with ES (embedded systems) Context.
+ #
+ # Since: 3.0
+ #
+ ##
 { 'enum'    : 'DisplayGLMode',
   'data'    : [ 'off', 'on', 'core', 'es' ] }
 
@@ -1268,63 +1090,13 @@
 #
 # Curses display options.
 #
-# @charset: Font charset used by guest (default: CP437).
+# @charset:       Font charset used by guest (default: CP437).
 #
 # Since: 4.0
+#
 ##
 { 'struct'  : 'DisplayCurses',
   'data'    : { '*charset'       : 'str' } }
-
-##
-# @DisplayCocoa:
-#
-# Cocoa display options.
-#
-# @left-command-key: Enable/disable forwarding of left command key to
-#                    guest. Allows command-tab window switching on the
-#                    host without sending this key to the guest when
-#                    "off". Defaults to "on"
-#
-# @full-grab: Capture all key presses, including system combos. This
-#             requires accessibility permissions, since it performs
-#             a global grab on key events. (default: off)
-#             See https://support.apple.com/en-in/guide/mac-help/mh32356/mac
-#
-# @swap-opt-cmd: Swap the Option and Command keys so that their key codes match
-#                their position on non-Mac keyboards and you can use Meta/Super
-#                and Alt where you expect them. (default: off)
-#
-# Since: 7.0
-##
-{ 'struct': 'DisplayCocoa',
-  'data': {
-      '*left-command-key': 'bool',
-      '*full-grab': 'bool',
-      '*swap-opt-cmd': 'bool'
-  } }
-
-##
-# @HotKeyMod:
-#
-# Set of modifier keys that need to be held for shortcut key actions.
-#
-# Since: 7.1
-##
-{ 'enum'  : 'HotKeyMod',
-  'data'  : [ 'lctrl-lalt', 'lshift-lctrl-lalt', 'rctrl' ] }
-
-##
-# @DisplaySDL:
-#
-# SDL2 display options.
-#
-# @grab-mod:  Modifier keys that should be pressed together with the
-#             "G" key to release the mouse grab.
-#
-# Since: 7.1
-##
-{ 'struct'  : 'DisplaySDL',
-  'data'    : { '*grab-mod'   : 'HotKeyMod' } }
 
 ##
 # @DisplayType:
@@ -1360,37 +1132,28 @@
 #             application to connect to it. The server will redirect
 #             the serial console and QEMU monitors. (Since 4.0)
 #
-# @dbus: Start a D-Bus service for the display. (Since 7.0)
-#
 # Since: 2.12
+#
 ##
 { 'enum'    : 'DisplayType',
-  'data'    : [
-    { 'name': 'default' },
-    { 'name': 'none' },
-    { 'name': 'gtk', 'if': 'CONFIG_GTK' },
-    { 'name': 'sdl', 'if': 'CONFIG_SDL' },
-    { 'name': 'egl-headless',
-              'if': { 'all': ['CONFIG_OPENGL', 'CONFIG_GBM'] } },
-    { 'name': 'curses', 'if': 'CONFIG_CURSES' },
-    { 'name': 'cocoa', 'if': 'CONFIG_COCOA' },
-    { 'name': 'spice-app', 'if': 'CONFIG_SPICE' },
-    { 'name': 'dbus', 'if': 'CONFIG_DBUS_DISPLAY' }
-  ]
-}
+  'data'    : [ 'default', 'none', 'gtk', 'sdl',
+                'egl-headless', 'curses', 'cocoa',
+                'spice-app'] }
 
 ##
 # @DisplayOptions:
 #
 # Display (user interface) options.
 #
-# @type: Which DisplayType qemu should use.
-# @full-screen: Start user interface in fullscreen mode (default: off).
-# @window-close: Allow to quit qemu with window close button (default: on).
-# @show-cursor: Force showing the mouse cursor (default: off). (since: 5.0)
-# @gl: Enable OpenGL support (default: off).
+# @type:          Which DisplayType qemu should use.
+# @full-screen:   Start user interface in fullscreen mode (default: off).
+# @window-close:  Allow to quit qemu with window close button (default: on).
+# @show-cursor:   Force showing the mouse cursor (default: off).
+#                 (since: 5.0)
+# @gl:            Enable OpenGL support (default: off).
 #
 # Since: 2.12
+#
 ##
 { 'union'   : 'DisplayOptions',
   'base'    : { 'type'           : 'DisplayType',
@@ -1399,16 +1162,9 @@
                 '*show-cursor'   : 'bool',
                 '*gl'            : 'DisplayGLMode' },
   'discriminator' : 'type',
-  'data'    : {
-      'gtk': { 'type': 'DisplayGTK', 'if': 'CONFIG_GTK' },
-      'cocoa': { 'type': 'DisplayCocoa', 'if': 'CONFIG_COCOA' },
-      'curses': { 'type': 'DisplayCurses', 'if': 'CONFIG_CURSES' },
-      'egl-headless': { 'type': 'DisplayEGLHeadless',
-                        'if': { 'all': ['CONFIG_OPENGL', 'CONFIG_GBM'] } },
-      'dbus': { 'type': 'DisplayDBus', 'if': 'CONFIG_DBUS_DISPLAY' },
-      'sdl': { 'type': 'DisplaySDL', 'if': 'CONFIG_SDL' }
-  }
-}
+  'data'    : { 'gtk'            : 'DisplayGTK',
+                'curses'         : 'DisplayCurses',
+                'egl-headless'   : 'DisplayEGLHeadless'} }
 
 ##
 # @query-display-options:
@@ -1418,126 +1174,7 @@
 # Returns: @DisplayOptions
 #
 # Since: 3.1
+#
 ##
 { 'command': 'query-display-options',
   'returns': 'DisplayOptions' }
-
-##
-# @DisplayReloadType:
-#
-# Available DisplayReload types.
-#
-# @vnc: VNC display
-#
-# Since: 6.0
-##
-{ 'enum': 'DisplayReloadType',
-  'data': ['vnc'] }
-
-##
-# @DisplayReloadOptionsVNC:
-#
-# Specify the VNC reload options.
-#
-# @tls-certs: reload tls certs or not.
-#
-# Since: 6.0
-##
-{ 'struct': 'DisplayReloadOptionsVNC',
-  'data': { '*tls-certs': 'bool' } }
-
-##
-# @DisplayReloadOptions:
-#
-# Options of the display configuration reload.
-#
-# @type: Specify the display type.
-#
-# Since: 6.0
-##
-{ 'union': 'DisplayReloadOptions',
-  'base': {'type': 'DisplayReloadType'},
-  'discriminator': 'type',
-  'data': { 'vnc': 'DisplayReloadOptionsVNC' } }
-
-##
-# @display-reload:
-#
-# Reload display configuration.
-#
-# Returns: Nothing on success.
-#
-# Since: 6.0
-#
-# Example:
-#
-# -> { "execute": "display-reload",
-#      "arguments": { "type": "vnc", "tls-certs": true  } }
-# <- { "return": {} }
-#
-##
-{ 'command': 'display-reload',
-  'data': 'DisplayReloadOptions',
-  'boxed' : true }
-
-##
-# @DisplayUpdateType:
-#
-# Available DisplayUpdate types.
-#
-# @vnc: VNC display
-#
-# Since: 7.1
-##
-{ 'enum': 'DisplayUpdateType',
-  'data': ['vnc'] }
-
-##
-# @DisplayUpdateOptionsVNC:
-#
-# Specify the VNC reload options.
-#
-# @addresses: If specified, change set of addresses
-#             to listen for connections. Addresses configured
-#             for websockets are not touched.
-#
-# Since: 7.1
-##
-{ 'struct': 'DisplayUpdateOptionsVNC',
-  'data': { '*addresses': ['SocketAddress'] } }
-
-##
-# @DisplayUpdateOptions:
-#
-# Options of the display configuration reload.
-#
-# @type: Specify the display type.
-#
-# Since: 7.1
-##
-{ 'union': 'DisplayUpdateOptions',
-  'base': {'type': 'DisplayUpdateType'},
-  'discriminator': 'type',
-  'data': { 'vnc': 'DisplayUpdateOptionsVNC' } }
-
-##
-# @display-update:
-#
-# Update display configuration.
-#
-# Returns: Nothing on success.
-#
-# Since: 7.1
-#
-# Example:
-#
-# -> { "execute": "display-update",
-#      "arguments": { "type": "vnc", "addresses":
-#                     [ { "type": "inet", "host": "0.0.0.0",
-#                         "port": "5901" } ] } }
-# <- { "return": {} }
-#
-##
-{ 'command': 'display-update',
-  'data': 'DisplayUpdateOptions',
-  'boxed' : true }

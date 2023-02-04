@@ -27,6 +27,7 @@
 
 #include "net/net.h"
 #include "clients.h"
+#include "qemu-common.h"
 #include "qemu/option.h"
 #include "qemu/main-loop.h"
 #include "qapi/error.h"
@@ -98,7 +99,8 @@ static int net_vde_init(NetClientState *peer, const char *model,
 
     nc = qemu_new_net_client(&net_vde_info, peer, model, name);
 
-    qemu_set_info_str(nc, "sock=%s,fd=%d", sock, vde_datafd(vde));
+    snprintf(nc->info_str, sizeof(nc->info_str), "sock=%s,fd=%d",
+             sock, vde_datafd(vde));
 
     s = DO_UPCAST(VDEState, nc, nc);
 

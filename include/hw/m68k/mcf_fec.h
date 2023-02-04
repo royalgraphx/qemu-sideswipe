@@ -9,10 +9,9 @@
 
 #ifndef HW_M68K_MCF_FEC_H
 #define HW_M68K_MCF_FEC_H
-#include "qom/object.h"
 
 #define TYPE_MCF_FEC_NET "mcf-fec"
-OBJECT_DECLARE_SIMPLE_TYPE(mcf_fec_state, MCF_FEC_NET)
+#define MCF_FEC_NET(obj) OBJECT_CHECK(mcf_fec_state, (obj), TYPE_MCF_FEC_NET)
 
 #define FEC_NUM_IRQ 13
 

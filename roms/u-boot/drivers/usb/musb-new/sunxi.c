@@ -16,22 +16,15 @@
  * This file is part of the Inventra Controller Driver for Linux.
  */
 #include <common.h>
-#include <clk.h>
 #include <dm.h>
 #include <generic-phy.h>
-#include <log.h>
-#include <malloc.h>
 #include <phy-sun4i-usb.h>
-#include <reset.h>
 #include <asm/arch/cpu.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/gpio.h>
 #include <asm-generic/gpio.h>
-#include <dm/device_compat.h>
 #include <dm/lists.h>
 #include <dm/root.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
 #include <linux/usb/musb.h>
 #include "linux-compat.h"
 #include "musb_core.h"
@@ -87,12 +80,16 @@
 
 struct sunxi_musb_config {
 	struct musb_hdrc_config *config;
+	bool has_reset;
+	u8 rst_bit;
+	u8 clkgate_bit;
+	u32 off_reset0;
 };
 
 struct sunxi_glue {
 	struct musb_host_data mdata;
-	struct clk clk;
-	struct reset_ctl rst;
+	struct sunxi_ccm_reg *ccm;
+	u32 *reg_reset0;
 	struct sunxi_musb_config *cfg;
 	struct device dev;
 	struct phy phy;
@@ -257,7 +254,7 @@ static int sunxi_musb_enable(struct musb *musb)
 
 		ret = generic_phy_power_on(&glue->phy);
 		if (ret) {
-			pr_debug("failed to power on USB PHY\n");
+			pr_err("failed to power on USB PHY\n");
 			return ret;
 		}
 	}
@@ -281,7 +278,7 @@ static void sunxi_musb_disable(struct musb *musb)
 	if (is_host_enabled(musb)) {
 		ret = generic_phy_power_off(&glue->phy);
 		if (ret) {
-			pr_debug("failed to power off USB PHY\n");
+			pr_err("failed to power off USB PHY\n");
 			return;
 		}
 	}
@@ -299,27 +296,24 @@ static int sunxi_musb_init(struct musb *musb)
 
 	pr_debug("%s():\n", __func__);
 
-	ret = clk_enable(&glue->clk);
+	ret = generic_phy_init(&glue->phy);
 	if (ret) {
-		dev_err(musb->controller, "failed to enable clock\n");
+		pr_err("failed to init USB PHY\n");
 		return ret;
 	}
 
-	if (reset_valid(&glue->rst)) {
-		ret = reset_deassert(&glue->rst);
-		if (ret) {
-			dev_err(musb->controller, "failed to deassert reset\n");
-			goto err_clk;
-		}
-	}
-
-	ret = generic_phy_init(&glue->phy);
-	if (ret) {
-		dev_dbg(musb->controller, "failed to init USB PHY\n");
-		goto err_rst;
-	}
-
 	musb->isr = sunxi_musb_interrupt;
+
+	setbits_le32(&glue->ccm->ahb_gate0, BIT(AHB_GATE_OFFSET_USB0));
+	if (glue->cfg->clkgate_bit)
+		setbits_le32(&glue->ccm->ahb_gate0,
+			     BIT(glue->cfg->clkgate_bit));
+
+	if (glue->cfg->has_reset)
+		setbits_le32(glue->reg_reset0, BIT(AHB_GATE_OFFSET_USB0));
+
+	if (glue->cfg->rst_bit)
+		setbits_le32(glue->reg_reset0, BIT(glue->cfg->rst_bit));
 
 	USBC_ConfigFIFO_Base();
 	USBC_EnableDpDmPullUp(musb->mregs);
@@ -335,13 +329,6 @@ static int sunxi_musb_init(struct musb *musb)
 	USBC_ForceVbusValidToHigh(musb->mregs);
 
 	return 0;
-
-err_rst:
-	if (reset_valid(&glue->rst))
-		reset_assert(&glue->rst);
-err_clk:
-	clk_disable(&glue->clk);
-	return ret;
 }
 
 static int sunxi_musb_exit(struct musb *musb)
@@ -352,15 +339,21 @@ static int sunxi_musb_exit(struct musb *musb)
 	if (generic_phy_valid(&glue->phy)) {
 		ret = generic_phy_exit(&glue->phy);
 		if (ret) {
-			dev_dbg(musb->controller,
-				"failed to power off usb phy\n");
+			dev_err(dev, "failed to power off usb phy\n");
 			return ret;
 		}
 	}
 
-	if (reset_valid(&glue->rst))
-		reset_assert(&glue->rst);
-	clk_disable(&glue->clk);
+	if (glue->cfg->has_reset)
+		clrbits_le32(glue->reg_reset0, BIT(AHB_GATE_OFFSET_USB0));
+
+	if (glue->cfg->rst_bit)
+		clrbits_le32(glue->reg_reset0, BIT(glue->cfg->rst_bit));
+
+	clrbits_le32(&glue->ccm->ahb_gate0, BIT(AHB_GATE_OFFSET_USB0));
+	if (glue->cfg->clkgate_bit)
+		clrbits_le32(&glue->ccm->ahb_gate0,
+			     BIT(glue->cfg->clkgate_bit));
 
 	return 0;
 }
@@ -457,23 +450,18 @@ static int musb_usb_probe(struct udevice *dev)
 	if (!glue->cfg)
 		return -EINVAL;
 
-	ret = clk_get_by_index(dev, 0, &glue->clk);
-	if (ret) {
-		dev_err(dev, "failed to get clock\n");
-		return ret;
-	}
+	glue->ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
+	if (IS_ERR(glue->ccm))
+		return PTR_ERR(glue->ccm);
 
-	ret = reset_get_by_index(dev, 0, &glue->rst);
-	if (ret && ret != -ENOENT) {
-		dev_err(dev, "failed to get reset\n");
-		return ret;
-	}
+	glue->reg_reset0 = (void *)glue->ccm + glue->cfg->off_reset0;
 
 	ret = generic_phy_get_by_name(dev, "usb", &glue->phy);
 	if (ret) {
 		pr_err("failed to get usb PHY\n");
 		return ret;
 	}
+
 
 	memset(&pdata, 0, sizeof(pdata));
 	pdata.power = 250;
@@ -517,14 +505,21 @@ static int musb_usb_remove(struct udevice *dev)
 
 static const struct sunxi_musb_config sun4i_a10_cfg = {
 	.config = &musb_config,
+	.has_reset = false,
 };
 
 static const struct sunxi_musb_config sun6i_a31_cfg = {
 	.config = &musb_config,
+	.has_reset = true,
+	.off_reset0 = OFF_SUN6I_AHB_RESET0,
 };
 
 static const struct sunxi_musb_config sun8i_h3_cfg = {
 	.config = &musb_config_h3,
+	.has_reset = true,
+	.rst_bit = 23,
+	.clkgate_bit = 23,
+	.off_reset0 = OFF_SUN6I_AHB_RESET0,
 };
 
 static const struct udevice_id sunxi_musb_ids[] = {
@@ -552,6 +547,6 @@ U_BOOT_DRIVER(usb_musb) = {
 #ifdef CONFIG_USB_MUSB_HOST
 	.ops		= &musb_usb_ops,
 #endif
-	.plat_auto	= sizeof(struct usb_plat),
-	.priv_auto	= sizeof(struct sunxi_glue),
+	.platdata_auto_alloc_size = sizeof(struct usb_platdata),
+	.priv_auto_alloc_size = sizeof(struct sunxi_glue),
 };

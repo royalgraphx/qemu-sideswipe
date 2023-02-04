@@ -27,7 +27,8 @@ write -P0xcd 0x3ff0000 64k
         "granularity": 65536,
         "name": "bitmapB",
         "persistent": false,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -35,7 +36,8 @@ write -P0xcd 0x3ff0000 64k
         "granularity": 65536,
         "name": "bitmapA",
         "persistent": false,
-        "recording": true
+        "recording": true,
+        "status": "active"
       }
     ]
   }
@@ -91,7 +93,8 @@ write -P0xcd 0x3ff0000 64k
         "granularity": 65536,
         "name": "bitmapB",
         "persistent": false,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -99,7 +102,8 @@ write -P0xcd 0x3ff0000 64k
         "granularity": 65536,
         "name": "bitmapA",
         "persistent": false,
-        "recording": true
+        "recording": true,
+        "status": "active"
       }
     ]
   }
@@ -193,7 +197,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapC",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       },
       {
         "busy": false,
@@ -201,7 +206,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapB",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       },
       {
         "busy": false,
@@ -209,7 +215,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapA",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       }
     ]
   }
@@ -263,7 +270,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapC",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       },
       {
         "busy": false,
@@ -271,7 +279,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapB",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       },
       {
         "busy": false,
@@ -279,7 +288,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapA",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       }
     ]
   }
@@ -326,7 +336,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapD",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       },
       {
         "busy": false,
@@ -334,7 +345,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapC",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       },
       {
         "busy": false,
@@ -342,7 +354,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapB",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       },
       {
         "busy": false,
@@ -350,7 +363,8 @@ write -P0xea 0x3fe0000 64k
         "granularity": 65536,
         "name": "bitmapA",
         "persistent": false,
-        "recording": false
+        "recording": false,
+        "status": "disabled"
       }
     ]
   }

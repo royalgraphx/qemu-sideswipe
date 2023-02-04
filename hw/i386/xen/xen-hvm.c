@@ -15,15 +15,15 @@
 #include "hw/pci/pci.h"
 #include "hw/pci/pci_host.h"
 #include "hw/i386/pc.h"
+#include "hw/southbridge/piix.h"
 #include "hw/irq.h"
 #include "hw/hw.h"
 #include "hw/i386/apic-msidef.h"
 #include "hw/xen/xen_common.h"
 #include "hw/xen/xen-legacy-backend.h"
 #include "hw/xen/xen-bus.h"
-#include "hw/xen/xen-x86.h"
 #include "qapi/error.h"
-#include "qapi/qapi-commands-migration.h"
+#include "qapi/qapi-commands-misc.h"
 #include "qemu/error-report.h"
 #include "qemu/main-loop.h"
 #include "qemu/range.h"
@@ -32,6 +32,7 @@
 #include "sysemu/xen.h"
 #include "sysemu/xen-mapcache.h"
 #include "trace.h"
+#include "exec/address-spaces.h"
 
 #include <xen/hvm/ioreq.h>
 #include <xen/hvm/e820.h>
@@ -107,7 +108,6 @@ typedef struct XenIOState {
     shared_iopage_t *shared_page;
     shared_vmport_iopage_t *shared_vmport_page;
     buffered_iopage_t *buffered_io_page;
-    xenforeignmemory_resource_handle *fres;
     QEMUTimer *buffered_io_timer;
     CPUState **cpu_by_vcpu_id;
     /* the evtchn port for polling the notification, */
@@ -139,7 +139,7 @@ typedef struct XenIOState {
 
 int xen_pci_slot_get_pirq(PCIDevice *pci_dev, int irq_num)
 {
-    return irq_num + (PCI_SLOT(pci_dev->devfn) << 2);
+    return irq_num + ((pci_dev->devfn >> 3) << 2);
 }
 
 void xen_piix3_set_irq(void *opaque, int irq_num, int level)
@@ -148,9 +148,21 @@ void xen_piix3_set_irq(void *opaque, int irq_num, int level)
                            irq_num & 3, level);
 }
 
-int xen_set_pci_link_route(uint8_t link, uint8_t irq)
+void xen_piix_pci_write_config_client(uint32_t address, uint32_t val, int len)
 {
-    return xendevicemodel_set_pci_link_route(xen_dmod, xen_domid, link, irq);
+    int i;
+
+    /* Scan for updates to PCI link routes (0x60-0x63). */
+    for (i = 0; i < len; i++) {
+        uint8_t v = (val >> (8 * i)) & 0xff;
+        if (v & 0x80) {
+            v = 0;
+        }
+        v &= 0xf;
+        if (((address + i) >= PIIX_PIRQCA) && ((address + i) <= PIIX_PIRQCD)) {
+            xen_set_pci_link_route(xen_domid, address + i - PIIX_PIRQCA, v);
+        }
+    }
 }
 
 int xen_is_pirq_msi(uint32_t msi_data)
@@ -383,7 +395,7 @@ go_physmap:
 
     mr_name = memory_region_name(mr);
 
-    physmap = g_new(XenPhysmap, 1);
+    physmap = g_malloc(sizeof(XenPhysmap));
 
     physmap->start_addr = start_addr;
     physmap->size = size;
@@ -708,7 +720,6 @@ static void xen_log_global_stop(MemoryListener *listener)
 }
 
 static MemoryListener xen_memory_listener = {
-    .name = "xen-memory",
     .region_add = xen_region_add,
     .region_del = xen_region_del,
     .log_start = xen_log_start,
@@ -720,7 +731,6 @@ static MemoryListener xen_memory_listener = {
 };
 
 static MemoryListener xen_io_listener = {
-    .name = "xen-io",
     .region_add = xen_io_add,
     .region_del = xen_io_del,
     .priority = 10,
@@ -1074,11 +1084,10 @@ static void handle_ioreq(XenIOState *state, ioreq_t *req)
     }
 }
 
-static bool handle_buffered_iopage(XenIOState *state)
+static int handle_buffered_iopage(XenIOState *state)
 {
     buffered_iopage_t *buf_page = state->buffered_io_page;
     buf_ioreq_t *buf_req = NULL;
-    bool handled_ioreq = false;
     ioreq_t req;
     int qw;
 
@@ -1131,11 +1140,10 @@ static bool handle_buffered_iopage(XenIOState *state)
         assert(req.dir == IOREQ_WRITE);
         assert(!req.data_is_ptr);
 
-        qatomic_add(&buf_page->read_pointer, qw + 1);
-        handled_ioreq = true;
+        atomic_add(&buf_page->read_pointer, qw + 1);
     }
 
-    return handled_ioreq;
+    return req.count;
 }
 
 static void handle_buffered_io(void *opaque)
@@ -1226,7 +1234,7 @@ static void xen_main_loop_prepare(XenIOState *state)
 }
 
 
-static void xen_hvm_change_state_handler(void *opaque, bool running,
+static void xen_hvm_change_state_handler(void *opaque, int running,
                                          RunState rstate)
 {
     XenIOState *state = opaque;
@@ -1245,9 +1253,6 @@ static void xen_exit_notifier(Notifier *n, void *data)
     XenIOState *state = container_of(n, XenIOState, exit);
 
     xen_destroy_ioreq_server(xen_domid, state->ioservid);
-    if (state->fres != NULL) {
-        xenforeignmemory_unmap_resource(xen_fmem, state->fres);
-    }
 
     xenevtchn_close(state->xce_handle);
     xs_daemon_close(state->xenstore);
@@ -1268,7 +1273,7 @@ static void xen_read_physmap(XenIOState *state)
         return;
 
     for (i = 0; i < num; i++) {
-        physmap = g_new(XenPhysmap, 1);
+        physmap = g_malloc(sizeof (XenPhysmap));
         physmap->phys_offset = strtoull(entries[i], NULL, 16);
         snprintf(path, sizeof(path),
                 "/local/domain/0/device-model/%d/physmap/%s/start_addr",
@@ -1315,6 +1320,7 @@ static void xen_wakeup_notifier(Notifier *notifier, void *data)
 static int xen_map_ioreq_server(XenIOState *state)
 {
     void *addr = NULL;
+    xenforeignmemory_resource_handle *fres;
     xen_pfn_t ioreq_pfn;
     xen_pfn_t bufioreq_pfn;
     evtchn_port_t bufioreq_evtchn;
@@ -1326,12 +1332,12 @@ static int xen_map_ioreq_server(XenIOState *state)
      */
     QEMU_BUILD_BUG_ON(XENMEM_resource_ioreq_server_frame_bufioreq != 0);
     QEMU_BUILD_BUG_ON(XENMEM_resource_ioreq_server_frame_ioreq(0) != 1);
-    state->fres = xenforeignmemory_map_resource(xen_fmem, xen_domid,
+    fres = xenforeignmemory_map_resource(xen_fmem, xen_domid,
                                          XENMEM_resource_ioreq_server,
                                          state->ioservid, 0, 2,
                                          &addr,
                                          PROT_READ | PROT_WRITE, 0);
-    if (state->fres != NULL) {
+    if (fres != NULL) {
         trace_xen_map_resource_ioreq(state->ioservid, addr);
         state->buffered_io_page = addr;
         state->shared_page = addr + TARGET_PAGE_SIZE;
@@ -1389,7 +1395,7 @@ static int xen_map_ioreq_server(XenIOState *state)
     return 0;
 }
 
-void xen_hvm_init_pc(PCMachineState *pcms, MemoryRegion **ram_memory)
+void xen_hvm_init(PCMachineState *pcms, MemoryRegion **ram_memory)
 {
     MachineState *ms = MACHINE(pcms);
     unsigned int max_cpus = ms->smp.max_cpus;
@@ -1397,7 +1403,7 @@ void xen_hvm_init_pc(PCMachineState *pcms, MemoryRegion **ram_memory)
     xen_pfn_t ioreq_pfn;
     XenIOState *state;
 
-    state = g_new0(XenIOState, 1);
+    state = g_malloc0(sizeof (XenIOState));
 
     state->xce_handle = xenevtchn_open(NULL, 0);
     if (state->xce_handle == NULL) {
@@ -1450,7 +1456,7 @@ void xen_hvm_init_pc(PCMachineState *pcms, MemoryRegion **ram_memory)
     }
 
     /* Note: cpus is empty at this point in init */
-    state->cpu_by_vcpu_id = g_new0(CPUState *, max_cpus);
+    state->cpu_by_vcpu_id = g_malloc0(max_cpus * sizeof(CPUState *));
 
     rc = xen_set_ioreq_server_state(xen_domid, state->ioservid, true);
     if (rc < 0) {
@@ -1459,7 +1465,7 @@ void xen_hvm_init_pc(PCMachineState *pcms, MemoryRegion **ram_memory)
         goto err;
     }
 
-    state->ioreq_local_port = g_new0(evtchn_port_t, max_cpus);
+    state->ioreq_local_port = g_malloc0(max_cpus * sizeof (evtchn_port_t));
 
     /* FIXME: how about if we overflow the page here? */
     for (i = 0; i < max_cpus; i++) {
@@ -1486,7 +1492,7 @@ void xen_hvm_init_pc(PCMachineState *pcms, MemoryRegion **ram_memory)
 #else
     xen_map_cache_init(NULL, state);
 #endif
-    xen_ram_init(pcms, ms->ram_size, ram_memory);
+    xen_ram_init(pcms, ram_size, ram_memory);
 
     qemu_add_vm_change_state_handler(xen_hvm_change_state_handler, state);
 
@@ -1602,8 +1608,8 @@ void xen_hvm_modified_memory(ram_addr_t start, ram_addr_t length)
 void qmp_xen_set_global_dirty_log(bool enable, Error **errp)
 {
     if (enable) {
-        memory_global_dirty_log_start(GLOBAL_DIRTY_MIGRATION);
+        memory_global_dirty_log_start();
     } else {
-        memory_global_dirty_log_stop(GLOBAL_DIRTY_MIGRATION);
+        memory_global_dirty_log_stop();
     }
 }

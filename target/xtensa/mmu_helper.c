@@ -26,7 +26,6 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/log.h"
 #include "qemu/main-loop.h"
 #include "qemu/qemu-print.h"
 #include "qemu/units.h"
@@ -1099,7 +1098,7 @@ static void dump_tlb(CPUXtensaState *env, bool dtlb)
                     qemu_printf("\tVaddr       Paddr       ASID  Attr RWX Cache\n"
                                 "\t----------  ----------  ----  ---- --- -------\n");
                 }
-                qemu_printf("\t0x%08x  0x%08x  0x%02x  0x%02x %c%c%c %s\n",
+                qemu_printf("\t0x%08x  0x%08x  0x%02x  0x%02x %c%c%c %-7s\n",
                             entry->vaddr,
                             entry->paddr,
                             entry->asid,

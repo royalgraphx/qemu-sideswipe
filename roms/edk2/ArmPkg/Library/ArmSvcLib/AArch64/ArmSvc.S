@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2012 - 2020, ARM Limited. All rights reserved.
+//  Copyright (c) 2012 - 2017, ARM Limited. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -25,19 +25,14 @@ ASM_PFX(ArmCallSvc):
   ldp   x0, x1, [x0, #0]
 
   svc   #0
-  // Prevent speculative execution beyond svc instruction
-  dsb   nsh
-  isb
 
   // Pop the ARM_SVC_ARGS structure address from the stack into x9
   ldr   x9, [sp, #16]
 
   // Store the SVC returned values into the ARM_SVC_ARGS structure.
-  // A SVC call can return up to 8 values
+  // A SVC call can return up to 4 values - we do not need to store back x4-x7.
   stp   x0, x1, [x9, #0]
   stp   x2, x3, [x9, #16]
-  stp   x4, x5, [x9, #32]
-  stp   x6, x7, [x9, #48]
 
   mov   x0, x9
 

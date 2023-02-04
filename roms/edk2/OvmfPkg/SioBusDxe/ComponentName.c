@@ -12,9 +12,9 @@
 //
 // Driver name table
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE  mSioBusDriverNameTable[] = {
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_UNICODE_STRING_TABLE mSioBusDriverNameTable[] = {
   { "eng;en", L"OVMF Sio Bus Driver" },
-  { NULL,     NULL                   }
+  { NULL , NULL }
 };
 
 //
@@ -29,11 +29,12 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME_PROTOCOL  gSioBusComponentName 
 //
 // EFI Component Name 2 Protocol
 //
-GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gSioBusComponentName2 = {
-  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME)SioBusComponentNameGetDriverName,
-  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME)SioBusComponentNameGetControllerName,
+GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL gSioBusComponentName2 = {
+  (EFI_COMPONENT_NAME2_GET_DRIVER_NAME) SioBusComponentNameGetDriverName,
+  (EFI_COMPONENT_NAME2_GET_CONTROLLER_NAME) SioBusComponentNameGetControllerName,
   "en"
 };
+
 
 /**
   Retrieves a Unicode string that is the user readable name of the driver.
@@ -72,9 +73,9 @@ GLOBAL_REMOVE_IF_UNREFERENCED EFI_COMPONENT_NAME2_PROTOCOL  gSioBusComponentName
 EFI_STATUS
 EFIAPI
 SioBusComponentNameGetDriverName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **DriverName
+  IN  EFI_COMPONENT_NAME_PROTOCOL    *This,
+  IN  CHAR8                          *Language,
+  OUT CHAR16                         **DriverName
   )
 {
   return LookupUnicodeString2 (
@@ -148,11 +149,11 @@ SioBusComponentNameGetDriverName (
 EFI_STATUS
 EFIAPI
 SioBusComponentNameGetControllerName (
-  IN  EFI_COMPONENT_NAME_PROTOCOL  *This,
-  IN  EFI_HANDLE                   ControllerHandle,
-  IN  EFI_HANDLE                   ChildHandle        OPTIONAL,
-  IN  CHAR8                        *Language,
-  OUT CHAR16                       **ControllerName
+  IN  EFI_COMPONENT_NAME_PROTOCOL    *This,
+  IN  EFI_HANDLE                     ControllerHandle,
+  IN  EFI_HANDLE                     ChildHandle        OPTIONAL,
+  IN  CHAR8                          *Language,
+  OUT CHAR16                         **ControllerName
   )
 {
   return EFI_UNSUPPORTED;

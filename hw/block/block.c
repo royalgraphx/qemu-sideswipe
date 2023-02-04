@@ -53,7 +53,7 @@ bool blk_check_size_and_read_all(BlockBackend *blk, void *buf, hwaddr size,
      * block device and read only on demand.
      */
     assert(size <= BDRV_REQUEST_MAX_BYTES);
-    ret = blk_pread(blk, 0, size, buf, 0);
+    ret = blk_pread(blk, 0, buf, size);
     if (ret < 0) {
         error_setg_errno(errp, -ret, "can't read block backend");
         return false;
@@ -65,56 +65,22 @@ bool blkconf_blocksizes(BlockConf *conf, Error **errp)
 {
     BlockBackend *blk = conf->blk;
     BlockSizes blocksizes;
-    BlockDriverState *bs;
-    bool use_blocksizes;
-    bool use_bs;
+    int backend_ret;
 
-    switch (conf->backend_defaults) {
-    case ON_OFF_AUTO_AUTO:
-        use_blocksizes = !blk_probe_blocksizes(blk, &blocksizes);
-        use_bs = false;
-        break;
-
-    case ON_OFF_AUTO_ON:
-        use_blocksizes = !blk_probe_blocksizes(blk, &blocksizes);
-        bs = blk_bs(blk);
-        use_bs = bs;
-        break;
-
-    case ON_OFF_AUTO_OFF:
-        use_blocksizes = false;
-        use_bs = false;
-        break;
-
-    default:
-        abort();
-    }
-
+    backend_ret = blk_probe_blocksizes(blk, &blocksizes);
     /* fill in detected values if they are not defined via qemu command line */
     if (!conf->physical_block_size) {
-        if (use_blocksizes) {
+        if (!backend_ret) {
            conf->physical_block_size = blocksizes.phys;
         } else {
             conf->physical_block_size = BDRV_SECTOR_SIZE;
         }
     }
     if (!conf->logical_block_size) {
-        if (use_blocksizes) {
+        if (!backend_ret) {
             conf->logical_block_size = blocksizes.log;
         } else {
             conf->logical_block_size = BDRV_SECTOR_SIZE;
-        }
-    }
-    if (use_bs) {
-        if (!conf->opt_io_size) {
-            conf->opt_io_size = bs->bl.opt_transfer;
-        }
-        if (conf->discard_granularity == -1) {
-            if (bs->bl.pdiscard_alignment) {
-                conf->discard_granularity = bs->bl.pdiscard_alignment;
-            } else if (bs->bl.request_alignment != 1) {
-                conf->discard_granularity = bs->bl.request_alignment;
-            }
         }
     }
 
@@ -171,7 +137,8 @@ bool blkconf_apply_backend_options(BlockConf *conf, bool readonly,
         perm |= BLK_PERM_WRITE;
     }
 
-    shared_perm = BLK_PERM_CONSISTENT_READ | BLK_PERM_WRITE_UNCHANGED;
+    shared_perm = BLK_PERM_CONSISTENT_READ | BLK_PERM_WRITE_UNCHANGED |
+                  BLK_PERM_GRAPH_MOD;
     if (resizable) {
         shared_perm |= BLK_PERM_RESIZE;
     }
@@ -205,8 +172,6 @@ bool blkconf_apply_backend_options(BlockConf *conf, bool readonly,
     blk_set_enable_write_cache(blk, wce);
     blk_set_on_error(blk, rerror, werror);
 
-    block_acct_setup(blk_get_stats(blk), conf->account_invalid,
-                     conf->account_failed);
     return true;
 }
 

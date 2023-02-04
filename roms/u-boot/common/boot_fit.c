@@ -10,7 +10,6 @@
 #include <common.h>
 #include <errno.h>
 #include <image.h>
-#include <log.h>
 #include <linux/libfdt.h>
 
 static int fdt_offset(const void *fit)

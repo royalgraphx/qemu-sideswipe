@@ -1,8 +1,8 @@
 /******************************************************************************
  * xen-x86_64.h
- *
+ * 
  * Guest OS interface to x86 64-bit Xen.
- *
+ * 
  * SPDX-License-Identifier: MIT
  *
  * Copyright (c) 2004-2006, K A Fraser
@@ -23,10 +23,9 @@
 #ifndef __ASSEMBLY__
 
 struct arch_vcpu_info {
-  UINTN    cr2;
-  UINTN    pad; /* sizeof(vcpu_info_t) == 64 */
+    UINTN cr2;
+    UINTN pad; /* sizeof(vcpu_info_t) == 64 */
 };
-
 typedef struct arch_vcpu_info arch_vcpu_info_t;
 
 #endif /* !__ASSEMBLY__ */

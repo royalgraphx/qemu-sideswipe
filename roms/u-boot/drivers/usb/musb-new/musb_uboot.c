@@ -1,10 +1,6 @@
 #include <common.h>
 #include <console.h>
-#include <dm.h>
-#include <malloc.h>
 #include <watchdog.h>
-#include <linux/delay.h>
-#include <linux/err.h>
 #include <linux/errno.h>
 #include <linux/usb/ch9.h>
 #include <linux/usb/gadget.h>
@@ -114,7 +110,7 @@ static int _musb_submit_bulk_msg(struct musb_host_data *host,
 
 static int _musb_submit_int_msg(struct musb_host_data *host,
 	struct usb_device *dev, unsigned long pipe,
-	void *buffer, int len, int interval, bool nonblock)
+	void *buffer, int len, int interval)
 {
 	construct_urb(&host->urb, &host->hep, dev, USB_ENDPOINT_XFER_INT, pipe,
 		      buffer, len, NULL, interval);
@@ -272,10 +268,9 @@ int submit_control_msg(struct usb_device *dev, unsigned long pipe,
 }
 
 int submit_int_msg(struct usb_device *dev, unsigned long pipe,
-		   void *buffer, int length, int interval, bool nonblock)
+		   void *buffer, int length, int interval)
 {
-	return _musb_submit_int_msg(&musb_host, dev, pipe, buffer, length,
-				    interval, nonblock);
+	return _musb_submit_int_msg(&musb_host, dev, pipe, buffer, length, interval);
 }
 
 struct int_queue *create_int_queue(struct usb_device *dev,
@@ -325,11 +320,10 @@ static int musb_submit_bulk_msg(struct udevice *dev, struct usb_device *udev,
 
 static int musb_submit_int_msg(struct udevice *dev, struct usb_device *udev,
 			       unsigned long pipe, void *buffer, int length,
-			       int interval, bool nonblock)
+			       int interval)
 {
 	struct musb_host_data *host = dev_get_priv(dev);
-	return _musb_submit_int_msg(host, udev, pipe, buffer, length, interval,
-				    nonblock);
+	return _musb_submit_int_msg(host, udev, pipe, buffer, length, interval);
 }
 
 static struct int_queue *musb_create_int_queue(struct udevice *dev,
@@ -453,39 +447,3 @@ struct musb *musb_register(struct musb_hdrc_platform_data *plat, void *bdata,
 
 	return *musbp;
 }
-
-#if CONFIG_IS_ENABLED(DM_USB)
-struct usb_device *usb_dev_get_parent(struct usb_device *udev)
-{
-	struct udevice *parent = udev->dev->parent;
-
-	/*
-	 * When called from usb-uclass.c: usb_scan_device() udev->dev points
-	 * to the parent udevice, not the actual udevice belonging to the
-	 * udev as the device is not instantiated yet.
-	 *
-	 * If dev is an usb-bus, then we are called from usb_scan_device() for
-	 * an usb-device plugged directly into the root port, return NULL.
-	 */
-	if (device_get_uclass_id(udev->dev) == UCLASS_USB)
-		return NULL;
-
-	/*
-	 * If these 2 are not the same we are being called from
-	 * usb_scan_device() and udev itself is the parent.
-	 */
-	if (dev_get_parent_priv(udev->dev) != udev)
-		return udev;
-
-	/* We are being called normally, use the parent pointer */
-	if (device_get_uclass_id(parent) == UCLASS_USB_HUB)
-		return dev_get_parent_priv(parent);
-
-	return NULL;
-}
-#else
-struct usb_device *usb_dev_get_parent(struct usb_device *udev)
-{
-	return udev->parent;
-}
-#endif

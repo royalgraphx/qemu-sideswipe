@@ -33,14 +33,14 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 // Definitions
 //
 
-#define PEI_FAT_CACHE_SIZE        4
-#define PEI_FAT_MAX_BLOCK_SIZE    8192
-#define FAT_MAX_FILE_NAME_LENGTH  128
-#define PEI_FAT_MAX_BLOCK_DEVICE  64
-#define PEI_FAT_MAX_BLOCK_IO_PPI  32
-#define PEI_FAT_MAX_VOLUME        64
+#define PEI_FAT_CACHE_SIZE                            4
+#define PEI_FAT_MAX_BLOCK_SIZE                        8192
+#define FAT_MAX_FILE_NAME_LENGTH                      128
+#define PEI_FAT_MAX_BLOCK_DEVICE                      64
+#define PEI_FAT_MAX_BLOCK_IO_PPI                      32
+#define PEI_FAT_MAX_VOLUME                            64
 
-#define PEI_FAT_MEMORY_PAGE_SIZE  0x1000
+#define PEI_FAT_MEMMORY_PAGE_SIZE                     0x1000
 
 //
 // Data Structures
@@ -49,79 +49,86 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 // The block device
 //
 typedef struct {
-  UINT32                            BlockSize;
-  UINT64                            LastBlock;
-  UINT32                            IoAlign;
-  BOOLEAN                           Logical;
-  BOOLEAN                           PartitionChecked;
+
+  UINT32                        BlockSize;
+  UINT64                        LastBlock;
+  UINT32                        IoAlign;
+  BOOLEAN                       Logical;
+  BOOLEAN                       PartitionChecked;
 
   //
   // Following fields only valid for logical device
   //
-  CHAR8                             PartitionFlag[8];
-  UINT64                            StartingPos;
-  UINTN                             ParentDevNo;
+  CHAR8                         PartitionFlag[8];
+  UINT64                        StartingPos;
+  UINTN                         ParentDevNo;
 
   //
   // Following fields only valid for physical device
   //
-  EFI_PEI_BLOCK_DEVICE_TYPE         DevType;
-  UINT8                             InterfaceType;
+  EFI_PEI_BLOCK_DEVICE_TYPE     DevType;
+  UINT8                         InterfaceType;
   //
   // EFI_PEI_READ_BLOCKS         ReadFunc;
   //
-  EFI_PEI_RECOVERY_BLOCK_IO_PPI     *BlockIo;
-  EFI_PEI_RECOVERY_BLOCK_IO2_PPI    *BlockIo2;
-  UINT8                             PhysicalDevNo;
+  EFI_PEI_RECOVERY_BLOCK_IO_PPI  *BlockIo;
+  EFI_PEI_RECOVERY_BLOCK_IO2_PPI *BlockIo2;
+  UINT8                          PhysicalDevNo;
 } PEI_FAT_BLOCK_DEVICE;
 
 //
 // the Volume structure
 //
 typedef struct {
-  UINTN           BlockDeviceNo;
-  UINTN           VolumeNo;
-  UINT64          VolumeSize;
-  UINTN           MaxCluster;
-  CHAR16          VolumeLabel[FAT_MAX_FILE_NAME_LENGTH];
-  PEI_FAT_TYPE    FatType;
-  UINT64          FatPos;
-  UINT32          SectorSize;
-  UINT32          ClusterSize;
-  UINT64          FirstClusterPos;
-  UINT64          RootDirPos;
-  UINT32          RootEntries;
-  UINT32          RootDirCluster;
+
+  UINTN         BlockDeviceNo;
+  UINTN         VolumeNo;
+  UINT64        VolumeSize;
+  UINTN         MaxCluster;
+  CHAR16        VolumeLabel[FAT_MAX_FILE_NAME_LENGTH];
+  PEI_FAT_TYPE  FatType;
+  UINT64        FatPos;
+  UINT32        SectorSize;
+  UINT32        ClusterSize;
+  UINT64        FirstClusterPos;
+  UINT64        RootDirPos;
+  UINT32        RootEntries;
+  UINT32        RootDirCluster;
+
 } PEI_FAT_VOLUME;
 
 //
 // File instance
 //
 typedef struct {
-  PEI_FAT_VOLUME    *Volume;
-  CHAR16            FileName[FAT_MAX_FILE_NAME_LENGTH];
 
-  BOOLEAN           IsFixedRootDir;
+  PEI_FAT_VOLUME  *Volume;
+  CHAR16          FileName[FAT_MAX_FILE_NAME_LENGTH];
 
-  UINT32            StartingCluster;
-  UINT32            CurrentPos;
-  UINT32            StraightReadAmount;
-  UINT32            CurrentCluster;
+  BOOLEAN         IsFixedRootDir;
 
-  UINT8             Attributes;
-  UINT32            FileSize;
+  UINT32          StartingCluster;
+  UINT32          CurrentPos;
+  UINT32          StraightReadAmount;
+  UINT32          CurrentCluster;
+
+  UINT8           Attributes;
+  UINT32          FileSize;
+
 } PEI_FAT_FILE;
 
 //
 // Cache Buffer
 //
 typedef struct {
-  BOOLEAN    Valid;
-  UINTN      BlockDeviceNo;
-  UINT64     Lba;
-  UINT32     Lru;
-  UINT64     Buffer[PEI_FAT_MAX_BLOCK_SIZE / 8];
-  UINTN      Size;
+
+  BOOLEAN Valid;
+  UINTN   BlockDeviceNo;
+  UINT64  Lba;
+  UINT32  Lru;
+  UINT64  Buffer[PEI_FAT_MAX_BLOCK_SIZE / 8];
+  UINTN   Size;
+
 } PEI_FAT_CACHE_BUFFER;
 
 //
@@ -135,23 +142,25 @@ typedef struct {
 #define PEI_FAT_PRIVATE_DATA_SIGNATURE  SIGNATURE_32 ('p', 'f', 'a', 't')
 
 typedef struct {
-  UINTN                                 Signature;
-  EFI_PEI_DEVICE_RECOVERY_MODULE_PPI    DeviceRecoveryPpi;
-  EFI_PEI_PPI_DESCRIPTOR                PpiDescriptor;
-  EFI_PEI_NOTIFY_DESCRIPTOR             NotifyDescriptor[2];
 
-  UINT8                                 UnicodeCaseMap[0x300];
-  CHAR8                                 *EngUpperMap;
-  CHAR8                                 *EngLowerMap;
-  CHAR8                                 *EngInfoMap;
+  UINTN                               Signature;
+  EFI_PEI_DEVICE_RECOVERY_MODULE_PPI  DeviceRecoveryPpi;
+  EFI_PEI_PPI_DESCRIPTOR              PpiDescriptor;
+  EFI_PEI_NOTIFY_DESCRIPTOR           NotifyDescriptor[2];
 
-  UINT64                                BlockData[PEI_FAT_MAX_BLOCK_SIZE / 8];
-  UINTN                                 BlockDeviceCount;
-  PEI_FAT_BLOCK_DEVICE                  BlockDevice[PEI_FAT_MAX_BLOCK_DEVICE];
-  UINTN                                 VolumeCount;
-  PEI_FAT_VOLUME                        Volume[PEI_FAT_MAX_VOLUME];
-  PEI_FAT_FILE                          File;
-  PEI_FAT_CACHE_BUFFER                  CacheBuffer[PEI_FAT_CACHE_SIZE];
+  UINT8                               UnicodeCaseMap[0x300];
+  CHAR8                               *EngUpperMap;
+  CHAR8                               *EngLowerMap;
+  CHAR8                               *EngInfoMap;
+
+  UINT64                              BlockData[PEI_FAT_MAX_BLOCK_SIZE / 8];
+  UINTN                               BlockDeviceCount;
+  PEI_FAT_BLOCK_DEVICE                BlockDevice[PEI_FAT_MAX_BLOCK_DEVICE];
+  UINTN                               VolumeCount;
+  PEI_FAT_VOLUME                      Volume[PEI_FAT_MAX_VOLUME];
+  PEI_FAT_FILE                        File;
+  PEI_FAT_CACHE_BUFFER                CacheBuffer[PEI_FAT_CACHE_SIZE];
+
 } PEI_FAT_PRIVATE_DATA;
 
 #define PEI_FAT_PRIVATE_DATA_FROM_THIS(a) \
@@ -169,13 +178,14 @@ typedef struct {
 #define UNPACK_UINT32(a) \
   (UINT32) ((((UINT8 *) a)[0] << 0) | (((UINT8 *) a)[1] << 8) | (((UINT8 *) a)[2] << 16) | (((UINT8 *) a)[3] << 24))
 
+
 //
 // API functions
 //
 
 /**
   Finds the recovery file on a FAT volume.
-  This function finds the recovery file named FileName on a specified FAT volume and returns
+  This function finds the the recovery file named FileName on a specified FAT volume and returns
   its FileHandle pointer.
 
   @param  PrivateData             Global memory map for accessing global
@@ -184,7 +194,7 @@ typedef struct {
   @param  FileName                The recovery file name to find.
   @param  Handle                  The output file handle.
 
-  @retval EFI_DEVICE_ERROR        Some error occurred when operating the FAT
+  @retval EFI_DEVICE_ERROR        Some error occured when operating the FAT
                                   volume.
   @retval EFI_NOT_FOUND           The recovery file was not found.
   @retval EFI_SUCCESS             The recovery file was successfully found on the
@@ -198,6 +208,7 @@ FindRecoveryFile (
   IN  CHAR16                *FileName,
   OUT PEI_FILE_HANDLE       *Handle
   );
+
 
 /**
   Returns the number of DXE capsules residing on the device.
@@ -220,10 +231,11 @@ FindRecoveryFile (
 EFI_STATUS
 EFIAPI
 GetNumberRecoveryCapsules (
-  IN EFI_PEI_SERVICES                    **PeiServices,
-  IN EFI_PEI_DEVICE_RECOVERY_MODULE_PPI  *This,
-  OUT UINTN                              *NumberRecoveryCapsules
+  IN EFI_PEI_SERVICES                               **PeiServices,
+  IN EFI_PEI_DEVICE_RECOVERY_MODULE_PPI             *This,
+  OUT UINTN                                         *NumberRecoveryCapsules
   );
+
 
 /**
   Returns the size and type of the requested recovery capsule.
@@ -255,12 +267,13 @@ GetNumberRecoveryCapsules (
 EFI_STATUS
 EFIAPI
 GetRecoveryCapsuleInfo (
-  IN  EFI_PEI_SERVICES                    **PeiServices,
-  IN  EFI_PEI_DEVICE_RECOVERY_MODULE_PPI  *This,
-  IN  UINTN                               CapsuleInstance,
-  OUT UINTN                               *Size,
-  OUT EFI_GUID                            *CapsuleType
+  IN  EFI_PEI_SERVICES                              **PeiServices,
+  IN  EFI_PEI_DEVICE_RECOVERY_MODULE_PPI            *This,
+  IN  UINTN                                         CapsuleInstance,
+  OUT UINTN                                         *Size,
+  OUT EFI_GUID                                      *CapsuleType
   );
+
 
 /**
   Loads a DXE capsule from some media into memory.
@@ -284,11 +297,12 @@ GetRecoveryCapsuleInfo (
 EFI_STATUS
 EFIAPI
 LoadRecoveryCapsule (
-  IN EFI_PEI_SERVICES                    **PeiServices,
-  IN EFI_PEI_DEVICE_RECOVERY_MODULE_PPI  *This,
-  IN UINTN                               CapsuleInstance,
-  OUT VOID                               *Buffer
+  IN EFI_PEI_SERVICES                             **PeiServices,
+  IN EFI_PEI_DEVICE_RECOVERY_MODULE_PPI           *This,
+  IN UINTN                                        CapsuleInstance,
+  OUT VOID                                        *Buffer
   );
+
 
 /**
   This version is different from the version in Unicode collation
@@ -307,10 +321,11 @@ LoadRecoveryCapsule (
 **/
 VOID
 EngFatToStr (
-  IN UINTN    FatSize,
-  IN CHAR8    *Fat,
-  OUT CHAR16  *Str
+  IN UINTN                            FatSize,
+  IN CHAR8                            *Fat,
+  OUT CHAR16                          *Str
   );
+
 
 /**
   Performs a case-insensitive comparison of two Null-terminated Unicode strings.
@@ -326,6 +341,7 @@ EngStriColl (
   IN CHAR16                 *Str1,
   IN CHAR16                 *Str2
   );
+
 
 /**
   Reads a block of data from the block device by calling
@@ -345,12 +361,13 @@ EngStriColl (
 **/
 EFI_STATUS
 FatReadBlock (
-  IN  PEI_FAT_PRIVATE_DATA  *PrivateData,
-  IN  UINTN                 BlockDeviceNo,
-  IN  EFI_PEI_LBA           Lba,
-  IN  UINTN                 BufferSize,
-  OUT VOID                  *Buffer
+  IN  PEI_FAT_PRIVATE_DATA   *PrivateData,
+  IN  UINTN                  BlockDeviceNo,
+  IN  EFI_PEI_LBA            Lba,
+  IN  UINTN                  BufferSize,
+  OUT VOID                   *Buffer
   );
+
 
 /**
   Check if there is a valid FAT in the corresponding Block device
@@ -377,6 +394,7 @@ FatGetBpbInfo (
   IN OUT  PEI_FAT_VOLUME        *Volume
   );
 
+
 /**
   Gets the next cluster in the cluster chain.
 
@@ -397,6 +415,7 @@ FatGetNextCluster (
   IN  UINT32                Cluster,
   OUT UINT32                *NextCluster
   );
+
 
 /**
   Disk reading.
@@ -420,6 +439,7 @@ FatReadDisk (
   OUT VOID                  *Buffer
   );
 
+
 /**
   Set a file's CurrentPos and CurrentCluster, then compute StraightReadAmount.
 
@@ -439,6 +459,7 @@ FatSetFilePos (
   IN  PEI_FAT_FILE          *File,
   IN  UINT32                Pos
   );
+
 
 /**
   Reads file data. Updates the file's CurrentPos.
@@ -460,6 +481,7 @@ FatReadFile (
   IN  UINTN                 Size,
   OUT VOID                  *Buffer
   );
+
 
 /**
   This function reads the next item in the parent directory and
@@ -484,6 +506,7 @@ FatReadNextDirectoryEntry (
   IN  PEI_FAT_FILE          *ParentDir,
   OUT PEI_FAT_FILE          *SubFile
   );
+
 
 /**
   This function finds partitions (logical devices) in physical block devices.

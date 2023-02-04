@@ -7,13 +7,13 @@
 
 **/
 
-#ifndef SEMIHOST_FS_H_
-#define SEMIHOST_FS_H_
+#ifndef __SEMIHOST_FS_H__
+#define __SEMIHOST_FS_H__
 
 EFI_STATUS
 VolumeOpen (
-  IN  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL  *This,
-  OUT EFI_FILE                         **Root
+  IN  EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *This,
+  OUT EFI_FILE                        **Root
   );
 
 /**
@@ -79,7 +79,7 @@ FileClose (
 **/
 EFI_STATUS
 FileDelete (
-  IN EFI_FILE  *This
+  IN EFI_FILE *This
   );
 
 /**
@@ -127,9 +127,9 @@ FileRead (
 **/
 EFI_STATUS
 FileWrite (
-  IN     EFI_FILE  *This,
-  IN OUT UINTN     *BufferSize,
-  IN     VOID      *Buffer
+  IN     EFI_FILE *This,
+  IN OUT UINTN    *BufferSize,
+  IN     VOID     *Buffer
   );
 
 /**
@@ -145,8 +145,8 @@ FileWrite (
 **/
 EFI_STATUS
 FileGetPosition (
-  IN  EFI_FILE  *File,
-  OUT UINT64    *Position
+  IN  EFI_FILE    *File,
+  OUT UINT64      *Position
   );
 
 /**
@@ -157,15 +157,15 @@ FileGetPosition (
   @param[in]  Position  The byte position from the start of the file to set.
 
   @retval  EFI_SUCCESS       The position was set.
-  @retval  EFI_DEVICE_ERROR  The semi-hosting positioning operation failed.
+  @retval  EFI_DEVICE_ERROR  The semi-hosting positionning operation failed.
   @retval  EFI_UNSUPPORTED   The seek request for nonzero is not valid on open
                              directories.
 
 **/
 EFI_STATUS
 FileSetPosition (
-  IN EFI_FILE  *File,
-  IN UINT64    Position
+  IN EFI_FILE *File,
+  IN UINT64   Position
   );
 
 /**
@@ -239,7 +239,8 @@ FileSetInfo (
 
 EFI_STATUS
 FileFlush (
-  IN EFI_FILE  *File
+  IN EFI_FILE *File
   );
 
-#endif // SEMIHOST_FS_H_
+#endif // __SEMIHOST_FS_H__
+

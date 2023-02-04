@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Reads the current value of GS Data Segment Register (GS).
 
@@ -26,3 +29,4 @@ AsmReadGs (
     mov     ax, gs
   }
 }
+

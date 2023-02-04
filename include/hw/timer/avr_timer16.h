@@ -30,7 +30,7 @@
 
 #include "hw/sysbus.h"
 #include "qemu/timer.h"
-#include "qom/object.h"
+#include "hw/hw.h"
 
 enum NextInterrupt {
     OVERFLOW,
@@ -41,9 +41,10 @@ enum NextInterrupt {
 };
 
 #define TYPE_AVR_TIMER16 "avr-timer16"
-OBJECT_DECLARE_SIMPLE_TYPE(AVRTimer16State, AVR_TIMER16)
+#define AVR_TIMER16(obj) \
+    OBJECT_CHECK(AVRTimer16State, (obj), TYPE_AVR_TIMER16)
 
-struct AVRTimer16State {
+typedef struct AVRTimer16State {
     /* <private> */
     SysBusDevice parent_obj;
 
@@ -88,6 +89,6 @@ struct AVRTimer16State {
     uint64_t period_ns;
     uint64_t reset_time_ns;
     enum NextInterrupt next_interrupt;
-};
+} AVRTimer16State;
 
 #endif /* HW_TIMER_AVR_TIMER16_H */

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2019 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2017-2018 The OpenSSL Project Authors. All Rights Reserved.
  * Copyright (c) 2017, Oracle and/or its affiliates.  All rights reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
@@ -14,10 +14,10 @@
 # include <openssl/modes.h>
 # include <openssl/rand.h>
 # include <openssl/rand_drbg.h>
-# include "crypto/aria.h"
-# include "crypto/evp.h"
-# include "modes_local.h"
-# include "evp_local.h"
+# include "internal/aria.h"
+# include "internal/evp_int.h"
+# include "modes_lcl.h"
+# include "evp_locl.h"
 
 /* ARIA subkey Structure */
 typedef struct {
@@ -252,7 +252,7 @@ static int aria_gcm_ctrl(EVP_CIPHER_CTX *c, int type, int arg, void *ptr)
     case EVP_CTRL_INIT:
         gctx->key_set = 0;
         gctx->iv_set = 0;
-        gctx->ivlen = EVP_CIPHER_iv_length(c->cipher);
+        gctx->ivlen = EVP_CIPHER_CTX_iv_length(c);
         gctx->iv = EVP_CIPHER_CTX_iv_noconst(c);
         gctx->taglen = -1;
         gctx->iv_gen = 0;
@@ -272,10 +272,6 @@ static int aria_gcm_ctrl(EVP_CIPHER_CTX *c, int type, int arg, void *ptr)
             }
         }
         gctx->ivlen = arg;
-        return 1;
-
-    case EVP_CTRL_GET_IVLEN:
-        *(int *)ptr = gctx->ivlen;
         return 1;
 
     case EVP_CTRL_AEAD_SET_TAG:
@@ -490,16 +486,6 @@ static int aria_gcm_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
     return 0;
 }
 
-static int aria_gcm_cleanup(EVP_CIPHER_CTX *ctx)
-{
-    EVP_ARIA_GCM_CTX *gctx = EVP_C_DATA(EVP_ARIA_GCM_CTX, ctx);
-
-    if (gctx->iv != EVP_CIPHER_CTX_iv_noconst(ctx))
-        OPENSSL_free(gctx->iv);
-
-    return 1;
-}
-
 static int aria_ccm_init_key(EVP_CIPHER_CTX *ctx, const unsigned char *key,
                             const unsigned char *iv, int enc)
 {
@@ -575,10 +561,6 @@ static int aria_ccm_ctrl(EVP_CIPHER_CTX *c, int type, int arg, void *ptr)
             return 0;
         /* Just copy to first part of IV */
         memcpy(EVP_CIPHER_CTX_iv_noconst(c), ptr, arg);
-        return 1;
-
-    case EVP_CTRL_GET_IVLEN:
-        *(int *)ptr = 15 - cctx->L;
         return 1;
 
     case EVP_CTRL_AEAD_SET_IVLEN:
@@ -695,6 +677,8 @@ static int aria_ccm_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
     if (!cctx->iv_set)
         return -1;
 
+    if (!EVP_CIPHER_CTX_encrypting(ctx) && !cctx->tag_set)
+        return -1;
     if (!out) {
         if (!in) {
             if (CRYPTO_ccm128_setiv(ccm, EVP_CIPHER_CTX_iv_noconst(ctx),
@@ -709,11 +693,6 @@ static int aria_ccm_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
         CRYPTO_ccm128_aad(ccm, in, len);
         return len;
     }
-
-    /* The tag must be set before actually decrypting data */
-    if (!EVP_CIPHER_CTX_encrypting(ctx) && !cctx->tag_set)
-        return -1;
-
     /* If not set length yet do it */
     if (!cctx->len_set) {
         if (CRYPTO_ccm128_setiv(ccm, EVP_CIPHER_CTX_iv_noconst(ctx),
@@ -748,13 +727,10 @@ static int aria_ccm_cipher(EVP_CIPHER_CTX *ctx, unsigned char *out,
     }
 }
 
-#define aria_ccm_cleanup    NULL
-
 #define ARIA_AUTH_FLAGS  (EVP_CIPH_FLAG_DEFAULT_ASN1 \
                           | EVP_CIPH_CUSTOM_IV | EVP_CIPH_FLAG_CUSTOM_CIPHER \
                           | EVP_CIPH_ALWAYS_CALL_INIT | EVP_CIPH_CTRL_INIT \
-                          | EVP_CIPH_CUSTOM_COPY | EVP_CIPH_FLAG_AEAD_CIPHER \
-                          | EVP_CIPH_CUSTOM_IV_LENGTH)
+                          | EVP_CIPH_CUSTOM_COPY | EVP_CIPH_FLAG_AEAD_CIPHER)
 
 #define BLOCK_CIPHER_aead(nid,keylen,blocksize,ivlen,nmode,mode,MODE,flags) \
 static const EVP_CIPHER aria_##keylen##_##mode = { \
@@ -763,7 +739,7 @@ static const EVP_CIPHER aria_##keylen##_##mode = { \
         ARIA_AUTH_FLAGS|EVP_CIPH_##MODE##_MODE,    \
         aria_##mode##_init_key,                    \
         aria_##mode##_cipher,                      \
-        aria_##mode##_cleanup,                     \
+        NULL,                                      \
         sizeof(EVP_ARIA_##MODE##_CTX),             \
         NULL,NULL,aria_##mode##_ctrl,NULL };       \
 const EVP_CIPHER *EVP_aria_##keylen##_##mode(void) \

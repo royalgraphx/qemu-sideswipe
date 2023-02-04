@@ -1,7 +1,7 @@
 /** @file
   Dynamic Table Factory Dxe
 
-  Copyright (c) 2017 - 2019, ARM Limited. All rights reserved.
+  Copyright (c) 2017 - 2018, ARM Limited. All rights reserved.
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
@@ -27,14 +27,14 @@
 /** The Dynamic Table Factory protocol structure that holds the
     list of registered ACPI and SMBIOS table generators.
 */
-EDKII_DYNAMIC_TABLE_FACTORY_INFO  TableFactoryInfo;
+EDKII_DYNAMIC_TABLE_FACTORY_INFO TableFactoryInfo;
 
 /** A structure describing the Dynamic Table Factory protocol.
 */
 STATIC
 CONST
-EDKII_DYNAMIC_TABLE_FACTORY_PROTOCOL  DynamicTableFactoryProtocol = {
-  CREATE_REVISION (1,             0),
+EDKII_DYNAMIC_TABLE_FACTORY_PROTOCOL DynamicTableFactoryProtocol = {
+  CREATE_REVISION (1, 0),
   GetAcpiTableGenerator,
   RegisterAcpiTableGenerator,
   DeregisterAcpiTableGenerator,
@@ -60,8 +60,8 @@ EDKII_DYNAMIC_TABLE_FACTORY_PROTOCOL  DynamicTableFactoryProtocol = {
 EFI_STATUS
 EFIAPI
 DynamicTableFactoryDxeInitialize (
-  IN  EFI_HANDLE        ImageHandle,
-  IN  EFI_SYSTEM_TABLE  *SystemTable
+  IN  EFI_HANDLE                 ImageHandle,
+  IN  EFI_SYSTEM_TABLE   * CONST SystemTable
   )
 {
   EFI_STATUS  Status;
@@ -70,7 +70,7 @@ DynamicTableFactoryDxeInitialize (
                   &ImageHandle,
                   &gEdkiiDynamicTableFactoryProtocolGuid,
                   EFI_NATIVE_INTERFACE,
-                  (VOID *)&DynamicTableFactoryProtocol
+                  (VOID*)&DynamicTableFactoryProtocol
                   );
   if (EFI_ERROR (Status)) {
     DEBUG ((
@@ -80,6 +80,5 @@ DynamicTableFactoryDxeInitialize (
       Status
       ));
   }
-
   return Status;
 }

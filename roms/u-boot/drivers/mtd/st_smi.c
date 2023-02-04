@@ -6,7 +6,6 @@
 
 #include <common.h>
 #include <flash.h>
-#include <linux/delay.h>
 #include <linux/err.h>
 #include <linux/mtd/st_smi.h>
 

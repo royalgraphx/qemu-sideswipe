@@ -9,7 +9,7 @@
 #ifndef __DEBUG_COMMUNICATION_LIB_H__
 #define __DEBUG_COMMUNICATION_LIB_H__
 
-typedef VOID *DEBUG_PORT_HANDLE;
+typedef VOID *    DEBUG_PORT_HANDLE;
 
 /**
   Caller provided function to be invoked at the end of DebugPortInitialize().
@@ -22,7 +22,7 @@ typedef VOID *DEBUG_PORT_HANDLE;
 **/
 typedef
 VOID
-(EFIAPI *DEBUG_PORT_CONTINUE)(
+(EFIAPI * DEBUG_PORT_CONTINUE)(
   IN VOID                *Context,
   IN DEBUG_PORT_HANDLE   DebugPortHandle
   );
@@ -30,7 +30,7 @@ VOID
 /**
   Initialize the debug port.
 
-  This function will initialize debug port to get it ready for data transmission. If
+  This function will initialize debug port to get it ready for data transmition. If
   certain Debug Communication Library instance has to save some private data in the
   stack, this function must work on the mode that doesn't return to the caller, then
   the caller needs to wrap up all rest of logic after DebugPortInitialize() into one
@@ -70,6 +70,7 @@ DebugPortInitialize (
   IN DEBUG_PORT_CONTINUE  Function
   );
 
+
 /**
   Read data from debug device and save the datas in buffer.
 
@@ -90,11 +91,12 @@ DebugPortInitialize (
 UINTN
 EFIAPI
 DebugPortReadBuffer (
-  IN DEBUG_PORT_HANDLE  Handle,
-  IN UINT8              *Buffer,
-  IN UINTN              NumberOfBytes,
-  IN UINTN              Timeout
+  IN DEBUG_PORT_HANDLE     Handle,
+  IN UINT8                 *Buffer,
+  IN UINTN                 NumberOfBytes,
+  IN UINTN                 Timeout
   );
+
 
 /**
   Write data from buffer to debug device.
@@ -116,9 +118,9 @@ DebugPortReadBuffer (
 UINTN
 EFIAPI
 DebugPortWriteBuffer (
-  IN DEBUG_PORT_HANDLE  Handle,
-  IN UINT8              *Buffer,
-  IN UINTN              NumberOfBytes
+  IN DEBUG_PORT_HANDLE     Handle,
+  IN UINT8                 *Buffer,
+  IN UINTN                 NumberOfBytes
   );
 
 /**
@@ -137,7 +139,8 @@ DebugPortWriteBuffer (
 BOOLEAN
 EFIAPI
 DebugPortPollBuffer (
-  IN DEBUG_PORT_HANDLE  Handle
+  IN DEBUG_PORT_HANDLE     Handle
   );
 
 #endif
+

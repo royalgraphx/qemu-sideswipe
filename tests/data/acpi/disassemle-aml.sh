@@ -42,16 +42,11 @@ do
         else
             extra=""
         fi
+        asl=${aml}.dsl
         if [[ "${outdir}" ]];
         then
-            # iasl strips an extension from prefix if there.
-            # since we have some files with . in the name, the
-            # last component gets interpreted as an extension:
-            # add another extension to work around that.
-            prefix="-p ${outdir}/${aml}.dsl"
-        else
-            prefix=""
+            asl="${outdir}"/${machine}/${asl}
         fi
-        iasl ${extra} ${prefix} -d ${aml}
+        iasl -d -p ${asl} ${extra} ${aml}
     done
 done

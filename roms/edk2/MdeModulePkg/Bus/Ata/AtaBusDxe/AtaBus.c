@@ -15,7 +15,7 @@
 //
 // ATA Bus Driver Binding Protocol Instance
 //
-EFI_DRIVER_BINDING_PROTOCOL  gAtaBusDriverBinding = {
+EFI_DRIVER_BINDING_PROTOCOL gAtaBusDriverBinding = {
   AtaBusDriverBindingSupported,
   AtaBusDriverBindingStart,
   AtaBusDriverBindingStop,
@@ -27,9 +27,9 @@ EFI_DRIVER_BINDING_PROTOCOL  gAtaBusDriverBinding = {
 //
 // Template for ATA Child Device.
 //
-ATA_DEVICE  gAtaDeviceTemplate = {
-  ATA_DEVICE_SIGNATURE,              // Signature
-  NULL,                              // Handle
+ATA_DEVICE gAtaDeviceTemplate = {
+  ATA_DEVICE_SIGNATURE,        // Signature
+  NULL,                        // Handle
   {                            // BlockIo
     EFI_BLOCK_IO_PROTOCOL_REVISION,
     NULL,
@@ -65,27 +65,25 @@ ATA_DEVICE  gAtaDeviceTemplate = {
     AtaDiskInfoSenseData,
     AtaDiskInfoWhichIde
   },
-  NULL,                              // DevicePath
+  NULL,                        // DevicePath
   {
     AtaStorageSecurityReceiveData,
     AtaStorageSecuritySendData
   },
-  NULL,                                       // AtaBusDriverData
-  0,                                          // Port
-  0,                                          // PortMultiplierPort
-  { 0,                                     }, // Packet
-  {
-    { 0 },
-  },                                          // Acb
-  NULL,                                       // Asb
-  FALSE,                                      // UdmaValid
-  FALSE,                                      // Lba48Bit
-  NULL,                                       // IdentifyData
-  NULL,                                       // ControllerNameTable
-  { L'\0',                                 }, // ModelName
-  { NULL,                            NULL  }, // AtaTaskList
-  { NULL,                            NULL  }, // AtaSubTaskList
-  FALSE                                       // Abort
+  NULL,                        // AtaBusDriverData
+  0,                           // Port
+  0,                           // PortMultiplierPort
+  { 0, },                      // Packet
+  {{ 0}, },                    // Acb
+  NULL,                        // Asb
+  FALSE,                       // UdmaValid
+  FALSE,                       // Lba48Bit
+  NULL,                        // IdentifyData
+  NULL,                        // ControllerNameTable
+  {L'\0', },                   // ModelName
+  {NULL, NULL},                // AtaTaskList
+  {NULL, NULL},                // AtaSubTaskList
+  FALSE                        // Abort
 };
 
 /**
@@ -103,8 +101,8 @@ ATA_DEVICE  gAtaDeviceTemplate = {
 **/
 VOID *
 AllocateAlignedBuffer (
-  IN ATA_DEVICE  *AtaDevice,
-  IN UINTN       BufferSize
+  IN ATA_DEVICE               *AtaDevice,
+  IN UINTN                    BufferSize
   )
 {
   return AllocateAlignedPages (EFI_SIZE_TO_PAGES (BufferSize), AtaDevice->AtaBusDriverData->AtaPassThru->Mode->IoAlign);
@@ -122,14 +120,15 @@ AllocateAlignedBuffer (
 **/
 VOID
 FreeAlignedBuffer (
-  IN VOID   *Buffer,
-  IN UINTN  BufferSize
+  IN VOID                     *Buffer,
+  IN UINTN                    BufferSize
   )
 {
   if (Buffer != NULL) {
     FreeAlignedPages (Buffer, EFI_SIZE_TO_PAGES (BufferSize));
   }
 }
+
 
 /**
   Release all the resources allocated for the ATA device.
@@ -144,11 +143,11 @@ ReleaseAtaResources (
   IN ATA_DEVICE  *AtaDevice
   )
 {
-  ATA_BUS_ASYN_SUB_TASK  *SubTask;
-  ATA_BUS_ASYN_TASK      *AtaTask;
-  LIST_ENTRY             *Entry;
-  LIST_ENTRY             *DelEntry;
-  EFI_TPL                OldTpl;
+  ATA_BUS_ASYN_SUB_TASK *SubTask;
+  ATA_BUS_ASYN_TASK     *AtaTask;
+  LIST_ENTRY            *Entry;
+  LIST_ENTRY            *DelEntry;
+  EFI_TPL               OldTpl;
 
   FreeUnicodeStringTable (AtaDevice->ControllerNameTable);
   FreeAlignedBuffer (AtaDevice->Asb, sizeof (EFI_ATA_STATUS_BLOCK));
@@ -156,16 +155,14 @@ ReleaseAtaResources (
   if (AtaDevice->DevicePath != NULL) {
     FreePool (AtaDevice->DevicePath);
   }
-
   OldTpl = gBS->RaiseTPL (TPL_NOTIFY);
   if (!IsListEmpty (&AtaDevice->AtaSubTaskList)) {
     //
     // Free the Subtask list.
     //
-    for (Entry = AtaDevice->AtaSubTaskList.ForwardLink;
-         Entry != (&AtaDevice->AtaSubTaskList);
-         )
-    {
+    for(Entry = AtaDevice->AtaSubTaskList.ForwardLink;
+        Entry != (&AtaDevice->AtaSubTaskList);
+       ) {
       DelEntry = Entry;
       Entry    = Entry->ForwardLink;
       SubTask  = ATA_ASYN_SUB_TASK_FROM_ENTRY (DelEntry);
@@ -174,15 +171,13 @@ ReleaseAtaResources (
       FreeAtaSubTask (SubTask);
     }
   }
-
   if (!IsListEmpty (&AtaDevice->AtaTaskList)) {
     //
     // Free the Subtask list.
     //
-    for (Entry = AtaDevice->AtaTaskList.ForwardLink;
-         Entry != (&AtaDevice->AtaTaskList);
-         )
-    {
+    for(Entry = AtaDevice->AtaTaskList.ForwardLink;
+        Entry != (&AtaDevice->AtaTaskList);
+       ) {
       DelEntry = Entry;
       Entry    = Entry->ForwardLink;
       AtaTask  = ATA_ASYN_TASK_FROM_ENTRY (DelEntry);
@@ -191,10 +186,10 @@ ReleaseAtaResources (
       FreePool (AtaTask);
     }
   }
-
   gBS->RestoreTPL (OldTpl);
   FreePool (AtaDevice);
 }
+
 
 /**
   Registers an ATA device.
@@ -215,29 +210,29 @@ ReleaseAtaResources (
 **/
 EFI_STATUS
 RegisterAtaDevice (
-  IN OUT ATA_BUS_DRIVER_DATA  *AtaBusDriverData,
-  IN     UINT16               Port,
-  IN     UINT16               PortMultiplierPort
+  IN OUT ATA_BUS_DRIVER_DATA        *AtaBusDriverData,
+  IN     UINT16                     Port,
+  IN     UINT16                     PortMultiplierPort
   )
 {
-  EFI_STATUS                  Status;
-  ATA_DEVICE                  *AtaDevice;
-  EFI_ATA_PASS_THRU_PROTOCOL  *AtaPassThru;
-  EFI_DEVICE_PATH_PROTOCOL    *NewDevicePathNode;
-  EFI_DEVICE_PATH_PROTOCOL    *DevicePath;
-  EFI_DEVICE_PATH_PROTOCOL    *RemainingDevicePath;
-  EFI_HANDLE                  DeviceHandle;
+  EFI_STATUS                        Status;
+  ATA_DEVICE                        *AtaDevice;
+  EFI_ATA_PASS_THRU_PROTOCOL        *AtaPassThru;
+  EFI_DEVICE_PATH_PROTOCOL          *NewDevicePathNode;
+  EFI_DEVICE_PATH_PROTOCOL          *DevicePath;
+  EFI_DEVICE_PATH_PROTOCOL          *RemainingDevicePath;
+  EFI_HANDLE                        DeviceHandle;
 
-  AtaDevice           = NULL;
-  NewDevicePathNode   = NULL;
-  DevicePath          = NULL;
+  AtaDevice         = NULL;
+  NewDevicePathNode = NULL;
+  DevicePath        = NULL;
   RemainingDevicePath = NULL;
 
   //
   // Build device path
   //
   AtaPassThru = AtaBusDriverData->AtaPassThru;
-  Status      = AtaPassThru->BuildDevicePath (AtaPassThru, Port, PortMultiplierPort, &NewDevicePathNode);
+  Status = AtaPassThru->BuildDevicePath (AtaPassThru, Port, PortMultiplierPort, &NewDevicePathNode);
   if (EFI_ERROR (Status)) {
     goto Done;
   }
@@ -248,10 +243,10 @@ RegisterAtaDevice (
     goto Done;
   }
 
-  DeviceHandle        = NULL;
+  DeviceHandle = NULL;
   RemainingDevicePath = DevicePath;
-  Status              = gBS->LocateDevicePath (&gEfiDevicePathProtocolGuid, &RemainingDevicePath, &DeviceHandle);
-  if (!EFI_ERROR (Status) && (DeviceHandle != NULL) && IsDevicePathEnd (RemainingDevicePath)) {
+  Status = gBS->LocateDevicePath (&gEfiDevicePathProtocolGuid, &RemainingDevicePath, &DeviceHandle);
+  if (!EFI_ERROR (Status) && (DeviceHandle != NULL) && IsDevicePathEnd(RemainingDevicePath)) {
     Status = EFI_ALREADY_STARTED;
     FreePool (DevicePath);
     goto Done;
@@ -275,12 +270,11 @@ RegisterAtaDevice (
   AtaDevice->DevicePath         = DevicePath;
   AtaDevice->Port               = Port;
   AtaDevice->PortMultiplierPort = PortMultiplierPort;
-  AtaDevice->Asb                = AllocateAlignedBuffer (AtaDevice, sizeof (EFI_ATA_STATUS_BLOCK));
+  AtaDevice->Asb = AllocateAlignedBuffer (AtaDevice, sizeof (EFI_ATA_STATUS_BLOCK));
   if (AtaDevice->Asb == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
     goto Done;
   }
-
   AtaDevice->IdentifyData = AllocateAlignedBuffer (AtaDevice, sizeof (ATA_IDENTIFY_DATA));
   if (AtaDevice->IdentifyData == NULL) {
     Status = EFI_OUT_OF_RESOURCES;
@@ -364,7 +358,7 @@ RegisterAtaDevice (
   // If yes, then install Storage Security Protocol at the ata device handle.
   //
   if ((AtaDevice->IdentifyData->trusted_computing_support & BIT0) != 0) {
-    DEBUG ((DEBUG_INFO, "Found TCG support in Port %x PortMultiplierPort %x\n", Port, PortMultiplierPort));
+    DEBUG ((EFI_D_INFO, "Found TCG support in Port %x PortMultiplierPort %x\n", Port, PortMultiplierPort));
     Status = gBS->InstallProtocolInterface (
                     &AtaDevice->Handle,
                     &gEfiStorageSecurityCommandProtocolGuid,
@@ -374,14 +368,13 @@ RegisterAtaDevice (
     if (EFI_ERROR (Status)) {
       goto Done;
     }
-
-    DEBUG ((DEBUG_INFO, "Successfully Install Storage Security Protocol on the ATA device\n"));
+    DEBUG ((EFI_D_INFO, "Successfully Install Storage Security Protocol on the ATA device\n"));
   }
 
   gBS->OpenProtocol (
          AtaBusDriverData->Controller,
          &gEfiAtaPassThruProtocolGuid,
-         (VOID **)&AtaPassThru,
+         (VOID **) &AtaPassThru,
          AtaBusDriverData->DriverBindingHandle,
          AtaDevice->Handle,
          EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
@@ -394,11 +387,11 @@ Done:
 
   if (EFI_ERROR (Status) && (AtaDevice != NULL)) {
     ReleaseAtaResources (AtaDevice);
-    DEBUG ((DEBUG_ERROR | DEBUG_INIT, "Failed to initialize Port %x PortMultiplierPort %x, status = %r\n", Port, PortMultiplierPort, Status));
+    DEBUG ((EFI_D_ERROR | EFI_D_INIT, "Failed to initialize Port %x PortMultiplierPort %x, status = %r\n", Port, PortMultiplierPort, Status));
   }
-
   return Status;
 }
+
 
 /**
   Unregisters an ATA device.
@@ -416,25 +409,25 @@ Done:
 **/
 EFI_STATUS
 UnregisterAtaDevice (
-  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN  EFI_HANDLE                   Controller,
-  IN  EFI_HANDLE                   Handle
+  IN  EFI_DRIVER_BINDING_PROTOCOL    *This,
+  IN  EFI_HANDLE                     Controller,
+  IN  EFI_HANDLE                     Handle
   )
 {
-  EFI_STATUS                             Status;
-  EFI_BLOCK_IO_PROTOCOL                  *BlockIo;
-  EFI_BLOCK_IO2_PROTOCOL                 *BlockIo2;
-  ATA_DEVICE                             *AtaDevice;
-  EFI_ATA_PASS_THRU_PROTOCOL             *AtaPassThru;
-  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *StorageSecurity;
+  EFI_STATUS                               Status;
+  EFI_BLOCK_IO_PROTOCOL                    *BlockIo;
+  EFI_BLOCK_IO2_PROTOCOL                   *BlockIo2;
+  ATA_DEVICE                               *AtaDevice;
+  EFI_ATA_PASS_THRU_PROTOCOL               *AtaPassThru;
+  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *StorageSecurity;
 
-  BlockIo2 =     NULL;
-  BlockIo  =     NULL;
+  BlockIo2             =     NULL;
+  BlockIo              =     NULL;
 
   Status = gBS->OpenProtocol (
                   Handle,
                   &gEfiBlockIoProtocolGuid,
-                  (VOID **)&BlockIo,
+                  (VOID **) &BlockIo,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -446,7 +439,7 @@ UnregisterAtaDevice (
     Status = gBS->OpenProtocol (
                     Handle,
                     &gEfiBlockIo2ProtocolGuid,
-                    (VOID **)&BlockIo2,
+                    (VOID **) &BlockIo2,
                     This->DriverBindingHandle,
                     Controller,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -495,13 +488,13 @@ UnregisterAtaDevice (
 
   if (EFI_ERROR (Status)) {
     gBS->OpenProtocol (
-           Controller,
-           &gEfiAtaPassThruProtocolGuid,
-           (VOID **)&AtaPassThru,
-           This->DriverBindingHandle,
-           Handle,
-           EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
-           );
+          Controller,
+          &gEfiAtaPassThruProtocolGuid,
+          (VOID **) &AtaPassThru,
+          This->DriverBindingHandle,
+          Handle,
+          EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
+          );
     return Status;
   }
 
@@ -511,7 +504,7 @@ UnregisterAtaDevice (
   Status = gBS->OpenProtocol (
                   Handle,
                   &gEfiStorageSecurityCommandProtocolGuid,
-                  (VOID **)&StorageSecurity,
+                  (VOID **) &StorageSecurity,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -525,13 +518,13 @@ UnregisterAtaDevice (
                     );
     if (EFI_ERROR (Status)) {
       gBS->OpenProtocol (
-             Controller,
-             &gEfiAtaPassThruProtocolGuid,
-             (VOID **)&AtaPassThru,
-             This->DriverBindingHandle,
-             Handle,
-             EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
-             );
+        Controller,
+        &gEfiAtaPassThruProtocolGuid,
+        (VOID **) &AtaPassThru,
+        This->DriverBindingHandle,
+        Handle,
+        EFI_OPEN_PROTOCOL_BY_CHILD_CONTROLLER
+        );
       return Status;
     }
   }
@@ -539,6 +532,8 @@ UnregisterAtaDevice (
   ReleaseAtaResources (AtaDevice);
   return EFI_SUCCESS;
 }
+
+
 
 /**
   Tests to see if this driver supports a given controller. If a child device is provided,
@@ -590,11 +585,11 @@ AtaBusDriverBindingSupported (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                  Status;
-  EFI_DEVICE_PATH_PROTOCOL    *ParentDevicePath;
-  EFI_ATA_PASS_THRU_PROTOCOL  *AtaPassThru;
-  UINT16                      Port;
-  UINT16                      PortMultiplierPort;
+  EFI_STATUS                        Status;
+  EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath;
+  EFI_ATA_PASS_THRU_PROTOCOL        *AtaPassThru;
+  UINT16                            Port;
+  UINT16                            PortMultiplierPort;
 
   //
   // Test EFI_ATA_PASS_THRU_PROTOCOL on controller handle.
@@ -602,7 +597,7 @@ AtaBusDriverBindingSupported (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiAtaPassThruProtocolGuid,
-                  (VOID **)&AtaPassThru,
+                  (VOID **) &AtaPassThru,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -624,11 +619,11 @@ AtaBusDriverBindingSupported (
     // Close the I/O Abstraction(s) used to perform the supported test
     //
     gBS->CloseProtocol (
-           Controller,
-           &gEfiAtaPassThruProtocolGuid,
-           This->DriverBindingHandle,
-           Controller
-           );
+          Controller,
+          &gEfiAtaPassThruProtocolGuid,
+          This->DriverBindingHandle,
+          Controller
+          );
     return EFI_UNSUPPORTED;
   }
 
@@ -642,11 +637,11 @@ AtaBusDriverBindingSupported (
       // Close the I/O Abstraction(s) used to perform the supported test
       //
       gBS->CloseProtocol (
-             Controller,
-             &gEfiAtaPassThruProtocolGuid,
-             This->DriverBindingHandle,
-             Controller
-             );
+            Controller,
+            &gEfiAtaPassThruProtocolGuid,
+            This->DriverBindingHandle,
+            Controller
+            );
       return Status;
     }
   }
@@ -655,11 +650,11 @@ AtaBusDriverBindingSupported (
   // Close the I/O Abstraction(s) used to perform the supported test
   //
   gBS->CloseProtocol (
-         Controller,
-         &gEfiAtaPassThruProtocolGuid,
-         This->DriverBindingHandle,
-         Controller
-         );
+        Controller,
+        &gEfiAtaPassThruProtocolGuid,
+        This->DriverBindingHandle,
+        Controller
+        );
 
   //
   // Open the EFI Device Path protocol needed to perform the supported test
@@ -667,13 +662,14 @@ AtaBusDriverBindingSupported (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID **)&ParentDevicePath,
+                  (VOID **) &ParentDevicePath,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
                   );
   return Status;
 }
+
 
 /**
   Starts a device controller or a bus controller.
@@ -707,7 +703,7 @@ AtaBusDriverBindingSupported (
   @retval EFI_SUCCESS              The device was started.
   @retval EFI_DEVICE_ERROR         The device could not be started due to a device error.Currently not implemented.
   @retval EFI_OUT_OF_RESOURCES     The request could not be completed due to a lack of resources.
-  @retval Others                   The driver failed to start the device.
+  @retval Others                   The driver failded to start the device.
 
 **/
 EFI_STATUS
@@ -718,19 +714,19 @@ AtaBusDriverBindingStart (
   IN EFI_DEVICE_PATH_PROTOCOL     *RemainingDevicePath
   )
 {
-  EFI_STATUS                  Status;
-  EFI_ATA_PASS_THRU_PROTOCOL  *AtaPassThru;
-  EFI_DEVICE_PATH_PROTOCOL    *ParentDevicePath;
-  ATA_BUS_DRIVER_DATA         *AtaBusDriverData;
-  UINT16                      Port;
-  UINT16                      PortMultiplierPort;
+  EFI_STATUS                        Status;
+  EFI_ATA_PASS_THRU_PROTOCOL        *AtaPassThru;
+  EFI_DEVICE_PATH_PROTOCOL          *ParentDevicePath;
+  ATA_BUS_DRIVER_DATA               *AtaBusDriverData;
+  UINT16                            Port;
+  UINT16                            PortMultiplierPort;
 
   AtaBusDriverData = NULL;
 
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiDevicePathProtocolGuid,
-                  (VOID **)&ParentDevicePath,
+                  (VOID **) &ParentDevicePath,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -751,7 +747,7 @@ AtaBusDriverBindingStart (
   Status = gBS->OpenProtocol (
                   Controller,
                   &gEfiAtaPassThruProtocolGuid,
-                  (VOID **)&AtaPassThru,
+                  (VOID **) &AtaPassThru,
                   This->DriverBindingHandle,
                   Controller,
                   EFI_OPEN_PROTOCOL_BY_DRIVER
@@ -770,9 +766,9 @@ AtaBusDriverBindingStart (
       goto ErrorExit;
     }
 
-    AtaBusDriverData->AtaPassThru         = AtaPassThru;
-    AtaBusDriverData->Controller          = Controller;
-    AtaBusDriverData->ParentDevicePath    = ParentDevicePath;
+    AtaBusDriverData->AtaPassThru = AtaPassThru;
+    AtaBusDriverData->Controller  = Controller;
+    AtaBusDriverData->ParentDevicePath = ParentDevicePath;
     AtaBusDriverData->DriverBindingHandle = This->DriverBindingHandle;
 
     Status = gBS->InstallMultipleProtocolInterfaces (
@@ -784,11 +780,12 @@ AtaBusDriverBindingStart (
     if (EFI_ERROR (Status)) {
       goto ErrorExit;
     }
+
   } else {
     Status = gBS->OpenProtocol (
                     Controller,
                     &gEfiCallerIdGuid,
-                    (VOID **)&AtaBusDriverData,
+                    (VOID **) &AtaBusDriverData,
                     This->DriverBindingHandle,
                     Controller,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
@@ -829,16 +826,14 @@ AtaBusDriverBindingStart (
           //
           break;
         }
-
         RegisterAtaDevice (AtaBusDriverData, Port, PortMultiplierPort);
       }
     }
-
     Status = EFI_SUCCESS;
   } else if (!IsDevicePathEnd (RemainingDevicePath)) {
     Status = AtaPassThru->GetDevice (AtaPassThru, RemainingDevicePath, &Port, &PortMultiplierPort);
     if (!EFI_ERROR (Status)) {
-      Status = RegisterAtaDevice (AtaBusDriverData, Port, PortMultiplierPort);
+      Status = RegisterAtaDevice (AtaBusDriverData,Port, PortMultiplierPort);
     }
   }
 
@@ -857,14 +852,16 @@ ErrorExit:
   }
 
   gBS->CloseProtocol (
-         Controller,
-         &gEfiAtaPassThruProtocolGuid,
-         This->DriverBindingHandle,
-         Controller
-         );
+        Controller,
+        &gEfiAtaPassThruProtocolGuid,
+        This->DriverBindingHandle,
+        Controller
+        );
 
   return Status;
+
 }
+
 
 /**
   Stops a device controller or a bus controller.
@@ -895,42 +892,42 @@ ErrorExit:
 EFI_STATUS
 EFIAPI
 AtaBusDriverBindingStop (
-  IN  EFI_DRIVER_BINDING_PROTOCOL  *This,
-  IN  EFI_HANDLE                   Controller,
-  IN  UINTN                        NumberOfChildren,
-  IN  EFI_HANDLE                   *ChildHandleBuffer
+  IN  EFI_DRIVER_BINDING_PROTOCOL     *This,
+  IN  EFI_HANDLE                      Controller,
+  IN  UINTN                           NumberOfChildren,
+  IN  EFI_HANDLE                      *ChildHandleBuffer
   )
 {
-  EFI_STATUS           Status;
-  BOOLEAN              AllChildrenStopped;
-  UINTN                Index;
-  ATA_BUS_DRIVER_DATA  *AtaBusDriverData;
+  EFI_STATUS                  Status;
+  BOOLEAN                     AllChildrenStopped;
+  UINTN                       Index;
+  ATA_BUS_DRIVER_DATA         *AtaBusDriverData;
 
   if (NumberOfChildren == 0) {
     Status = gBS->OpenProtocol (
                     Controller,
                     &gEfiCallerIdGuid,
-                    (VOID **)&AtaBusDriverData,
+                    (VOID **) &AtaBusDriverData,
                     This->DriverBindingHandle,
                     Controller,
                     EFI_OPEN_PROTOCOL_GET_PROTOCOL
                     );
     if (!EFI_ERROR (Status)) {
       gBS->UninstallMultipleProtocolInterfaces (
-             Controller,
-             &gEfiCallerIdGuid,
-             AtaBusDriverData,
-             NULL
-             );
+            Controller,
+            &gEfiCallerIdGuid,
+            AtaBusDriverData,
+            NULL
+            );
       FreePool (AtaBusDriverData);
     }
 
     gBS->CloseProtocol (
-           Controller,
-           &gEfiAtaPassThruProtocolGuid,
-           This->DriverBindingHandle,
-           Controller
-           );
+          Controller,
+          &gEfiAtaPassThruProtocolGuid,
+          This->DriverBindingHandle,
+          Controller
+          );
 
     return EFI_SUCCESS;
   }
@@ -938,6 +935,7 @@ AtaBusDriverBindingStop (
   AllChildrenStopped = TRUE;
 
   for (Index = 0; Index < NumberOfChildren; Index++) {
+
     Status = UnregisterAtaDevice (This, Controller, ChildHandleBuffer[Index]);
     if (EFI_ERROR (Status)) {
       AllChildrenStopped = FALSE;
@@ -950,6 +948,7 @@ AtaBusDriverBindingStop (
 
   return EFI_SUCCESS;
 }
+
 
 /**
   Reset the Block Device.
@@ -965,13 +964,13 @@ AtaBusDriverBindingStop (
 EFI_STATUS
 EFIAPI
 AtaBlockIoReset (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  BOOLEAN                ExtendedVerification
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  BOOLEAN                 ExtendedVerification
   )
 {
-  EFI_STATUS  Status;
-  ATA_DEVICE  *AtaDevice;
-  EFI_TPL     OldTpl;
+  EFI_STATUS      Status;
+  ATA_DEVICE      *AtaDevice;
+  EFI_TPL         OldTpl;
 
   OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
 
@@ -986,6 +985,7 @@ AtaBlockIoReset (
   gBS->RestoreTPL (OldTpl);
   return Status;
 }
+
 
 /**
   Read/Write BufferSize bytes from Lba from/into Buffer.
@@ -1007,7 +1007,7 @@ AtaBlockIoReset (
   @retval EFI_WRITE_PROTECTED   The device can not be read/written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the read/write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The read/write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -1015,30 +1015,30 @@ AtaBlockIoReset (
 **/
 EFI_STATUS
 BlockIoReadWrite (
-  IN     VOID                 *This,
-  IN     UINT32               MediaId,
-  IN     EFI_LBA              Lba,
-  IN OUT EFI_BLOCK_IO2_TOKEN  *Token,
-  IN     UINTN                BufferSize,
-  OUT    VOID                 *Buffer,
-  IN     BOOLEAN              IsBlockIo2,
-  IN     BOOLEAN              IsWrite
+  IN     VOID                    *This,
+  IN     UINT32                  MediaId,
+  IN     EFI_LBA                 Lba,
+  IN OUT EFI_BLOCK_IO2_TOKEN     *Token,
+  IN     UINTN                   BufferSize,
+  OUT    VOID                    *Buffer,
+  IN     BOOLEAN                 IsBlockIo2,
+  IN     BOOLEAN                 IsWrite
   )
 {
-  ATA_DEVICE          *AtaDevice;
-  EFI_STATUS          Status;
-  EFI_TPL             OldTpl;
-  EFI_BLOCK_IO_MEDIA  *Media;
-  UINTN               BlockSize;
-  UINTN               NumberOfBlocks;
-  UINTN               IoAlign;
+  ATA_DEVICE                        *AtaDevice;
+  EFI_STATUS                        Status;
+  EFI_TPL                           OldTpl;
+  EFI_BLOCK_IO_MEDIA                *Media;
+  UINTN                             BlockSize;
+  UINTN                             NumberOfBlocks;
+  UINTN                             IoAlign;
 
   if (IsBlockIo2) {
-    Media     = ((EFI_BLOCK_IO2_PROTOCOL *)This)->Media;
-    AtaDevice = ATA_DEVICE_FROM_BLOCK_IO2 (This);
+   Media     = ((EFI_BLOCK_IO2_PROTOCOL *) This)->Media;
+   AtaDevice = ATA_DEVICE_FROM_BLOCK_IO2 (This);
   } else {
-    Media     = ((EFI_BLOCK_IO_PROTOCOL *)This)->Media;
-    AtaDevice = ATA_DEVICE_FROM_BLOCK_IO (This);
+   Media     = ((EFI_BLOCK_IO_PROTOCOL *) This)->Media;
+   AtaDevice = ATA_DEVICE_FROM_BLOCK_IO (This);
   }
 
   if (MediaId != Media->MediaId) {
@@ -1057,7 +1057,6 @@ BlockIoReadWrite (
       Token->TransactionStatus = EFI_SUCCESS;
       gBS->SignalEvent (Token->Event);
     }
-
     return EFI_SUCCESS;
   }
 
@@ -1066,13 +1065,13 @@ BlockIoReadWrite (
     return EFI_BAD_BUFFER_SIZE;
   }
 
-  NumberOfBlocks = BufferSize / BlockSize;
+  NumberOfBlocks  = BufferSize / BlockSize;
   if ((Lba + NumberOfBlocks - 1) > Media->LastBlock) {
     return EFI_INVALID_PARAMETER;
   }
 
   IoAlign = Media->IoAlign;
-  if ((IoAlign > 0) && (((UINTN)Buffer & (IoAlign - 1)) != 0)) {
+  if (IoAlign > 0 && (((UINTN) Buffer & (IoAlign - 1)) != 0)) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1088,6 +1087,7 @@ BlockIoReadWrite (
   return Status;
 }
 
+
 /**
   Read BufferSize bytes from Lba into Buffer.
 
@@ -1101,7 +1101,7 @@ BlockIoReadWrite (
   @retval EFI_SUCCESS           The data was read correctly from the device.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the read.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHANGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The read request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -1110,15 +1110,16 @@ BlockIoReadWrite (
 EFI_STATUS
 EFIAPI
 AtaBlockIoReadBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  UINT32                 MediaId,
-  IN  EFI_LBA                Lba,
-  IN  UINTN                  BufferSize,
-  OUT VOID                   *Buffer
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  UINT32                  MediaId,
+  IN  EFI_LBA                 Lba,
+  IN  UINTN                   BufferSize,
+  OUT VOID                    *Buffer
   )
 {
-  return BlockIoReadWrite ((VOID *)This, MediaId, Lba, NULL, BufferSize, Buffer, FALSE, FALSE);
+  return BlockIoReadWrite ((VOID *) This, MediaId, Lba, NULL, BufferSize, Buffer, FALSE, FALSE);
 }
+
 
 /**
   Write BufferSize bytes from Lba into Buffer.
@@ -1134,7 +1135,7 @@ AtaBlockIoReadBlocks (
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -1143,15 +1144,16 @@ AtaBlockIoReadBlocks (
 EFI_STATUS
 EFIAPI
 AtaBlockIoWriteBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This,
-  IN  UINT32                 MediaId,
-  IN  EFI_LBA                Lba,
-  IN  UINTN                  BufferSize,
-  IN  VOID                   *Buffer
+  IN  EFI_BLOCK_IO_PROTOCOL   *This,
+  IN  UINT32                  MediaId,
+  IN  EFI_LBA                 Lba,
+  IN  UINTN                   BufferSize,
+  IN  VOID                    *Buffer
   )
 {
-  return BlockIoReadWrite ((VOID *)This, MediaId, Lba, NULL, BufferSize, Buffer, FALSE, TRUE);
+  return BlockIoReadWrite ((VOID *) This, MediaId, Lba, NULL, BufferSize, Buffer, FALSE, TRUE);
 }
+
 
 /**
   Flush the Block Device.
@@ -1166,7 +1168,7 @@ AtaBlockIoWriteBlocks (
 EFI_STATUS
 EFIAPI
 AtaBlockIoFlushBlocks (
-  IN  EFI_BLOCK_IO_PROTOCOL  *This
+  IN  EFI_BLOCK_IO_PROTOCOL   *This
   )
 {
   //
@@ -1193,9 +1195,9 @@ AtaBlockIoResetEx (
   IN  BOOLEAN                 ExtendedVerification
   )
 {
-  EFI_STATUS  Status;
-  ATA_DEVICE  *AtaDevice;
-  EFI_TPL     OldTpl;
+  EFI_STATUS      Status;
+  ATA_DEVICE      *AtaDevice;
+  EFI_TPL         OldTpl;
 
   OldTpl = gBS->RaiseTPL (TPL_CALLBACK);
 
@@ -1250,8 +1252,9 @@ AtaBlockIoReadBlocksEx (
   OUT VOID                    *Buffer
   )
 {
-  return BlockIoReadWrite ((VOID *)This, MediaId, Lba, Token, BufferSize, Buffer, TRUE, FALSE);
+  return BlockIoReadWrite ((VOID *) This, MediaId, Lba, Token, BufferSize, Buffer, TRUE, FALSE);
 }
+
 
 /**
   Write BufferSize bytes from Lba into Buffer.
@@ -1269,7 +1272,7 @@ AtaBlockIoReadBlocksEx (
   @retval EFI_WRITE_PROTECTED   The device can not be written to.
   @retval EFI_DEVICE_ERROR      The device reported an error while performing the write.
   @retval EFI_NO_MEDIA          There is no media in the device.
-  @retval EFI_MEDIA_CHANGED     The MediaId does not match the current device.
+  @retval EFI_MEDIA_CHNAGED     The MediaId does not matched the current device.
   @retval EFI_BAD_BUFFER_SIZE   The Buffer was not a multiple of the block size of the device.
   @retval EFI_INVALID_PARAMETER The write request contains LBAs that are not valid,
                                 or the buffer is not on proper alignment.
@@ -1286,8 +1289,9 @@ AtaBlockIoWriteBlocksEx (
   IN  VOID                    *Buffer
   )
 {
-  return BlockIoReadWrite ((VOID *)This, MediaId, Lba, Token, BufferSize, Buffer, TRUE, TRUE);
+  return BlockIoReadWrite ((VOID *) This, MediaId, Lba, Token, BufferSize, Buffer, TRUE, TRUE);
 }
+
 
 /**
   Flush the Block Device.
@@ -1310,14 +1314,12 @@ AtaBlockIoFlushBlocksEx (
   //
   // Signal event and return directly.
   //
-  if ((Token != NULL) && (Token->Event != NULL)) {
+  if (Token != NULL && Token->Event != NULL) {
     Token->TransactionStatus = EFI_SUCCESS;
     gBS->SignalEvent (Token->Event);
   }
-
   return EFI_SUCCESS;
 }
-
 /**
   Provides inquiry information for the controller type.
 
@@ -1337,13 +1339,14 @@ AtaBlockIoFlushBlocksEx (
 EFI_STATUS
 EFIAPI
 AtaDiskInfoInquiry (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *InquiryData,
-  IN OUT UINT32                  *InquiryDataSize
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *InquiryData,
+  IN OUT UINT32                   *InquiryDataSize
   )
 {
   return EFI_NOT_FOUND;
 }
+
 
 /**
   Provides identify information for the controller type.
@@ -1366,13 +1369,13 @@ AtaDiskInfoInquiry (
 EFI_STATUS
 EFIAPI
 AtaDiskInfoIdentify (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *IdentifyData,
-  IN OUT UINT32                  *IdentifyDataSize
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *IdentifyData,
+  IN OUT UINT32                   *IdentifyDataSize
   )
 {
-  EFI_STATUS  Status;
-  ATA_DEVICE  *AtaDevice;
+  EFI_STATUS                      Status;
+  ATA_DEVICE                      *AtaDevice;
 
   AtaDevice = ATA_DEVICE_FROM_DISK_INFO (This);
 
@@ -1381,11 +1384,11 @@ AtaDiskInfoIdentify (
     Status = EFI_SUCCESS;
     CopyMem (IdentifyData, AtaDevice->IdentifyData, sizeof (ATA_IDENTIFY_DATA));
   }
-
   *IdentifyDataSize = sizeof (ATA_IDENTIFY_DATA);
 
   return Status;
 }
+
 
 /**
   Provides sense data information for the controller type.
@@ -1407,14 +1410,15 @@ AtaDiskInfoIdentify (
 EFI_STATUS
 EFIAPI
 AtaDiskInfoSenseData (
-  IN     EFI_DISK_INFO_PROTOCOL  *This,
-  IN OUT VOID                    *SenseData,
-  IN OUT UINT32                  *SenseDataSize,
-  OUT    UINT8                   *SenseDataNumber
+  IN     EFI_DISK_INFO_PROTOCOL   *This,
+  IN OUT VOID                     *SenseData,
+  IN OUT UINT32                   *SenseDataSize,
+  OUT    UINT8                    *SenseDataNumber
   )
 {
   return EFI_NOT_FOUND;
 }
+
 
 /**
   This function is used by the IDE bus driver to get controller information.
@@ -1430,16 +1434,16 @@ AtaDiskInfoSenseData (
 EFI_STATUS
 EFIAPI
 AtaDiskInfoWhichIde (
-  IN  EFI_DISK_INFO_PROTOCOL  *This,
-  OUT UINT32                  *IdeChannel,
-  OUT UINT32                  *IdeDevice
+  IN  EFI_DISK_INFO_PROTOCOL   *This,
+  OUT UINT32                   *IdeChannel,
+  OUT UINT32                   *IdeDevice
   )
 {
-  ATA_DEVICE  *AtaDevice;
+  ATA_DEVICE                   *AtaDevice;
 
-  AtaDevice   = ATA_DEVICE_FROM_DISK_INFO (This);
-  *IdeChannel = AtaDevice->Port;
-  *IdeDevice  = AtaDevice->PortMultiplierPort;
+  AtaDevice       = ATA_DEVICE_FROM_DISK_INFO (This);
+  *IdeChannel     = AtaDevice->Port;
+  *IdeDevice      = AtaDevice->PortMultiplierPort;
 
   return EFI_SUCCESS;
 }
@@ -1519,22 +1523,22 @@ AtaDiskInfoWhichIde (
 EFI_STATUS
 EFIAPI
 AtaStorageSecurityReceiveData (
-  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN UINT32                                 MediaId,
-  IN UINT64                                 Timeout,
-  IN UINT8                                  SecurityProtocolId,
-  IN UINT16                                 SecurityProtocolSpecificData,
-  IN UINTN                                  PayloadBufferSize,
-  OUT VOID                                  *PayloadBuffer,
-  OUT UINTN                                 *PayloadTransferSize
+  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN UINT32                                   MediaId,
+  IN UINT64                                   Timeout,
+  IN UINT8                                    SecurityProtocolId,
+  IN UINT16                                   SecurityProtocolSpecificData,
+  IN UINTN                                    PayloadBufferSize,
+  OUT VOID                                    *PayloadBuffer,
+  OUT UINTN                                   *PayloadTransferSize
   )
 {
-  EFI_STATUS  Status;
-  ATA_DEVICE  *Private;
-  EFI_TPL     OldTpl;
+  EFI_STATUS                       Status;
+  ATA_DEVICE                       *Private;
+  EFI_TPL                          OldTpl;
 
-  DEBUG ((DEBUG_INFO, "EFI Storage Security Protocol - Read\n"));
-  if (((PayloadBuffer == NULL) || (PayloadTransferSize == NULL)) && (PayloadBufferSize != 0)) {
+  DEBUG ((EFI_D_INFO, "EFI Storage Security Protocol - Read\n"));
+  if ((PayloadBuffer == NULL || PayloadTransferSize == NULL) && PayloadBufferSize != 0) {
     return EFI_INVALID_PARAMETER;
   }
 
@@ -1630,20 +1634,20 @@ AtaStorageSecurityReceiveData (
 EFI_STATUS
 EFIAPI
 AtaStorageSecuritySendData (
-  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN UINT32                                 MediaId,
-  IN UINT64                                 Timeout,
-  IN UINT8                                  SecurityProtocolId,
-  IN UINT16                                 SecurityProtocolSpecificData,
-  IN UINTN                                  PayloadBufferSize,
-  IN VOID                                   *PayloadBuffer
+  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN UINT32                                   MediaId,
+  IN UINT64                                   Timeout,
+  IN UINT8                                    SecurityProtocolId,
+  IN UINT16                                   SecurityProtocolSpecificData,
+  IN UINTN                                    PayloadBufferSize,
+  IN VOID                                     *PayloadBuffer
   )
 {
-  EFI_STATUS  Status;
-  ATA_DEVICE  *Private;
-  EFI_TPL     OldTpl;
+  EFI_STATUS                       Status;
+  ATA_DEVICE                       *Private;
+  EFI_TPL                          OldTpl;
 
-  DEBUG ((DEBUG_INFO, "EFI Storage Security Protocol - Send\n"));
+  DEBUG ((EFI_D_INFO, "EFI Storage Security Protocol - Send\n"));
   if ((PayloadBuffer == NULL) && (PayloadBufferSize != 0)) {
     return EFI_INVALID_PARAMETER;
   }
@@ -1683,12 +1687,12 @@ AtaStorageSecuritySendData (
 **/
 EFI_STATUS
 EFIAPI
-InitializeAtaBus (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+InitializeAtaBus(
+  IN EFI_HANDLE           ImageHandle,
+  IN EFI_SYSTEM_TABLE     *SystemTable
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS              Status;
 
   //
   // Install driver model protocol(s).
@@ -1705,3 +1709,4 @@ InitializeAtaBus (
 
   return Status;
 }
+

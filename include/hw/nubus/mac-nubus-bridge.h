@@ -6,24 +6,19 @@
  *
  */
 
-#ifndef HW_NUBUS_MAC_NUBUS_BRIDGE_H
-#define HW_NUBUS_MAC_NUBUS_BRIDGE_H
+#ifndef HW_NUBUS_MAC_H
+#define HW_NUBUS_MAC_H
 
 #include "hw/nubus/nubus.h"
-#include "qom/object.h"
-
-#define MAC_NUBUS_FIRST_SLOT 0x9
-#define MAC_NUBUS_LAST_SLOT  0xe
-#define MAC_NUBUS_SLOT_NB    (MAC_NUBUS_LAST_SLOT - MAC_NUBUS_FIRST_SLOT + 1)
 
 #define TYPE_MAC_NUBUS_BRIDGE "mac-nubus-bridge"
-OBJECT_DECLARE_SIMPLE_TYPE(MacNubusBridge, MAC_NUBUS_BRIDGE)
+#define MAC_NUBUS_BRIDGE(obj) OBJECT_CHECK(MacNubusState, (obj), \
+                                           TYPE_MAC_NUBUS_BRIDGE)
 
-struct MacNubusBridge {
-    NubusBridge parent_obj;
+typedef struct MacNubusState {
+    SysBusDevice sysbus_dev;
 
-    MemoryRegion super_slot_alias;
-    MemoryRegion slot_alias;
-};
+    NubusBus *bus;
+} MacNubusState;
 
 #endif

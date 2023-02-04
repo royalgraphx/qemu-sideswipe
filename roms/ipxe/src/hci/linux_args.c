@@ -185,7 +185,6 @@ void linux_args_cleanup(int flags __unused)
 }
 
 struct startup_fn startup_linux_args __startup_fn(STARTUP_EARLY) = {
-	.name = "linux_args",
 	.startup = linux_args_parse,
 	.shutdown = linux_args_cleanup,
 };

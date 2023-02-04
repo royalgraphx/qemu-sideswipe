@@ -5,12 +5,8 @@
  */
 
 #include <common.h>
-#include <bootstage.h>
 #include <command.h>
-#include <time.h>
-#include <asm/global_data.h>
 #include <asm/system.h>
-#include <linux/bitops.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 

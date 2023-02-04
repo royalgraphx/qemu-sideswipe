@@ -22,19 +22,19 @@
 /// Define table for mapping PCI Segment MMIO physical addresses to virtual addresses at OS runtime
 ///
 typedef struct {
-  UINTN    PhysicalAddress;
-  UINTN    VirtualAddress;
+  UINTN  PhysicalAddress;
+  UINTN  VirtualAddress;
 } PCI_SEGMENT_RUNTIME_REGISTRATION_TABLE;
 
 ///
 /// Set Virtual Address Map Event
 ///
-EFI_EVENT  mDxeRuntimePciSegmentLibVirtualNotifyEvent = NULL;
+EFI_EVENT                               mDxeRuntimePciSegmentLibVirtualNotifyEvent = NULL;
 
 ///
 /// The number of PCI devices that have been registered for runtime access.
 ///
-UINTN  mDxeRuntimePciSegmentLibNumberOfRuntimeRanges = 0;
+UINTN                                   mDxeRuntimePciSegmentLibNumberOfRuntimeRanges = 0;
 
 ///
 /// The table of PCI devices that have been registered for runtime access.
@@ -44,7 +44,7 @@ PCI_SEGMENT_RUNTIME_REGISTRATION_TABLE  *mDxeRuntimePciSegmentLibRegistrationTab
 ///
 /// The table index of the most recent virtual address lookup.
 ///
-UINTN  mDxeRuntimePciSegmentLibLastRuntimeRange = 0;
+UINTN                                   mDxeRuntimePciSegmentLibLastRuntimeRange = 0;
 
 /**
   Convert the physical PCI Express MMIO addresses for all registered PCI devices
@@ -60,8 +60,8 @@ DxeRuntimePciSegmentLibVirtualNotify (
   IN VOID       *Context
   )
 {
-  UINTN       Index;
-  EFI_STATUS  Status;
+  UINTN         Index;
+  EFI_STATUS    Status;
 
   //
   // If there have been no runtime registrations, then just return
@@ -75,14 +75,14 @@ DxeRuntimePciSegmentLibVirtualNotify (
   // virtual addresses.
   //
   for (Index = 0; Index < mDxeRuntimePciSegmentLibNumberOfRuntimeRanges; Index++) {
-    Status = EfiConvertPointer (0, (VOID **)&(mDxeRuntimePciSegmentLibRegistrationTable[Index].VirtualAddress));
+    Status = EfiConvertPointer (0, (VOID **) &(mDxeRuntimePciSegmentLibRegistrationTable[Index].VirtualAddress));
     ASSERT_EFI_ERROR (Status);
   }
 
   //
   // Convert table pointer that is allocated from EfiRuntimeServicesData to a virtual address.
   //
-  Status = EfiConvertPointer (0, (VOID **)&mDxeRuntimePciSegmentLibRegistrationTable);
+  Status = EfiConvertPointer (0, (VOID **) &mDxeRuntimePciSegmentLibRegistrationTable);
   ASSERT_EFI_ERROR (Status);
 }
 
@@ -109,11 +109,12 @@ DxeRuntimePciSegmentLibConstructor (
   //
   // Register SetVirtualAddressMap () notify function
   //
-  Status = gBS->CreateEvent (
-                  EVT_SIGNAL_VIRTUAL_ADDRESS_CHANGE,
+  Status = gBS->CreateEventEx (
+                  EVT_NOTIFY_SIGNAL,
                   TPL_NOTIFY,
                   DxeRuntimePciSegmentLibVirtualNotify,
                   NULL,
+                  &gEfiEventVirtualAddressChangeGuid,
                   &mDxeRuntimePciSegmentLibVirtualNotifyEvent
                   );
   ASSERT_EFI_ERROR (Status);
@@ -194,7 +195,7 @@ PciSegmentRegisterForRuntimeAccess (
   // Convert Address to a ECAM address at the beginning of the PCI Configuration
   // header for the specified PCI Bus/Dev/Func
   //
-  Address    &= ~(UINTN)EFI_PAGE_MASK;
+  Address &= ~(UINTN)EFI_PAGE_MASK;
   SegmentInfo = GetPciSegmentInfo (&Count);
   EcamAddress = PciSegmentLibGetEcamAddress (Address, SegmentInfo, Count);
 
@@ -204,15 +205,13 @@ PciSegmentRegisterForRuntimeAccess (
   if (EfiAtRuntime ()) {
     return RETURN_UNSUPPORTED;
   }
-
   if (sizeof (UINTN) == sizeof (UINT32)) {
     ASSERT (EcamAddress < BASE_4GB);
   }
-
   Address = (UINTN)EcamAddress;
 
   //
-  // See if Address has already been registered for runtime access
+  // See if Address has already been registerd for runtime access
   //
   for (Index = 0; Index < mDxeRuntimePciSegmentLibNumberOfRuntimeRanges; Index++) {
     if (mDxeRuntimePciSegmentLibRegistrationTable[Index].PhysicalAddress == Address) {
@@ -248,8 +247,7 @@ PciSegmentRegisterForRuntimeAccess (
   if (NewTable == NULL) {
     return RETURN_OUT_OF_RESOURCES;
   }
-
-  mDxeRuntimePciSegmentLibRegistrationTable                                                                = NewTable;
+  mDxeRuntimePciSegmentLibRegistrationTable = NewTable;
   mDxeRuntimePciSegmentLibRegistrationTable[mDxeRuntimePciSegmentLibNumberOfRuntimeRanges].PhysicalAddress = Address;
   mDxeRuntimePciSegmentLibRegistrationTable[mDxeRuntimePciSegmentLibNumberOfRuntimeRanges].VirtualAddress  = Address;
   mDxeRuntimePciSegmentLibNumberOfRuntimeRanges++;
@@ -266,11 +264,10 @@ PciSegmentRegisterForRuntimeAccess (
 **/
 UINTN
 PciSegmentLibVirtualAddress (
-  IN UINTN  Address
+  IN UINTN                     Address
   )
 {
-  UINTN  Index;
-
+  UINTN                        Index;
   //
   // If SetVirtualAddressMap() has not been called, then just return the physical address
   //

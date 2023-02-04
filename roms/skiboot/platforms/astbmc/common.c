@@ -1,5 +1,19 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/* Copyright 2013-2019 IBM Corp. */
+/* Copyright 2013-2016 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 
 #include <skiboot.h>
 #include <device.h>
@@ -266,9 +280,8 @@ static void astbmc_fixup_dt_mbox(struct dt_node *lpc)
 	 * can indicate they support mbox using the scratch register, or ipmi
 	 * by configuring the hiomap ipmi command. If neither are configured
 	 * for P8 then skiboot will drive the flash controller directly.
-	 * XXX P10
 	 */
-	if (proc_gen == proc_gen_p8 && !ast_scratch_reg_is_mbox())
+	if (proc_gen != proc_gen_p9 && !ast_scratch_reg_is_mbox())
 		return;
 
 	/* First check if the mbox interface is already there */
@@ -466,6 +479,9 @@ void astbmc_early_init(void)
 	/* Hostboot forgets to populate the PSI BAR */
 	astbmc_fixup_psi_bar();
 
+	/* Send external interrupts to me */
+	psi_set_external_irq_policy(EXTERNAL_IRQ_POLICY_SKIBOOT);
+
 	if (ast_sio_init()) {
 		if (ast_io_init()) {
 			astbmc_fixup_uart();
@@ -479,7 +495,7 @@ void astbmc_early_init(void)
 		 * never MBOX. Thus only populate the MBOX node on P9 to allow
 		 * fallback.
 		 */
-		if (proc_gen >= proc_gen_p9) {
+		if (proc_gen == proc_gen_p9) {
 			astbmc_fixup_dt_mbox(dt_find_primary_lpc());
 			ast_setup_sio_mbox(MBOX_IO_BASE, MBOX_LPC_IRQ);
 		}
@@ -504,13 +520,13 @@ void astbmc_exit(void)
 	ipmi_wdt_final_reset();
 }
 
-static const struct bmc_sw_config bmc_sw_ami = {
+const struct bmc_sw_config bmc_sw_ami = {
 	.ipmi_oem_partial_add_esel   = IPMI_CODE(0x3a, 0xf0),
 	.ipmi_oem_pnor_access_status = IPMI_CODE(0x3a, 0x07),
 	.ipmi_oem_hiomap_cmd         = IPMI_CODE(0x3a, 0x5a),
 };
 
-static const struct bmc_sw_config bmc_sw_openbmc = {
+const struct bmc_sw_config bmc_sw_openbmc = {
 	.ipmi_oem_partial_add_esel   = IPMI_CODE(0x3a, 0xf0),
 	.ipmi_oem_hiomap_cmd         = IPMI_CODE(0x3a, 0x5a),
 };
@@ -531,14 +547,6 @@ const struct bmc_hw_config bmc_hw_ast2500 = {
 	.mcr_scu_strap = 0x00000000,
 };
 
-/* XXX P10: Update with Rainier values */
-const struct bmc_hw_config bmc_hw_ast2600 = {
-	.scu_revision_id = 0x05000303,
-	.mcr_configuration = 0x11200756,
-	.mcr_scu_mpll = 0x1008405F,
-	.mcr_scu_strap = 0x000030E0,
-};
-
 const struct bmc_platform bmc_plat_ast2400_ami = {
 	.name = "ast2400:ami",
 	.hw = &bmc_hw_ast2400,
@@ -554,11 +562,5 @@ const struct bmc_platform bmc_plat_ast2500_ami = {
 const struct bmc_platform bmc_plat_ast2500_openbmc = {
 	.name = "ast2500:openbmc",
 	.hw = &bmc_hw_ast2500,
-	.sw = &bmc_sw_openbmc,
-};
-
-const struct bmc_platform bmc_plat_ast2600_openbmc = {
-	.name = "ast2600:openbmc",
-	.hw = &bmc_hw_ast2600,
 	.sw = &bmc_sw_openbmc,
 };

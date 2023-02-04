@@ -11,7 +11,7 @@
 
 /* This is a model of the security controller which is part of the
  * Arm IoT Kit and documented in
- * https://developer.arm.com/documentation/ecm0601256/latest
+ * http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ecm0601256/index.html
  *
  * QEMU interface:
  *  + sysbus MMIO region 0 is the "secure privilege control block" registers
@@ -56,10 +56,9 @@
 #define IOTKIT_SECCTL_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define TYPE_IOTKIT_SECCTL "iotkit-secctl"
-OBJECT_DECLARE_SIMPLE_TYPE(IoTKitSecCtl, IOTKIT_SECCTL)
+#define IOTKIT_SECCTL(obj) OBJECT_CHECK(IoTKitSecCtl, (obj), TYPE_IOTKIT_SECCTL)
 
 #define IOTS_APB_PPC0_NUM_PORTS 3
 #define IOTS_APB_PPC1_NUM_PORTS 1
@@ -71,6 +70,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(IoTKitSecCtl, IOTKIT_SECCTL)
 #define IOTS_NUM_MPC 4
 #define IOTS_NUM_EXP_MSC 16
 
+typedef struct IoTKitSecCtl IoTKitSecCtl;
 
 /* State and IRQ lines relating to a PPC. For the
  * PPCs in the IoTKit not all the IRQ lines are used.
@@ -120,8 +120,6 @@ struct IoTKitSecCtl {
     IoTKitSecCtlPPC apb[IOTS_NUM_APB_PPC];
     IoTKitSecCtlPPC apbexp[IOTS_NUM_APB_EXP_PPC];
     IoTKitSecCtlPPC ahbexp[IOTS_NUM_APB_EXP_PPC];
-
-    uint32_t sse_version;
 };
 
 #endif

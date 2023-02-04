@@ -30,6 +30,7 @@
 #include "qemu/module.h"
 #include "hw/qdev-properties.h"
 #include "sysemu/runstate.h"
+#include "migration/blocker.h"
 #include "migration/vmstate.h"
 #include "trace.h"
 
@@ -274,8 +275,7 @@ static void qxl_spice_monitors_config_async(PCIQXLDevice *qxl, int replay)
                                           QXL_IO_MONITORS_CONFIG_ASYNC));
     }
 
-    cfg = qxl_phys2virt(qxl, qxl->guest_monitors_config, MEMSLOT_GROUP_GUEST,
-                        sizeof(QXLMonitorsConfig));
+    cfg = qxl_phys2virt(qxl, qxl->guest_monitors_config, MEMSLOT_GROUP_GUEST);
     if (cfg != NULL && cfg->count == 1) {
         qxl->guest_primary.resized = 1;
         qxl->guest_head0_width  = cfg->heads[0].width;
@@ -321,7 +321,7 @@ static ram_addr_t qxl_rom_size(void)
 #define QXL_ROM_SZ 8192
 
     QEMU_BUILD_BUG_ON(QXL_REQUIRED_SZ > QXL_ROM_SZ);
-    return QEMU_ALIGN_UP(QXL_REQUIRED_SZ, qemu_real_host_page_size());
+    return QXL_ROM_SZ;
 }
 
 static void init_qxl_rom(PCIQXLDevice *d)
@@ -460,8 +460,7 @@ static int qxl_track_command(PCIQXLDevice *qxl, struct QXLCommandExt *ext)
     switch (le32_to_cpu(ext->cmd.type)) {
     case QXL_CMD_SURFACE:
     {
-        QXLSurfaceCmd *cmd = qxl_phys2virt(qxl, ext->cmd.data, ext->group_id,
-                                           sizeof(QXLSurfaceCmd));
+        QXLSurfaceCmd *cmd = qxl_phys2virt(qxl, ext->cmd.data, ext->group_id);
 
         if (!cmd) {
             return 1;
@@ -496,8 +495,7 @@ static int qxl_track_command(PCIQXLDevice *qxl, struct QXLCommandExt *ext)
     }
     case QXL_CMD_CURSOR:
     {
-        QXLCursorCmd *cmd = qxl_phys2virt(qxl, ext->cmd.data, ext->group_id,
-                                          sizeof(QXLCursorCmd));
+        QXLCursorCmd *cmd = qxl_phys2virt(qxl, ext->cmd.data, ext->group_id);
 
         if (!cmd) {
             return 1;
@@ -520,19 +518,12 @@ static int qxl_track_command(PCIQXLDevice *qxl, struct QXLCommandExt *ext)
 
 /* spice display interface callbacks */
 
-static void interface_attached_worker(QXLInstance *sin)
+static void interface_attach_worker(QXLInstance *sin, QXLWorker *qxl_worker)
 {
     PCIQXLDevice *qxl = container_of(sin, PCIQXLDevice, ssd.qxl);
 
     trace_qxl_interface_attach_worker(qxl->id);
 }
-
-#if !(SPICE_HAS_ATTACHED_WORKER)
-static void interface_attach_worker(QXLInstance *sin, QXLWorker *qxl_worker)
-{
-    interface_attached_worker(sin);
-}
-#endif
 
 static void interface_set_compression_level(QXLInstance *sin, int level)
 {
@@ -675,6 +666,30 @@ static int interface_get_command(QXLInstance *sin, struct QXLCommandExt *ext)
         qxl->guest_primary.commands++;
         qxl_track_command(qxl, ext);
         qxl_log_command(qxl, "cmd", ext);
+        {
+            /*
+             * Windows 8 drivers place qxl commands in the vram
+             * (instead of the ram) bar.  We can't live migrate such a
+             * guest, so add a migration blocker in case we detect
+             * this, to avoid triggering the assert in pre_save().
+             *
+             * https://cgit.freedesktop.org/spice/win32/qxl-wddm-dod/commit/?id=f6e099db39e7d0787f294d5fd0dce328b5210faa
+             */
+            void *msg = qxl_phys2virt(qxl, ext->cmd.data, ext->group_id);
+            if (msg != NULL && (
+                    msg < (void *)qxl->vga.vram_ptr ||
+                    msg > ((void *)qxl->vga.vram_ptr + qxl->vga.vram_size))) {
+                if (!qxl->migration_blocker) {
+                    Error *local_err = NULL;
+                    error_setg(&qxl->migration_blocker,
+                               "qxl: guest bug: command not in ram bar");
+                    migrate_add_blocker(qxl->migration_blocker, &local_err);
+                    if (local_err) {
+                        error_report_err(local_err);
+                    }
+                }
+            }
+        }
         trace_qxl_ring_command_get(qxl->id, qxl_mode_to_string(qxl->mode));
         return true;
     default:
@@ -929,7 +944,7 @@ static void interface_async_complete_io(PCIQXLDevice *qxl, QXLCookie *cookie)
         qxl_spice_destroy_surface_wait_complete(qxl, cookie->u.surface_id);
         break;
     default:
-        fprintf(stderr, "qxl: %s: unexpected current_async %u\n", __func__,
+        fprintf(stderr, "qxl: %s: unexpected current_async %d\n", __func__,
                 current_async);
     }
     qxl_send_events(qxl, QXL_INTERRUPT_IO_CMD);
@@ -1141,12 +1156,7 @@ static const QXLInterface qxl_interface = {
     .base.major_version      = SPICE_INTERFACE_QXL_MAJOR,
     .base.minor_version      = SPICE_INTERFACE_QXL_MINOR,
 
-#if SPICE_HAS_ATTACHED_WORKER
-    .attached_worker         = interface_attached_worker,
-#else
     .attache_worker          = interface_attach_worker,
-#endif
-
     .set_compression_level   = interface_set_compression_level,
 #if SPICE_NEEDS_SET_MM_TIME
     .set_mm_time             = interface_set_mm_time,
@@ -1273,6 +1283,12 @@ static void qxl_hard_reset(PCIQXLDevice *d, int loadvm)
     qemu_spice_create_host_memslot(&d->ssd);
     qxl_soft_reset(d);
 
+    if (d->migration_blocker) {
+        migrate_del_blocker(d->migration_blocker);
+        error_free(d->migration_blocker);
+        d->migration_blocker = NULL;
+    }
+
     if (startstop) {
         qemu_spice_display_start();
     }
@@ -1384,7 +1400,6 @@ static int qxl_add_memslot(PCIQXLDevice *d, uint32_t slot_id, uint64_t delta,
         qxl_set_guest_bug(d, "%s: pci_region = %d", __func__, pci_region);
         return 1;
     }
-    assert(guest_end - pci_start <= memory_region_size(mr));
 
     virt_start = (intptr_t)memory_region_get_ram_ptr(mr);
     memslot.slot_id = slot_id;
@@ -1425,13 +1440,11 @@ static void qxl_reset_surfaces(PCIQXLDevice *d)
 
 /* can be also called from spice server thread context */
 static bool qxl_get_check_slot_offset(PCIQXLDevice *qxl, QXLPHYSICAL pqxl,
-                                      uint32_t *s, uint64_t *o,
-                                      size_t size_requested)
+                                      uint32_t *s, uint64_t *o)
 {
     uint64_t phys   = le64_to_cpu(pqxl);
     uint32_t slot   = (phys >> (64 -  8)) & 0xff;
     uint64_t offset = phys & 0xffffffffffff;
-    uint64_t size_available;
 
     if (slot >= NUM_MEMSLOTS) {
         qxl_set_guest_bug(qxl, "slot too large %d >= %d", slot,
@@ -1455,23 +1468,6 @@ static bool qxl_get_check_slot_offset(PCIQXLDevice *qxl, QXLPHYSICAL pqxl,
                           slot, offset, qxl->guest_slots[slot].size);
         return false;
     }
-    size_available = memory_region_size(qxl->guest_slots[slot].mr);
-    if (qxl->guest_slots[slot].offset + offset >= size_available) {
-        qxl_set_guest_bug(qxl,
-                          "slot %d offset %"PRIu64" > region size %"PRIu64"\n",
-                          slot, qxl->guest_slots[slot].offset + offset,
-                          size_available);
-        return false;
-    }
-    size_available -= qxl->guest_slots[slot].offset + offset;
-    if (size_requested > size_available) {
-        qxl_set_guest_bug(qxl,
-                          "slot %d offset %"PRIu64" size %zu: "
-                          "overrun by %"PRIu64" bytes\n",
-                          slot, offset, size_requested,
-                          size_requested - size_available);
-        return false;
-    }
 
     *s = slot;
     *o = offset;
@@ -1479,8 +1475,7 @@ static bool qxl_get_check_slot_offset(PCIQXLDevice *qxl, QXLPHYSICAL pqxl,
 }
 
 /* can be also called from spice server thread context */
-void *qxl_phys2virt(PCIQXLDevice *qxl, QXLPHYSICAL pqxl, int group_id,
-                    size_t size)
+void *qxl_phys2virt(PCIQXLDevice *qxl, QXLPHYSICAL pqxl, int group_id)
 {
     uint64_t offset;
     uint32_t slot;
@@ -1491,7 +1486,7 @@ void *qxl_phys2virt(PCIQXLDevice *qxl, QXLPHYSICAL pqxl, int group_id,
         offset = le64_to_cpu(pqxl) & 0xffffffffffff;
         return (void *)(intptr_t)offset;
     case MEMSLOT_GROUP_GUEST:
-        if (!qxl_get_check_slot_offset(qxl, pqxl, &slot, &offset, size)) {
+        if (!qxl_get_check_slot_offset(qxl, pqxl, &slot, &offset)) {
             return NULL;
         }
         ptr = memory_region_get_ram_ptr(qxl->guest_slots[slot].mr);
@@ -1913,7 +1908,7 @@ static void qxl_send_events(PCIQXLDevice *d, uint32_t events)
     /*
      * Older versions of Spice forgot to define the QXLRam struct
      * with the '__aligned__(4)' attribute. clang 7 and newer will
-     * thus warn that qatomic_fetch_or(&d->ram->int_pending, ...)
+     * thus warn that atomic_fetch_or(&d->ram->int_pending, ...)
      * might be a misaligned atomic access, and will generate an
      * out-of-line call for it, which results in a link error since
      * we don't currently link against libatomic.
@@ -1933,7 +1928,7 @@ static void qxl_send_events(PCIQXLDevice *d, uint32_t events)
 #define ALIGNED_UINT32_PTR(P) ((uint32_t *)P)
 #endif
 
-    old_pending = qatomic_fetch_or(ALIGNED_UINT32_PTR(&d->ram->int_pending),
+    old_pending = atomic_fetch_or(ALIGNED_UINT32_PTR(&d->ram->int_pending),
                                   le_events);
     if ((old_pending & le_events) == le_events) {
         return;
@@ -1957,9 +1952,9 @@ static void qxl_dirty_one_surface(PCIQXLDevice *qxl, QXLPHYSICAL pqxl,
     uint32_t slot;
     bool rc;
 
-    size = (uint64_t)height * abs(stride);
-    rc = qxl_get_check_slot_offset(qxl, pqxl, &slot, &offset, size);
+    rc = qxl_get_check_slot_offset(qxl, pqxl, &slot, &offset);
     assert(rc == true);
+    size = (uint64_t)height * abs(stride);
     trace_qxl_surfaces_dirty(qxl->id, offset, size);
     qxl_set_dirty(qxl->guest_slots[slot].mr,
                   qxl->guest_slots[slot].offset + offset,
@@ -1988,7 +1983,7 @@ static void qxl_dirty_surfaces(PCIQXLDevice *qxl)
         }
 
         cmd = qxl_phys2virt(qxl, qxl->guest_surfaces.cmds[i],
-                            MEMSLOT_GROUP_GUEST, sizeof(QXLSurfaceCmd));
+                            MEMSLOT_GROUP_GUEST);
         assert(cmd);
         assert(cmd->type == QXL_SURFACE_CMD_CREATE);
         qxl_dirty_one_surface(qxl, cmd->u.surface_create.data,
@@ -1997,7 +1992,7 @@ static void qxl_dirty_surfaces(PCIQXLDevice *qxl)
     }
 }
 
-static void qxl_vm_change_state_handler(void *opaque, bool running,
+static void qxl_vm_change_state_handler(void *opaque, int running,
                                         RunState state)
 {
     PCIQXLDevice *qxl = opaque;
@@ -2207,17 +2202,12 @@ static void qxl_realize_common(PCIQXLDevice *qxl, Error **errp)
     }
 
 #if SPICE_SERVER_VERSION >= 0x000e02 /* release 0.14.2 */
-    Error *err = NULL;
     char device_address[256] = "";
-    if (qemu_console_fill_device_address(qxl->vga.con,
-                                         device_address, sizeof(device_address),
-                                         &err)) {
+    if (qemu_spice_fill_device_address(qxl->vga.con, device_address, 256)) {
         spice_qxl_set_device_info(&qxl->ssd.qxl,
                                   device_address,
                                   0,
                                   qxl->max_outputs);
-    } else {
-        error_report_err(err);
     }
 #endif
 
@@ -2239,11 +2229,7 @@ static void qxl_realize_primary(PCIDevice *dev, Error **errp)
     qxl_init_ramsize(qxl);
     vga->vbe_size = qxl->vgamem_size;
     vga->vram_size_mb = qxl->vga.vram_size / MiB;
-    vga_common_init(vga, OBJECT(dev), &local_err);
-    if (local_err) {
-        error_propagate(errp, local_err);
-        return;
-    }
+    vga_common_init(vga, OBJECT(dev));
     vga_init(vga, OBJECT(dev),
              pci_address_space(dev), pci_address_space_io(dev), false);
     portio_list_init(&qxl->vga_port_list, OBJECT(dev), qxl_vga_portio_list,
@@ -2280,7 +2266,6 @@ static void qxl_realize_secondary(PCIDevice *dev, Error **errp)
                            qxl->vga.vram_size, &error_fatal);
     qxl->vga.vram_ptr = memory_region_get_ram_ptr(&qxl->vga.vram);
     qxl->vga.con = graphic_console_init(DEVICE(dev), 0, &qxl_ops, qxl);
-    qxl->ssd.dcl.con = qxl->vga.con;
     qxl->id = qemu_console_get_index(qxl->vga.con); /* == channel_id */
 
     qxl_realize_common(qxl, errp);
@@ -2297,9 +2282,7 @@ static int qxl_pre_save(void *opaque)
     } else {
         d->last_release_offset = (uint8_t *)d->last_release - ram_start;
     }
-    if (d->last_release_offset >= d->vga.vram_size) {
-        return 1;
-    }
+    assert(d->last_release_offset < d->vga.vram_size);
 
     return 0;
 }
@@ -2400,7 +2383,7 @@ static bool qxl_monitors_config_needed(void *opaque)
 }
 
 
-static const VMStateDescription qxl_memslot = {
+static VMStateDescription qxl_memslot = {
     .name               = "qxl-memslot",
     .version_id         = QXL_SAVE_VERSION,
     .minimum_version_id = QXL_SAVE_VERSION,
@@ -2412,7 +2395,7 @@ static const VMStateDescription qxl_memslot = {
     }
 };
 
-static const VMStateDescription qxl_surface = {
+static VMStateDescription qxl_surface = {
     .name               = "qxl-surface",
     .version_id         = QXL_SAVE_VERSION,
     .minimum_version_id = QXL_SAVE_VERSION,
@@ -2430,7 +2413,7 @@ static const VMStateDescription qxl_surface = {
     }
 };
 
-static const VMStateDescription qxl_vmstate_monitors_config = {
+static VMStateDescription qxl_vmstate_monitors_config = {
     .name               = "qxl/monitors-config",
     .version_id         = 1,
     .minimum_version_id = 1,
@@ -2441,7 +2424,7 @@ static const VMStateDescription qxl_vmstate_monitors_config = {
     },
 };
 
-static const VMStateDescription qxl_vmstate = {
+static VMStateDescription qxl_vmstate = {
     .name               = "qxl",
     .version_id         = QXL_SAVE_VERSION,
     .minimum_version_id = QXL_SAVE_VERSION,
@@ -2538,8 +2521,6 @@ static const TypeInfo qxl_primary_info = {
     .parent        = TYPE_PCI_QXL,
     .class_init    = qxl_primary_class_init,
 };
-module_obj("qxl-vga");
-module_kconfig(QXL);
 
 static void qxl_secondary_class_init(ObjectClass *klass, void *data)
 {
@@ -2556,7 +2537,6 @@ static const TypeInfo qxl_secondary_info = {
     .parent        = TYPE_PCI_QXL,
     .class_init    = qxl_secondary_class_init,
 };
-module_obj("qxl");
 
 static void qxl_register_types(void)
 {
@@ -2566,5 +2546,3 @@ static void qxl_register_types(void)
 }
 
 type_init(qxl_register_types)
-
-module_dep("ui-spice-core");

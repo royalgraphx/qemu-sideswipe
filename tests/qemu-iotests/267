@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick snapshot
 #
 # Test which nodes are involved in internal snapshots
 #

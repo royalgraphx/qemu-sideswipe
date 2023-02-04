@@ -13,13 +13,11 @@
 
 #include "exec/hwaddr.h"
 #include "qapi/qapi-types-block-core.h"
-#include "hw/qdev-properties-system.h"
 
 /* Configuration */
 
 typedef struct BlockConf {
     BlockBackend *blk;
-    OnOffAuto backend_defaults;
     uint32_t physical_block_size;
     uint32_t logical_block_size;
     uint32_t min_io_size;
@@ -31,7 +29,6 @@ typedef struct BlockConf {
     uint32_t lcyls, lheads, lsecs;
     OnOffAuto wce;
     bool share_rw;
-    OnOffAuto account_invalid, account_failed;
     BlockdevOnError rerror;
     BlockdevOnError werror;
 } BlockConf;
@@ -50,8 +47,6 @@ static inline unsigned int get_physical_block_exp(BlockConf *conf)
 }
 
 #define DEFINE_BLOCK_PROPERTIES_BASE(_state, _conf)                     \
-    DEFINE_PROP_ON_OFF_AUTO("backend_defaults", _state,                 \
-                            _conf.backend_defaults, ON_OFF_AUTO_AUTO),  \
     DEFINE_PROP_BLOCKSIZE("logical_block_size", _state,                 \
                           _conf.logical_block_size),                    \
     DEFINE_PROP_BLOCKSIZE("physical_block_size", _state,                \
@@ -62,11 +57,7 @@ static inline unsigned int get_physical_block_exp(BlockConf *conf)
                        _conf.discard_granularity, -1),                  \
     DEFINE_PROP_ON_OFF_AUTO("write-cache", _state, _conf.wce,           \
                             ON_OFF_AUTO_AUTO),                          \
-    DEFINE_PROP_BOOL("share-rw", _state, _conf.share_rw, false),        \
-    DEFINE_PROP_ON_OFF_AUTO("account-invalid", _state,                  \
-                            _conf.account_invalid, ON_OFF_AUTO_AUTO),   \
-    DEFINE_PROP_ON_OFF_AUTO("account-failed", _state,                   \
-                            _conf.account_failed, ON_OFF_AUTO_AUTO)
+    DEFINE_PROP_BOOL("share-rw", _state, _conf.share_rw, false)
 
 #define DEFINE_BLOCK_PROPERTIES(_state, _conf)                          \
     DEFINE_PROP_DRIVE("drive", _state, _conf.blk),                      \

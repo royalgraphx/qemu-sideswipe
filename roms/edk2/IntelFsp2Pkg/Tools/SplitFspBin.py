@@ -1,6 +1,6 @@
-## @ SplitFspBin.py
+## @ FspTool.py
 #
-# Copyright (c) 2015 - 2021, Intel Corporation. All rights reserved.<BR>
+# Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
@@ -12,15 +12,14 @@ import copy
 import struct
 import argparse
 from   ctypes import *
-from functools import reduce
 
 """
-This utility supports some operations for Intel FSP 1.x/2.x image.
+This utility supports some operations for Intel FSP 2.0 image.
 It supports:
-    - Display FSP 1.x/2.x information header
-    - Split FSP 2.x image into individual FSP-T/M/S/O component
-    - Rebase FSP 1.x/2.x components to a different base address
-    - Generate FSP 1.x/2.x mapping C header file
+    - Display FSP 2.0 information header
+    - Split FSP 2.0 image into individual FSP-T/M/S/O component
+    - Rebase FSP 2.0 components to a different base address
+    - Generate FSP mapping C header file
 """
 
 CopyRightHeaderFile = """/*
@@ -103,29 +102,26 @@ class FSP_COMMON_HEADER(Structure):
 
 class FSP_INFORMATION_HEADER(Structure):
      _fields_ = [
-        ('Signature',                      ARRAY(c_char, 4)),
-        ('HeaderLength',                   c_uint32),
-        ('Reserved1',                      c_uint16),
-        ('SpecVersion',                    c_uint8),
-        ('HeaderRevision',                 c_uint8),
-        ('ImageRevision',                  c_uint32),
-        ('ImageId',                        ARRAY(c_char, 8)),
-        ('ImageSize',                      c_uint32),
-        ('ImageBase',                      c_uint32),
-        ('ImageAttribute',                 c_uint16),
-        ('ComponentAttribute',             c_uint16),
-        ('CfgRegionOffset',                c_uint32),
-        ('CfgRegionSize',                  c_uint32),
-        ('Reserved2',                      c_uint32),
-        ('TempRamInitEntryOffset',         c_uint32),
-        ('Reserved3',                      c_uint32),
-        ('NotifyPhaseEntryOffset',         c_uint32),
-        ('FspMemoryInitEntryOffset',       c_uint32),
-        ('TempRamExitEntryOffset',         c_uint32),
-        ('FspSiliconInitEntryOffset',      c_uint32),
-        ('FspMultiPhaseSiInitEntryOffset', c_uint32),
-        ('ExtendedImageRevision',          c_uint16),
-        ('Reserved4',                      c_uint16)
+        ('Signature',            ARRAY(c_char, 4)),
+        ('HeaderLength',         c_uint32),
+        ('Reserved1',            c_uint16),
+        ('SpecVersion',          c_uint8),
+        ('HeaderRevision',       c_uint8),
+        ('ImageRevision',        c_uint32),
+        ('ImageId',              ARRAY(c_char, 8)),
+        ('ImageSize',            c_uint32),
+        ('ImageBase',            c_uint32),
+        ('ImageAttribute',       c_uint16),
+        ('ComponentAttribute',   c_uint16),
+        ('CfgRegionOffset',      c_uint32),
+        ('CfgRegionSize',        c_uint32),
+        ('Reserved2',            c_uint32),
+        ('TempRamInitEntryOffset',     c_uint32),
+        ('Reserved3',                  c_uint32),
+        ('NotifyPhaseEntryOffset',     c_uint32),
+        ('FspMemoryInitEntryOffset',   c_uint32),
+        ('TempRamExitEntryOffset',     c_uint32),
+        ('FspSiliconInitEntryOffset',  c_uint32)
     ]
 
 class FSP_PATCH_TABLE(Structure):
@@ -344,31 +340,6 @@ def Bytes2Val (bytes):
 def Val2Bytes (value, blen):
     return [(value>>(i*8) & 0xff) for i in range(blen)]
 
-def IsIntegerType (val):
-    if sys.version_info[0] < 3:
-        if type(val) in (int, long):
-            return True
-    else:
-        if type(val) is int:
-            return True
-    return False
-
-def IsStrType (val):
-    if sys.version_info[0] < 3:
-        if type(val) is str:
-            return True
-    else:
-        if type(val) is bytes:
-            return True
-    return False
-
-def HandleNameStr (val):
-    if sys.version_info[0] < 3:
-        rep = "0x%X ('%s')" % (Bytes2Val (bytearray (val)), val)
-    else:
-        rep = "0x%X ('%s')" % (Bytes2Val (bytearray (val)), str (val, 'utf-8'))
-    return rep
-
 def OutputStruct (obj, indent = 0, plen = 0):
     if indent:
         body = ''
@@ -390,38 +361,15 @@ def OutputStruct (obj, indent = 0, plen = 0):
             body += OutputStruct (val, indent + 1)
             plen -= sizeof(val)
         else:
-            if IsStrType (val):
-                rep = HandleNameStr (val)
-            elif IsIntegerType (val):
-                if (key == 'ImageRevision'):
-                    FspImageRevisionMajor       = ((val >> 24) & 0xFF)
-                    FspImageRevisionMinor       = ((val >> 16) & 0xFF)
-                    FspImageRevisionRevision    = ((val >> 8) & 0xFF)
-                    FspImageRevisionBuildNumber = (val & 0xFF)
-                    rep = '0x%08X' % val
-                elif (key == 'ExtendedImageRevision'):
-                    FspImageRevisionRevision    |= (val & 0xFF00)
-                    FspImageRevisionBuildNumber |= ((val << 8) & 0xFF00)
-                    rep = "0x%04X ('%02X.%02X.%04X.%04X')" % (val, FspImageRevisionMajor, FspImageRevisionMinor, FspImageRevisionRevision, FspImageRevisionBuildNumber)
-                elif field[1] == c_uint64:
-                    rep = '0x%016X' % val
-                elif field[1] == c_uint32:
-                    rep = '0x%08X' % val
-                elif field[1] == c_uint16:
-                    rep = '0x%04X' % val
-                elif field[1] == c_uint8:
-                    rep = '0x%02X' % val
-                else:
-                    rep = '0x%X' % val
+            if type(val) is str:
+                rep = "0x%X ('%s')" % (Bytes2Val(bytearray(val)), val)
+            elif type(val) in (int, long):
+                rep = '0x%X' % val
             elif isinstance(val, c_uint24):
                 rep = '0x%X' % val.get_value()
             elif 'c_ubyte_Array' in str(type(val)):
                 if sizeof(val) == 16:
-                    if sys.version_info[0] < 3:
-                        rep = str(bytearray(val))
-                    else:
-                        rep = bytes(val)
-                    rep = str(uuid.UUID(bytes_le = rep)).upper()
+                    rep = str(uuid.UUID(bytes = str(bytearray(val)))).upper()
                 else:
                     res = ['0x%02X'%i for i in bytearray(val)]
                     rep = '[%s]' % (','.join(res))
@@ -450,7 +398,7 @@ class FirmwareFile:
         ffssize = len(self.FfsData)
         offset  = sizeof(self.FfsHdr)
         if self.FfsHdr.Name != '\xff' * 16:
-            while offset < (ffssize - sizeof (EFI_COMMON_SECTION_HEADER)):
+            while offset < ffssize:
                 sechdr = EFI_COMMON_SECTION_HEADER.from_buffer (self.FfsData, offset)
                 sec = Section (offset, self.FfsData[offset:offset + int(sechdr.Size)])
                 self.SecList.append(sec)
@@ -475,7 +423,7 @@ class FirmwareVolume:
         else:
             offset = self.FvHdr.HeaderLength
         offset = AlignPtr(offset)
-        while offset < (fvsize - sizeof (EFI_FFS_FILE_HEADER)):
+        while offset < fvsize:
             ffshdr = EFI_FFS_FILE_HEADER.from_buffer (self.FvData, offset)
             if (ffshdr.Name == '\xff' * 16) and (int(ffshdr.Size) == 0xFFFFFF):
                 offset = fvsize
@@ -537,9 +485,9 @@ class FirmwareDevice:
         offset = 0
         fdsize = len(self.FdData)
         self.FvList  = []
-        while offset < (fdsize - sizeof (EFI_FIRMWARE_VOLUME_HEADER)):
+        while offset < fdsize:
             fvh = EFI_FIRMWARE_VOLUME_HEADER.from_buffer (self.FdData, offset)
-            if b'_FVH' != fvh.Signature:
+            if '_FVH' != fvh.Signature:
                 raise Exception("ERROR: Invalid FV header !")
             fv = FirmwareVolume (offset, self.FdData[offset:offset + fvh.FvLength])
             fv.ParseFv ()
@@ -552,6 +500,8 @@ class FirmwareDevice:
 
         fih = None
         for fsp in self.FspList:
+            if fsp.Fih.HeaderRevision < 3:
+                raise Exception("ERROR: FSP 1.x is not supported by this tool !")
             if not fih:
                 fih = fsp.Fih
             else:
@@ -576,7 +526,7 @@ class FirmwareDevice:
                 fspoffset = fv.Offset
                 offset    = fspoffset + fihoffset
                 fih = FSP_INFORMATION_HEADER.from_buffer (self.FdData, offset)
-                if b'FSPH' != fih.Signature:
+                if 'FSPH' != fih.Signature:
                     continue
 
                 offset += fih.HeaderLength
@@ -584,7 +534,7 @@ class FirmwareDevice:
                 plist  = []
                 while True:
                     fch = FSP_COMMON_HEADER.from_buffer (self.FdData, offset)
-                    if b'FSPP' != fch.Signature:
+                    if 'FSPP' != fch.Signature:
                         offset += fch.HeaderLength
                         offset = AlignPtr(offset, 4)
                     else:
@@ -609,9 +559,9 @@ class PeTeImage:
     def __init__(self, offset, data):
         self.Offset    = offset
         tehdr          = EFI_TE_IMAGE_HEADER.from_buffer (data, 0)
-        if   tehdr.Signature == b'VZ': # TE image
+        if   tehdr.Signature == 'VZ': # TE image
             self.TeHdr   = tehdr
-        elif tehdr.Signature == b'MZ': # PE image
+        elif tehdr.Signature == 'MZ': # PE image
             self.TeHdr   = None
             self.DosHdr  = EFI_IMAGE_DOS_HEADER.from_buffer (data, 0)
             self.PeHdr   = EFI_IMAGE_NT_HEADERS32.from_buffer (data, self.DosHdr.e_lfanew)
@@ -641,10 +591,10 @@ class PeTeImage:
             rsize   = self.TeHdr.DataDirectoryBaseReloc.Size
             roffset = sizeof(self.TeHdr) - self.TeHdr.StrippedSize + self.TeHdr.DataDirectoryBaseReloc.VirtualAddress
         else:
-            # Assuming PE32 image type (self.PeHdr.OptionalHeader.PeOptHdr.Magic == 0x10b)
-            rsize   = self.PeHdr.OptionalHeader.PeOptHdr.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY.BASERELOC].Size
-            roffset = self.PeHdr.OptionalHeader.PeOptHdr.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY.BASERELOC].VirtualAddress
-            if self.PeHdr.OptionalHeader.PePlusOptHdr.Magic == 0x20b: # PE32+ image
+            if self.PeHdr.OptionalHeader.PeOptHdr.Magic == 0x10b: # PE32 image
+                rsize   = self.PeHdr.OptionalHeader.PeOptHdr.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY.BASERELOC].Size
+                roffset = self.PeHdr.OptionalHeader.PeOptHdr.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY.BASERELOC].VirtualAddress
+            if self.PeHdr.OptionalHeader.PeOptHdr.Magic == 0x20b: # PE32+ image
                 rsize   = self.PeHdr.OptionalHeader.PePlusOptHdr.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY.BASERELOC].Size
                 roffset = self.PeHdr.OptionalHeader.PePlusOptHdr.DataDirectory[EFI_IMAGE_DIRECTORY_ENTRY.BASERELOC].VirtualAddress
 
@@ -656,7 +606,7 @@ class PeTeImage:
             offset += sizeof(blkhdr)
             # Read relocation type,offset pairs
             rlen  = blkhdr.BlockSize - sizeof(PE_RELOC_BLOCK_HEADER)
-            rnum  = int (rlen/sizeof(c_uint16))
+            rnum  = rlen/sizeof(c_uint16)
             rdata = (c_uint16 * rnum).from_buffer(self.Data, offset)
             for each in rdata:
                 roff  = each & 0xfff
@@ -699,12 +649,8 @@ class PeTeImage:
         else:
             offset  = self.Offset + self.DosHdr.e_lfanew
             offset += EFI_IMAGE_NT_HEADERS32.OptionalHeader.offset
-            if self.PeHdr.OptionalHeader.PePlusOptHdr.Magic == 0x20b: # PE32+ image
-                offset += EFI_IMAGE_OPTIONAL_HEADER32_PLUS.ImageBase.offset
-                size    = EFI_IMAGE_OPTIONAL_HEADER32_PLUS.ImageBase.size
-            else:
-                offset += EFI_IMAGE_OPTIONAL_HEADER32.ImageBase.offset
-                size    = EFI_IMAGE_OPTIONAL_HEADER32.ImageBase.size
+            offset += EFI_IMAGE_OPTIONAL_HEADER32.ImageBase.offset
+            size    = EFI_IMAGE_OPTIONAL_HEADER32.ImageBase.size
 
         value  = Bytes2Val(fdbin[offset:offset+size]) + delta
         fdbin[offset:offset+size] = Val2Bytes(value, size)
@@ -722,11 +668,8 @@ def ShowFspInfo (fspfile):
         if not name:
             name = '\xff' * 16
         else:
-            if sys.version_info[0] < 3:
-                name = str(bytearray(name))
-            else:
-                name = bytes(name)
-        guid = uuid.UUID(bytes_le = name)
+            name = str(bytearray(name))
+        guid = uuid.UUID(bytes = name)
         print ("FV%d:" % idx)
         print ("  GUID   : %s" % str(guid).upper())
         print ("  Offset : 0x%08X" %  fv.Offset)
@@ -754,10 +697,7 @@ def GenFspHdr (fspfile, outdir, hfile):
     for fsp in fd.FspList:
         fih = fsp.Fih
         if firstfv:
-            if sys.version_info[0] < 3:
-                hfsp.write("#define  FSP_IMAGE_ID    0x%016X    /* '%s' */\n" % (Bytes2Val(bytearray(fih.ImageId)), fih.ImageId))
-            else:
-                hfsp.write("#define  FSP_IMAGE_ID    0x%016X    /* '%s' */\n" % (Bytes2Val(bytearray(fih.ImageId)), str (fih.ImageId, 'utf-8')))
+            hfsp.write("#define  FSP_IMAGE_ID    0x%016X    /* '%s' */\n" % (Bytes2Val(bytearray(fih.ImageId)), fih.ImageId))
             hfsp.write("#define  FSP_IMAGE_REV   0x%08X \n\n" % fih.ImageRevision)
             firstfv = False
         fv = fd.FvList[fsp.FvIdxList[0]]
@@ -773,8 +713,6 @@ def SplitFspBin (fspfile, outdir, nametemplate):
     fd.ParseFsp ()
 
     for fsp in fd.FspList:
-        if fsp.Fih.HeaderRevision < 3:
-            raise Exception("ERROR: FSP 1.x is not supported by the split command !")
         ftype = fsp.Type
         if not nametemplate:
             nametemplate = fspfile
@@ -795,7 +733,7 @@ def RebaseFspBin (FspBinary, FspComponent, FspBase, OutputDir, OutputFile):
     numcomp  = len(FspComponent)
     baselist = FspBase
     if numcomp != len(baselist):
-        print ("ERROR: Required number of base does not match number of FSP component !")
+        print "ERROR: Required number of base does not match number of FSP component !"
         return
 
     newfspbin = fd.FdData[:]
@@ -804,18 +742,13 @@ def RebaseFspBin (FspBinary, FspComponent, FspBase, OutputDir, OutputFile):
 
         found = False
         for fsp in fd.FspList:
-            # Is this FSP 1.x single binary?
-            if fsp.Fih.HeaderRevision < 3:
-                found = True
-                ftype = 'X'
-                break
             ftype = fsp.Type.lower()
             if ftype == fspcomp:
                 found = True
                 break
 
         if not found:
-            print ("ERROR: Could not find FSP_%c component to rebase !" % fspcomp.upper())
+            print "ERROR: Could not find FSP_%c component to rebase !" % fspcomp.upper()
             return
 
         fspbase = baselist[idx]
@@ -825,7 +758,7 @@ def RebaseFspBin (FspBinary, FspComponent, FspBase, OutputDir, OutputFile):
             newbase = int(fspbase)
         oldbase = fsp.Fih.ImageBase
         delta = newbase - oldbase
-        print ("Rebase FSP-%c from 0x%08X to 0x%08X:" % (ftype.upper(),oldbase,newbase))
+        print "Rebase FSP-%c from 0x%08X to 0x%08X:" % (ftype.upper(),oldbase,newbase)
 
         imglist = []
         for fvidx in fsp.FvIdxList:
@@ -844,12 +777,12 @@ def RebaseFspBin (FspBinary, FspComponent, FspBase, OutputDir, OutputFile):
             pcount += img.Rebase(delta, newfspbin)
             fcount += 1
 
-        print ("  Patched %d entries in %d TE/PE32 images." % (pcount, fcount))
+        print "  Patched %d entries in %d TE/PE32 images." % (pcount, fcount)
 
         (count, applied) = fsp.Patch(delta, newfspbin)
-        print ("  Patched %d entries using FSP patch table." % applied)
+        print "  Patched %d entries using FSP patch table." % applied
         if count != applied:
-            print ("  %d invalid entries are ignored !" % (count - applied))
+            print "  %d invalid entries are ignored !" % (count - applied)
 
     if OutputFile == '':
         filename = os.path.basename(FspBinary)
@@ -864,7 +797,7 @@ def RebaseFspBin (FspBinary, FspComponent, FspBase, OutputDir, OutputFile):
 
 def main ():
     parser     = argparse.ArgumentParser()
-    subparsers = parser.add_subparsers(title='commands', dest="which")
+    subparsers = parser.add_subparsers(title='commands')
 
     parser_rebase  = subparsers.add_parser('rebase',  help='rebase a FSP into a new base address')
     parser_rebase.set_defaults(which='rebase')
@@ -906,7 +839,7 @@ def main ():
     elif args.which == 'info':
         ShowFspInfo (args.FspBinary)
     else:
-        parser.print_help()
+        pass
 
     return 0
 

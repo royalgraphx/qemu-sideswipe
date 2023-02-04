@@ -5,7 +5,6 @@
  */
 
 #include <common.h>
-#include <log.h>
 #include <linux/libfdt.h>
 #include <fdt_support.h>
 

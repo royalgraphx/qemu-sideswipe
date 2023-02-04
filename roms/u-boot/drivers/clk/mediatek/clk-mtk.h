@@ -7,13 +7,11 @@
 #ifndef __DRV_CLK_MTK_H
 #define __DRV_CLK_MTK_H
 
-#include <linux/bitops.h>
 #define CLK_XTAL			0
 #define MHZ				(1000 * 1000)
 
 #define HAVE_RST_BAR			BIT(0)
 #define CLK_DOMAIN_SCPSYS		BIT(0)
-#define CLK_MUX_SETCLR_UPD		BIT(1)
 
 #define CLK_GATE_SETCLR			BIT(0)
 #define CLK_GATE_SETCLR_INV		BIT(1)
@@ -24,8 +22,6 @@
 #define CLK_PARENT_APMIXED		BIT(4)
 #define CLK_PARENT_TOPCKGEN		BIT(5)
 #define CLK_PARENT_MASK			GENMASK(5, 4)
-
-#define ETHSYS_HIFSYS_RST_CTRL_OFS	0x34
 
 /* struct mtk_pll_data - hardware-specific PLLs data */
 struct mtk_pll_data {
@@ -38,12 +34,9 @@ struct mtk_pll_data {
 	u32 flags;
 	u32 rst_bar_mask;
 	u64 fmax;
-	u64 fmin;
 	int pcwbits;
-	int pcwibits;
 	u32 pcw_reg;
 	int pcw_shift;
-	u32 pcw_chg_reg;
 };
 
 /**
@@ -107,13 +100,9 @@ struct mtk_composite {
 	const int id;
 	const int *parent;
 	u32 mux_reg;
-	u32 mux_set_reg;
-	u32 mux_clr_reg;
-	u32 upd_reg;
 	u32 gate_reg;
 	u32 mux_mask;
 	signed char mux_shift;
-	signed char upd_shift;
 	signed char gate_shift;
 	signed char num_parents;
 	u16 flags;
@@ -144,24 +133,6 @@ struct mtk_composite {
 		.parent = _parents,					\
 		.num_parents = ARRAY_SIZE(_parents),			\
 		.flags = 0,						\
-	}
-
-#define MUX_CLR_SET_UPD_FLAGS(_id, _parents, _mux_ofs, _mux_set_ofs,\
-			_mux_clr_ofs, _shift, _width, _gate,		\
-			_upd_ofs, _upd, _flags) {			\
-		.id = _id,						\
-		.mux_reg = _mux_ofs,					\
-		.mux_set_reg = _mux_set_ofs,			\
-		.mux_clr_reg = _mux_clr_ofs,			\
-		.upd_reg = _upd_ofs,					\
-		.upd_shift = _upd,					\
-		.mux_shift = _shift,					\
-		.mux_mask = BIT(_width) - 1,				\
-		.gate_reg = _mux_ofs,					\
-		.gate_shift = _gate,					\
-		.parent = _parents,					\
-		.num_parents = ARRAY_SIZE(_parents),			\
-		.flags = _flags,					\
 	}
 
 struct mtk_gate_regs {

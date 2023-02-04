@@ -2,16 +2,15 @@
 #define CHIPIDEA_H
 
 #include "hw/usb/hcd-ehci.h"
-#include "qom/object.h"
 
-struct ChipideaState {
+typedef struct ChipideaState {
     /*< private >*/
     EHCISysBusState parent_obj;
 
     MemoryRegion iomem[3];
-};
+} ChipideaState;
 
 #define TYPE_CHIPIDEA "usb-chipidea"
-OBJECT_DECLARE_SIMPLE_TYPE(ChipideaState, CHIPIDEA)
+#define CHIPIDEA(obj) OBJECT_CHECK(ChipideaState, (obj), TYPE_CHIPIDEA)
 
 #endif /* CHIPIDEA_H */

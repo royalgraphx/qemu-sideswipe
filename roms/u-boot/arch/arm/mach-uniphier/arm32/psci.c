@@ -4,7 +4,7 @@
  *   Author: Masahiro Yamada <yamada.masahiro@socionext.com>
  */
 
-#include <cpu_func.h>
+#include <common.h>
 #include <linux/bitops.h>
 #include <linux/delay.h>
 #include <linux/io.h>
@@ -15,7 +15,6 @@
 #include <asm/processor.h>
 #include <asm/psci.h>
 #include <asm/secure.h>
-#include <asm/system.h>
 
 #include "../debug.h"
 #include "../soc-info.h"
@@ -131,7 +130,7 @@ void psci_arch_init(void)
 
 u32 uniphier_psci_holding_pen_release __secure_data = 0xffffffff;
 
-s32 __secure psci_cpu_on(u32 function_id, u32 cpuid, u32 entry_point,
+int __secure psci_cpu_on(u32 function_id, u32 cpuid, u32 entry_point,
 			 u32 context_id)
 {
 	u32 cpu = cpuid & 0xff;
@@ -156,7 +155,7 @@ s32 __secure psci_cpu_on(u32 function_id, u32 cpuid, u32 entry_point,
 	return PSCI_RET_SUCCESS;
 }
 
-void __secure psci_system_reset(void)
+void __secure psci_system_reset(u32 function_id)
 {
-	reset_cpu();
+	reset_cpu(0);
 }

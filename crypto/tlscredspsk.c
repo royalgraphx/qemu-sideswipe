@@ -29,8 +29,6 @@
 
 #ifdef CONFIG_GNUTLS
 
-#include <gnutls/gnutls.h>
-
 static int
 lookup_key(const char *pskfile, const char *username, gnutls_datum_t *key,
            Error **errp)
@@ -109,12 +107,7 @@ qcrypto_tls_creds_psk_load(QCryptoTLSCredsPSK *creds,
             goto cleanup;
         }
 
-        ret = gnutls_psk_set_server_credentials_file(creds->data.server, pskfile);
-        if (ret < 0) {
-            error_setg(errp, "Cannot set PSK server credentials: %s",
-                       gnutls_strerror(ret));
-            goto cleanup;
-        }
+        gnutls_psk_set_server_credentials_file(creds->data.server, pskfile);
         gnutls_psk_set_server_dh_params(creds->data.server,
                                         creds->parent_obj.dh_params);
     } else {
@@ -140,13 +133,8 @@ qcrypto_tls_creds_psk_load(QCryptoTLSCredsPSK *creds,
             goto cleanup;
         }
 
-        ret = gnutls_psk_set_client_credentials(creds->data.client,
-                                                username, &key, GNUTLS_PSK_KEY_HEX);
-        if (ret < 0) {
-            error_setg(errp, "Cannot set PSK client credentials: %s",
-                       gnutls_strerror(ret));
-            goto cleanup;
-        }
+        gnutls_psk_set_client_credentials(creds->data.client,
+                                          username, &key, GNUTLS_PSK_KEY_HEX);
     }
 
     rv = 0;
@@ -198,11 +186,17 @@ qcrypto_tls_creds_psk_unload(QCryptoTLSCredsPSK *creds G_GNUC_UNUSED)
 
 
 static void
-qcrypto_tls_creds_psk_complete(UserCreatable *uc, Error **errp)
+qcrypto_tls_creds_psk_prop_set_loaded(Object *obj,
+                                      bool value,
+                                      Error **errp)
 {
-    QCryptoTLSCredsPSK *creds = QCRYPTO_TLS_CREDS_PSK(uc);
+    QCryptoTLSCredsPSK *creds = QCRYPTO_TLS_CREDS_PSK(obj);
 
-    qcrypto_tls_creds_psk_load(creds, errp);
+    if (value) {
+        qcrypto_tls_creds_psk_load(creds, errp);
+    } else {
+        qcrypto_tls_creds_psk_unload(creds);
+    }
 }
 
 
@@ -235,6 +229,13 @@ qcrypto_tls_creds_psk_prop_get_loaded(Object *obj G_GNUC_UNUSED,
 
 
 #endif /* ! CONFIG_GNUTLS */
+
+
+static void
+qcrypto_tls_creds_psk_complete(UserCreatable *uc, Error **errp)
+{
+    object_property_set_bool(OBJECT(uc), "loaded", true, errp);
+}
 
 
 static void
@@ -274,7 +275,7 @@ qcrypto_tls_creds_psk_class_init(ObjectClass *oc, void *data)
 
     object_class_property_add_bool(oc, "loaded",
                                    qcrypto_tls_creds_psk_prop_get_loaded,
-                                   NULL);
+                                   qcrypto_tls_creds_psk_prop_set_loaded);
     object_class_property_add_str(oc, "username",
                                   qcrypto_tls_creds_psk_prop_get_username,
                                   qcrypto_tls_creds_psk_prop_set_username);

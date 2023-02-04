@@ -420,13 +420,13 @@ unsigned int mv_ddr_speed_bin_timing_get(enum mv_ddr_speed_bin index, enum mv_dd
 		result = speed_bin_table_t_rcd_t_rp[index];
 		break;
 	case SPEED_BIN_TRAS:
-		if (index <= SPEED_BIN_DDR_1066G)
+		if (index < SPEED_BIN_DDR_1066G)
 			result = 37500;
-		else if (index <= SPEED_BIN_DDR_1333J)
+		else if (index < SPEED_BIN_DDR_1333J)
 			result = 36000;
-		else if (index <= SPEED_BIN_DDR_1600K)
+		else if (index < SPEED_BIN_DDR_1600K)
 			result = 35000;
-		else if (index <= SPEED_BIN_DDR_1866M)
+		else if (index < SPEED_BIN_DDR_1866M)
 			result = 34000;
 		else
 			result = 33000;
@@ -833,9 +833,6 @@ u32 pattern_table_get_word(u32 dev_num, enum hws_pattern type, u8 index)
 			pattern = pattern_table_get_isi_word16(index);
 			break;
 		default:
-			if (((int)type == 29) || ((int)type == 30))
-				break;
-
 			printf("error: %s: unsupported pattern type [%d] found\n",
 			       __func__, (int)type);
 			pattern = 0;

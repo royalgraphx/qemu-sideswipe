@@ -27,7 +27,7 @@ Makefile
 # Auto generated headers
 /crypto/buildinf.h
 /apps/progs.h
-/include/crypto/*_conf.h
+/crypto/include/internal/*_conf.h
 /openssl/include/opensslconf.h
 /util/domd
 
@@ -178,7 +178,6 @@ Makefile.save
 *.bak
 cscope.*
 *.d
-*.d.tmp
 pod2htmd.tmp
 
 # Windows manifest files

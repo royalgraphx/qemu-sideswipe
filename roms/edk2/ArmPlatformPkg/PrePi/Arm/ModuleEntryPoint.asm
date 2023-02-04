@@ -1,5 +1,5 @@
 //
-//  Copyright (c) 2011 - 2020, Arm Limited. All rights reserved.<BR>
+//  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 //
 //  SPDX-License-Identifier: BSD-2-Clause-Patent
 //
@@ -28,7 +28,7 @@ _ModuleEntryPoint
   // Do early platform specific actions
   bl    ArmPlatformPeiBootAction
 
-  // Get ID of this CPU in multi-core system
+  // Get ID of this CPU in Multicore system
   bl    ArmReadMpidr
   // Keep a copy of the MpId register value
   mov   r8, r0

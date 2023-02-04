@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -34,9 +34,9 @@ static inline unsigned long arm_max_reserved_va(CPUState *cs)
     } else {
         /*
          * We need to be able to map the commpage.
-         * See init_guest_commpage in linux-user/elfload.c.
+         * See validate_guest_space in linux-user/elfload.c.
          */
-        return 0xfffffffful;
+        return 0xffff0000ul;
     }
 }
 #define MAX_RESERVED_VA  arm_max_reserved_va

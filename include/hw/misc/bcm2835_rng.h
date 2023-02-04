@@ -11,17 +11,17 @@
 #define BCM2835_RNG_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define TYPE_BCM2835_RNG "bcm2835-rng"
-OBJECT_DECLARE_SIMPLE_TYPE(BCM2835RngState, BCM2835_RNG)
+#define BCM2835_RNG(obj) \
+        OBJECT_CHECK(BCM2835RngState, (obj), TYPE_BCM2835_RNG)
 
-struct BCM2835RngState {
+typedef struct {
     SysBusDevice busdev;
     MemoryRegion iomem;
 
     uint32_t rng_ctrl;
     uint32_t rng_status;
-};
+} BCM2835RngState;
 
 #endif

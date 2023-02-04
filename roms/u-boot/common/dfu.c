@@ -11,8 +11,6 @@
  */
 
 #include <common.h>
-#include <command.h>
-#include <log.h>
 #include <watchdog.h>
 #include <dfu.h>
 #include <console.h>
@@ -36,10 +34,6 @@ int run_usb_dnl_gadget(int usbctrl_index, char *usb_dnl_gadget)
 		pr_err("g_dnl_register failed");
 		return CMD_RET_FAILURE;
 	}
-
-#ifdef CONFIG_DFU_TIMEOUT
-	unsigned long start_time = get_timer(0);
-#endif
 
 	while (1) {
 		if (g_dnl_detach()) {
@@ -84,22 +78,6 @@ int run_usb_dnl_gadget(int usbctrl_index, char *usb_dnl_gadget)
 				goto exit;
 			}
 		}
-
-#ifdef CONFIG_DFU_TIMEOUT
-		unsigned long wait_time = dfu_get_timeout();
-
-		if (wait_time) {
-			unsigned long current_time = get_timer(start_time);
-
-			if (current_time > wait_time) {
-				debug("Inactivity timeout, abort DFU\n");
-				goto exit;
-			}
-		}
-#endif
-
-		if (dfu_reinit_needed)
-			goto exit;
 
 		WATCHDOG_RESET();
 		usb_gadget_handle_interrupts(usbctrl_index);

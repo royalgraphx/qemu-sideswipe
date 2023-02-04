@@ -14,7 +14,6 @@
 
 #include "qemu/bitops.h"
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 
 enum IMX7SNVSRegisters {
@@ -24,13 +23,13 @@ enum IMX7SNVSRegisters {
 };
 
 #define TYPE_IMX7_SNVS "imx7.snvs"
-OBJECT_DECLARE_SIMPLE_TYPE(IMX7SNVSState, IMX7_SNVS)
+#define IMX7_SNVS(obj) OBJECT_CHECK(IMX7SNVSState, (obj), TYPE_IMX7_SNVS)
 
-struct IMX7SNVSState {
+typedef struct IMX7SNVSState {
     /* <private> */
     SysBusDevice parent_obj;
 
     MemoryRegion mmio;
-};
+} IMX7SNVSState;
 
 #endif /* IMX7_SNVS_H */

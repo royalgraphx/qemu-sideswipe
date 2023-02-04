@@ -6,7 +6,7 @@
  */
 
 #ifndef PPC_CPU_PARAM_H
-#define PPC_CPU_PARAM_H
+#define PPC_CPU_PARAM_H 1
 
 #ifdef TARGET_PPC64
 # define TARGET_LONG_BITS 64

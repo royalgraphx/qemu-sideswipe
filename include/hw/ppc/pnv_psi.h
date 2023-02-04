@@ -1,12 +1,12 @@
 /*
  * QEMU PowerPC PowerNV Processor Service Interface (PSI) model
  *
- * Copyright (c) 2015-2022, IBM Corporation.
+ * Copyright (c) 2015-2017, IBM Corporation.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,15 +23,14 @@
 #include "hw/sysbus.h"
 #include "hw/ppc/xics.h"
 #include "hw/ppc/xive.h"
-#include "qom/object.h"
 
 #define TYPE_PNV_PSI "pnv-psi"
-OBJECT_DECLARE_TYPE(PnvPsi, PnvPsiClass,
-                    PNV_PSI)
+#define PNV_PSI(obj) \
+     OBJECT_CHECK(PnvPsi, (obj), TYPE_PNV_PSI)
 
 #define PSIHB_XSCOM_MAX         0x20
 
-struct PnvPsi {
+typedef struct PnvPsi {
     DeviceState parent;
 
     MemoryRegion regs_mr;
@@ -48,30 +47,36 @@ struct PnvPsi {
     uint64_t regs[PSIHB_XSCOM_MAX];
 
     MemoryRegion xscom_regs;
-};
+} PnvPsi;
 
 #define TYPE_PNV8_PSI TYPE_PNV_PSI "-POWER8"
-OBJECT_DECLARE_SIMPLE_TYPE(Pnv8Psi, PNV8_PSI)
+#define PNV8_PSI(obj) \
+    OBJECT_CHECK(Pnv8Psi, (obj), TYPE_PNV8_PSI)
 
-struct Pnv8Psi {
+typedef struct Pnv8Psi {
     PnvPsi   parent;
 
     ICSState ics;
-};
+} Pnv8Psi;
 
 #define TYPE_PNV9_PSI TYPE_PNV_PSI "-POWER9"
-OBJECT_DECLARE_SIMPLE_TYPE(Pnv9Psi, PNV9_PSI)
+#define PNV9_PSI(obj) \
+    OBJECT_CHECK(Pnv9Psi, (obj), TYPE_PNV9_PSI)
 
-struct Pnv9Psi {
+typedef struct Pnv9Psi {
     PnvPsi   parent;
 
     XiveSource source;
-};
+} Pnv9Psi;
 
 #define TYPE_PNV10_PSI TYPE_PNV_PSI "-POWER10"
 
+#define PNV_PSI_CLASS(klass) \
+     OBJECT_CLASS_CHECK(PnvPsiClass, (klass), TYPE_PNV_PSI)
+#define PNV_PSI_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(PnvPsiClass, (obj), TYPE_PNV_PSI)
 
-struct PnvPsiClass {
+typedef struct PnvPsiClass {
     SysBusDeviceClass parent_class;
 
     uint32_t xscom_pcba;
@@ -79,10 +84,13 @@ struct PnvPsiClass {
     uint64_t bar_mask;
     const char *compat;
     int compat_size;
-};
+
+    void (*irq_set)(PnvPsi *psi, int, bool state);
+} PnvPsiClass;
 
 /* The PSI and FSP interrupts are muxed on the same IRQ number */
 typedef enum PnvPsiIrq {
+    PSIHB_IRQ_PSI, /* internal use only */
     PSIHB_IRQ_FSP, /* internal use only */
     PSIHB_IRQ_OCC,
     PSIHB_IRQ_FSI,
@@ -92,6 +100,8 @@ typedef enum PnvPsiIrq {
 } PnvPsiIrq;
 
 #define PSI_NUM_INTERRUPTS 6
+
+void pnv_psi_irq_set(PnvPsi *psi, int irq, bool state);
 
 /* P9 PSI Interrupts */
 #define PSIHB9_IRQ_PSI          0

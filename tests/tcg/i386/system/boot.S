@@ -76,7 +76,7 @@ _start:
          */
         call main
 
-_exit:	/* output any non-zero result in eax to isa-debug-exit device */
+        /* output any non-zero result in eax to isa-debug-exit device */
         test %al, %al
         jz 1f
         out %ax, $0xf4

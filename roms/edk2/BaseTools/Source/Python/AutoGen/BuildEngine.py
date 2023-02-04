@@ -20,9 +20,6 @@ from Common.BuildToolError import *
 from Common.Misc import tdict, PathClass
 from Common.StringUtils import NormPath
 from Common.DataType import *
-from Common.TargetTxtClassObject import TargetTxtDict
-gDefaultBuildRuleFile = 'build_rule.txt'
-AutoGenReqBuildRuleVerNum = '0.1'
 
 import Common.EdkLogger as EdkLogger
 
@@ -172,13 +169,11 @@ class FileBuildRule:
     def __str__(self):
         SourceString = ""
         SourceString += " %s %s %s" % (self.SourceFileType, " ".join(self.SourceFileExtList), self.ExtraSourceFileList)
-        DestString = ", ".join([str(i) for i in self.DestFileList])
+        DestString = ", ".join(self.DestFileList)
         CommandString = "\n\t".join(self.CommandList)
         return "%s : %s\n\t%s" % (DestString, SourceString, CommandString)
 
-    def Instantiate(self, Macros = None):
-        if Macros is None:
-            Macros = {}
+    def Instantiate(self, Macros={}):
         NewRuleObject = copy.copy(self)
         NewRuleObject.BuildTargets = {}
         NewRuleObject.DestFileList = []
@@ -587,43 +582,6 @@ class BuildRule:
         _Command           : ParseCommonSubSection,
         _UnknownSection    : SkipSection,
     }
-
-class ToolBuildRule():
-
-    def __new__(cls, *args, **kw):
-        if not hasattr(cls, '_instance'):
-            orig = super(ToolBuildRule, cls)
-            cls._instance = orig.__new__(cls, *args, **kw)
-        return cls._instance
-
-    def __init__(self):
-        if not hasattr(self, 'ToolBuildRule'):
-            self._ToolBuildRule = None
-
-    @property
-    def ToolBuildRule(self):
-        if not self._ToolBuildRule:
-            self._GetBuildRule()
-        return self._ToolBuildRule
-
-    def _GetBuildRule(self):
-        BuildRuleFile = None
-        TargetObj = TargetTxtDict()
-        TargetTxt = TargetObj.Target
-        if TAB_TAT_DEFINES_BUILD_RULE_CONF in TargetTxt.TargetTxtDictionary:
-            BuildRuleFile = TargetTxt.TargetTxtDictionary[TAB_TAT_DEFINES_BUILD_RULE_CONF]
-        if not BuildRuleFile:
-            BuildRuleFile = gDefaultBuildRuleFile
-        RetVal = BuildRule(BuildRuleFile)
-        if RetVal._FileVersion == "":
-            RetVal._FileVersion = AutoGenReqBuildRuleVerNum
-        else:
-            if RetVal._FileVersion < AutoGenReqBuildRuleVerNum :
-                # If Build Rule's version is less than the version number required by the tools, halting the build.
-                EdkLogger.error("build", AUTOGEN_ERROR,
-                                ExtraData="The version number [%s] of build_rule.txt is less than the version number required by the AutoGen.(the minimum required version number is [%s])"\
-                                 % (RetVal._FileVersion, AutoGenReqBuildRuleVerNum))
-        self._ToolBuildRule = RetVal
 
 # This acts like the main() function for the script, unless it is 'import'ed into another
 # script.

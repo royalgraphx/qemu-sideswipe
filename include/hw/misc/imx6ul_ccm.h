@@ -12,7 +12,6 @@
 
 #include "hw/misc/imx_ccm.h"
 #include "qemu/bitops.h"
-#include "qom/object.h"
 
 #define CCM_CCR 0
 #define CCM_CCDR 1
@@ -208,9 +207,9 @@
 #define CCM_ANALOG_PLL_LOCK      (1 << 31);
 
 #define TYPE_IMX6UL_CCM "imx6ul.ccm"
-OBJECT_DECLARE_SIMPLE_TYPE(IMX6ULCCMState, IMX6UL_CCM)
+#define IMX6UL_CCM(obj) OBJECT_CHECK(IMX6ULCCMState, (obj), TYPE_IMX6UL_CCM)
 
-struct IMX6ULCCMState {
+typedef struct IMX6ULCCMState {
     /* <private> */
     IMXCCMState parent_obj;
 
@@ -222,6 +221,6 @@ struct IMX6ULCCMState {
     uint32_t ccm[CCM_MAX];
     uint32_t analog[CCM_ANALOG_MAX];
 
-};
+} IMX6ULCCMState;
 
 #endif /* IMX6UL_CCM_H */

@@ -183,7 +183,7 @@ petalogix_ml605_init(MachineState *machine)
         spi = (SSIBus *)qdev_get_child_bus(dev, "spi");
 
         for (i = 0; i < NUM_SPI_FLASHES; i++) {
-            DriveInfo *dinfo = drive_get(IF_MTD, 0, i);
+            DriveInfo *dinfo = drive_get_next(IF_MTD);
             qemu_irq cs_line;
 
             dev = qdev_new("n25q128");
@@ -200,9 +200,9 @@ petalogix_ml605_init(MachineState *machine)
     }
 
     /* setup PVR to match kernel settings */
-    cpu->cfg.pvr_regs[4] = 0xc56b8000;
-    cpu->cfg.pvr_regs[5] = 0xc56be000;
-    cpu->cfg.pvr_regs[10] = 0x0e000000; /* virtex 6 */
+    cpu->env.pvr.regs[4] = 0xc56b8000;
+    cpu->env.pvr.regs[5] = 0xc56be000;
+    cpu->env.pvr.regs[10] = 0x0e000000; /* virtex 6 */
 
     microblaze_load_kernel(cpu, MEMORY_BASEADDR, ram_size,
                            machine->initrd_filename,

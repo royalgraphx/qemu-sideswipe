@@ -56,7 +56,7 @@ typedef struct {
     QTestState *qtest;
 } FlashConfig;
 
-static char *image_path;
+static char image_path[] = "/tmp/qtest.XXXXXX";
 
 /*
  * The pflash implementation allows some parameters to be unspecified. We want
@@ -261,7 +261,7 @@ static void test_geometry(const void *opaque)
     const FlashConfig *config = opaque;
     QTestState *qtest;
     qtest = qtest_initf("-M musicpal"
-                        " -drive if=pflash,file=%s,format=raw,copy-on-read=on"
+                        " -drive if=pflash,file=%s,format=raw,copy-on-read"
                         /* Device geometry properties. */
                         " -global driver=cfi.pflash02,"
                         "property=num-blocks0,value=%d"
@@ -406,7 +406,7 @@ static void test_geometry(const void *opaque)
 
     for (int region = 0; region < nb_erase_regions; ++region) {
         for (uint32_t i = 0; i < c->nb_blocs[region]; ++i) {
-            uint64_t byte_addr = (uint64_t)i * c->sector_len[region];
+            uint64_t byte_addr = i * c->sector_len[region];
             g_assert_cmphex(flash_read(c, byte_addr), ==, bank_mask(c));
         }
     }
@@ -581,7 +581,7 @@ static void test_cfi_in_autoselect(const void *opaque)
     const FlashConfig *config = opaque;
     QTestState *qtest;
     qtest = qtest_initf("-M musicpal"
-                        " -drive if=pflash,file=%s,format=raw,copy-on-read=on",
+                        " -drive if=pflash,file=%s,format=raw,copy-on-read",
                         image_path);
     FlashConfig explicit_config = expand_config_defaults(config);
     explicit_config.qtest = qtest;
@@ -608,7 +608,6 @@ static void test_cfi_in_autoselect(const void *opaque)
 static void cleanup(void *opaque)
 {
     unlink(image_path);
-    g_free(image_path);
 }
 
 /*
@@ -636,14 +635,16 @@ static const FlashConfig configuration[] = {
 
 int main(int argc, char **argv)
 {
-    GError *err = NULL;
-    int fd = g_file_open_tmp("qtest.XXXXXX", &image_path, &err);
-    g_assert_no_error(err);
-
+    int fd = mkstemp(image_path);
+    if (fd == -1) {
+        g_printerr("Failed to create temporary file %s: %s\n", image_path,
+                   strerror(errno));
+        exit(EXIT_FAILURE);
+    }
     if (ftruncate(fd, UNIFORM_FLASH_SIZE) < 0) {
         int error_code = errno;
         close(fd);
-        cleanup(NULL);
+        unlink(image_path);
         g_printerr("Failed to truncate file %s to %u MB: %s\n", image_path,
                    UNIFORM_FLASH_SIZE, strerror(error_code));
         exit(EXIT_FAILURE);

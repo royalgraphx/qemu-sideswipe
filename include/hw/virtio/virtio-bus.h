@@ -27,16 +27,17 @@
 
 #include "hw/qdev-core.h"
 #include "hw/virtio/virtio.h"
-#include "qom/object.h"
 
 #define TYPE_VIRTIO_BUS "virtio-bus"
-typedef struct VirtioBusClass VirtioBusClass;
+#define VIRTIO_BUS_GET_CLASS(obj) \
+        OBJECT_GET_CLASS(VirtioBusClass, obj, TYPE_VIRTIO_BUS)
+#define VIRTIO_BUS_CLASS(klass) \
+        OBJECT_CLASS_CHECK(VirtioBusClass, klass, TYPE_VIRTIO_BUS)
+#define VIRTIO_BUS(obj) OBJECT_CHECK(VirtioBusState, (obj), TYPE_VIRTIO_BUS)
+
 typedef struct VirtioBusState VirtioBusState;
-DECLARE_OBJ_CHECKERS(VirtioBusState, VirtioBusClass,
-                     VIRTIO_BUS, TYPE_VIRTIO_BUS)
 
-
-struct VirtioBusClass {
+typedef struct VirtioBusClass {
     /* This is what a VirtioBus must implement */
     BusClass parent;
     void (*notify)(DeviceState *d, uint16_t vector);
@@ -93,8 +94,7 @@ struct VirtioBusClass {
      */
     bool has_variable_vring_alignment;
     AddressSpace *(*get_dma_as)(DeviceState *d);
-    bool (*iommu_enabled)(DeviceState *d);
-};
+} VirtioBusClass;
 
 struct VirtioBusState {
     BusState parent_obj;
@@ -155,6 +155,5 @@ void virtio_bus_release_ioeventfd(VirtioBusState *bus);
 int virtio_bus_set_host_notifier(VirtioBusState *bus, int n, bool assign);
 /* Tell the bus that the ioeventfd handler is no longer required. */
 void virtio_bus_cleanup_host_notifier(VirtioBusState *bus, int n);
-/* Whether the IOMMU is enabled for this device */
-bool virtio_bus_device_iommu_enabled(VirtIODevice *vdev);
+
 #endif /* VIRTIO_BUS_H */

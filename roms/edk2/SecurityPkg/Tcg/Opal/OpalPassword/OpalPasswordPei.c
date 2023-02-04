@@ -8,7 +8,8 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "OpalPasswordPei.h"
 
-EFI_GUID  mOpalDeviceLockBoxGuid = OPAL_DEVICE_LOCKBOX_GUID;
+EFI_GUID mOpalDeviceLockBoxGuid = OPAL_DEVICE_LOCKBOX_GUID;
+
 
 /**
   Send a security protocol command to a device that receives data and/or the result
@@ -85,17 +86,17 @@ EFI_GUID  mOpalDeviceLockBoxGuid = OPAL_DEVICE_LOCKBOX_GUID;
 EFI_STATUS
 EFIAPI
 SecurityReceiveData (
-  IN  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN  UINT32                                 MediaId,
-  IN  UINT64                                 Timeout,
-  IN  UINT8                                  SecurityProtocolId,
-  IN  UINT16                                 SecurityProtocolSpecificData,
-  IN  UINTN                                  PayloadBufferSize,
-  OUT VOID                                   *PayloadBuffer,
-  OUT UINTN                                  *PayloadTransferSize
+  IN  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN  UINT32                                   MediaId,
+  IN  UINT64                                   Timeout,
+  IN  UINT8                                    SecurityProtocolId,
+  IN  UINT16                                   SecurityProtocolSpecificData,
+  IN  UINTN                                    PayloadBufferSize,
+  OUT VOID                                     *PayloadBuffer,
+  OUT UINTN                                    *PayloadTransferSize
   )
 {
-  OPAL_PEI_DEVICE  *PeiDev;
+  OPAL_PEI_DEVICE               *PeiDev;
 
   PeiDev = OPAL_PEI_DEVICE_FROM_THIS (This);
   if (PeiDev == NULL) {
@@ -178,16 +179,16 @@ SecurityReceiveData (
 EFI_STATUS
 EFIAPI
 SecuritySendData (
-  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL  *This,
-  IN UINT32                                 MediaId,
-  IN UINT64                                 Timeout,
-  IN UINT8                                  SecurityProtocolId,
-  IN UINT16                                 SecurityProtocolSpecificData,
-  IN UINTN                                  PayloadBufferSize,
-  IN VOID                                   *PayloadBuffer
+  IN EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    *This,
+  IN UINT32                                   MediaId,
+  IN UINT64                                   Timeout,
+  IN UINT8                                    SecurityProtocolId,
+  IN UINT16                                   SecurityProtocolSpecificData,
+  IN UINTN                                    PayloadBufferSize,
+  IN VOID                                     *PayloadBuffer
   )
 {
-  OPAL_PEI_DEVICE  *PeiDev;
+  OPAL_PEI_DEVICE               *PeiDev;
 
   PeiDev = OPAL_PEI_DEVICE_FROM_THIS (This);
   if (PeiDev == NULL) {
@@ -216,18 +217,18 @@ SecuritySendData (
 
 **/
 BOOLEAN
-IsOpalDeviceLocked (
-  OPAL_PEI_DEVICE  *OpalDev,
-  BOOLEAN          *BlockSidSupported
+IsOpalDeviceLocked(
+  OPAL_PEI_DEVICE    *OpalDev,
+  BOOLEAN            *BlockSidSupported
   )
 {
-  OPAL_SESSION                    Session;
-  OPAL_DISK_SUPPORT_ATTRIBUTE     SupportedAttributes;
-  TCG_LOCKING_FEATURE_DESCRIPTOR  LockingFeature;
-  UINT16                          OpalBaseComId;
-  TCG_RESULT                      Ret;
+  OPAL_SESSION                   Session;
+  OPAL_DISK_SUPPORT_ATTRIBUTE    SupportedAttributes;
+  TCG_LOCKING_FEATURE_DESCRIPTOR LockingFeature;
+  UINT16                         OpalBaseComId;
+  TCG_RESULT                     Ret;
 
-  Session.Sscp    = &OpalDev->Sscp;
+  Session.Sscp = &OpalDev->Sscp;
   Session.MediaId = 0;
 
   Ret = OpalGetSupportedAttributesInfo (&Session, &SupportedAttributes, &OpalBaseComId);
@@ -235,10 +236,10 @@ IsOpalDeviceLocked (
     return FALSE;
   }
 
-  Session.OpalBaseComId = OpalBaseComId;
-  *BlockSidSupported    = SupportedAttributes.BlockSid == 1 ? TRUE : FALSE;
+  Session.OpalBaseComId  = OpalBaseComId;
+  *BlockSidSupported     = SupportedAttributes.BlockSid == 1 ? TRUE : FALSE;
 
-  Ret = OpalGetLockingInfo (&Session, &LockingFeature);
+  Ret = OpalGetLockingInfo(&Session, &LockingFeature);
   if (Ret != TcgResultSuccess) {
     return FALSE;
   }
@@ -254,20 +255,20 @@ IsOpalDeviceLocked (
 **/
 VOID
 UnlockOpalPassword (
-  IN OPAL_PEI_DEVICE  *OpalDev
+  IN OPAL_PEI_DEVICE            *OpalDev
   )
 {
-  TCG_RESULT    Result;
-  OPAL_SESSION  Session;
-  BOOLEAN       BlockSidSupport;
-  UINT32        PpStorageFlags;
-  BOOLEAN       BlockSIDEnabled;
+  TCG_RESULT                    Result;
+  OPAL_SESSION                  Session;
+  BOOLEAN                       BlockSidSupport;
+  UINT32                        PpStorageFlags;
+  BOOLEAN                       BlockSIDEnabled;
 
   BlockSidSupport = FALSE;
   if (IsOpalDeviceLocked (OpalDev, &BlockSidSupport)) {
-    ZeroMem (&Session, sizeof (Session));
-    Session.Sscp          = &OpalDev->Sscp;
-    Session.MediaId       = 0;
+    ZeroMem(&Session, sizeof (Session));
+    Session.Sscp = &OpalDev->Sscp;
+    Session.MediaId = 0;
     Session.OpalBaseComId = OpalDev->Device->OpalBaseComId;
 
     Result = OpalUtilUpdateGlobalLockingRange (
@@ -291,14 +292,13 @@ UnlockOpalPassword (
   } else {
     BlockSIDEnabled = FALSE;
   }
-
   if (BlockSIDEnabled && BlockSidSupport) {
     DEBUG ((DEBUG_INFO, "OpalPassword: S3 phase send BlockSid command to device!\n"));
-    ZeroMem (&Session, sizeof (Session));
-    Session.Sscp          = &OpalDev->Sscp;
-    Session.MediaId       = 0;
+    ZeroMem(&Session, sizeof (Session));
+    Session.Sscp = &OpalDev->Sscp;
+    Session.MediaId = 0;
     Session.OpalBaseComId = OpalDev->Device->OpalBaseComId;
-    Result                = OpalBlockSid (&Session, TRUE);
+    Result = OpalBlockSid (&Session, TRUE);
     DEBUG ((
       DEBUG_INFO,
       "%a() OpalBlockSid() Result = 0x%x\n",
@@ -316,34 +316,33 @@ UnlockOpalPassword (
 **/
 VOID
 UnlockOpalPasswordDevices (
-  IN EDKII_PEI_STORAGE_SECURITY_CMD_PPI  *SscPpi
+  IN EDKII_PEI_STORAGE_SECURITY_CMD_PPI    *SscPpi
   )
 {
-  EFI_STATUS                Status;
-  UINT8                     *DevInfoBuffer;
-  UINT8                     DummyData;
-  OPAL_DEVICE_LOCKBOX_DATA  *DevInfo;
-  UINTN                     DevInfoLength;
-  EFI_DEVICE_PATH_PROTOCOL  *SscDevicePath;
-  UINTN                     SscDevicePathLength;
-  UINTN                     SscDeviceNum;
-  UINTN                     SscDeviceIndex;
-  OPAL_PEI_DEVICE           OpalDev;
+  EFI_STATUS                            Status;
+  UINT8                                 *DevInfoBuffer;
+  UINT8                                 DummyData;
+  OPAL_DEVICE_LOCKBOX_DATA              *DevInfo;
+  UINTN                                 DevInfoLength;
+  EFI_DEVICE_PATH_PROTOCOL              *SscDevicePath;
+  UINTN                                 SscDevicePathLength;
+  UINTN                                 SscDeviceNum;
+  UINTN                                 SscDeviceIndex;
+  OPAL_PEI_DEVICE                       OpalDev;
 
   //
   // Get OPAL devices info from LockBox.
   //
   DevInfoBuffer = &DummyData;
   DevInfoLength = sizeof (DummyData);
-  Status        = RestoreLockBox (&mOpalDeviceLockBoxGuid, DevInfoBuffer, &DevInfoLength);
+  Status = RestoreLockBox (&mOpalDeviceLockBoxGuid, DevInfoBuffer, &DevInfoLength);
   if (Status == EFI_BUFFER_TOO_SMALL) {
     DevInfoBuffer = AllocatePages (EFI_SIZE_TO_PAGES (DevInfoLength));
     if (DevInfoBuffer != NULL) {
       Status = RestoreLockBox (&mOpalDeviceLockBoxGuid, DevInfoBuffer, &DevInfoLength);
     }
   }
-
-  if ((DevInfoBuffer == NULL) || (DevInfoBuffer == &DummyData)) {
+  if (DevInfoBuffer == NULL || DevInfoBuffer == &DummyData) {
     return;
   } else if (EFI_ERROR (Status)) {
     FreePages (DevInfoBuffer, EFI_SIZE_TO_PAGES (DevInfoLength));
@@ -357,7 +356,6 @@ UnlockOpalPasswordDevices (
   if (EFI_ERROR (Status)) {
     goto Exit;
   }
-
   for (SscDeviceIndex = 1; SscDeviceIndex <= SscDeviceNum; SscDeviceIndex++) {
     Status = SscPpi->GetDevicePath (
                        SscPpi,
@@ -375,10 +373,9 @@ UnlockOpalPasswordDevices (
     //
     // Search the device in the restored LockBox.
     //
-    for (DevInfo = (OPAL_DEVICE_LOCKBOX_DATA *)DevInfoBuffer;
-         (UINTN)DevInfo < ((UINTN)DevInfoBuffer + DevInfoLength);
-         DevInfo = (OPAL_DEVICE_LOCKBOX_DATA *)((UINTN)DevInfo + DevInfo->Length))
-    {
+    for (DevInfo = (OPAL_DEVICE_LOCKBOX_DATA *) DevInfoBuffer;
+         (UINTN) DevInfo < ((UINTN) DevInfoBuffer + DevInfoLength);
+         DevInfo = (OPAL_DEVICE_LOCKBOX_DATA *) ((UINTN) DevInfo + DevInfo->Length)) {
       //
       // Find the matching device.
       //
@@ -386,9 +383,7 @@ UnlockOpalPasswordDevices (
           (CompareMem (
              DevInfo->DevicePath,
              SscDevicePath,
-             SscDevicePathLength - sizeof (EFI_DEVICE_PATH_PROTOCOL)
-             ) == 0))
-      {
+             SscDevicePathLength - sizeof (EFI_DEVICE_PATH_PROTOCOL)) == 0)) {
         OpalDev.Signature        = OPAL_PEI_DEVICE_SIGNATURE;
         OpalDev.Sscp.ReceiveData = SecurityReceiveData;
         OpalDev.Sscp.SendData    = SecuritySendData;
@@ -405,6 +400,7 @@ UnlockOpalPasswordDevices (
 Exit:
   ZeroMem (DevInfoBuffer, DevInfoLength);
   FreePages (DevInfoBuffer, EFI_SIZE_TO_PAGES (DevInfoLength));
+
 }
 
 /**
@@ -422,25 +418,27 @@ Exit:
 EFI_STATUS
 EFIAPI
 OpalPasswordStorageSecurityPpiNotify (
-  IN EFI_PEI_SERVICES           **PeiServices,
-  IN EFI_PEI_NOTIFY_DESCRIPTOR  *NotifyDesc,
-  IN VOID                       *Ppi
+  IN EFI_PEI_SERVICES             **PeiServices,
+  IN EFI_PEI_NOTIFY_DESCRIPTOR    *NotifyDesc,
+  IN VOID                         *Ppi
   )
 {
   DEBUG ((DEBUG_INFO, "%a entered at S3 resume!\n", __FUNCTION__));
 
-  UnlockOpalPasswordDevices ((EDKII_PEI_STORAGE_SECURITY_CMD_PPI *)Ppi);
+  UnlockOpalPasswordDevices ((EDKII_PEI_STORAGE_SECURITY_CMD_PPI *) Ppi);
 
   DEBUG ((DEBUG_INFO, "%a exit at S3 resume!\n", __FUNCTION__));
 
   return EFI_SUCCESS;
 }
 
-EFI_PEI_NOTIFY_DESCRIPTOR  mOpalPasswordStorageSecurityPpiNotifyDesc = {
+
+EFI_PEI_NOTIFY_DESCRIPTOR mOpalPasswordStorageSecurityPpiNotifyDesc = {
   (EFI_PEI_PPI_DESCRIPTOR_NOTIFY_CALLBACK | EFI_PEI_PPI_DESCRIPTOR_TERMINATE_LIST),
   &gEdkiiPeiStorageSecurityCommandPpiGuid,
   OpalPasswordStorageSecurityPpiNotify
 };
+
 
 /**
   Main entry for this module.
@@ -454,12 +452,12 @@ EFI_PEI_NOTIFY_DESCRIPTOR  mOpalPasswordStorageSecurityPpiNotifyDesc = {
 EFI_STATUS
 EFIAPI
 OpalPasswordPeiInit (
-  IN EFI_PEI_FILE_HANDLE     FileHandle,
-  IN CONST EFI_PEI_SERVICES  **PeiServices
+  IN EFI_PEI_FILE_HANDLE        FileHandle,
+  IN CONST EFI_PEI_SERVICES     **PeiServices
   )
 {
-  EFI_STATUS     Status;
-  EFI_BOOT_MODE  BootMode;
+  EFI_STATUS       Status;
+  EFI_BOOT_MODE    BootMode;
 
   Status = PeiServicesGetBootMode (&BootMode);
   if ((EFI_ERROR (Status)) || (BootMode != BOOT_ON_S3_RESUME)) {

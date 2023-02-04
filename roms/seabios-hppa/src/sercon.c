@@ -464,7 +464,7 @@ static void sercon_104f(struct bregs *regs)
         regs->ax = 0x0100;
     } else {
         // Disable sercon entry point on any vesa modeset
-        if (regs->al == 0x02)
+        if (regs->al == 0x00)
             SET_LOW(sercon_enable, 0);
     }
 }

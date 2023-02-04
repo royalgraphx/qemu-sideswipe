@@ -23,7 +23,6 @@
 #include "qemu/log.h"
 #include "qemu/module.h"
 #include "trace.h"
-#include "qom/object.h"
 
 static const char *names[] = {
     "SCNTL0", "SCNTL1", "SCNTL2", "SCNTL3", "SCID", "SXFER", "SDID", "GPREG",
@@ -214,7 +213,7 @@ enum {
     LSI_MSG_ACTION_DIN = 3,
 };
 
-struct LSIState {
+typedef struct {
     /*< private >*/
     PCIDevice parent_obj;
     /*< public >*/
@@ -304,12 +303,13 @@ struct LSIState {
     uint32_t adder;
 
     uint8_t script_ram[2048 * sizeof(uint32_t)];
-};
+} LSIState;
 
 #define TYPE_LSI53C810  "lsi53c810"
 #define TYPE_LSI53C895A "lsi53c895a"
 
-OBJECT_DECLARE_SIMPLE_TYPE(LSIState, LSI53C895A)
+#define LSI53C895A(obj) \
+    OBJECT_CHECK(LSIState, (obj), TYPE_LSI53C895A)
 
 static const char *scsi_phases[] = {
     "DOUT",
@@ -621,7 +621,8 @@ static void lsi_do_dma(LSIState *s, int out)
     dma_addr_t addr;
     SCSIDevice *dev;
 
-    if (!s->current || !s->current->dma_len) {
+    assert(s->current);
+    if (!s->current->dma_len) {
         /* Wait until data is available.  */
         trace_lsi_do_dma_unavailable();
         return;
@@ -786,14 +787,14 @@ static int lsi_queue_req(LSIState *s, SCSIRequest *req, uint32_t len)
 }
 
  /* Callback to indicate that the SCSI layer has completed a command.  */
-static void lsi_command_complete(SCSIRequest *req, size_t resid)
+static void lsi_command_complete(SCSIRequest *req, uint32_t status, size_t resid)
 {
     LSIState *s = LSI53C895A(req->bus->qbus.parent);
     int out;
 
     out = (s->sstat1 & PHASE_MASK) == PHASE_DO;
-    trace_lsi_command_complete(req->status);
-    s->status = req->status;
+    trace_lsi_command_complete(status);
+    s->status = status;
     s->command_complete = 2;
     if (s->waiting && s->dbc != 0) {
         /* Raise phase mismatch for short transfers.  */
@@ -864,7 +865,7 @@ static void lsi_do_command(LSIState *s)
     s->current = g_new0(lsi_request, 1);
     s->current->tag = s->select_tag;
     s->current->req = scsi_req_new(dev, s->current->tag, s->current_lun, buf,
-                                   s->dbc, s->current);
+                                   s->current);
 
     n = scsi_req_enqueue(s->current->req);
     if (n) {
@@ -1028,9 +1029,8 @@ static void lsi_do_msgout(LSIState *s)
         case 0x0d:
             /* The ABORT TAG message clears the current I/O process only. */
             trace_lsi_do_msgout_abort(current_tag);
-            if (current_req && current_req->req) {
+            if (current_req) {
                 scsi_req_cancel(current_req->req);
-                current_req = NULL;
             }
             lsi_disconnect(s);
             break;
@@ -1056,7 +1056,6 @@ static void lsi_do_msgout(LSIState *s)
             /* clear the current I/O process */
             if (s->current) {
                 scsi_req_cancel(s->current->req);
-                current_req = NULL;
             }
 
             /* As the current implemented devices scsi_disk and scsi_generic
@@ -1868,7 +1867,7 @@ static void lsi_reg_writeb(LSIState *s, int offset, uint8_t val)
         }
         if (val & LSI_SCNTL1_RST) {
             if (!(s->sstat0 & LSI_SSTAT0_RST)) {
-                bus_cold_reset(BUS(&s->bus));
+                qbus_reset_all(BUS(&s->bus));
                 s->sstat0 |= LSI_SSTAT0_RST;
                 lsi_script_scsi_interrupt(s, LSI_SIST0_RST, 0);
             }
@@ -1926,7 +1925,7 @@ static void lsi_reg_writeb(LSIState *s, int offset, uint8_t val)
             lsi_execute_script(s);
         }
         if (val & LSI_ISTAT0_SRST) {
-            device_cold_reset(DEVICE(s));
+            qdev_reset_all(DEVICE(s));
         }
         break;
     case 0x16: /* MBOX0 */
@@ -2310,10 +2309,10 @@ static void lsi_scsi_realize(PCIDevice *dev, Error **errp)
     pci_register_bar(dev, 2, PCI_BASE_ADDRESS_SPACE_MEMORY, &s->ram_io);
     QTAILQ_INIT(&s->queue);
 
-    scsi_bus_init(&s->bus, sizeof(s->bus), d, &lsi_scsi_info);
+    scsi_bus_new(&s->bus, sizeof(s->bus), d, &lsi_scsi_info, NULL);
 }
 
-static void lsi_scsi_exit(PCIDevice *dev)
+static void lsi_scsi_unrealize(DeviceState *dev)
 {
     LSIState *s = LSI53C895A(dev);
 
@@ -2326,11 +2325,11 @@ static void lsi_class_init(ObjectClass *klass, void *data)
     PCIDeviceClass *k = PCI_DEVICE_CLASS(klass);
 
     k->realize = lsi_scsi_realize;
-    k->exit = lsi_scsi_exit;
     k->vendor_id = PCI_VENDOR_ID_LSI_LOGIC;
     k->device_id = PCI_DEVICE_ID_LSI_53C895A;
     k->class_id = PCI_CLASS_STORAGE_SCSI;
     k->subsystem_id = 0x1000;
+    dc->unrealize = lsi_scsi_unrealize;
     dc->reset = lsi_scsi_reset;
     dc->vmsd = &vmstate_lsi_scsi;
     set_bit(DEVICE_CATEGORY_STORAGE, dc->categories);
@@ -2354,7 +2353,7 @@ static void lsi53c810_class_init(ObjectClass *klass, void *data)
     k->device_id = PCI_DEVICE_ID_LSI_53C810;
 }
 
-static const TypeInfo lsi53c810_info = {
+static TypeInfo lsi53c810_info = {
     .name          = TYPE_LSI53C810,
     .parent        = TYPE_LSI53C895A,
     .class_init    = lsi53c810_class_init,

@@ -238,23 +238,12 @@ static void dwc2_handle_packet(DWC2State *s, uint32_t devadr, USBDevice *dev,
     pid = get_field(hctsiz, TSIZ_SC_MC_PID);
     pcnt = get_field(hctsiz, TSIZ_PKTCNT);
     len = get_field(hctsiz, TSIZ_XFERSIZE);
-    if (len > DWC2_MAX_XFER_SIZE) {
-        qemu_log_mask(LOG_GUEST_ERROR,
-                      "%s: HCTSIZ transfer size too large\n", __func__);
-        return;
-    }
-
+    assert(len <= DWC2_MAX_XFER_SIZE);
     chan = index >> 3;
     p = &s->packet[chan];
 
     trace_usb_dwc2_handle_packet(chan, dev, &p->packet, epnum, types[eptype],
                                  dirs[epdir], mps, len, pcnt);
-
-    if (mps == 0) {
-        qemu_log_mask(LOG_GUEST_ERROR,
-                "%s: Bad HCCHAR_MPS set to zero\n", __func__);
-        return;
-    }
 
     if (eptype == USB_ENDPOINT_XFER_CONTROL && pid == TSIZ_SC_MC_PID_SETUP) {
         pid = USB_TOKEN_SETUP;
@@ -272,8 +261,8 @@ static void dwc2_handle_packet(DWC2State *s, uint32_t devadr, USBDevice *dev,
 
         if (pid != USB_TOKEN_IN) {
             trace_usb_dwc2_memory_read(hcdma, tlen);
-            if (dma_memory_read(&s->dma_as, hcdma, s->usb_buf[chan], tlen,
-                                MEMTXATTRS_UNSPECIFIED) != MEMTX_OK) {
+            if (dma_memory_read(&s->dma_as, hcdma,
+                                s->usb_buf[chan], tlen) != MEMTX_OK) {
                 qemu_log_mask(LOG_GUEST_ERROR, "%s: dma_memory_read failed\n",
                               __func__);
             }
@@ -328,8 +317,8 @@ babble:
 
         if (pid == USB_TOKEN_IN) {
             trace_usb_dwc2_memory_write(hcdma, actual);
-            if (dma_memory_write(&s->dma_as, hcdma, s->usb_buf[chan], actual,
-                                 MEMTXATTRS_UNSPECIFIED) != MEMTX_OK) {
+            if (dma_memory_write(&s->dma_as, hcdma, s->usb_buf[chan],
+                                 actual) != MEMTX_OK) {
                 qemu_log_mask(LOG_GUEST_ERROR, "%s: dma_memory_write failed\n",
                               __func__);
             }
@@ -674,12 +663,7 @@ static uint64_t dwc2_glbreg_read(void *ptr, hwaddr addr, int index,
     DWC2State *s = ptr;
     uint32_t val;
 
-    if (addr > GINTSTS2) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return 0;
-    }
-
+    assert(addr <= GINTSTS2);
     val = s->glbreg[index];
 
     switch (addr) {
@@ -706,12 +690,7 @@ static void dwc2_glbreg_write(void *ptr, hwaddr addr, int index, uint64_t val,
     uint32_t old;
     int iflg = 0;
 
-    if (addr > GINTSTS2) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return;
-    }
-
+    assert(addr <= GINTSTS2);
     mmio = &s->glbreg[index];
     old = *mmio;
 
@@ -736,34 +715,27 @@ static void dwc2_glbreg_write(void *ptr, hwaddr addr, int index, uint64_t val,
         val &= ~GRSTCTL_DMAREQ;
         if (!(old & GRSTCTL_TXFFLSH) && (val & GRSTCTL_TXFFLSH)) {
                 /* TODO - TX fifo flush */
-            qemu_log_mask(LOG_UNIMP, "%s: Tx FIFO flush not implemented\n",
-                          __func__);
+            qemu_log_mask(LOG_UNIMP, "Tx FIFO flush not implemented\n");
         }
         if (!(old & GRSTCTL_RXFFLSH) && (val & GRSTCTL_RXFFLSH)) {
                 /* TODO - RX fifo flush */
-            qemu_log_mask(LOG_UNIMP, "%s: Rx FIFO flush not implemented\n",
-                          __func__);
+            qemu_log_mask(LOG_UNIMP, "Rx FIFO flush not implemented\n");
         }
         if (!(old & GRSTCTL_IN_TKNQ_FLSH) && (val & GRSTCTL_IN_TKNQ_FLSH)) {
                 /* TODO - device IN token queue flush */
-            qemu_log_mask(LOG_UNIMP, "%s: Token queue flush not implemented\n",
-                          __func__);
+            qemu_log_mask(LOG_UNIMP, "Token queue flush not implemented\n");
         }
         if (!(old & GRSTCTL_FRMCNTRRST) && (val & GRSTCTL_FRMCNTRRST)) {
                 /* TODO - host frame counter reset */
-            qemu_log_mask(LOG_UNIMP,
-                          "%s: Frame counter reset not implemented\n",
-                          __func__);
+            qemu_log_mask(LOG_UNIMP, "Frame counter reset not implemented\n");
         }
         if (!(old & GRSTCTL_HSFTRST) && (val & GRSTCTL_HSFTRST)) {
                 /* TODO - host soft reset */
-            qemu_log_mask(LOG_UNIMP, "%s: Host soft reset not implemented\n",
-                          __func__);
+            qemu_log_mask(LOG_UNIMP, "Host soft reset not implemented\n");
         }
         if (!(old & GRSTCTL_CSFTRST) && (val & GRSTCTL_CSFTRST)) {
                 /* TODO - core soft reset */
-            qemu_log_mask(LOG_UNIMP, "%s: Core soft reset not implemented\n",
-                          __func__);
+            qemu_log_mask(LOG_UNIMP, "Core soft reset not implemented\n");
         }
         /* don't allow clearing of self-clearing bits */
         val |= old & (GRSTCTL_TXFFLSH | GRSTCTL_RXFFLSH |
@@ -802,12 +774,7 @@ static uint64_t dwc2_fszreg_read(void *ptr, hwaddr addr, int index,
     DWC2State *s = ptr;
     uint32_t val;
 
-    if (addr != HPTXFSIZ) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return 0;
-    }
-
+    assert(addr == HPTXFSIZ);
     val = s->fszreg[index];
 
     trace_usb_dwc2_fszreg_read(addr, val);
@@ -822,12 +789,7 @@ static void dwc2_fszreg_write(void *ptr, hwaddr addr, int index, uint64_t val,
     uint32_t *mmio;
     uint32_t old;
 
-    if (addr != HPTXFSIZ) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return;
-    }
-
+    assert(addr == HPTXFSIZ);
     mmio = &s->fszreg[index];
     old = *mmio;
 
@@ -848,12 +810,7 @@ static uint64_t dwc2_hreg0_read(void *ptr, hwaddr addr, int index,
     DWC2State *s = ptr;
     uint32_t val;
 
-    if (addr < HCFG || addr > HPRT0) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return 0;
-    }
-
+    assert(addr >= HCFG && addr <= HPRT0);
     val = s->hreg0[index];
 
     switch (addr) {
@@ -880,12 +837,7 @@ static void dwc2_hreg0_write(void *ptr, hwaddr addr, int index, uint64_t val,
     int prst = 0;
     int iflg = 0;
 
-    if (addr < HCFG || addr > HPRT0) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return;
-    }
-
+    assert(addr >= HCFG && addr <= HPRT0);
     mmio = &s->hreg0[index];
     old = *mmio;
 
@@ -971,12 +923,7 @@ static uint64_t dwc2_hreg1_read(void *ptr, hwaddr addr, int index,
     DWC2State *s = ptr;
     uint32_t val;
 
-    if (addr < HCCHAR(0) || addr > HCDMAB(DWC2_NB_CHAN - 1)) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return 0;
-    }
-
+    assert(addr >= HCCHAR(0) && addr <= HCDMAB(DWC2_NB_CHAN - 1));
     val = s->hreg1[index];
 
     trace_usb_dwc2_hreg1_read(addr, hreg1nm[index & 7], addr >> 5, val);
@@ -994,12 +941,7 @@ static void dwc2_hreg1_write(void *ptr, hwaddr addr, int index, uint64_t val,
     int enflg = 0;
     int disflg = 0;
 
-    if (addr < HCCHAR(0) || addr > HCDMAB(DWC2_NB_CHAN - 1)) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return;
-    }
-
+    assert(addr >= HCCHAR(0) && addr <= HCDMAB(DWC2_NB_CHAN - 1));
     mmio = &s->hreg1[index];
     old = *mmio;
 
@@ -1066,12 +1008,7 @@ static uint64_t dwc2_pcgreg_read(void *ptr, hwaddr addr, int index,
     DWC2State *s = ptr;
     uint32_t val;
 
-    if (addr < PCGCTL || addr > PCGCCTL1) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return 0;
-    }
-
+    assert(addr >= PCGCTL && addr <= PCGCCTL1);
     val = s->pcgreg[index];
 
     trace_usb_dwc2_pcgreg_read(addr, pcgregnm[index], val);
@@ -1086,12 +1023,7 @@ static void dwc2_pcgreg_write(void *ptr, hwaddr addr, int index,
     uint32_t *mmio;
     uint32_t old;
 
-    if (addr < PCGCTL || addr > PCGCCTL1) {
-        qemu_log_mask(LOG_GUEST_ERROR, "%s: Bad offset 0x%"HWADDR_PRIx"\n",
-                      __func__, addr);
-        return;
-    }
-
+    assert(addr >= PCGCTL && addr <= PCGCCTL1);
     mmio = &s->pcgreg[index];
     old = *mmio;
 
@@ -1176,7 +1108,7 @@ static uint64_t dwc2_hreg2_read(void *ptr, hwaddr addr, unsigned size)
 {
     /* TODO - implement FIFOs to support slave mode */
     trace_usb_dwc2_hreg2_read(addr, addr >> 12, 0);
-    qemu_log_mask(LOG_UNIMP, "%s: FIFO read not implemented\n", __func__);
+    qemu_log_mask(LOG_UNIMP, "FIFO read not implemented\n");
     return 0;
 }
 
@@ -1187,7 +1119,7 @@ static void dwc2_hreg2_write(void *ptr, hwaddr addr, uint64_t val,
 
     /* TODO - implement FIFOs to support slave mode */
     trace_usb_dwc2_hreg2_write(addr, addr >> 12, orig, 0, val);
-    qemu_log_mask(LOG_UNIMP, "%s: FIFO write not implemented\n", __func__);
+    qemu_log_mask(LOG_UNIMP, "FIFO write not implemented\n");
 }
 
 static const MemoryRegionOps dwc2_mmio_hreg2_ops = {
@@ -1223,7 +1155,7 @@ static void dwc2_work_timer(void *opaque)
 
 static void dwc2_reset_enter(Object *obj, ResetType type)
 {
-    DWC2Class *c = DWC2_USB_GET_CLASS(obj);
+    DWC2Class *c = DWC2_GET_CLASS(obj);
     DWC2State *s = DWC2_USB(obj);
     int i;
 
@@ -1307,7 +1239,7 @@ static void dwc2_reset_enter(Object *obj, ResetType type)
 
 static void dwc2_reset_hold(Object *obj)
 {
-    DWC2Class *c = DWC2_USB_GET_CLASS(obj);
+    DWC2Class *c = DWC2_GET_CLASS(obj);
     DWC2State *s = DWC2_USB(obj);
 
     trace_usb_dwc2_reset_hold();
@@ -1321,7 +1253,7 @@ static void dwc2_reset_hold(Object *obj)
 
 static void dwc2_reset_exit(Object *obj)
 {
-    DWC2Class *c = DWC2_USB_GET_CLASS(obj);
+    DWC2Class *c = DWC2_GET_CLASS(obj);
     DWC2State *s = DWC2_USB(obj);
 
     trace_usb_dwc2_reset_exit();
@@ -1450,7 +1382,7 @@ static Property dwc2_usb_properties[] = {
 static void dwc2_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
-    DWC2Class *c = DWC2_USB_CLASS(klass);
+    DWC2Class *c = DWC2_CLASS(klass);
     ResettableClass *rc = RESETTABLE_CLASS(klass);
 
     dc->realize = dwc2_realize;

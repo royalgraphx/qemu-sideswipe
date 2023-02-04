@@ -12,16 +12,14 @@
 #define HW_S390X_AP_DEVICE_H
 
 #include "hw/qdev-core.h"
-#include "qom/object.h"
 
-#define TYPE_AP_DEVICE       "ap-device"
+#define AP_DEVICE_TYPE       "ap-device"
 
-struct APDevice {
+typedef struct APDevice {
     DeviceState parent_obj;
-};
-typedef struct APDevice APDevice;
+} APDevice;
 
-DECLARE_INSTANCE_CHECKER(APDevice, AP_DEVICE,
-                         TYPE_AP_DEVICE)
+#define AP_DEVICE(obj) \
+    OBJECT_CHECK(APDevice, (obj), AP_DEVICE_TYPE)
 
 #endif /* HW_S390X_AP_DEVICE_H */

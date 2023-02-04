@@ -29,23 +29,27 @@
 #define NET_CAN_HOST_H
 
 #include "net/can_emu.h"
-#include "qom/object.h"
 
 #define TYPE_CAN_HOST "can-host"
-OBJECT_DECLARE_TYPE(CanHostState, CanHostClass, CAN_HOST)
+#define CAN_HOST_CLASS(klass) \
+     OBJECT_CLASS_CHECK(CanHostClass, (klass), TYPE_CAN_HOST)
+#define CAN_HOST_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(CanHostClass, (obj), TYPE_CAN_HOST)
+#define CAN_HOST(obj) \
+     OBJECT_CHECK(CanHostState, (obj), TYPE_CAN_HOST)
 
-struct CanHostState {
-    Object oc;
+typedef struct CanHostState {
+    ObjectClass oc;
 
     CanBusState *bus;
     CanBusClientState bus_client;
-};
+} CanHostState;
 
-struct CanHostClass {
+typedef struct CanHostClass {
     ObjectClass oc;
 
     void (*connect)(CanHostState *ch, Error **errp);
     void (*disconnect)(CanHostState *ch);
-};
+} CanHostClass;
 
 #endif

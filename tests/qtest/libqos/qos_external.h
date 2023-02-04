@@ -19,9 +19,7 @@
 #ifndef QOS_EXTERNAL_H
 #define QOS_EXTERNAL_H
 
-#include "qgraph.h"
-
-#include "libqos-malloc.h"
+#include "libqos/malloc.h"
 #include "qapi/qapi-types-machine.h"
 #include "qapi/qapi-types-qom.h"
 

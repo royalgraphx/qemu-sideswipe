@@ -9,8 +9,6 @@
  */
 
 #ifndef __UBOOT__
-#include <log.h>
-#include <dm/device_compat.h>
 #include <linux/kernel.h>
 #include <linux/list.h>
 #include <linux/timer.h>
@@ -19,10 +17,8 @@
 #include <linux/interrupt.h>
 #else
 #include <common.h>
-#include <dm.h>
-#include <dm/device_compat.h>
-#include <asm/processor.h>
 #include "linux-compat.h"
+#include <asm/processor.h>
 #endif
 
 #include "musb_core.h"
@@ -886,7 +882,7 @@ finish:
 
 	default:
 		/* "can't happen" */
-		assert_noisy(false);
+		WARN_ON(1);
 		musb_writew(regs, MUSB_CSR0, MUSB_CSR0_P_SENDSTALL);
 		musb->ep0_state = MUSB_EP0_STAGE_IDLE;
 		break;

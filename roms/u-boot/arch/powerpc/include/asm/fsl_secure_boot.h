@@ -7,7 +7,7 @@
 #define __FSL_SECURE_BOOT_H
 #include <asm/config_mpc85xx.h>
 
-#ifdef CONFIG_NXP_ESBC
+#ifdef CONFIG_SECURE_BOOT
 #if defined(CONFIG_FSL_CORENET)
 #define CONFIG_SYS_PBI_FLASH_BASE		0xc0000000
 #elif defined(CONFIG_TARGET_BSC9132QDS)
@@ -25,6 +25,7 @@
 	defined(CONFIG_TARGET_T4240QDS) || \
 	defined(CONFIG_TARGET_T2080QDS) || \
 	defined(CONFIG_TARGET_T2080RDB) || \
+	defined(CONFIG_TARGET_T1040QDS) || \
 	defined(CONFIG_TARGET_T1040RDB) || \
 	defined(CONFIG_TARGET_T1040D4RDB) || \
 	defined(CONFIG_TARGET_T1042RDB) || \
@@ -57,6 +58,7 @@
 
 #if defined(CONFIG_ARCH_P3041)	||	\
 	defined(CONFIG_ARCH_P4080) ||	\
+	defined(CONFIG_ARCH_P5020) ||	\
 	defined(CONFIG_ARCH_P5040) ||	\
 	defined(CONFIG_ARCH_P2041)
 	#define	CONFIG_FSL_TRUST_ARCH_v1
@@ -72,7 +74,7 @@
  */
 #define CONFIG_FSL_ISBC_KEY_EXT
 #endif
-#endif /* #ifdef CONFIG_NXP_ESBC */
+#endif /* #ifdef CONFIG_SECURE_BOOT */
 
 #ifdef CONFIG_CHAIN_OF_TRUST
 #ifdef CONFIG_SPL_BUILD

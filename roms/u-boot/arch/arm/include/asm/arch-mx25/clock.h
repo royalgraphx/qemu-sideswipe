@@ -9,6 +9,8 @@
 #ifndef __ASM_ARCH_CLOCK_H
 #define __ASM_ARCH_CLOCK_H
 
+#include <common.h>
+
 #ifdef CONFIG_MX25_HCLK_FREQ
 #define MXC_HCLK	CONFIG_MX25_HCLK_FREQ
 #else

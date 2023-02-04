@@ -1,4 +1,4 @@
-.. _VNC security:
+.. _vnc_005fsecurity:
 
 VNC security
 ------------
@@ -44,7 +44,7 @@ the password all clients will be rejected.
 
 .. parsed-literal::
 
-   |qemu_system| [...OPTIONS...] -vnc :1,password=on -monitor stdio
+   |qemu_system| [...OPTIONS...] -vnc :1,password -monitor stdio
    (qemu) change vnc password
    Password: ********
    (qemu)
@@ -65,7 +65,7 @@ encrypted session.
 .. parsed-literal::
 
    |qemu_system| [...OPTIONS...] \
-     -object tls-creds-x509,id=tls0,dir=/etc/pki/qemu,endpoint=server,verify-peer=off \
+     -object tls-creds-x509,id=tls0,dir=/etc/pki/qemu,endpoint=server,verify-peer=no \
      -vnc :1,tls-creds=tls0 -monitor stdio
 
 In the above example ``/etc/pki/qemu`` should contain at least three
@@ -84,12 +84,12 @@ connecting. The server will request that the client provide a
 certificate, which it will then validate against the CA certificate.
 This is a good choice if deploying in an environment with a private
 internal certificate authority. It uses the same syntax as previously,
-but with ``verify-peer`` set to ``on`` instead.
+but with ``verify-peer`` set to ``yes`` instead.
 
 .. parsed-literal::
 
    |qemu_system| [...OPTIONS...] \
-     -object tls-creds-x509,id=tls0,dir=/etc/pki/qemu,endpoint=server,verify-peer=on \
+     -object tls-creds-x509,id=tls0,dir=/etc/pki/qemu,endpoint=server,verify-peer=yes \
      -vnc :1,tls-creds=tls0 -monitor stdio
 
 .. _vnc_005fsec_005fcertificate_005fpw:
@@ -103,8 +103,8 @@ authentication to provide two layers of authentication for clients.
 .. parsed-literal::
 
    |qemu_system| [...OPTIONS...] \
-     -object tls-creds-x509,id=tls0,dir=/etc/pki/qemu,endpoint=server,verify-peer=on \
-     -vnc :1,tls-creds=tls0,password=on -monitor stdio
+     -object tls-creds-x509,id=tls0,dir=/etc/pki/qemu,endpoint=server,verify-peer=yes \
+     -vnc :1,tls-creds=tls0,password -monitor stdio
    (qemu) change vnc password
    Password: ********
    (qemu)
@@ -128,7 +128,7 @@ can be launched with:
 
 .. parsed-literal::
 
-   |qemu_system| [...OPTIONS...] -vnc :1,sasl=on -monitor stdio
+   |qemu_system| [...OPTIONS...] -vnc :1,sasl -monitor stdio
 
 .. _vnc_005fsec_005fcertificate_005fsasl:
 
@@ -145,8 +145,8 @@ x509 options:
 .. parsed-literal::
 
    |qemu_system| [...OPTIONS...] \
-     -object tls-creds-x509,id=tls0,dir=/etc/pki/qemu,endpoint=server,verify-peer=on \
-     -vnc :1,tls-creds=tls0,sasl=on -monitor stdio
+     -object tls-creds-x509,id=tls0,dir=/etc/pki/qemu,endpoint=server,verify-peer=yes \
+     -vnc :1,tls-creds=tls0,sasl -monitor stdio
 
 .. _vnc_005fsetup_005fsasl:
 
@@ -168,7 +168,7 @@ used is drastically reduced. In fact only the GSSAPI SASL mechanism
 provides an acceptable level of security by modern standards. Previous
 versions of QEMU referred to the DIGEST-MD5 mechanism, however, it has
 multiple serious flaws described in detail in RFC 6331 and thus should
-never be used any more. The SCRAM-SHA-256 mechanism provides a simple
+never be used any more. The SCRAM-SHA-1 mechanism provides a simple
 username/password auth facility similar to DIGEST-MD5, but does not
 support session encryption, so can only be used in combination with TLS.
 
@@ -191,12 +191,11 @@ reasonable configuration is
 
 ::
 
-   mech_list: scram-sha-256
+   mech_list: scram-sha-1
    sasldb_path: /etc/qemu/passwd.db
 
 The ``saslpasswd2`` program can be used to populate the ``passwd.db``
-file with accounts. Note that the ``passwd.db`` file stores passwords
-in clear text.
+file with accounts.
 
 Other SASL configurations will be left as an exercise for the reader.
 Note that all mechanisms, except GSSAPI, should be combined with use of

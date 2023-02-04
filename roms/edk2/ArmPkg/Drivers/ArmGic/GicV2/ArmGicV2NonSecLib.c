@@ -10,10 +10,11 @@
 #include <Library/IoLib.h>
 #include <Library/ArmGicLib.h>
 
+
 VOID
 EFIAPI
 ArmGicV2EnableInterruptInterface (
-  IN  INTN  GicInterruptInterfaceBase
+  IN  INTN          GicInterruptInterfaceBase
   )
 {
   /*
@@ -26,7 +27,7 @@ ArmGicV2EnableInterruptInterface (
 VOID
 EFIAPI
 ArmGicV2DisableInterruptInterface (
-  IN  INTN  GicInterruptInterfaceBase
+  IN  INTN          GicInterruptInterfaceBase
   )
 {
   // Disable Gic Interface

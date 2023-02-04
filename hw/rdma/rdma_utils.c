@@ -14,32 +14,34 @@
  */
 
 #include "qemu/osdep.h"
+#include "qapi/qmp/qlist.h"
+#include "qapi/qmp/qnum.h"
 #include "trace.h"
 #include "rdma_utils.h"
 
-void *rdma_pci_dma_map(PCIDevice *dev, dma_addr_t addr, dma_addr_t len)
+void *rdma_pci_dma_map(PCIDevice *dev, dma_addr_t addr, dma_addr_t plen)
 {
     void *p;
-    dma_addr_t pci_len = len;
+    hwaddr len = plen;
 
     if (!addr) {
         rdma_error_report("addr is NULL");
         return NULL;
     }
 
-    p = pci_dma_map(dev, addr, &pci_len, DMA_DIRECTION_TO_DEVICE);
+    p = pci_dma_map(dev, addr, &len, DMA_DIRECTION_TO_DEVICE);
     if (!p) {
         rdma_error_report("pci_dma_map fail, addr=0x%"PRIx64", len=%"PRId64,
-                          addr, pci_len);
+                          addr, len);
         return NULL;
     }
 
-    if (pci_len != len) {
-        rdma_pci_dma_unmap(dev, p, pci_len);
+    if (len != plen) {
+        rdma_pci_dma_unmap(dev, p, len);
         return NULL;
     }
 
-    trace_rdma_pci_dma_map(addr, p, pci_len);
+    trace_rdma_pci_dma_map(addr, p, len);
 
     return p;
 }
@@ -52,46 +54,41 @@ void rdma_pci_dma_unmap(PCIDevice *dev, void *buffer, dma_addr_t len)
     }
 }
 
-void rdma_protected_gqueue_init(RdmaProtectedGQueue *list)
+void rdma_protected_qlist_init(RdmaProtectedQList *list)
 {
     qemu_mutex_init(&list->lock);
-    list->list = g_queue_new();
+    list->list = qlist_new();
 }
 
-void rdma_protected_gqueue_destroy(RdmaProtectedGQueue *list)
+void rdma_protected_qlist_destroy(RdmaProtectedQList *list)
 {
     if (list->list) {
-        g_queue_free_full(list->list, g_free);
+        qlist_destroy_obj(QOBJECT(list->list));
         qemu_mutex_destroy(&list->lock);
         list->list = NULL;
     }
 }
 
-void rdma_protected_gqueue_append_int64(RdmaProtectedGQueue *list,
-                                        int64_t value)
+void rdma_protected_qlist_append_int64(RdmaProtectedQList *list, int64_t value)
 {
     qemu_mutex_lock(&list->lock);
-    g_queue_push_tail(list->list, g_memdup(&value, sizeof(value)));
+    qlist_append_int(list->list, value);
     qemu_mutex_unlock(&list->lock);
 }
 
-int64_t rdma_protected_gqueue_pop_int64(RdmaProtectedGQueue *list)
+int64_t rdma_protected_qlist_pop_int64(RdmaProtectedQList *list)
 {
-    int64_t *valp;
-    int64_t val;
+    QObject *obj;
 
     qemu_mutex_lock(&list->lock);
-
-    valp = g_queue_pop_head(list->list);
+    obj = qlist_pop(list->list);
     qemu_mutex_unlock(&list->lock);
 
-    if (!valp) {
+    if (!obj) {
         return -ENOENT;
     }
 
-    val = *valp;
-    g_free(valp);
-    return val;
+    return qnum_get_uint(qobject_to(QNum, obj));
 }
 
 void rdma_protected_gslist_init(RdmaProtectedGSList *list)

@@ -1,13 +1,19 @@
 /** @file
   Detects if PcdFmpDevicePkcs7CertBufferXdr contains a test key.
 
-  Copyright (c) 2018 - 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2018, Intel Corporation. All rights reserved.<BR>
 
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
 
-#include "FmpDxe.h"
+#include <PiDxe.h>
+#include <Library/DebugLib.h>
+#include <Library/BaseLib.h>
+#include <Library/BaseMemoryLib.h>
+#include <Library/PcdLib.h>
+#include <Library/MemoryAllocationLib.h>
+#include <Library/BaseCryptLib.h>
 
 /**
   Check to see if any of the keys in PcdFmpDevicePkcs7CertBufferXdr matches
@@ -33,7 +39,7 @@ DetectTestKey (
   UINTN    TestKeyDigestSize;
 
   //
-  // If PcdFmpDeviceTestKeySha256Digest is not exactly SHA256_DIGEST_SIZE bytes,
+  // If PcdFmpDeviceTestKeySha256Digest is not exacty SHA256_DIGEST_SIZE bytes,
   // then skip the test key detection.
   //
   TestKeyDigestSize = PcdGetSize (PcdFmpDeviceTestKeySha256Digest);
@@ -54,7 +60,7 @@ DetectTestKey (
   //
   PublicKeyDataXdr    = PcdGetPtr (PcdFmpDevicePkcs7CertBufferXdr);
   PublicKeyDataXdrEnd = PublicKeyDataXdr + PcdGetSize (PcdFmpDevicePkcs7CertBufferXdr);
-  if ((PublicKeyDataXdr == NULL) || (PublicKeyDataXdr == PublicKeyDataXdrEnd)) {
+  if (PublicKeyDataXdr == NULL || PublicKeyDataXdr == PublicKeyDataXdrEnd) {
     return;
   }
 
@@ -76,7 +82,6 @@ DetectTestKey (
       //
       break;
     }
-
     //
     // Read key length stored in big endian format
     //
@@ -101,12 +106,10 @@ DetectTestKey (
       TestKeyUsed = TRUE;
       break;
     }
-
     if (!Sha256Update (HashContext, PublicKeyDataXdr, PublicKeyDataLength)) {
       TestKeyUsed = TRUE;
       break;
     }
-
     if (!Sha256Final (HashContext, Digest)) {
       TestKeyUsed = TRUE;
       break;
@@ -124,7 +127,7 @@ DetectTestKey (
     // Point to start of next key
     //
     PublicKeyDataXdr += PublicKeyDataLength;
-    PublicKeyDataXdr  = (UINT8 *)ALIGN_POINTER (PublicKeyDataXdr, sizeof (UINT32));
+    PublicKeyDataXdr = (UINT8 *)ALIGN_POINTER (PublicKeyDataXdr, sizeof (UINT32));
   }
 
   //
@@ -136,13 +139,13 @@ DetectTestKey (
   }
 
   //
-  // If test key detected or an error occurred checking for the test key, then
+  // If test key detected or an error occured checking for the test key, then
   // set PcdTestKeyUsed to TRUE.
   //
   if (TestKeyUsed) {
-    DEBUG ((DEBUG_INFO, "FmpDxe(%s): Test key detected in PcdFmpDevicePkcs7CertBufferXdr.\n", mImageIdName));
+    DEBUG ((DEBUG_INFO, "FmpDxe: Test key detected in PcdFmpDevicePkcs7CertBufferXdr.\n"));
     PcdSetBoolS (PcdTestKeyUsed, TRUE);
   } else {
-    DEBUG ((DEBUG_INFO, "FmpDxe(%s): No test key detected in PcdFmpDevicePkcs7CertBufferXdr.\n", mImageIdName));
+    DEBUG ((DEBUG_INFO, "FmpDxe: No test key detected in PcdFmpDevicePkcs7CertBufferXdr.\n"));
   }
 }

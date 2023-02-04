@@ -28,7 +28,6 @@
 #include "hw/sysbus.h"
 #include "ui/console.h"
 #include "sysemu/dma.h"
-#include "qom/object.h"
 
 #define XLNX_DPDMA_REG_ARRAY_SIZE (0x1000 >> 2)
 
@@ -43,9 +42,10 @@ struct XlnxDPDMAState {
     qemu_irq irq;
 };
 
+typedef struct XlnxDPDMAState XlnxDPDMAState;
 
 #define TYPE_XLNX_DPDMA "xlnx.dpdma"
-OBJECT_DECLARE_SIMPLE_TYPE(XlnxDPDMAState, XLNX_DPDMA)
+#define XLNX_DPDMA(obj) OBJECT_CHECK(XlnxDPDMAState, (obj), TYPE_XLNX_DPDMA)
 
 /*
  * xlnx_dpdma_start_operation: Start the operation on the specified channel. The

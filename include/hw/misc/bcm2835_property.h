@@ -11,12 +11,12 @@
 #include "hw/sysbus.h"
 #include "net/net.h"
 #include "hw/display/bcm2835_fb.h"
-#include "qom/object.h"
 
 #define TYPE_BCM2835_PROPERTY "bcm2835-property"
-OBJECT_DECLARE_SIMPLE_TYPE(BCM2835PropertyState, BCM2835_PROPERTY)
+#define BCM2835_PROPERTY(obj) \
+        OBJECT_CHECK(BCM2835PropertyState, (obj), TYPE_BCM2835_PROPERTY)
 
-struct BCM2835PropertyState {
+typedef struct {
     /*< private >*/
     SysBusDevice busdev;
     /*< public >*/
@@ -31,6 +31,6 @@ struct BCM2835PropertyState {
     uint32_t board_rev;
     uint32_t addr;
     bool pending;
-};
+} BCM2835PropertyState;
 
 #endif

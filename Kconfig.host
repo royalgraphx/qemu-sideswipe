@@ -1,6 +1,6 @@
 # These are "proxy" symbols used to pass config-host.mak values
-# down to Kconfig.  See also kconfig_external_symbols in
-# meson.build: these two need to be kept in sync.
+# down to Kconfig.  See also MINIKCONF_ARGS in the Makefile:
+# these two need to be kept in sync.
 
 config LINUX
     bool
@@ -22,27 +22,14 @@ config TPM
 
 config VHOST_USER
     bool
-
-config VHOST_VDPA
-    bool
+    select VHOST
 
 config VHOST_KERNEL
     bool
+    select VHOST
 
 config VIRTFS
     bool
 
 config PVRDMA
     bool
-
-config MULTIPROCESS_ALLOWED
-    bool
-    imply MULTIPROCESS
-
-config FUZZ
-    bool
-    select SPARSE_MEM
-
-config VFIO_USER_SERVER_ALLOWED
-    bool
-    imply VFIO_USER_SERVER

@@ -64,7 +64,7 @@ PeriodicSmiExit (
   This function yields control back to the SMM Foundation.  When the next
   periodic SMI for the currently executing handler is triggered, the periodic
   SMI handler will be resumed and this function will return.  Use of this
-  function requires a separate stack for the periodic SMI handler.  A non zero
+  function requires a seperate stack for the periodic SMI handler.  A non zero
   stack size must be specified in PeriodicSmiEnable() for this function to be
   used.
 
@@ -96,7 +96,7 @@ PeriodicSmiYield (
 **/
 typedef
 VOID
-(EFIAPI *PERIODIC_SMI_LIBRARY_HANDLER)(
+(EFIAPI *PERIODIC_SMI_LIBRARY_HANDLER) (
   IN CONST VOID  *Context OPTIONAL,
   IN UINT64      ElapsedTime
   );
@@ -113,7 +113,7 @@ VOID
   @param[in]     DispatchFunction  A pointer to a periodic SMI handler function.
   @param[in]     Context           Optional content to pass into DispatchFunction.
   @param[in]     TickPeriod        The requested tick period in 100ns units that
-                                   control should be given to the periodic SMI
+                                   control should be givien to the periodic SMI
                                    handler.  Must be one of the supported values
                                    returned by PeriodicSmiSupportedPickPeriod().
   @param[in]     Cpu               Specifies the CPU that is required to execute
@@ -137,16 +137,16 @@ VOID
   @retval EFI_OUT_OF_RESOURCES   There are not enough resources to enable the
                                  periodic SMI handler.
   @retval EFI_OUT_OF_RESOURCES   There are not enough resources to allocate the
-                                 stack specified by StackSize.
+                                 stack speficied by StackSize.
   @retval EFI_SUCCESS            The periodic SMI handler was enabled.
 
 **/
 EFI_STATUS
 EFIAPI
 PeriodicSmiEnable (
-  IN OUT EFI_HANDLE                    *DispatchHandle     OPTIONAL,
+  IN OUT EFI_HANDLE                    *DispatchHandle,    OPTIONAL
   IN     PERIODIC_SMI_LIBRARY_HANDLER  DispatchFunction,
-  IN     CONST VOID                    *Context            OPTIONAL,
+  IN     CONST VOID                    *Context,           OPTIONAL
   IN     UINT64                        TickPeriod,
   IN     UINTN                         Cpu,
   IN     UINTN                         StackSize

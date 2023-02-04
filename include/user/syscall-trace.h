@@ -7,10 +7,10 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
 
-#ifndef SYSCALL_TRACE_H
-#define SYSCALL_TRACE_H
+#ifndef _SYSCALL_TRACE_H_
+#define _SYSCALL_TRACE_H_
 
-#include "trace/trace-root.h"
+#include "trace-root.h"
 
 /*
  * These helpers just provide a common place for the various
@@ -39,4 +39,4 @@ static inline void record_syscall_return(void *cpu, int num, abi_long ret)
 }
 
 
-#endif /* SYSCALL_TRACE_H */
+#endif /* _SYSCALL_TRACE_H_ */

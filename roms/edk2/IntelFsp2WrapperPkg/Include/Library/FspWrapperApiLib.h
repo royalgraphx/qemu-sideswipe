@@ -34,13 +34,13 @@ FspFindFspHeader (
 EFI_STATUS
 EFIAPI
 CallFspNotifyPhase (
-  IN NOTIFY_PHASE_PARAMS  *NotifyPhaseParams
+  IN NOTIFY_PHASE_PARAMS *NotifyPhaseParams
   );
 
 /**
   Call FSP API - FspMemoryInit.
 
-  @param[in]  FspmUpdDataPtr          Pointer to the FSPM_UPD data structure.
+  @param[in]  FspmUpdDataPtr          Pointer to the FSPM_UPD data sructure.
   @param[out] HobListPtr              Pointer to receive the address of the HOB list.
 
   @return EFI status returned by FspMemoryInit API.
@@ -48,8 +48,8 @@ CallFspNotifyPhase (
 EFI_STATUS
 EFIAPI
 CallFspMemoryInit (
-  IN VOID   *FspmUpdDataPtr,
-  OUT VOID  **HobListPtr
+  IN VOID                       *FspmUpdDataPtr,
+  OUT VOID                      **HobListPtr
   );
 
 /**
@@ -62,7 +62,7 @@ CallFspMemoryInit (
 EFI_STATUS
 EFIAPI
 CallTempRamExit (
-  IN VOID  *TempRamExitParam
+  IN VOID                       *TempRamExitParam
   );
 
 /**
@@ -75,7 +75,7 @@ CallTempRamExit (
 EFI_STATUS
 EFIAPI
 CallFspSiliconInit (
-  IN VOID  *FspsUpdDataPtr
+  IN VOID                       *FspsUpdDataPtr
   );
 
 #endif

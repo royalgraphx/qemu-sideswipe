@@ -76,6 +76,7 @@ PeCoffLoaderGetPdbPointer (
   IN VOID  *Pe32Data
   );
 
+
 /**
   Returns the size of the PE/COFF headers
 
@@ -91,7 +92,7 @@ PeCoffLoaderGetPdbPointer (
 UINT32
 EFIAPI
 PeCoffGetSizeOfHeaders (
-  IN VOID  *Pe32Data
+  IN VOID     *Pe32Data
   );
 
 /**
@@ -109,7 +110,7 @@ PeCoffGetSizeOfHeaders (
 UINTN
 EFIAPI
 PeCoffSearchImageBase (
-  IN UINTN  Address
+  IN UINTN    Address
   );
 
 #endif

@@ -5,9 +5,6 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <time.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <div64.h>
 #include <bootstage.h>
@@ -52,9 +49,6 @@ unsigned long long get_ticks(void)
 
 ulong timer_get_boot_us(void)
 {
-	if (!gd->arch.timer_rate_hz)
-		timer_init();
-
 	return lldiv(get_ticks(), gd->arch.timer_rate_hz / 1000000);
 }
 

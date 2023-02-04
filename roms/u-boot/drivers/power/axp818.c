@@ -11,7 +11,6 @@
  */
 
 #include <common.h>
-#include <command.h>
 #include <errno.h>
 #include <asm/arch/gpio.h>
 #include <asm/arch/pmic_bus.h>
@@ -162,7 +161,7 @@ int axp_set_dldo(int dldo_num, unsigned int mvolt)
 	cfg = axp818_mvolt_to_cfg(mvolt, 700, 3300, 100);
 	if (dldo_num == 2 && mvolt > 3300)
 		cfg += 1 + axp818_mvolt_to_cfg(mvolt, 3400, 4200, 200);
-	ret = pmic_bus_write(AXP818_DLDO1_CTRL + (dldo_num - 1), cfg);
+	ret = pmic_bus_write(AXP818_ELDO1_CTRL + (dldo_num - 1), cfg);
 	if (ret)
 		return ret;
 
@@ -256,7 +255,7 @@ int axp_init(void)
 	return 0;
 }
 
-int do_poweroff(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+int do_poweroff(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	pmic_bus_write(AXP818_SHUTDOWN, AXP818_SHUTDOWN_POWEROFF);
 

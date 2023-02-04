@@ -16,9 +16,7 @@ Module Name:
 #include <IndustryStandard/E820.h>
 #include <IndustryStandard/I440FxPiix4.h>
 #include <IndustryStandard/Q35MchIch9.h>
-#include <IndustryStandard/CloudHv.h>
 #include <PiPei.h>
-#include <Register/Intel/SmramSaveStateMap.h>
 
 //
 // The Library classes this module consumes
@@ -28,38 +26,45 @@ Module Name:
 #include <Library/DebugLib.h>
 #include <Library/HobLib.h>
 #include <Library/IoLib.h>
-#include <Library/MemEncryptSevLib.h>
 #include <Library/PcdLib.h>
 #include <Library/PciLib.h>
 #include <Library/PeimEntryPoint.h>
 #include <Library/ResourcePublicationLib.h>
 #include <Library/MtrrLib.h>
 #include <Library/QemuFwCfgLib.h>
-#include <Library/QemuFwCfgSimpleParserLib.h>
 
 #include "Platform.h"
 #include "Cmos.h"
 
-UINT8  mPhysMemAddressWidth;
+UINT8 mPhysMemAddressWidth;
 
-STATIC UINT32  mS3AcpiReservedMemoryBase;
-STATIC UINT32  mS3AcpiReservedMemorySize;
+STATIC UINT32 mS3AcpiReservedMemoryBase;
+STATIC UINT32 mS3AcpiReservedMemorySize;
 
-STATIC UINT16  mQ35TsegMbytes;
+STATIC UINT16 mQ35TsegMbytes;
 
-BOOLEAN  mQ35SmramAtDefaultSmbase;
-
-UINT32  mQemuUc32Base;
+UINT32 mQemuUc32Base;
 
 VOID
 Q35TsegMbytesInitialization (
   VOID
   )
 {
-  UINT16         ExtendedTsegMbytes;
-  RETURN_STATUS  PcdStatus;
+  UINT16        ExtendedTsegMbytes;
+  RETURN_STATUS PcdStatus;
 
-  ASSERT (mHostBridgeDevId == INTEL_Q35_MCH_DEVICE_ID);
+  if (mHostBridgeDevId != INTEL_Q35_MCH_DEVICE_ID) {
+    DEBUG ((
+      DEBUG_ERROR,
+      "%a: no TSEG (SMRAM) on host bridge DID=0x%04x; "
+      "only DID=0x%04x (Q35) is supported\n",
+      __FUNCTION__,
+      mHostBridgeDevId,
+      INTEL_Q35_MCH_DEVICE_ID
+      ));
+    ASSERT (FALSE);
+    CpuDeadLoop ();
+  }
 
   //
   // Check if QEMU offers an extended TSEG.
@@ -95,55 +100,16 @@ Q35TsegMbytesInitialization (
   mQ35TsegMbytes = ExtendedTsegMbytes;
 }
 
-VOID
-Q35SmramAtDefaultSmbaseInitialization (
-  VOID
-  )
-{
-  RETURN_STATUS  PcdStatus;
-
-  ASSERT (mHostBridgeDevId == INTEL_Q35_MCH_DEVICE_ID);
-
-  mQ35SmramAtDefaultSmbase = FALSE;
-  if (FeaturePcdGet (PcdCsmEnable)) {
-    DEBUG ((
-      DEBUG_INFO,
-      "%a: SMRAM at default SMBASE not checked due to CSM\n",
-      __FUNCTION__
-      ));
-  } else {
-    UINTN  CtlReg;
-    UINT8  CtlRegVal;
-
-    CtlReg = DRAMC_REGISTER_Q35 (MCH_DEFAULT_SMBASE_CTL);
-    PciWrite8 (CtlReg, MCH_DEFAULT_SMBASE_QUERY);
-    CtlRegVal                = PciRead8 (CtlReg);
-    mQ35SmramAtDefaultSmbase = (BOOLEAN)(CtlRegVal ==
-                                         MCH_DEFAULT_SMBASE_IN_RAM);
-    DEBUG ((
-      DEBUG_INFO,
-      "%a: SMRAM at default SMBASE %a\n",
-      __FUNCTION__,
-      mQ35SmramAtDefaultSmbase ? "found" : "not found"
-      ));
-  }
-
-  PcdStatus = PcdSetBoolS (
-                PcdQ35SmramAtDefaultSmbase,
-                mQ35SmramAtDefaultSmbase
-                );
-  ASSERT_RETURN_ERROR (PcdStatus);
-}
 
 VOID
 QemuUc32BaseInitialization (
   VOID
   )
 {
-  UINT32  LowerMemorySize;
-  UINT32  Uc32Size;
+  UINT32 LowerMemorySize;
+  UINT32 Uc32Size;
 
-  if (mHostBridgeDevId == 0xffff /* microvm */) {
+  if (mXen) {
     return;
   }
 
@@ -160,12 +126,6 @@ QemuUc32BaseInitialization (
     return;
   }
 
-  if (mHostBridgeDevId == CLOUDHV_DEVICE_ID) {
-    Uc32Size      = CLOUDHV_MMIO_HOLE_SIZE;
-    mQemuUc32Base = CLOUDHV_MMIO_HOLE_ADDRESS;
-    return;
-  }
-
   ASSERT (mHostBridgeDevId == INTEL_82441_DEVICE_ID);
   //
   // On i440fx, start with the [LowerMemorySize, 4GB) range. Make sure one
@@ -173,8 +133,8 @@ QemuUc32BaseInitialization (
   // while keeping the end affixed to 4GB. This will round the base up.
   //
   LowerMemorySize = GetSystemMemorySizeBelow4gb ();
-  Uc32Size        = GetPowerOfTwo32 ((UINT32)(SIZE_4GB - LowerMemorySize));
-  mQemuUc32Base   = (UINT32)(SIZE_4GB - Uc32Size);
+  Uc32Size = GetPowerOfTwo32 ((UINT32)(SIZE_4GB - LowerMemorySize));
+  mQemuUc32Base = (UINT32)(SIZE_4GB - Uc32Size);
   //
   // Assuming that LowerMemorySize is at least 1 byte, Uc32Size is at most 2GB.
   // Therefore mQemuUc32Base is at least 2GB.
@@ -182,17 +142,12 @@ QemuUc32BaseInitialization (
   ASSERT (mQemuUc32Base >= BASE_2GB);
 
   if (mQemuUc32Base != LowerMemorySize) {
-    DEBUG ((
-      DEBUG_VERBOSE,
-      "%a: rounded UC32 base from 0x%x up to 0x%x, for "
-      "an UC32 size of 0x%x\n",
-      __FUNCTION__,
-      LowerMemorySize,
-      mQemuUc32Base,
-      Uc32Size
-      ));
+    DEBUG ((DEBUG_VERBOSE, "%a: rounded UC32 base from 0x%x up to 0x%x, for "
+      "an UC32 size of 0x%x\n", __FUNCTION__, LowerMemorySize, mQemuUc32Base,
+      Uc32Size));
   }
 }
+
 
 /**
   Iterate over the RAM entries in QEMU's fw_cfg E820 RAM map that start outside
@@ -223,28 +178,21 @@ QemuUc32BaseInitialization (
 STATIC
 EFI_STATUS
 ScanOrAdd64BitE820Ram (
-  IN BOOLEAN  AddHighHob,
-  OUT UINT64  *LowMemory OPTIONAL,
-  OUT UINT64  *MaxAddress OPTIONAL
+  OUT UINT64 *MaxAddress OPTIONAL
   )
 {
-  EFI_STATUS            Status;
-  FIRMWARE_CONFIG_ITEM  FwCfgItem;
-  UINTN                 FwCfgSize;
-  EFI_E820_ENTRY64      E820Entry;
-  UINTN                 Processed;
+  EFI_STATUS           Status;
+  FIRMWARE_CONFIG_ITEM FwCfgItem;
+  UINTN                FwCfgSize;
+  EFI_E820_ENTRY64     E820Entry;
+  UINTN                Processed;
 
   Status = QemuFwCfgFindFile ("etc/e820", &FwCfgItem, &FwCfgSize);
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   if (FwCfgSize % sizeof E820Entry != 0) {
     return EFI_PROTOCOL_ERROR;
-  }
-
-  if (LowMemory != NULL) {
-    *LowMemory = 0;
   }
 
   if (MaxAddress != NULL) {
@@ -262,17 +210,18 @@ ScanOrAdd64BitE820Ram (
       E820Entry.Length,
       E820Entry.Type
       ));
-    if (E820Entry.Type == EfiAcpiAddressRangeMemory) {
-      if (AddHighHob && (E820Entry.BaseAddr >= BASE_4GB)) {
-        UINT64  Base;
-        UINT64  End;
+    if (E820Entry.Type == EfiAcpiAddressRangeMemory &&
+        E820Entry.BaseAddr >= BASE_4GB) {
+      if (MaxAddress == NULL) {
+        UINT64 Base;
+        UINT64 End;
 
         //
         // Round up the start address, and round down the end address.
         //
         Base = ALIGN_VALUE (E820Entry.BaseAddr, (UINT64)EFI_PAGE_SIZE);
-        End  = (E820Entry.BaseAddr + E820Entry.Length) &
-               ~(UINT64)EFI_PAGE_MASK;
+        End = (E820Entry.BaseAddr + E820Entry.Length) &
+              ~(UINT64)EFI_PAGE_MASK;
         if (Base < End) {
           AddMemoryRangeHob (Base, End);
           DEBUG ((
@@ -283,13 +232,11 @@ ScanOrAdd64BitE820Ram (
             End
             ));
         }
-      }
-
-      if (MaxAddress || LowMemory) {
-        UINT64  Candidate;
+      } else {
+        UINT64 Candidate;
 
         Candidate = E820Entry.BaseAddr + E820Entry.Length;
-        if (MaxAddress && (Candidate > *MaxAddress)) {
+        if (Candidate > *MaxAddress) {
           *MaxAddress = Candidate;
           DEBUG ((
             DEBUG_VERBOSE,
@@ -298,37 +245,20 @@ ScanOrAdd64BitE820Ram (
             *MaxAddress
             ));
         }
-
-        if (LowMemory && (Candidate > *LowMemory) && (Candidate < BASE_4GB)) {
-          *LowMemory = Candidate;
-          DEBUG ((
-            DEBUG_VERBOSE,
-            "%a: LowMemory=0x%Lx\n",
-            __FUNCTION__,
-            *LowMemory
-            ));
-        }
       }
     }
   }
-
   return EFI_SUCCESS;
 }
+
 
 UINT32
 GetSystemMemorySizeBelow4gb (
   VOID
   )
 {
-  EFI_STATUS  Status;
-  UINT64      LowerMemorySize = 0;
-  UINT8       Cmos0x34;
-  UINT8       Cmos0x35;
-
-  Status = ScanOrAdd64BitE820Ram (FALSE, &LowerMemorySize, NULL);
-  if ((Status == EFI_SUCCESS) && (LowerMemorySize > 0)) {
-    return (UINT32)LowerMemorySize;
-  }
+  UINT8 Cmos0x34;
+  UINT8 Cmos0x35;
 
   //
   // CMOS 0x34/0x35 specifies the system memory above 16 MB.
@@ -339,19 +269,20 @@ GetSystemMemorySizeBelow4gb (
   //   into the calculation to get the total memory size.
   //
 
-  Cmos0x34 = (UINT8)CmosRead8 (0x34);
-  Cmos0x35 = (UINT8)CmosRead8 (0x35);
+  Cmos0x34 = (UINT8) CmosRead8 (0x34);
+  Cmos0x35 = (UINT8) CmosRead8 (0x35);
 
-  return (UINT32)(((UINTN)((Cmos0x35 << 8) + Cmos0x34) << 16) + SIZE_16MB);
+  return (UINT32) (((UINTN)((Cmos0x35 << 8) + Cmos0x34) << 16) + SIZE_16MB);
 }
+
 
 STATIC
 UINT64
 GetSystemMemorySizeAbove4gb (
   )
 {
-  UINT32  Size;
-  UINTN   CmosIndex;
+  UINT32 Size;
+  UINTN  CmosIndex;
 
   //
   // CMOS 0x5b-0x5d specifies the system memory above 4GB MB.
@@ -363,11 +294,12 @@ GetSystemMemorySizeAbove4gb (
 
   Size = 0;
   for (CmosIndex = 0x5d; CmosIndex >= 0x5b; CmosIndex--) {
-    Size = (UINT32)(Size << 8) + (UINT32)CmosRead8 (CmosIndex);
+    Size = (UINT32) (Size << 8) + (UINT32) CmosRead8 (CmosIndex);
   }
 
   return LShiftU64 (Size, 16);
 }
+
 
 /**
   Return the highest address that DXE could possibly use, plus one.
@@ -378,14 +310,14 @@ GetFirstNonAddress (
   VOID
   )
 {
-  UINT64                FirstNonAddress;
-  UINT64                Pci64Base, Pci64Size;
-  UINT32                FwCfgPciMmio64Mb;
-  EFI_STATUS            Status;
-  FIRMWARE_CONFIG_ITEM  FwCfgItem;
-  UINTN                 FwCfgSize;
-  UINT64                HotPlugMemoryEnd;
-  RETURN_STATUS         PcdStatus;
+  UINT64               FirstNonAddress;
+  UINT64               Pci64Base, Pci64Size;
+  CHAR8                MbString[7 + 1];
+  EFI_STATUS           Status;
+  FIRMWARE_CONFIG_ITEM FwCfgItem;
+  UINTN                FwCfgSize;
+  UINT64               HotPlugMemoryEnd;
+  RETURN_STATUS        PcdStatus;
 
   //
   // set FirstNonAddress to suppress incorrect compiler/analyzer warnings
@@ -399,7 +331,7 @@ GetFirstNonAddress (
   // Otherwise, get the flat size of the memory above 4GB from the CMOS (which
   // can only express a size smaller than 1TB), and add it to 4GB.
   //
-  Status = ScanOrAdd64BitE820Ram (FALSE, NULL, &FirstNonAddress);
+  Status = ScanOrAdd64BitE820Ram (&FirstNonAddress);
   if (EFI_ERROR (Status)) {
     FirstNonAddress = BASE_4GB + GetSystemMemorySizeAbove4gb ();
   }
@@ -409,12 +341,11 @@ GetFirstNonAddress (
   // resources to 32-bit anyway. See DegradeResource() in
   // "PciResourceSupport.c".
   //
- #ifdef MDE_CPU_IA32
+#ifdef MDE_CPU_IA32
   if (!FeaturePcdGet (PcdDxeIplSwitchToLongMode)) {
     return FirstNonAddress;
   }
-
- #endif
+#endif
 
   //
   // Otherwise, in order to calculate the highest address plus one, we must
@@ -424,45 +355,31 @@ GetFirstNonAddress (
 
   //
   // See if the user specified the number of megabytes for the 64-bit PCI host
-  // aperture. Accept an aperture size up to 16TB.
+  // aperture. The number of non-NUL characters in MbString allows for
+  // 9,999,999 MB, which is approximately 10 TB.
   //
   // As signaled by the "X-" prefix, this knob is experimental, and might go
   // away at any time.
   //
-  Status = QemuFwCfgParseUint32 (
-             "opt/ovmf/X-PciMmio64Mb",
-             FALSE,
-             &FwCfgPciMmio64Mb
-             );
-  switch (Status) {
-    case EFI_UNSUPPORTED:
-    case EFI_NOT_FOUND:
-      break;
-    case EFI_SUCCESS:
-      if (FwCfgPciMmio64Mb <= 0x1000000) {
-        Pci64Size = LShiftU64 (FwCfgPciMmio64Mb, 20);
-        break;
-      }
-
-    //
-    // fall through
-    //
-    default:
-      DEBUG ((
-        DEBUG_WARN,
+  Status = QemuFwCfgFindFile ("opt/ovmf/X-PciMmio64Mb", &FwCfgItem,
+             &FwCfgSize);
+  if (!EFI_ERROR (Status)) {
+    if (FwCfgSize >= sizeof MbString) {
+      DEBUG ((EFI_D_WARN,
         "%a: ignoring malformed 64-bit PCI host aperture size from fw_cfg\n",
-        __FUNCTION__
-        ));
-      break;
+        __FUNCTION__));
+    } else {
+      QemuFwCfgSelectItem (FwCfgItem);
+      QemuFwCfgReadBytes (FwCfgSize, MbString);
+      MbString[FwCfgSize] = '\0';
+      Pci64Size = LShiftU64 (AsciiStrDecimalToUint64 (MbString), 20);
+    }
   }
 
   if (Pci64Size == 0) {
     if (mBootMode != BOOT_ON_S3_RESUME) {
-      DEBUG ((
-        DEBUG_INFO,
-        "%a: disabling 64-bit PCI host aperture\n",
-        __FUNCTION__
-        ));
+      DEBUG ((EFI_D_INFO, "%a: disabling 64-bit PCI host aperture\n",
+        __FUNCTION__));
       PcdStatus = PcdSet64S (PcdPciMmio64Size, 0);
       ASSERT_RETURN_ERROR (PcdStatus);
     }
@@ -481,20 +398,13 @@ GetFirstNonAddress (
   // starts right at the end of the memory above 4GB. The 64-bit PCI host
   // aperture must be placed above it.
   //
-  Status = QemuFwCfgFindFile (
-             "etc/reserved-memory-end",
-             &FwCfgItem,
-             &FwCfgSize
-             );
-  if (!EFI_ERROR (Status) && (FwCfgSize == sizeof HotPlugMemoryEnd)) {
+  Status = QemuFwCfgFindFile ("etc/reserved-memory-end", &FwCfgItem,
+             &FwCfgSize);
+  if (!EFI_ERROR (Status) && FwCfgSize == sizeof HotPlugMemoryEnd) {
     QemuFwCfgSelectItem (FwCfgItem);
     QemuFwCfgReadBytes (FwCfgSize, &HotPlugMemoryEnd);
-    DEBUG ((
-      DEBUG_VERBOSE,
-      "%a: HotPlugMemoryEnd=0x%Lx\n",
-      __FUNCTION__,
-      HotPlugMemoryEnd
-      ));
+    DEBUG ((DEBUG_VERBOSE, "%a: HotPlugMemoryEnd=0x%Lx\n", __FUNCTION__,
+      HotPlugMemoryEnd));
 
     ASSERT (HotPlugMemoryEnd >= FirstNonAddress);
     FirstNonAddress = HotPlugMemoryEnd;
@@ -526,13 +436,8 @@ GetFirstNonAddress (
     PcdStatus = PcdSet64S (PcdPciMmio64Size, Pci64Size);
     ASSERT_RETURN_ERROR (PcdStatus);
 
-    DEBUG ((
-      DEBUG_INFO,
-      "%a: Pci64Base=0x%Lx Pci64Size=0x%Lx\n",
-      __FUNCTION__,
-      Pci64Base,
-      Pci64Size
-      ));
+    DEBUG ((EFI_D_INFO, "%a: Pci64Base=0x%Lx Pci64Size=0x%Lx\n",
+      __FUNCTION__, Pci64Base, Pci64Size));
   }
 
   //
@@ -542,6 +447,7 @@ GetFirstNonAddress (
   return FirstNonAddress;
 }
 
+
 /**
   Initialize the mPhysMemAddressWidth variable, based on guest RAM size.
 **/
@@ -550,7 +456,7 @@ AddressWidthInitialization (
   VOID
   )
 {
-  UINT64  FirstNonAddress;
+  UINT64 FirstNonAddress;
 
   //
   // As guest-physical memory size grows, the permanent PEI RAM requirements
@@ -578,9 +484,9 @@ AddressWidthInitialization (
   if (mPhysMemAddressWidth <= 36) {
     mPhysMemAddressWidth = 36;
   }
-
   ASSERT (mPhysMemAddressWidth <= 48);
 }
+
 
 /**
   Calculate the cap for the permanent PEI memory.
@@ -591,22 +497,21 @@ GetPeiMemoryCap (
   VOID
   )
 {
-  BOOLEAN  Page1GSupport;
-  UINT32   RegEax;
-  UINT32   RegEdx;
-  UINT32   Pml4Entries;
-  UINT32   PdpEntries;
-  UINTN    TotalPages;
+  BOOLEAN Page1GSupport;
+  UINT32  RegEax;
+  UINT32  RegEdx;
+  UINT32  Pml4Entries;
+  UINT32  PdpEntries;
+  UINTN   TotalPages;
 
   //
   // If DXE is 32-bit, then just return the traditional 64 MB cap.
   //
- #ifdef MDE_CPU_IA32
+#ifdef MDE_CPU_IA32
   if (!FeaturePcdGet (PcdDxeIplSwitchToLongMode)) {
     return SIZE_64MB;
   }
-
- #endif
+#endif
 
   //
   // Dependent on physical address width, PEI memory allocations can be
@@ -627,7 +532,7 @@ GetPeiMemoryCap (
 
   if (mPhysMemAddressWidth <= 39) {
     Pml4Entries = 1;
-    PdpEntries  = 1 << (mPhysMemAddressWidth - 30);
+    PdpEntries = 1 << (mPhysMemAddressWidth - 30);
     ASSERT (PdpEntries <= 0x200);
   } else {
     Pml4Entries = 1 << (mPhysMemAddressWidth - 39);
@@ -636,7 +541,7 @@ GetPeiMemoryCap (
   }
 
   TotalPages = Page1GSupport ? Pml4Entries + 1 :
-               (PdpEntries + 1) * Pml4Entries + 1;
+                               (PdpEntries + 1) * Pml4Entries + 1;
   ASSERT (TotalPages <= 0x40201);
 
   //
@@ -646,6 +551,7 @@ GetPeiMemoryCap (
   //
   return (UINT32)(EFI_PAGES_TO_SIZE (TotalPages) + SIZE_64MB);
 }
+
 
 /**
   Publish PEI core memory
@@ -658,11 +564,11 @@ PublishPeiMemory (
   VOID
   )
 {
-  EFI_STATUS            Status;
-  EFI_PHYSICAL_ADDRESS  MemoryBase;
-  UINT64                MemorySize;
-  UINT32                LowerMemorySize;
-  UINT32                PeiMemoryCap;
+  EFI_STATUS                  Status;
+  EFI_PHYSICAL_ADDRESS        MemoryBase;
+  UINT64                      MemorySize;
+  UINT32                      LowerMemorySize;
+  UINT32                      PeiMemoryCap;
 
   LowerMemorySize = GetSystemMemorySizeBelow4gb ();
   if (FeaturePcdGet (PcdSmmSmramRequire)) {
@@ -679,10 +585,10 @@ PublishPeiMemory (
   //
   if (mS3Supported) {
     mS3AcpiReservedMemorySize = SIZE_512KB +
-                                mMaxCpuCount *
-                                PcdGet32 (PcdCpuApStackSize);
+      mMaxCpuCount *
+      PcdGet32 (PcdCpuApStackSize);
     mS3AcpiReservedMemoryBase = LowerMemorySize - mS3AcpiReservedMemorySize;
-    LowerMemorySize           = mS3AcpiReservedMemoryBase;
+    LowerMemorySize = mS3AcpiReservedMemoryBase;
   }
 
   if (mBootMode == BOOT_ON_S3_RESUME) {
@@ -690,13 +596,8 @@ PublishPeiMemory (
     MemorySize = mS3AcpiReservedMemorySize;
   } else {
     PeiMemoryCap = GetPeiMemoryCap ();
-    DEBUG ((
-      DEBUG_INFO,
-      "%a: mPhysMemAddressWidth=%d PeiMemoryCap=%u KB\n",
-      __FUNCTION__,
-      mPhysMemAddressWidth,
-      PeiMemoryCap >> 10
-      ));
+    DEBUG ((EFI_D_INFO, "%a: mPhysMemAddressWidth=%d PeiMemoryCap=%u KB\n",
+      __FUNCTION__, mPhysMemAddressWidth, PeiMemoryCap >> 10));
 
     //
     // Determine the range of memory to use during PEI
@@ -709,8 +610,8 @@ PublishPeiMemory (
     // shouldn't overlap with that HOB.
     //
     MemoryBase = mS3Supported && FeaturePcdGet (PcdSmmSmramRequire) ?
-                 PcdGet32 (PcdOvmfDecompressionScratchEnd) :
-                 PcdGet32 (PcdOvmfDxeMemFvBase) + PcdGet32 (PcdOvmfDxeMemFvSize);
+      PcdGet32 (PcdOvmfDecompressionScratchEnd) :
+      PcdGet32 (PcdOvmfDxeMemFvBase) + PcdGet32 (PcdOvmfDxeMemFvSize);
     MemorySize = LowerMemorySize - MemoryBase;
     if (MemorySize > PeiMemoryCap) {
       MemoryBase = LowerMemorySize - PeiMemoryCap;
@@ -719,48 +620,14 @@ PublishPeiMemory (
   }
 
   //
-  // MEMFD_BASE_ADDRESS separates the SMRAM at the default SMBASE from the
-  // normal boot permanent PEI RAM. Regarding the S3 boot path, the S3
-  // permanent PEI RAM is located even higher.
-  //
-  if (FeaturePcdGet (PcdSmmSmramRequire) && mQ35SmramAtDefaultSmbase) {
-    ASSERT (SMM_DEFAULT_SMBASE + MCH_DEFAULT_SMBASE_SIZE <= MemoryBase);
-  }
-
-  //
   // Publish this memory to the PEI Core
   //
-  Status = PublishSystemMemory (MemoryBase, MemorySize);
+  Status = PublishSystemMemory(MemoryBase, MemorySize);
   ASSERT_EFI_ERROR (Status);
 
   return Status;
 }
 
-STATIC
-VOID
-QemuInitializeRamBelow1gb (
-  VOID
-  )
-{
-  if (FeaturePcdGet (PcdSmmSmramRequire) && mQ35SmramAtDefaultSmbase) {
-    AddMemoryRangeHob (0, SMM_DEFAULT_SMBASE);
-    AddReservedMemoryBaseSizeHob (
-      SMM_DEFAULT_SMBASE,
-      MCH_DEFAULT_SMBASE_SIZE,
-      TRUE /* Cacheable */
-      );
-    STATIC_ASSERT (
-      SMM_DEFAULT_SMBASE + MCH_DEFAULT_SMBASE_SIZE < BASE_512KB + BASE_128KB,
-      "end of SMRAM at default SMBASE ends at, or exceeds, 640KB"
-      );
-    AddMemoryRangeHob (
-      SMM_DEFAULT_SMBASE + MCH_DEFAULT_SMBASE_SIZE,
-      BASE_512KB + BASE_128KB
-      );
-  } else {
-    AddMemoryRangeHob (0, BASE_512KB + BASE_128KB);
-  }
-}
 
 /**
   Peform Memory Detection for QEMU / KVM
@@ -772,17 +639,18 @@ QemuInitializeRam (
   VOID
   )
 {
-  UINT64         LowerMemorySize;
-  UINT64         UpperMemorySize;
-  MTRR_SETTINGS  MtrrSettings;
-  EFI_STATUS     Status;
+  UINT64                      LowerMemorySize;
+  UINT64                      UpperMemorySize;
+  MTRR_SETTINGS               MtrrSettings;
+  EFI_STATUS                  Status;
 
-  DEBUG ((DEBUG_INFO, "%a called\n", __FUNCTION__));
+  DEBUG ((EFI_D_INFO, "%a called\n", __FUNCTION__));
 
   //
   // Determine total memory size available
   //
   LowerMemorySize = GetSystemMemorySizeBelow4gb ();
+  UpperMemorySize = GetSystemMemorySizeAbove4gb ();
 
   if (mBootMode == BOOT_ON_S3_RESUME) {
     //
@@ -805,23 +673,20 @@ QemuInitializeRam (
     // allocation HOBs, and to honor preexistent memory allocation HOBs when
     // looking for an area to borrow.
     //
-    QemuInitializeRamBelow1gb ();
+    AddMemoryRangeHob (0, BASE_512KB + BASE_128KB);
   } else {
     //
     // Create memory HOBs
     //
-    QemuInitializeRamBelow1gb ();
+    AddMemoryRangeHob (0, BASE_512KB + BASE_128KB);
 
     if (FeaturePcdGet (PcdSmmSmramRequire)) {
-      UINT32  TsegSize;
+      UINT32 TsegSize;
 
       TsegSize = mQ35TsegMbytes * SIZE_1MB;
       AddMemoryRangeHob (BASE_1MB, LowerMemorySize - TsegSize);
-      AddReservedMemoryBaseSizeHob (
-        LowerMemorySize - TsegSize,
-        TsegSize,
-        TRUE
-        );
+      AddReservedMemoryBaseSizeHob (LowerMemorySize - TsegSize, TsegSize,
+        TRUE);
     } else {
       AddMemoryRangeHob (BASE_1MB, LowerMemorySize);
     }
@@ -831,12 +696,9 @@ QemuInitializeRam (
     // entries. Otherwise, create a single memory HOB with the flat >=4GB
     // memory size read from the CMOS.
     //
-    Status = ScanOrAdd64BitE820Ram (TRUE, NULL, NULL);
-    if (EFI_ERROR (Status)) {
-      UpperMemorySize = GetSystemMemorySizeAbove4gb ();
-      if (UpperMemorySize != 0) {
-        AddMemoryBaseSizeHob (BASE_4GB, UpperMemorySize);
-      }
+    Status = ScanOrAdd64BitE820Ram (NULL);
+    if (EFI_ERROR (Status) && UpperMemorySize != 0) {
+      AddMemoryBaseSizeHob (BASE_4GB, UpperMemorySize);
     }
   }
 
@@ -851,7 +713,7 @@ QemuInitializeRam (
   // practically any alignment, and we may not have enough variable MTRRs to
   // cover it exactly.
   //
-  if (IsMtrrSupported () && (mHostBridgeDevId != CLOUDHV_DEVICE_ID)) {
+  if (IsMtrrSupported ()) {
     MtrrGetAllMtrrs (&MtrrSettings);
 
     //
@@ -872,22 +734,16 @@ QemuInitializeRam (
     //
     // Set memory range from 640KB to 1MB to uncacheable
     //
-    Status = MtrrSetMemoryAttribute (
-               BASE_512KB + BASE_128KB,
-               BASE_1MB - (BASE_512KB + BASE_128KB),
-               CacheUncacheable
-               );
+    Status = MtrrSetMemoryAttribute (BASE_512KB + BASE_128KB,
+               BASE_1MB - (BASE_512KB + BASE_128KB), CacheUncacheable);
     ASSERT_EFI_ERROR (Status);
 
     //
     // Set the memory range from the start of the 32-bit MMIO area (32-bit PCI
     // MMIO aperture on i440fx, PCIEXBAR on q35) to 4GB as uncacheable.
     //
-    Status = MtrrSetMemoryAttribute (
-               mQemuUc32Base,
-               SIZE_4GB - mQemuUc32Base,
-               CacheUncacheable
-               );
+    Status = MtrrSetMemoryAttribute (mQemuUc32Base, SIZE_4GB - mQemuUc32Base,
+               CacheUncacheable);
     ASSERT_EFI_ERROR (Status);
   }
 }
@@ -901,11 +757,13 @@ InitializeRamRegions (
   VOID
   )
 {
-  QemuInitializeRam ();
+  if (!mXen) {
+    QemuInitializeRam ();
+  } else {
+    XenPublishRamRegions ();
+  }
 
-  SevInitializeRam ();
-
-  if (mS3Supported && (mBootMode != BOOT_ON_S3_RESUME)) {
+  if (mS3Supported && mBootMode != BOOT_ON_S3_RESUME) {
     //
     // This is the memory range that will be used for PEI on S3 resume
     //
@@ -935,7 +793,7 @@ InitializeRamRegions (
       EfiACPIMemoryNVS
       );
 
- #ifdef MDE_CPU_X64
+#ifdef MDE_CPU_X64
     //
     // Reserve the initial page tables built by the reset vector code.
     //
@@ -943,39 +801,11 @@ InitializeRamRegions (
     // resume, it must be reserved as ACPI NVS.
     //
     BuildMemoryAllocationHob (
-      (EFI_PHYSICAL_ADDRESS)(UINTN)PcdGet32 (PcdOvmfSecPageTablesBase),
-      (UINT64)(UINTN)PcdGet32 (PcdOvmfSecPageTablesSize),
+      (EFI_PHYSICAL_ADDRESS)(UINTN) PcdGet32 (PcdOvmfSecPageTablesBase),
+      (UINT64)(UINTN) PcdGet32 (PcdOvmfSecPageTablesSize),
       EfiACPIMemoryNVS
       );
-
-    if (MemEncryptSevEsIsEnabled ()) {
-      //
-      // If SEV-ES is enabled, reserve the GHCB-related memory area. This
-      // includes the extra page table used to break down the 2MB page
-      // mapping into 4KB page entries where the GHCB resides and the
-      // GHCB area itself.
-      //
-      // Since this memory range will be used by the Reset Vector on S3
-      // resume, it must be reserved as ACPI NVS.
-      //
-      BuildMemoryAllocationHob (
-        (EFI_PHYSICAL_ADDRESS)(UINTN)PcdGet32 (PcdOvmfSecGhcbPageTableBase),
-        (UINT64)(UINTN)PcdGet32 (PcdOvmfSecGhcbPageTableSize),
-        EfiACPIMemoryNVS
-        );
-      BuildMemoryAllocationHob (
-        (EFI_PHYSICAL_ADDRESS)(UINTN)PcdGet32 (PcdOvmfSecGhcbBase),
-        (UINT64)(UINTN)PcdGet32 (PcdOvmfSecGhcbSize),
-        EfiACPIMemoryNVS
-        );
-      BuildMemoryAllocationHob (
-        (EFI_PHYSICAL_ADDRESS)(UINTN)PcdGet32 (PcdOvmfSecGhcbBackupBase),
-        (UINT64)(UINTN)PcdGet32 (PcdOvmfSecGhcbBackupSize),
-        EfiACPIMemoryNVS
-        );
-    }
-
- #endif
+#endif
   }
 
   if (mBootMode != BOOT_ON_S3_RESUME) {
@@ -991,18 +821,18 @@ InitializeRamRegions (
       // such that they would overlap the LockBox storage.
       //
       ZeroMem (
-        (VOID *)(UINTN)PcdGet32 (PcdOvmfLockBoxStorageBase),
-        (UINTN)PcdGet32 (PcdOvmfLockBoxStorageSize)
+        (VOID*)(UINTN) PcdGet32 (PcdOvmfLockBoxStorageBase),
+        (UINTN) PcdGet32 (PcdOvmfLockBoxStorageSize)
         );
       BuildMemoryAllocationHob (
-        (EFI_PHYSICAL_ADDRESS)(UINTN)PcdGet32 (PcdOvmfLockBoxStorageBase),
-        (UINT64)(UINTN)PcdGet32 (PcdOvmfLockBoxStorageSize),
+        (EFI_PHYSICAL_ADDRESS)(UINTN) PcdGet32 (PcdOvmfLockBoxStorageBase),
+        (UINT64)(UINTN) PcdGet32 (PcdOvmfLockBoxStorageSize),
         mS3Supported ? EfiACPIMemoryNVS : EfiBootServicesData
         );
     }
 
     if (FeaturePcdGet (PcdSmmSmramRequire)) {
-      UINT32  TsegSize;
+      UINT32 TsegSize;
 
       //
       // Make sure the TSEG area that we reported as a reserved memory resource
@@ -1010,42 +840,10 @@ InitializeRamRegions (
       //
       TsegSize = mQ35TsegMbytes * SIZE_1MB;
       BuildMemoryAllocationHob (
-        GetSystemMemorySizeBelow4gb () - TsegSize,
+        GetSystemMemorySizeBelow4gb() - TsegSize,
         TsegSize,
         EfiReservedMemoryType
         );
-      //
-      // Similarly, allocate away the (already reserved) SMRAM at the default
-      // SMBASE, if it exists.
-      //
-      if (mQ35SmramAtDefaultSmbase) {
-        BuildMemoryAllocationHob (
-          SMM_DEFAULT_SMBASE,
-          MCH_DEFAULT_SMBASE_SIZE,
-          EfiReservedMemoryType
-          );
-      }
     }
-
- #ifdef MDE_CPU_X64
-    if (FixedPcdGet32 (PcdOvmfWorkAreaSize) != 0) {
-      //
-      // Reserve the work area.
-      //
-      // Since this memory range will be used by the Reset Vector on S3
-      // resume, it must be reserved as ACPI NVS.
-      //
-      // If S3 is unsupported, then various drivers might still write to the
-      // work area. We ought to prevent DXE from serving allocation requests
-      // such that they would overlap the work area.
-      //
-      BuildMemoryAllocationHob (
-        (EFI_PHYSICAL_ADDRESS)(UINTN)FixedPcdGet32 (PcdOvmfWorkAreaBase),
-        (UINT64)(UINTN)FixedPcdGet32 (PcdOvmfWorkAreaSize),
-        mS3Supported ? EfiACPIMemoryNVS : EfiBootServicesData
-        );
-    }
-
- #endif
   }
 }

@@ -3,7 +3,7 @@
  * Eddie James <eajames@linux.ibm.com>
  *
  * Copyright (C) 2019 IBM Corp
- * SPDX-License-Identifier: GPL-2.0-or-later
+ * SPDX-License-Identifer: GPL-2.0-or-later
  */
 
 #include "qemu/osdep.h"
@@ -14,12 +14,9 @@
 #include "hw/irq.h"
 #include "migration/vmstate.h"
 #include "hw/qdev-properties.h"
-#include "trace.h"
 
 #define ASPEED_SDHCI_INFO            0x00
-#define  ASPEED_SDHCI_INFO_SLOT1     (1 << 17)
-#define  ASPEED_SDHCI_INFO_SLOT0     (1 << 16)
-#define  ASPEED_SDHCI_INFO_RESET     (1 << 0)
+#define  ASPEED_SDHCI_INFO_RESET     0x00030000
 #define ASPEED_SDHCI_DEBOUNCE        0x04
 #define  ASPEED_SDHCI_DEBOUNCE_RESET 0x00000005
 #define ASPEED_SDHCI_BUS             0x08
@@ -61,8 +58,6 @@ static uint64_t aspeed_sdhci_read(void *opaque, hwaddr addr, unsigned int size)
         }
     }
 
-    trace_aspeed_sdhci_read(addr, size, (uint64_t) val);
-
     return (uint64_t)val;
 }
 
@@ -71,13 +66,7 @@ static void aspeed_sdhci_write(void *opaque, hwaddr addr, uint64_t val,
 {
     AspeedSDHCIState *sdhci = opaque;
 
-    trace_aspeed_sdhci_write(addr, size, val);
-
     switch (addr) {
-    case ASPEED_SDHCI_INFO:
-        /* The RESET bit automatically clears. */
-        sdhci->regs[TO_REG(addr)] = (uint32_t)val & ~ASPEED_SDHCI_INFO_RESET;
-        break;
     case ASPEED_SDHCI_SDIO_140:
         sdhci->slots[0].capareg = (uint64_t)(uint32_t)val;
         break;
@@ -166,11 +155,7 @@ static void aspeed_sdhci_reset(DeviceState *dev)
     AspeedSDHCIState *sdhci = ASPEED_SDHCI(dev);
 
     memset(sdhci->regs, 0, ASPEED_SDHCI_REG_SIZE);
-
-    sdhci->regs[TO_REG(ASPEED_SDHCI_INFO)] = ASPEED_SDHCI_INFO_SLOT0;
-    if (sdhci->num_slots == 2) {
-        sdhci->regs[TO_REG(ASPEED_SDHCI_INFO)] |= ASPEED_SDHCI_INFO_SLOT1;
-    }
+    sdhci->regs[TO_REG(ASPEED_SDHCI_INFO)] = ASPEED_SDHCI_INFO_RESET;
     sdhci->regs[TO_REG(ASPEED_SDHCI_DEBOUNCE)] = ASPEED_SDHCI_DEBOUNCE_RESET;
 }
 
@@ -198,7 +183,7 @@ static void aspeed_sdhci_class_init(ObjectClass *classp, void *data)
     device_class_set_props(dc, aspeed_sdhci_properties);
 }
 
-static const TypeInfo aspeed_sdhci_info = {
+static TypeInfo aspeed_sdhci_info = {
     .name          = TYPE_ASPEED_SDHCI,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(AspeedSDHCIState),

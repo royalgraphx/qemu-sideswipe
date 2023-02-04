@@ -4,18 +4,14 @@
 # Wolfgang Denk, DENX Software Engineering, wd@denx.de.
 
 ifndef CONFIG_X86_64
-ifndef CONFIG_TPL_BUILD
 obj-y += bios.o
 obj-y += bios_asm.o
 obj-y += bios_interrupts.o
-endif
-obj-y += string.o
 endif
 ifndef CONFIG_SPL_BUILD
 obj-$(CONFIG_CMD_BOOTM) += bootm.o
 endif
 obj-y	+= cmd_boot.o
-obj-$(CONFIG_$(SPL_)COREBOOT_SYSINFO)	+= coreboot/
 obj-$(CONFIG_SEABIOS) += coreboot_table.o
 obj-y	+= early_cmos.o
 obj-y	+= e820.o
@@ -23,7 +19,7 @@ obj-y	+= init_helpers.o
 obj-y	+= interrupts.o
 obj-y	+= lpc-uclass.o
 obj-y	+= mpspec.o
-obj-$(CONFIG_$(SPL_TPL_)ACPIGEN) += acpi_nhlt.o
+obj-$(CONFIG_ENABLE_MRC_CACHE) += mrccache.o
 obj-y	+= northbridge-uclass.o
 obj-$(CONFIG_I8259_PIC) += i8259.o
 obj-$(CONFIG_I8254_TIMER) += i8254.o
@@ -36,31 +32,18 @@ obj-$(CONFIG_X86_RAMTEST) += ramtest.o
 obj-$(CONFIG_INTEL_MID) += scu.o
 obj-y	+= sections.o
 obj-y += sfi.o
+obj-y	+= string.o
 obj-y	+= acpi.o
 obj-$(CONFIG_HAVE_ACPI_RESUME) += acpi_s3.o
 ifndef CONFIG_QEMU
-obj-y += acpigen.o
 obj-$(CONFIG_GENERATE_ACPI_TABLE) += acpi_table.o
 endif
 obj-y	+= tables.o
 ifndef CONFIG_SPL_BUILD
 obj-$(CONFIG_CMD_ZBOOT)	+= zimage.o
 endif
-obj-$(CONFIG_USE_HOB) += hob.o
-ifndef CONFIG_TPL_BUILD
-obj-$(CONFIG_ENABLE_MRC_CACHE) += mrccache.o
 obj-$(CONFIG_HAVE_FSP) += fsp/
-obj-$(CONFIG_FSP_VERSION1) += fsp1/
-obj-$(CONFIG_FSP_VERSION2) += fsp2/
-endif
-
-ifdef CONFIG_SPL_BUILD
-ifdef CONFIG_TPL_BUILD
-obj-y += tpl.o
-else
-obj-y += spl.o
-endif
-endif
+obj-$(CONFIG_SPL_BUILD) += spl.o
 
 lib-$(CONFIG_USE_PRIVATE_LIBGCC) += div64.o
 

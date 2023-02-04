@@ -15,13 +15,13 @@
 #include <openssl/asn1.h>
 #include <openssl/x509.h>
 #include <openssl/bio.h>
-#include <crypto/x509.h>
+#include <internal/x509_int.h>
 #include <openssl/pkcs7.h>
 #include <openssl/bn.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/pem.h>
 #include <openssl/evp.h>
-#include <crypto/asn1.h>
+#include <internal/asn1_int.h>
 
 /**
   This function will return the leaf signer certificate in a chain.  This is
@@ -64,20 +64,19 @@
 **/
 EFI_STATUS
 GetSignerCertificate (
-  IN CONST PKCS7  *CertChain,
-  OUT X509        **SignerCert
+  IN CONST PKCS7 *CertChain,
+  OUT X509       **SignerCert
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS      Status;
+  STACK_OF(X509)  *Signers;
+  INT32           NumberSigners;
 
-  STACK_OF (X509)  *Signers;
-  INT32  NumberSigners;
+  Status         = EFI_SUCCESS;
+  Signers        = NULL;
+  NumberSigners  = 0;
 
-  Status        = EFI_SUCCESS;
-  Signers       = NULL;
-  NumberSigners = 0;
-
-  if ((CertChain == NULL) || (SignerCert == NULL)) {
+  if (CertChain == NULL || SignerCert == NULL) {
     Status = EFI_INVALID_PARAMETER;
     goto Exit;
   }
@@ -85,7 +84,7 @@ GetSignerCertificate (
   //
   // Get the signers from the chain.
   //
-  Signers = PKCS7_get0_signers ((PKCS7 *)CertChain, NULL, PKCS7_BINARY);
+  Signers = PKCS7_get0_signers ((PKCS7*) CertChain, NULL, PKCS7_BINARY);
   if (Signers == NULL) {
     //
     // Fail to get signers form PKCS7
@@ -112,12 +111,13 @@ Exit:
   //
   // Release Resources
   //
-  if (Signers != NULL) {
+  if (Signers) {
     sk_X509_free (Signers);
   }
 
   return Status;
 }
+
 
 /**
   Determines if the specified EKU represented in ASN1 form is present
@@ -134,8 +134,8 @@ Exit:
 **/
 EFI_STATUS
 IsEkuInCertificate (
-  IN CONST X509   *Cert,
-  IN ASN1_OBJECT  *Asn1ToFind
+  IN CONST X509  *Cert,
+  IN ASN1_OBJECT *Asn1ToFind
   )
 {
   EFI_STATUS          Status;
@@ -147,15 +147,15 @@ IsEkuInCertificate (
   ASN1_OBJECT         *Asn1InCert;
   INTN                Index;
 
-  Status         = EFI_NOT_FOUND;
-  ClonedCert     = NULL;
-  Extension      = NULL;
-  Eku            = NULL;
-  ExtensionIndex = -1;
-  NumExtensions  = 0;
-  Asn1InCert     = NULL;
+  Status            = EFI_NOT_FOUND;
+  ClonedCert        = NULL;
+  Extension         = NULL;
+  Eku               = NULL;
+  ExtensionIndex    = -1;
+  NumExtensions     = 0;
+  Asn1InCert        = NULL;
 
-  if ((Cert == NULL) || (Asn1ToFind == NULL)) {
+  if (Cert == NULL || Asn1ToFind == NULL) {
     Status = EFI_INVALID_PARAMETER;
     goto Exit;
   }
@@ -164,7 +164,7 @@ IsEkuInCertificate (
   // Clone the certificate.  This is required because the Extension API's
   // only work once per instance of an X509 object.
   //
-  ClonedCert = X509_dup ((X509 *)Cert);
+  ClonedCert = X509_dup ((X509*)Cert);
   if (ClonedCert == NULL) {
     //
     // Fail to duplicate cert.
@@ -193,7 +193,7 @@ IsEkuInCertificate (
     goto Exit;
   }
 
-  Eku = (EXTENDED_KEY_USAGE *)X509V3_EXT_d2i (Extension);
+  Eku = (EXTENDED_KEY_USAGE*)X509V3_EXT_d2i (Extension);
   if (Eku == NULL) {
     //
     // Fail to get Eku from extension.
@@ -215,9 +215,8 @@ IsEkuInCertificate (
       goto Exit;
     }
 
-    if ((Asn1InCert->length == Asn1ToFind->length) &&
-        (CompareMem (Asn1InCert->data, Asn1ToFind->data, Asn1InCert->length) == 0))
-    {
+    if (Asn1InCert->length == Asn1ToFind->length &&
+        CompareMem (Asn1InCert->data, Asn1ToFind->data, Asn1InCert->length) == 0) {
       //
       // Found Eku in certificate.
       //
@@ -231,16 +230,17 @@ Exit:
   //
   // Release Resources
   //
-  if (ClonedCert != NULL) {
+  if (ClonedCert) {
     X509_free (ClonedCert);
   }
 
-  if (Eku != NULL) {
+  if (Eku) {
     sk_ASN1_OBJECT_pop_free (Eku, ASN1_OBJECT_free);
   }
 
   return Status;
 }
+
 
 /**
   Determines if the specified EKUs are present in a signing certificate.
@@ -256,23 +256,23 @@ Exit:
   @retval EFI_NOT_FOUND             One or more EKU's were not found in the signature.
 **/
 EFI_STATUS
-CheckEKUs (
-  IN CONST X509    *SignerCert,
-  IN CONST CHAR8   *RequiredEKUs[],
-  IN CONST UINT32  RequiredEKUsSize,
-  IN BOOLEAN       RequireAllPresent
+CheckEKUs(
+  IN CONST X509     *SignerCert,
+  IN CONST CHAR8    *RequiredEKUs[],
+  IN CONST UINT32   RequiredEKUsSize,
+  IN BOOLEAN        RequireAllPresent
   )
 {
-  EFI_STATUS   Status;
-  ASN1_OBJECT  *Asn1ToFind;
-  UINT32       NumEkusFound;
-  UINT32       Index;
+  EFI_STATUS    Status;
+  ASN1_OBJECT   *Asn1ToFind;
+  UINT32        NumEkusFound;
+  UINT32        Index;
 
   Status       = EFI_SUCCESS;
   Asn1ToFind   = NULL;
   NumEkusFound = 0;
 
-  if ((SignerCert == NULL) || (RequiredEKUs == NULL) || (RequiredEKUsSize == 0)) {
+  if (SignerCert == NULL || RequiredEKUs == NULL || RequiredEKUsSize == 0) {
     Status = EFI_INVALID_PARAMETER;
     goto Exit;
   }
@@ -281,13 +281,13 @@ CheckEKUs (
     //
     // Finding required EKU in cert.
     //
-    if (Asn1ToFind != NULL) {
-      ASN1_OBJECT_free (Asn1ToFind);
+    if (Asn1ToFind) {
+      ASN1_OBJECT_free(Asn1ToFind);
       Asn1ToFind = NULL;
     }
 
     Asn1ToFind = OBJ_txt2obj (RequiredEKUs[Index], 0);
-    if (Asn1ToFind == NULL) {
+    if (!Asn1ToFind) {
       //
       // Fail to convert required EKU to ASN1.
       //
@@ -313,13 +313,12 @@ CheckEKUs (
 
 Exit:
 
-  if (Asn1ToFind != NULL) {
-    ASN1_OBJECT_free (Asn1ToFind);
+  if (Asn1ToFind) {
+    ASN1_OBJECT_free(Asn1ToFind);
   }
 
   if (RequireAllPresent &&
-      (NumEkusFound == RequiredEKUsSize))
-  {
+      NumEkusFound == RequiredEKUsSize) {
     //
     // Found all required EKUs in certificate.
     //
@@ -362,45 +361,43 @@ Exit:
 EFI_STATUS
 EFIAPI
 VerifyEKUsInPkcs7Signature (
-  IN CONST UINT8   *Pkcs7Signature,
-  IN CONST UINT32  SignatureSize,
-  IN CONST CHAR8   *RequiredEKUs[],
-  IN CONST UINT32  RequiredEKUsSize,
-  IN BOOLEAN       RequireAllPresent
+  IN CONST UINT8    *Pkcs7Signature,
+  IN CONST UINT32   SignatureSize,
+  IN CONST CHAR8    *RequiredEKUs[],
+  IN CONST UINT32   RequiredEKUsSize,
+  IN BOOLEAN        RequireAllPresent
   )
 {
-  EFI_STATUS  Status;
-  PKCS7       *Pkcs7;
+  EFI_STATUS        Status;
+  PKCS7             *Pkcs7;
+  STACK_OF(X509)    *CertChain;
+  INT32             SignatureType;
+  INT32             NumberCertsInSignature;
+  X509              *SignerCert;
+  UINT8             *SignedData;
+  UINT8             *Temp;
+  UINTN             SignedDataSize;
+  BOOLEAN           IsWrapped;
+  BOOLEAN           Ok;
 
-  STACK_OF (X509)    *CertChain;
-  INT32    SignatureType;
-  INT32    NumberCertsInSignature;
-  X509     *SignerCert;
-  UINT8    *SignedData;
-  UINT8    *Temp;
-  UINTN    SignedDataSize;
-  BOOLEAN  IsWrapped;
-  BOOLEAN  Ok;
-
-  Status                 = EFI_SUCCESS;
-  Pkcs7                  = NULL;
-  CertChain              = NULL;
-  SignatureType          = 0;
-  NumberCertsInSignature = 0;
-  SignerCert             = NULL;
-  SignedData             = NULL;
-  SignedDataSize         = 0;
-  IsWrapped              = FALSE;
-  Ok                     = FALSE;
+  Status                    = EFI_SUCCESS;
+  Pkcs7                     = NULL;
+  CertChain                 = NULL;
+  SignatureType             = 0;
+  NumberCertsInSignature    = 0;
+  SignerCert                = NULL;
+  SignedData                = NULL;
+  SignedDataSize            = 0;
+  IsWrapped                 = FALSE;
+  Ok                        = FALSE;
 
   //
-  // Validate the input parameters.
+  //Validate the input parameters.
   //
-  if ((Pkcs7Signature   == NULL) ||
-      (SignatureSize    == 0) ||
-      (RequiredEKUs     == NULL) ||
-      (RequiredEKUsSize == 0))
-  {
+  if (Pkcs7Signature   == NULL ||
+      SignatureSize    == 0    ||
+      RequiredEKUs     == NULL ||
+      RequiredEKUsSize == 0) {
     Status = EFI_INVALID_PARAMETER;
     goto Exit;
   }
@@ -412,13 +409,11 @@ VerifyEKUsInPkcs7Signature (
   //
   // Wrap the PKCS7 data if needed.
   //
-  Ok = WrapPkcs7Data (
-         Pkcs7Signature,
-         SignatureSize,
-         &IsWrapped,
-         &SignedData,
-         &SignedDataSize
-         );
+  Ok = WrapPkcs7Data (Pkcs7Signature,
+                      SignatureSize,
+                      &IsWrapped,
+                      &SignedData,
+                      &SignedDataSize);
   if (!Ok) {
     //
     // Fail to Wrap the PKCS7 data.
@@ -446,20 +441,18 @@ VerifyEKUsInPkcs7Signature (
   //
   SignatureType = OBJ_obj2nid (Pkcs7->type);
   switch (SignatureType) {
-    case NID_pkcs7_signed:
-      if (Pkcs7->d.sign != NULL) {
-        CertChain = Pkcs7->d.sign->cert;
-      }
-
-      break;
-    case NID_pkcs7_signedAndEnveloped:
-      if (Pkcs7->d.signed_and_enveloped != NULL) {
-        CertChain = Pkcs7->d.signed_and_enveloped->cert;
-      }
-
-      break;
-    default:
-      break;
+  case NID_pkcs7_signed:
+    if (Pkcs7->d.sign != NULL) {
+      CertChain = Pkcs7->d.sign->cert;
+    }
+    break;
+  case NID_pkcs7_signedAndEnveloped:
+    if (Pkcs7->d.signed_and_enveloped != NULL) {
+      CertChain = Pkcs7->d.signed_and_enveloped->cert;
+    }
+    break;
+  default:
+    break;
   }
 
   //
@@ -490,7 +483,7 @@ VerifyEKUsInPkcs7Signature (
   // Get the leaf signer.
   //
   Status = GetSignerCertificate (Pkcs7, &SignerCert);
-  if ((Status != EFI_SUCCESS) || (SignerCert == NULL)) {
+  if (Status != EFI_SUCCESS || SignerCert == NULL) {
     //
     // Fail to get the end-entity leaf signer certificate.
     //
@@ -515,9 +508,14 @@ Exit:
     free (SignedData);
   }
 
-  if (Pkcs7 != NULL) {
+  if (SignerCert) {
+    X509_free (SignerCert);
+  }
+
+  if (Pkcs7) {
     PKCS7_free (Pkcs7);
   }
 
   return Status;
 }
+

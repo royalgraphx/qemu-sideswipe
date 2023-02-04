@@ -11,9 +11,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
  *
  * Dummy Implement for UEFI
  */
-void
-ossl_store_cleanup_int (
-  void
-  )
+void ossl_store_cleanup_int(void)
 {
 }
+

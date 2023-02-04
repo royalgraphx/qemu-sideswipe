@@ -10,7 +10,6 @@
 #include <common.h>
 #include <dm.h>
 #include <pci.h>
-#include <asm/global_data.h>
 
 #include <asm/io.h>
 
@@ -20,8 +19,6 @@
  */
 struct generic_ecam_pcie {
 	void *cfg_base;
-	pci_size_t size;
-	int first_busno;
 };
 
 /**
@@ -38,31 +35,20 @@ struct generic_ecam_pcie {
  * code. Otherwise the address to access will be written to the pointer pointed
  * to by @paddress.
  */
-static int pci_generic_ecam_conf_address(const struct udevice *bus,
-					 pci_dev_t bdf, uint offset,
-					 void **paddress)
+static int pci_generic_ecam_conf_address(struct udevice *bus, pci_dev_t bdf,
+					    uint offset, void **paddress)
 {
 	struct generic_ecam_pcie *pcie = dev_get_priv(bus);
 	void *addr;
 
 	addr = pcie->cfg_base;
-	addr += (PCI_BUS(bdf) - pcie->first_busno) << 20;
+	addr += PCI_BUS(bdf) << 20;
 	addr += PCI_DEV(bdf) << 15;
 	addr += PCI_FUNC(bdf) << 12;
 	addr += offset;
 	*paddress = addr;
 
 	return 0;
-}
-
-static bool pci_generic_ecam_addr_valid(const struct udevice *bus,
-					pci_dev_t bdf)
-{
-	struct generic_ecam_pcie *pcie = dev_get_priv(bus);
-	int num_buses = DIV_ROUND_UP(pcie->size, 1 << 16);
-
-	return (PCI_BUS(bdf) >= pcie->first_busno &&
-		PCI_BUS(bdf) < pcie->first_busno + num_buses);
 }
 
 /**
@@ -77,15 +63,10 @@ static bool pci_generic_ecam_addr_valid(const struct udevice *bus,
  * space of the device identified by the bus, device & function numbers in @bdf
  * on the PCI bus @bus.
  */
-static int pci_generic_ecam_read_config(const struct udevice *bus,
-					pci_dev_t bdf, uint offset,
-					ulong *valuep, enum pci_size_t size)
+static int pci_generic_ecam_read_config(struct udevice *bus, pci_dev_t bdf,
+				   uint offset, ulong *valuep,
+				   enum pci_size_t size)
 {
-	if (!pci_generic_ecam_addr_valid(bus, bdf)) {
-		*valuep = pci_get_ff(size);
-		return 0;
-	}
-
 	return pci_generic_mmap_read_config(bus, pci_generic_ecam_conf_address,
 					    bdf, offset, valuep, size);
 }
@@ -106,15 +87,12 @@ static int pci_generic_ecam_write_config(struct udevice *bus, pci_dev_t bdf,
 				    uint offset, ulong value,
 				    enum pci_size_t size)
 {
-	if (!pci_generic_ecam_addr_valid(bus, bdf))
-		return 0;
-
 	return pci_generic_mmap_write_config(bus, pci_generic_ecam_conf_address,
 					     bdf, offset, value, size);
 }
 
 /**
- * pci_generic_ecam_of_to_plat() - Translate from DT to device state
+ * pci_generic_ecam_ofdata_to_platdata() - Translate from DT to device state
  * @dev: A pointer to the device being operated on
  *
  * Translate relevant data from the device tree pertaining to device @dev into
@@ -123,7 +101,7 @@ static int pci_generic_ecam_write_config(struct udevice *bus, pci_dev_t bdf,
  *
  * Return: 0 on success, else -EINVAL
  */
-static int pci_generic_ecam_of_to_plat(struct udevice *dev)
+static int pci_generic_ecam_ofdata_to_platdata(struct udevice *dev)
 {
 	struct generic_ecam_pcie *pcie = dev_get_priv(dev);
 	struct fdt_resource reg_res;
@@ -137,17 +115,9 @@ static int pci_generic_ecam_of_to_plat(struct udevice *dev)
 		return err;
 	}
 
-	pcie->size = fdt_resource_size(&reg_res);
-	pcie->cfg_base = map_physmem(reg_res.start, pcie->size, MAP_NOCACHE);
-
-	return 0;
-}
-
-static int pci_generic_ecam_probe(struct udevice *dev)
-{
-	struct generic_ecam_pcie *pcie = dev_get_priv(dev);
-
-	pcie->first_busno = dev_seq(dev);
+	pcie->cfg_base = map_physmem(reg_res.start,
+				     fdt_resource_size(&reg_res),
+				     MAP_NOCACHE);
 
 	return 0;
 }
@@ -167,7 +137,6 @@ U_BOOT_DRIVER(pci_generic_ecam) = {
 	.id			= UCLASS_PCI,
 	.of_match		= pci_generic_ecam_ids,
 	.ops			= &pci_generic_ecam_ops,
-	.probe			= pci_generic_ecam_probe,
-	.of_to_plat	= pci_generic_ecam_of_to_plat,
-	.priv_auto	= sizeof(struct generic_ecam_pcie),
+	.ofdata_to_platdata	= pci_generic_ecam_ofdata_to_platdata,
+	.priv_auto_alloc_size	= sizeof(struct generic_ecam_pcie),
 };

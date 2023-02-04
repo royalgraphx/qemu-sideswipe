@@ -38,6 +38,7 @@ LINECOMMENT	"//".*\n
 #include "srcpos.h"
 #include "dtc-parser.tab.h"
 
+YYLTYPE yylloc;
 extern bool treesource_error;
 
 /* CAUTION: this will stop working if we ever use yyless() or yyunput() */
@@ -150,13 +151,6 @@ static void PRINTF(1, 2) lexical_error(const char *fmt, ...);
 			DPRINT("<PROPNODENAME>\n");
 			BEGIN(PROPNODENAME);
 			return DT_DEL_NODE;
-		}
-
-<*>"/omit-if-no-ref/"	{
-			DPRINT("Keyword: /omit-if-no-ref/\n");
-			DPRINT("<PROPNODENAME>\n");
-			BEGIN(PROPNODENAME);
-			return DT_OMIT_NO_REF;
 		}
 
 <*>{LABEL}:	{

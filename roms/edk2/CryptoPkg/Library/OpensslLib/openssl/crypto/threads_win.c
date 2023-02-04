@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2020 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2016-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -24,15 +24,11 @@ CRYPTO_RWLOCK *CRYPTO_THREAD_lock_new(void)
         return NULL;
     }
 
-# if !defined(_WIN32_WCE)
     /* 0x400 is the spin count value suggested in the documentation */
     if (!InitializeCriticalSectionAndSpinCount(lock, 0x400)) {
         OPENSSL_free(lock);
         return NULL;
     }
-# else
-    InitializeCriticalSection(lock);
-# endif
 
     return lock;
 }
@@ -155,7 +151,7 @@ int CRYPTO_THREAD_compare_id(CRYPTO_THREAD_ID a, CRYPTO_THREAD_ID b)
 
 int CRYPTO_atomic_add(int *val, int amount, int *ret, CRYPTO_RWLOCK *lock)
 {
-    *ret = (int)InterlockedExchangeAdd((long volatile *)val, (long)amount) + amount;
+    *ret = InterlockedExchangeAdd(val, amount) + amount;
     return 1;
 }
 
@@ -164,8 +160,4 @@ int openssl_init_fork_handlers(void)
     return 0;
 }
 
-int openssl_get_fork_id(void)
-{
-    return 0;
-}
 #endif

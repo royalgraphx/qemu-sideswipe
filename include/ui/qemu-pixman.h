@@ -19,7 +19,7 @@
  * feeding libjpeg / libpng and writing screenshots.
  */
 
-#if HOST_BIG_ENDIAN
+#ifdef HOST_WORDS_BIGENDIAN
 # define PIXMAN_BE_r8g8b8     PIXMAN_r8g8b8
 # define PIXMAN_BE_x8r8g8b8   PIXMAN_x8r8g8b8
 # define PIXMAN_BE_a8r8g8b8   PIXMAN_a8r8g8b8
@@ -62,7 +62,6 @@ typedef struct PixelFormat {
 PixelFormat qemu_pixelformat_from_pixman(pixman_format_code_t format);
 pixman_format_code_t qemu_default_pixman_format(int bpp, bool native_endian);
 pixman_format_code_t qemu_drm_format_to_pixman(uint32_t drm_format);
-uint32_t qemu_pixman_to_drm_format(pixman_format_code_t pixman);
 int qemu_pixman_get_type(int rshift, int gshift, int bshift);
 pixman_format_code_t qemu_pixman_get_format(PixelFormat *pf);
 bool qemu_pixman_check_format(DisplayChangeListener *dcl,

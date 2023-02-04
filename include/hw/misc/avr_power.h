@@ -26,13 +26,13 @@
 #define HW_MISC_AVR_POWER_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
+#include "hw/hw.h"
 
 
 #define TYPE_AVR_MASK "avr-power"
-OBJECT_DECLARE_SIMPLE_TYPE(AVRMaskState, AVR_MASK)
+#define AVR_MASK(obj) OBJECT_CHECK(AVRMaskState, (obj), TYPE_AVR_MASK)
 
-struct AVRMaskState {
+typedef struct {
     /* <private> */
     SysBusDevice parent_obj;
 
@@ -41,6 +41,6 @@ struct AVRMaskState {
 
     uint8_t val;
     qemu_irq irq[8];
-};
+} AVRMaskState;
 
 #endif /* HW_MISC_AVR_POWER_H */

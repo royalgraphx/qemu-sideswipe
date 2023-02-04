@@ -29,7 +29,6 @@
 #include "migration/vmstate.h"
 #include "qemu/module.h"
 #include "trace.h"
-#include "qom/object.h"
 
 /* There are 3 versions of this chip used in SMP sun4m systems:
  * MCC (version 0, implementation 0) SS-600MP
@@ -127,9 +126,9 @@
 #define ECC_DIAG_MASK  (ECC_DIAG_SIZE - 1)
 
 #define TYPE_ECC_MEMCTL "eccmemctl"
-OBJECT_DECLARE_SIMPLE_TYPE(ECCState, ECC_MEMCTL)
+#define ECC_MEMCTL(obj) OBJECT_CHECK(ECCState, (obj), TYPE_ECC_MEMCTL)
 
-struct ECCState {
+typedef struct ECCState {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem, iomem_diag;
@@ -137,7 +136,7 @@ struct ECCState {
     uint32_t regs[ECC_NREGS];
     uint8_t diag[ECC_DIAG_SIZE];
     uint32_t version;
-};
+} ECCState;
 
 static void ecc_mem_write(void *opaque, hwaddr addr, uint64_t val,
                           unsigned size)

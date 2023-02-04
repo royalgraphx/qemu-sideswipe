@@ -27,7 +27,14 @@
 #include "hw/acpi/bios-linker-loader.h"
 #include "qemu/uuid.h"
 #include "hw/acpi/aml-build.h"
-#include "qom/object.h"
+
+#define NVDIMM_DEBUG 0
+#define nvdimm_debug(fmt, ...)                                \
+    do {                                                      \
+        if (NVDIMM_DEBUG) {                                   \
+            fprintf(stderr, "nvdimm: " fmt, ## __VA_ARGS__);  \
+        }                                                     \
+    } while (0)
 
 /*
  * The minimum label data size is required by NVDIMM Namespace
@@ -38,7 +45,10 @@
 #define MIN_NAMESPACE_LABEL_SIZE      (128UL << 10)
 
 #define TYPE_NVDIMM      "nvdimm"
-OBJECT_DECLARE_TYPE(NVDIMMDevice, NVDIMMClass, NVDIMM)
+#define NVDIMM(obj)      OBJECT_CHECK(NVDIMMDevice, (obj), TYPE_NVDIMM)
+#define NVDIMM_CLASS(oc) OBJECT_CLASS_CHECK(NVDIMMClass, (oc), TYPE_NVDIMM)
+#define NVDIMM_GET_CLASS(obj) OBJECT_GET_CLASS(NVDIMMClass, (obj), \
+                                               TYPE_NVDIMM)
 
 #define NVDIMM_LABEL_SIZE_PROP "label-size"
 #define NVDIMM_UUID_PROP       "uuid"
@@ -82,6 +92,7 @@ struct NVDIMMDevice {
      */
     QemuUUID uuid;
 };
+typedef struct NVDIMMDevice NVDIMMDevice;
 
 struct NVDIMMClass {
     /* private */
@@ -95,9 +106,8 @@ struct NVDIMMClass {
     /* write @size bytes from @buf to NVDIMM label data at @offset. */
     void (*write_label_data)(NVDIMMDevice *nvdimm, const void *buf,
                              uint64_t size, uint64_t offset);
-    void (*realize)(NVDIMMDevice *nvdimm, Error **errp);
-    void (*unrealize)(NVDIMMDevice *nvdimm);
 };
+typedef struct NVDIMMClass NVDIMMClass;
 
 #define NVDIMM_DSM_MEM_FILE     "etc/acpi/nvdimm-mem"
 
@@ -148,8 +158,7 @@ void nvdimm_init_acpi_state(NVDIMMState *state, MemoryRegion *io,
 void nvdimm_build_srat(GArray *table_data);
 void nvdimm_build_acpi(GArray *table_offsets, GArray *table_data,
                        BIOSLinker *linker, NVDIMMState *state,
-                       uint32_t ram_slots, const char *oem_id,
-                       const char *oem_table_id);
+                       uint32_t ram_slots);
 void nvdimm_plug(NVDIMMState *state);
 void nvdimm_acpi_plug_cb(HotplugHandler *hotplug_dev, DeviceState *dev);
 #endif

@@ -6,13 +6,8 @@
  */
 
 #include <common.h>
-#include <bootstage.h>
 #include <command.h>
-#include <env.h>
-#include <hang.h>
 #include <image.h>
-#include <log.h>
-#include <asm/global_data.h>
 #include <u-boot/zlib.h>
 #include <asm/byteorder.h>
 #include <asm/bootm.h>
@@ -24,25 +19,24 @@ DECLARE_GLOBAL_DATA_PTR;
 	defined(CONFIG_INITRD_TAG) || \
 	defined(CONFIG_SERIAL_TAG) || \
 	defined(CONFIG_REVISION_TAG)
-static void setup_start_tag(struct bd_info *bd);
+static void setup_start_tag(bd_t *bd);
 
 # ifdef CONFIG_SETUP_MEMORY_TAGS
-static void setup_memory_tags(struct bd_info *bd);
+static void setup_memory_tags(bd_t *bd);
 # endif
-static void setup_commandline_tag(struct bd_info *bd, char *commandline);
+static void setup_commandline_tag(bd_t *bd, char *commandline);
 
 # ifdef CONFIG_INITRD_TAG
-static void setup_initrd_tag(struct bd_info *bd, ulong initrd_start,
-			     ulong initrd_end);
+static void setup_initrd_tag(bd_t *bd, ulong initrd_start, ulong initrd_end);
 # endif
-static void setup_end_tag(struct bd_info *bd);
+static void setup_end_tag(bd_t *bd);
 
 static struct tag *params;
 #endif /* CONFIG_SETUP_MEMORY_TAGS || CONFIG_CMDLINE_TAG || CONFIG_INITRD_TAG */
 
 int do_bootm_linux(int flag, int argc, char *argv[], bootm_headers_t *images)
 {
-	struct bd_info	*bd = gd->bd;
+	bd_t	*bd = gd->bd;
 	char	*s;
 	int	machid = bd->bi_arch_number;
 	void	(*theKernel)(int zero, int arch, uint params);
@@ -132,7 +126,7 @@ int do_bootm_linux(int flag, int argc, char *argv[], bootm_headers_t *images)
 	defined(CONFIG_INITRD_TAG) || \
 	defined(CONFIG_SERIAL_TAG) || \
 	defined(CONFIG_REVISION_TAG)
-static void setup_start_tag(struct bd_info *bd)
+static void setup_start_tag(bd_t *bd)
 {
 	params = (struct tag *)bd->bi_boot_params;
 
@@ -147,7 +141,7 @@ static void setup_start_tag(struct bd_info *bd)
 }
 
 #ifdef CONFIG_SETUP_MEMORY_TAGS
-static void setup_memory_tags(struct bd_info *bd)
+static void setup_memory_tags(bd_t *bd)
 {
 	int i;
 
@@ -163,7 +157,7 @@ static void setup_memory_tags(struct bd_info *bd)
 }
 #endif /* CONFIG_SETUP_MEMORY_TAGS */
 
-static void setup_commandline_tag(struct bd_info *bd, char *commandline)
+static void setup_commandline_tag(bd_t *bd, char *commandline)
 {
 	char *p;
 
@@ -191,8 +185,7 @@ static void setup_commandline_tag(struct bd_info *bd, char *commandline)
 }
 
 #ifdef CONFIG_INITRD_TAG
-static void setup_initrd_tag(struct bd_info *bd, ulong initrd_start,
-			     ulong initrd_end)
+static void setup_initrd_tag(bd_t *bd, ulong initrd_start, ulong initrd_end)
 {
 	/* an ATAG_INITRD node tells the kernel where the compressed
 	 * ramdisk can be found. ATAG_RDIMG is a better name, actually.
@@ -238,7 +231,7 @@ void setup_revision_tag(struct tag **in_params)
 }
 #endif  /* CONFIG_REVISION_TAG */
 
-static void setup_end_tag(struct bd_info *bd)
+static void setup_end_tag(bd_t *bd)
 {
 	params->hdr.tag = ATAG_NONE;
 	params->hdr.size = 0;

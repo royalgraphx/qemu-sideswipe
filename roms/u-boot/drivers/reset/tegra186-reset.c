@@ -5,8 +5,6 @@
 
 #include <common.h>
 #include <dm.h>
-#include <log.h>
-#include <malloc.h>
 #include <misc.h>
 #include <reset-uclass.h>
 #include <asm/arch-tegra/bpmp_abi.h>
@@ -62,7 +60,7 @@ static int tegra186_reset_deassert(struct reset_ctl *reset_ctl)
 
 struct reset_ops tegra186_reset_ops = {
 	.request = tegra186_reset_request,
-	.rfree = tegra186_reset_free,
+	.free = tegra186_reset_free,
 	.rst_assert = tegra186_reset_assert,
 	.rst_deassert = tegra186_reset_deassert,
 };

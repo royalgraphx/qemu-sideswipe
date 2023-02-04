@@ -9,7 +9,7 @@
   Please attention this library instance can not be used util EFI_SYSTEM_TABLE was
   initialized.
 
-  This library contains construct function to retrieve EFI_DXE_SERVICE, this construct
+  This library contains contruct function to retrieve EFI_DXE_SERIVCE, this construct
   function will be invoked in DXE driver's autogen file.
 
   Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -26,7 +26,7 @@
 //
 // Cache copy of the DXE Services Table
 //
-EFI_DXE_SERVICES  *gDS = NULL;
+EFI_DXE_SERVICES  *gDS      = NULL;
 
 /**
   The constructor function caches the pointer of DXE Services Table.
@@ -54,7 +54,7 @@ DxeServicesTableLibConstructor (
   //
   // Cache copy of the DXE Services Table
   //
-  Status = EfiGetSystemConfigurationTable (&gEfiDxeServicesTableGuid, (VOID **)&gDS);
+  Status = EfiGetSystemConfigurationTable (&gEfiDxeServicesTableGuid, (VOID **) &gDS);
   ASSERT_EFI_ERROR (Status);
   ASSERT (gDS != NULL);
 

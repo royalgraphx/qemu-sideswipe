@@ -21,11 +21,15 @@
 #define QEMU_M68K_CPU_QOM_H
 
 #include "hw/core/cpu.h"
-#include "qom/object.h"
 
 #define TYPE_M68K_CPU "m68k-cpu"
 
-OBJECT_DECLARE_CPU_TYPE(M68kCPU, M68kCPUClass, M68K_CPU)
+#define M68K_CPU_CLASS(klass) \
+    OBJECT_CLASS_CHECK(M68kCPUClass, (klass), TYPE_M68K_CPU)
+#define M68K_CPU(obj) \
+    OBJECT_CHECK(M68kCPU, (obj), TYPE_M68K_CPU)
+#define M68K_CPU_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(M68kCPUClass, (obj), TYPE_M68K_CPU)
 
 /*
  * M68kCPUClass:
@@ -34,14 +38,15 @@ OBJECT_DECLARE_CPU_TYPE(M68kCPU, M68kCPUClass, M68K_CPU)
  *
  * A Motorola 68k CPU model.
  */
-struct M68kCPUClass {
+typedef struct M68kCPUClass {
     /*< private >*/
     CPUClass parent_class;
     /*< public >*/
 
     DeviceRealize parent_realize;
     DeviceReset parent_reset;
-};
+} M68kCPUClass;
 
+typedef struct M68kCPU M68kCPU;
 
 #endif

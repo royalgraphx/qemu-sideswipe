@@ -21,10 +21,7 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <init.h>
 #include <malloc.h>
-#include <asm/global_data.h>
 #include <asm/processor.h>
 #include <asm/mach-types.h>
 #include <asm/io.h>
@@ -322,6 +319,6 @@ int board_late_init(void)
 	return 0;
 }
 
-void reset_cpu(void)
+void reset_cpu(ulong addr)
 {
 }

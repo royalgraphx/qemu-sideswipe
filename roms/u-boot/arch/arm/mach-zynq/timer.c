@@ -31,10 +31,6 @@
 #include <common.h>
 #include <div64.h>
 #include <dm.h>
-#include <init.h>
-#include <time.h>
-#include <malloc.h>
-#include <asm/global_data.h>
 #include <asm/io.h>
 #include <asm/arch/hardware.h>
 #include <asm/arch/clk.h>
@@ -69,7 +65,7 @@ int timer_init(void)
 	int ret;
 
 	ret = uclass_get_device_by_driver(UCLASS_CLK,
-		DM_DRIVER_GET(zynq_clk), &dev);
+		DM_GET_DRIVER(zynq_clk), &dev);
 	if (ret)
 		return ret;
 

@@ -430,15 +430,7 @@ static void xen_bus_unrealize(BusState *bus)
     trace_xen_bus_unrealize();
 
     if (xenbus->backend_watch) {
-        unsigned int i;
-
-        for (i = 0; i < xenbus->backend_types; i++) {
-            if (xenbus->backend_watch[i]) {
-                xen_bus_remove_watch(xenbus, xenbus->backend_watch[i], NULL);
-            }
-        }
-
-        g_free(xenbus->backend_watch);
+        xen_bus_remove_watch(xenbus, xenbus->backend_watch, NULL);
         xenbus->backend_watch = NULL;
     }
 
@@ -454,11 +446,8 @@ static void xen_bus_unrealize(BusState *bus)
 
 static void xen_bus_realize(BusState *bus, Error **errp)
 {
-    char *key = g_strdup_printf("%u", xen_domid);
     XenBus *xenbus = XEN_BUS(bus);
     unsigned int domid;
-    const char **type;
-    unsigned int i;
     Error *local_err = NULL;
 
     trace_xen_bus_realize();
@@ -480,32 +469,19 @@ static void xen_bus_realize(BusState *bus, Error **errp)
 
     module_call_init(MODULE_INIT_XEN_BACKEND);
 
-    type = xen_backend_get_types(&xenbus->backend_types);
-    xenbus->backend_watch = g_new(XenWatch *, xenbus->backend_types);
-
-    for (i = 0; i < xenbus->backend_types; i++) {
-        char *node = g_strdup_printf("backend/%s", type[i]);
-
-        xenbus->backend_watch[i] =
-            xen_bus_add_watch(xenbus, node, key, xen_bus_backend_changed,
-                              &local_err);
-        if (local_err) {
-            /* This need not be treated as a hard error so don't propagate */
-            error_reportf_err(local_err,
-                              "failed to set up '%s' enumeration watch: ",
-                              type[i]);
-        }
-
-        g_free(node);
+    xenbus->backend_watch =
+        xen_bus_add_watch(xenbus, "", /* domain root node */
+                          "backend", xen_bus_backend_changed, &local_err);
+    if (local_err) {
+        /* This need not be treated as a hard error so don't propagate */
+        error_reportf_err(local_err,
+                          "failed to set up enumeration watch: ");
     }
 
-    g_free(type);
-    g_free(key);
     return;
 
 fail:
     xen_bus_unrealize(bus);
-    g_free(key);
 }
 
 static void xen_bus_unplug_request(HotplugHandler *hotplug,
@@ -1115,11 +1091,11 @@ void xen_device_set_event_channel_context(XenDevice *xendev,
 
     if (channel->ctx)
         aio_set_fd_handler(channel->ctx, xenevtchn_fd(channel->xeh), true,
-                           NULL, NULL, NULL, NULL, NULL);
+                           NULL, NULL, NULL, NULL);
 
     channel->ctx = ctx;
     aio_set_fd_handler(channel->ctx, xenevtchn_fd(channel->xeh), true,
-                       xen_device_event, NULL, xen_device_poll, NULL, channel);
+                       xen_device_event, NULL, xen_device_poll, channel);
 }
 
 XenEventChannel *xen_device_bind_event_channel(XenDevice *xendev,
@@ -1193,7 +1169,7 @@ void xen_device_unbind_event_channel(XenDevice *xendev,
     QLIST_REMOVE(channel, list);
 
     aio_set_fd_handler(channel->ctx, xenevtchn_fd(channel->xeh), true,
-                       NULL, NULL, NULL, NULL, NULL);
+                       NULL, NULL, NULL, NULL);
 
     if (xenevtchn_unbind(channel->xeh, channel->local_port) < 0) {
         error_setg_errno(errp, errno, "xenevtchn_unbind failed");
@@ -1398,7 +1374,7 @@ type_init(xen_register_types)
 void xen_bus_init(void)
 {
     DeviceState *dev = qdev_new(TYPE_XEN_BRIDGE);
-    BusState *bus = qbus_new(TYPE_XEN_BUS, dev, NULL);
+    BusState *bus = qbus_create(TYPE_XEN_BUS, dev, NULL);
 
     sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
     qbus_set_bus_hotplug_handler(bus);

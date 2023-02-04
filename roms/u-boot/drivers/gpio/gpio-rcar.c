@@ -6,14 +6,9 @@
 #include <common.h>
 #include <clk.h>
 #include <dm.h>
-#include <malloc.h>
-#include <asm/global_data.h>
-#include <dm/device_compat.h>
-#include <dm/pinctrl.h>
 #include <errno.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
-#include <linux/bitops.h>
 #include "../pinctrl/renesas/sh_pfc.h"
 
 #define GPIO_IOINTSEL	0x00	/* General IO/Interrupt Switching Register */
@@ -66,12 +61,9 @@ static int rcar_gpio_set_value(struct udevice *dev, unsigned offset,
 	return 0;
 }
 
-static void rcar_gpio_set_direction(struct udevice *dev, unsigned offset,
+static void rcar_gpio_set_direction(void __iomem *regs, unsigned offset,
 				    bool output)
 {
-	struct rcar_gpio_priv *priv = dev_get_priv(dev);
-	void __iomem *regs = priv->regs;
-
 	/*
 	 * follow steps in the GPIO documentation for
 	 * "Setting General Output Mode" and
@@ -93,7 +85,9 @@ static void rcar_gpio_set_direction(struct udevice *dev, unsigned offset,
 
 static int rcar_gpio_direction_input(struct udevice *dev, unsigned offset)
 {
-	rcar_gpio_set_direction(dev, offset, false);
+	struct rcar_gpio_priv *priv = dev_get_priv(dev);
+
+	rcar_gpio_set_direction(priv->regs, offset, false);
 
 	return 0;
 }
@@ -101,9 +95,11 @@ static int rcar_gpio_direction_input(struct udevice *dev, unsigned offset)
 static int rcar_gpio_direction_output(struct udevice *dev, unsigned offset,
 				      int value)
 {
+	struct rcar_gpio_priv *priv = dev_get_priv(dev);
+
 	/* write GPIO value to output before selecting output mode of pin */
 	rcar_gpio_set_value(dev, offset, value);
-	rcar_gpio_set_direction(dev, offset, true);
+	rcar_gpio_set_direction(priv->regs, offset, true);
 
 	return 0;
 }
@@ -121,17 +117,19 @@ static int rcar_gpio_get_function(struct udevice *dev, unsigned offset)
 static int rcar_gpio_request(struct udevice *dev, unsigned offset,
 			     const char *label)
 {
-	return pinctrl_gpio_request(dev, offset);
-}
+	struct rcar_gpio_priv *priv = dev_get_priv(dev);
+	struct udevice *pctldev;
+	int ret;
 
-static int rcar_gpio_free(struct udevice *dev, unsigned offset)
-{
-	return pinctrl_gpio_free(dev, offset);
+	ret = uclass_get_device(UCLASS_PINCTRL, 0, &pctldev);
+	if (ret)
+		return ret;
+
+	return sh_pfc_config_mux_for_gpio(pctldev, priv->pfc_offset + offset);
 }
 
 static const struct dm_gpio_ops rcar_gpio_ops = {
 	.request		= rcar_gpio_request,
-	.rfree			= rcar_gpio_free,
 	.direction_input	= rcar_gpio_direction_input,
 	.direction_output	= rcar_gpio_direction_output,
 	.get_value		= rcar_gpio_get_value,
@@ -148,7 +146,7 @@ static int rcar_gpio_probe(struct udevice *dev)
 	int node = dev_of_offset(dev);
 	int ret;
 
-	priv->regs = dev_read_addr_ptr(dev);
+	priv->regs = (void __iomem *)devfdt_get_addr(dev);
 	uc_priv->bank_name = dev->name;
 
 	ret = fdtdec_parse_phandle_with_args(gd->fdt_blob, node, "gpio-ranges",
@@ -189,6 +187,6 @@ U_BOOT_DRIVER(rcar_gpio) = {
 	.id	= UCLASS_GPIO,
 	.of_match = rcar_gpio_ids,
 	.ops	= &rcar_gpio_ops,
-	.priv_auto	= sizeof(struct rcar_gpio_priv),
+	.priv_auto_alloc_size = sizeof(struct rcar_gpio_priv),
 	.probe	= rcar_gpio_probe,
 };

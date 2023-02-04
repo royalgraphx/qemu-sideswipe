@@ -5,7 +5,6 @@
  */
 
 #include <common.h>
-#include <init.h>
 #include <msc01.h>
 #include <pci.h>
 #include <pci_msc01.h>

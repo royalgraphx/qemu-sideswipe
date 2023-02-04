@@ -14,8 +14,6 @@
 /include/ "rtc.dtsi"
 /include/ "tsc_timer.dtsi"
 
-#include "smbios.dtsi"
-
 / {
 	model = "Intel Cherry Hill";
 	compatible = "intel,cherryhill", "intel,braswell";
@@ -149,7 +147,7 @@
 					#address-cells = <1>;
 					#size-cells = <1>;
 					reg = <0>;
-					compatible = "macronix,mx25u6435f", "jedec,spi-nor";
+					compatible = "macronix,mx25u6435f", "spi-flash";
 					memory-map = <0xff800000 0x00800000>;
 					rw-mrc-cache {
 						label = "rw-mrc-cache";

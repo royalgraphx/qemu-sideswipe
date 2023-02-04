@@ -10,8 +10,10 @@
 #ifndef VHOST_USER_GPU_VUGBM_H
 #define VHOST_USER_GPU_VUGBM_H
 
+#include "qemu/osdep.h"
 
 #ifdef CONFIG_MEMFD
+#include <sys/mman.h>
 #include <sys/ioctl.h>
 #endif
 
@@ -54,7 +56,7 @@ struct vugbm_buffer {
     uint32_t format;
 };
 
-void vugbm_device_init(struct vugbm_device *dev, int fd);
+bool vugbm_device_init(struct vugbm_device *dev, int fd);
 void vugbm_device_destroy(struct vugbm_device *dev);
 
 bool vugbm_buffer_create(struct vugbm_buffer *buffer, struct vugbm_device *dev,

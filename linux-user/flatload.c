@@ -36,9 +36,6 @@
 #include "qemu/osdep.h"
 
 #include "qemu.h"
-#include "user-internals.h"
-#include "loader.h"
-#include "user-mmap.h"
 #include "flat.h"
 #include "target_flat.h"
 
@@ -445,7 +442,7 @@ static int load_flat_file(struct linux_binprm * bprm,
     indx_len = (indx_len + 15) & ~(abi_ulong)15;
 
     /*
-     * Allocate the address space.
+     * Alloate the address space.
      */
     probe_guest_base(bprm->filename, 0,
                      text_len + data_len + extra + indx_len);
@@ -671,7 +668,7 @@ static int load_flat_file(struct linux_binprm * bprm,
     }
 
     /* zero the BSS.  */
-    memset(g2h_untagged(datapos + data_len), 0, bss_len);
+    memset(g2h(datapos + data_len), 0, bss_len);
 
     return 0;
 }
@@ -797,7 +794,7 @@ int load_flt_binary(struct linux_binprm *bprm, struct image_info *info)
 #error here
     for (i = MAX_SHARED_LIBS-1; i>0; i--) {
             if (libinfo[i].loaded) {
-                    /* Push previous first to call address */
+                    /* Push previos first to call address */
                     --sp;
                     if (put_user_ual(start_addr, sp))
                         return -EFAULT;
@@ -808,7 +805,7 @@ int load_flt_binary(struct linux_binprm *bprm, struct image_info *info)
 
     /* Stash our initial stack pointer into the mm structure */
     info->start_code = libinfo[0].start_code;
-    info->end_code = libinfo[0].start_code + libinfo[0].text_len;
+    info->end_code = libinfo[0].start_code = libinfo[0].text_len;
     info->start_data = libinfo[0].start_data;
     info->end_data = libinfo[0].end_data;
     info->start_brk = libinfo[0].start_brk;

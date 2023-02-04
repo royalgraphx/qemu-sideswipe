@@ -17,11 +17,11 @@
  */
 
 #include "qemu/osdep.h"
-#include "../libqtest.h"
+#include "libqtest.h"
 #include "qemu/module.h"
 #include "standard-headers/linux/virtio_ids.h"
-#include "qgraph.h"
-#include "virtio-scsi.h"
+#include "libqos/qgraph.h"
+#include "libqos/virtio-scsi.h"
 
 /* virtio-scsi-device */
 static void *qvirtio_scsi_get_driver(QVirtioSCSI *v_scsi,

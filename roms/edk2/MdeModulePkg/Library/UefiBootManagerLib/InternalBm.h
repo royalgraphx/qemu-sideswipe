@@ -1,7 +1,6 @@
 /** @file
   BDS library definition, include the file and data structure
 
-Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
 (C) Copyright 2015 Hewlett Packard Enterprise Development LP<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -39,9 +38,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Protocol/BootLogo.h>
 #include <Protocol/DriverHealth.h>
 #include <Protocol/FormBrowser2.h>
+#include <Protocol/VariableLock.h>
 #include <Protocol/RamDisk.h>
 #include <Protocol/DeferredImageLoad.h>
-#include <Protocol/PlatformBootManager.h>
 
 #include <Guid/MemoryTypeInformation.h>
 #include <Guid/FileInfo.h>
@@ -71,15 +70,15 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include <Library/HiiLib.h>
 
 #if !defined (EFI_REMOVABLE_MEDIA_FILE_NAME)
-  #if defined (MDE_CPU_EBC)
-//
-// Uefi specification only defines the default boot file name for IA32, X64
-// and IPF processor, so need define boot file name for EBC architecture here.
-//
-#define EFI_REMOVABLE_MEDIA_FILE_NAME  L"\\EFI\\BOOT\\BOOTEBC.EFI"
-  #else
-    #error "Can not determine the default boot file name for unknown processor type!"
-  #endif
+    #if defined (MDE_CPU_EBC)
+        //
+        // Uefi specification only defines the default boot file name for IA32, X64
+        // and IPF processor, so need define boot file name for EBC architecture here.
+        //
+        #define EFI_REMOVABLE_MEDIA_FILE_NAME L"\\EFI\\BOOT\\BOOTEBC.EFI"
+    #else
+        #error "Can not determine the default boot file name for unknown processor type!"
+    #endif
 #endif
 
 typedef enum {
@@ -94,21 +93,21 @@ typedef enum {
 
 typedef
 CHAR16 *
-(*BM_GET_BOOT_DESCRIPTION) (
-  IN EFI_HANDLE  Handle
+(* BM_GET_BOOT_DESCRIPTION) (
+  IN EFI_HANDLE          Handle
   );
 
 //
 // PlatformRecovery#### is the load option with the longest name
 //
-#define BM_OPTION_NAME_LEN  sizeof ("PlatformRecovery####")
+#define BM_OPTION_NAME_LEN                          sizeof ("PlatformRecovery####")
 extern CHAR16  *mBmLoadOptionName[];
 
 //
 // Maximum number of reconnect retry to repair controller; it is to limit the
 // number of recursive call of BmRepairAllControllers.
 //
-#define MAX_RECONNECT_REPAIR  10
+#define MAX_RECONNECT_REPAIR                        10
 
 /**
   Visitor function to be called by BmForEachVariable for each variable
@@ -121,9 +120,9 @@ extern CHAR16  *mBmLoadOptionName[];
 typedef
 VOID
 (*BM_VARIABLE_VISITOR) (
-  CHAR16    *Name,
-  EFI_GUID  *Guid,
-  VOID      *Context
+  CHAR16                *Name,
+  EFI_GUID              *Guid,
+  VOID                  *Context
   );
 
 /**
@@ -134,15 +133,15 @@ VOID
 **/
 VOID
 BmForEachVariable (
-  BM_VARIABLE_VISITOR  Visitor,
-  VOID                 *Context
+  BM_VARIABLE_VISITOR         Visitor,
+  VOID                        *Context
   );
 
-#define BM_BOOT_DESCRIPTION_ENTRY_SIGNATURE  SIGNATURE_32 ('b', 'm', 'd', 'h')
+#define BM_BOOT_DESCRIPTION_ENTRY_SIGNATURE SIGNATURE_32 ('b', 'm', 'd', 'h')
 typedef struct {
-  UINT32                                       Signature;
-  LIST_ENTRY                                   Link;
-  EFI_BOOT_MANAGER_BOOT_DESCRIPTION_HANDLER    Handler;
+  UINT32                                    Signature;
+  LIST_ENTRY                                Link;
+  EFI_BOOT_MANAGER_BOOT_DESCRIPTION_HANDLER Handler;
 } BM_BOOT_DESCRIPTION_ENTRY;
 
 /**
@@ -153,22 +152,22 @@ typedef struct {
 **/
 VOID
 BmRepairAllControllers (
-  UINTN  ReconnectRepairCount
+  UINTN       ReconnectRepairCount
   );
 
-#define BM_HOTKEY_SIGNATURE  SIGNATURE_32 ('b', 'm', 'h', 'k')
+#define BM_HOTKEY_SIGNATURE SIGNATURE_32 ('b', 'm', 'h', 'k')
 typedef struct {
-  UINT32          Signature;
-  LIST_ENTRY      Link;
+  UINT32                    Signature;
+  LIST_ENTRY                Link;
 
-  BOOLEAN         IsContinue;
-  UINT16          BootOption;
-  UINT8           CodeCount;
-  UINT8           WaitingKey;
-  EFI_KEY_DATA    KeyData[3];
+  BOOLEAN                   IsContinue;
+  UINT16                    BootOption;
+  UINT8                     CodeCount;
+  UINT8                     WaitingKey;
+  EFI_KEY_DATA              KeyData[3];
 } BM_HOTKEY;
 
-#define BM_HOTKEY_FROM_LINK(a)  CR (a, BM_HOTKEY, Link, BM_HOTKEY_SIGNATURE)
+#define BM_HOTKEY_FROM_LINK(a) CR (a, BM_HOTKEY, Link, BM_HOTKEY_SIGNATURE)
 
 /**
   Get the Option Number that wasn't used.
@@ -183,8 +182,8 @@ typedef struct {
 **/
 EFI_STATUS
 BmGetFreeOptionNumber (
-  IN  EFI_BOOT_MANAGER_LOAD_OPTION_TYPE  LoadOptionType,
-  OUT UINT16                             *FreeOptionNumber
+  IN  EFI_BOOT_MANAGER_LOAD_OPTION_TYPE LoadOptionType,
+  OUT UINT16                            *FreeOptionNumber
   );
 
 /**
@@ -199,7 +198,7 @@ BmGetFreeOptionNumber (
 **/
 VOID
 BmSetMemoryTypeInformationVariable (
-  IN BOOLEAN  Boot
+  IN BOOLEAN                    Boot
   );
 
 /**
@@ -216,8 +215,8 @@ BmSetMemoryTypeInformationVariable (
 **/
 BOOLEAN
 BmMatchPartitionDevicePathNode (
-  IN  EFI_DEVICE_PATH_PROTOCOL  *BlockIoDevicePath,
-  IN  HARDDRIVE_DEVICE_PATH     *HardDriveDevicePath
+  IN  EFI_DEVICE_PATH_PROTOCOL   *BlockIoDevicePath,
+  IN  HARDDRIVE_DEVICE_PATH      *HardDriveDevicePath
   );
 
 /**
@@ -236,7 +235,7 @@ BmMatchPartitionDevicePathNode (
 **/
 EFI_STATUS
 BmConnectUsbShortFormDevicePath (
-  IN EFI_DEVICE_PATH_PROTOCOL  *DevicePath
+  IN EFI_DEVICE_PATH_PROTOCOL   *DevicePath
   );
 
 /**
@@ -248,8 +247,8 @@ BmConnectUsbShortFormDevicePath (
 VOID
 EFIAPI
 BmStopHotkeyService (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT    Event,
+  IN VOID         *Context
   );
 
 /**
@@ -287,11 +286,11 @@ BmStopHotkeyService (
 **/
 EFI_STATUS
 BmSetVariableAndReportStatusCodeOnError (
-  IN CHAR16    *VariableName,
-  IN EFI_GUID  *VendorGuid,
-  IN UINT32    Attributes,
-  IN UINTN     DataSize,
-  IN VOID      *Data
+  IN CHAR16     *VariableName,
+  IN EFI_GUID   *VendorGuid,
+  IN UINT32     Attributes,
+  IN UINTN      DataSize,
+  IN VOID       *Data
   );
 
 /**
@@ -339,7 +338,7 @@ BmDelPartMatchInstance (
 **/
 VOID
 BmPrintDp (
-  EFI_DEVICE_PATH_PROTOCOL  *DevicePath
+  EFI_DEVICE_PATH_PROTOCOL            *DevicePath
   );
 
 /**
@@ -352,7 +351,7 @@ BmPrintDp (
 **/
 UINTN
 BmCharToUint (
-  IN CHAR16  Char
+  IN CHAR16                           Char
   );
 
 /**
@@ -364,7 +363,7 @@ BmCharToUint (
 **/
 CHAR16 *
 BmGetBootDescription (
-  IN EFI_HANDLE  Handle
+  IN EFI_HANDLE                  Handle
   );
 
 /**
@@ -376,8 +375,8 @@ BmGetBootDescription (
 **/
 VOID
 BmMakeBootOptionDescriptionUnique (
-  EFI_BOOT_MANAGER_LOAD_OPTION  *BootOptions,
-  UINTN                         BootOptionCount
+  EFI_BOOT_MANAGER_LOAD_OPTION         *BootOptions,
+  UINTN                                BootOptionCount
   );
 
 /**
@@ -390,8 +389,8 @@ BmMakeBootOptionDescriptionUnique (
 **/
 EFI_DEVICE_PATH_PROTOCOL *
 BmExpandLoadFile (
-  IN  EFI_HANDLE                LoadFileHandle,
-  IN  EFI_DEVICE_PATH_PROTOCOL  *FilePath
+  IN  EFI_HANDLE                      LoadFileHandle,
+  IN  EFI_DEVICE_PATH_PROTOCOL        *FilePath
   );
 
 /**
@@ -403,7 +402,7 @@ BmExpandLoadFile (
 **/
 EFI_DEVICE_PATH_PROTOCOL *
 BmGetRamDiskDevicePath (
-  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath
+  IN EFI_DEVICE_PATH_PROTOCOL *FilePath
   );
 
 /**
@@ -417,7 +416,7 @@ BmGetRamDiskDevicePath (
 **/
 VOID
 BmDestroyRamDisk (
-  IN EFI_DEVICE_PATH_PROTOCOL  *RamDiskDevicePath
+  IN EFI_DEVICE_PATH_PROTOCOL *RamDiskDevicePath
   );
 
 /**
@@ -433,8 +432,8 @@ BmDestroyRamDisk (
 **/
 EFI_DEVICE_PATH_PROTOCOL *
 BmGetNextLoadOptionDevicePath (
-  IN  EFI_DEVICE_PATH_PROTOCOL  *FilePath,
-  IN  EFI_DEVICE_PATH_PROTOCOL  *FullPath
+  IN  EFI_DEVICE_PATH_PROTOCOL          *FilePath,
+  IN  EFI_DEVICE_PATH_PROTOCOL          *FullPath
   );
 
 /**
@@ -459,10 +458,9 @@ BmGetNextLoadOptionDevicePath (
 **/
 VOID *
 BmGetNextLoadOptionBuffer (
-  IN  EFI_BOOT_MANAGER_LOAD_OPTION_TYPE  Type,
-  IN  EFI_DEVICE_PATH_PROTOCOL           *FilePath,
-  OUT EFI_DEVICE_PATH_PROTOCOL           **FullPath,
-  OUT UINTN                              *FileSize
+  IN  EFI_BOOT_MANAGER_LOAD_OPTION_TYPE Type,
+  IN  EFI_DEVICE_PATH_PROTOCOL          *FilePath,
+  OUT EFI_DEVICE_PATH_PROTOCOL          **FullPath,
+  OUT UINTN                             *FileSize
   );
-
 #endif // _INTERNAL_BM_H_

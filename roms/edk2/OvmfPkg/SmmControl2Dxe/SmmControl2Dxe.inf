@@ -39,7 +39,6 @@
 
 [Packages]
   MdePkg/MdePkg.dec
-  MdeModulePkg/MdeModulePkg.dec
   OvmfPkg/OvmfPkg.dec
   UefiCpuPkg/UefiCpuPkg.dec
 
@@ -47,7 +46,6 @@
   BaseLib
   DebugLib
   IoLib
-  MemEncryptSevLib
   MemoryAllocationLib
   PcdLib
   PciLib
@@ -63,7 +61,6 @@
 [Pcd]
   gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmApSyncTimeout ## SOMETIMES_PRODUCES
   gUefiCpuPkgTokenSpaceGuid.PcdCpuSmmSyncMode      ## SOMETIMES_PRODUCES
-  gEfiMdeModulePkgTokenSpaceGuid.PcdAcpiS3Enable
 
 [FeaturePcd]
   gUefiOvmfPkgTokenSpaceGuid.PcdSmmSmramRequire

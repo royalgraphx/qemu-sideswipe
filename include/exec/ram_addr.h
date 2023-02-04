@@ -26,8 +26,6 @@
 #include "exec/ramlist.h"
 #include "exec/ramblock.h"
 
-extern uint64_t total_dirty_pages;
-
 /**
  * clear_bmap_size: calculate clear bitmap size
  *
@@ -42,8 +40,7 @@ static inline long clear_bmap_size(uint64_t pages, uint8_t shift)
 }
 
 /**
- * clear_bmap_set: set clear bitmap for the page range.  Must be with
- * bitmap_mutex held.
+ * clear_bmap_set: set clear bitmap for the page range
  *
  * @rb: the ramblock to operate on
  * @start: the start page number
@@ -56,12 +53,12 @@ static inline void clear_bmap_set(RAMBlock *rb, uint64_t start,
 {
     uint8_t shift = rb->clear_bmap_shift;
 
-    bitmap_set(rb->clear_bmap, start >> shift, clear_bmap_size(npages, shift));
+    bitmap_set_atomic(rb->clear_bmap, start >> shift,
+                      clear_bmap_size(npages, shift));
 }
 
 /**
- * clear_bmap_test_and_clear: test clear bitmap for the page, clear if set.
- * Must be with bitmap_mutex held.
+ * clear_bmap_test_and_clear: test clear bitmap for the page, clear if set
  *
  * @rb: the ramblock to operate on
  * @page: the page number to check
@@ -72,7 +69,7 @@ static inline bool clear_bmap_test_and_clear(RAMBlock *rb, uint64_t page)
 {
     uint8_t shift = rb->clear_bmap_shift;
 
-    return bitmap_test_and_clear(rb->clear_bmap, page >> shift, 1);
+    return bitmap_test_and_clear_atomic(rb->clear_bmap, page >> shift, 1);
 }
 
 static inline bool offset_in_ramblock(RAMBlock *b, ram_addr_t offset)
@@ -107,10 +104,12 @@ long qemu_maxrampagesize(void);
  * Parameters:
  *  @size: the size in bytes of the ram block
  *  @mr: the memory region where the ram block is
- *  @ram_flags: RamBlock flags. Supported flags: RAM_SHARED, RAM_PMEM,
- *              RAM_NORESERVE.
+ *  @ram_flags: specify the properties of the ram block, which can be one
+ *              or bit-or of following values
+ *              - RAM_SHARED: mmap the backing file or device with MAP_SHARED
+ *              - RAM_PMEM: the backend @mem_path or @fd is persistent memory
+ *              Other bits are ignored.
  *  @mem_path or @fd: specify the backing file or device
- *  @readonly: true to open @path for reading, false for read/write.
  *  @errp: pointer to Error*, to store an error if it happens
  *
  * Return:
@@ -119,14 +118,14 @@ long qemu_maxrampagesize(void);
  */
 RAMBlock *qemu_ram_alloc_from_file(ram_addr_t size, MemoryRegion *mr,
                                    uint32_t ram_flags, const char *mem_path,
-                                   bool readonly, Error **errp);
+                                   Error **errp);
 RAMBlock *qemu_ram_alloc_from_fd(ram_addr_t size, MemoryRegion *mr,
-                                 uint32_t ram_flags, int fd, off_t offset,
-                                 bool readonly, Error **errp);
+                                 uint32_t ram_flags, int fd,
+                                 Error **errp);
 
 RAMBlock *qemu_ram_alloc_from_ptr(ram_addr_t size, void *host,
                                   MemoryRegion *mr, Error **errp);
-RAMBlock *qemu_ram_alloc(ram_addr_t size, uint32_t ram_flags, MemoryRegion *mr,
+RAMBlock *qemu_ram_alloc(ram_addr_t size, bool share, MemoryRegion *mr,
                          Error **errp);
 RAMBlock *qemu_ram_alloc_resizeable(ram_addr_t size, ram_addr_t max_size,
                                     void (*resized)(const char*,
@@ -148,6 +147,8 @@ static inline void qemu_ram_block_writeback(RAMBlock *block)
 #define DIRTY_CLIENTS_ALL     ((1 << DIRTY_MEMORY_NUM) - 1)
 #define DIRTY_CLIENTS_NOCODE  (DIRTY_CLIENTS_ALL & ~(1 << DIRTY_MEMORY_CODE))
 
+void tb_invalidate_phys_range(ram_addr_t start, ram_addr_t end);
+
 static inline bool cpu_physical_memory_get_dirty(ram_addr_t start,
                                                  ram_addr_t length,
                                                  unsigned client)
@@ -163,7 +164,7 @@ static inline bool cpu_physical_memory_get_dirty(ram_addr_t start,
     page = start >> TARGET_PAGE_BITS;
 
     WITH_RCU_READ_LOCK_GUARD() {
-        blocks = qatomic_rcu_read(&ram_list.dirty_memory[client]);
+        blocks = atomic_rcu_read(&ram_list.dirty_memory[client]);
 
         idx = page / DIRTY_MEMORY_BLOCK_SIZE;
         offset = page % DIRTY_MEMORY_BLOCK_SIZE;
@@ -204,7 +205,7 @@ static inline bool cpu_physical_memory_all_dirty(ram_addr_t start,
 
     RCU_READ_LOCK_GUARD();
 
-    blocks = qatomic_rcu_read(&ram_list.dirty_memory[client]);
+    blocks = atomic_rcu_read(&ram_list.dirty_memory[client]);
 
     idx = page / DIRTY_MEMORY_BLOCK_SIZE;
     offset = page % DIRTY_MEMORY_BLOCK_SIZE;
@@ -277,7 +278,7 @@ static inline void cpu_physical_memory_set_dirty_flag(ram_addr_t addr,
 
     RCU_READ_LOCK_GUARD();
 
-    blocks = qatomic_rcu_read(&ram_list.dirty_memory[client]);
+    blocks = atomic_rcu_read(&ram_list.dirty_memory[client]);
 
     set_bit_atomic(offset, blocks->blocks[idx]);
 }
@@ -300,7 +301,7 @@ static inline void cpu_physical_memory_set_dirty_range(ram_addr_t start,
 
     WITH_RCU_READ_LOCK_GUARD() {
         for (i = 0; i < DIRTY_MEMORY_NUM; i++) {
-            blocks[i] = qatomic_rcu_read(&ram_list.dirty_memory[i]);
+            blocks[i] = atomic_rcu_read(&ram_list.dirty_memory[i]);
         }
 
         idx = page / DIRTY_MEMORY_BLOCK_SIZE;
@@ -342,7 +343,7 @@ static inline void cpu_physical_memory_set_dirty_lebitmap(unsigned long *bitmap,
     hwaddr addr;
     ram_addr_t ram_addr;
     unsigned long len = (pages + HOST_LONG_BITS - 1) / HOST_LONG_BITS;
-    unsigned long hpratio = qemu_real_host_page_size() / TARGET_PAGE_SIZE;
+    unsigned long hpratio = qemu_real_host_page_size / TARGET_PAGE_SIZE;
     unsigned long page = BIT_WORD(start >> TARGET_PAGE_BITS);
 
     /* start address is aligned at the start of a word? */
@@ -360,29 +361,23 @@ static inline void cpu_physical_memory_set_dirty_lebitmap(unsigned long *bitmap,
 
         WITH_RCU_READ_LOCK_GUARD() {
             for (i = 0; i < DIRTY_MEMORY_NUM; i++) {
-                blocks[i] =
-                    qatomic_rcu_read(&ram_list.dirty_memory[i])->blocks;
+                blocks[i] = atomic_rcu_read(&ram_list.dirty_memory[i])->blocks;
             }
 
             for (k = 0; k < nr; k++) {
                 if (bitmap[k]) {
                     unsigned long temp = leul_to_cpu(bitmap[k]);
 
-                    qatomic_or(&blocks[DIRTY_MEMORY_VGA][idx][offset], temp);
+                    atomic_or(&blocks[DIRTY_MEMORY_VGA][idx][offset], temp);
 
-                    if (global_dirty_tracking) {
-                        qatomic_or(
-                                &blocks[DIRTY_MEMORY_MIGRATION][idx][offset],
-                                temp);
-                        if (unlikely(
-                            global_dirty_tracking & GLOBAL_DIRTY_DIRTY_RATE)) {
-                            total_dirty_pages += ctpopl(temp);
-                        }
+                    if (global_dirty_log) {
+                        atomic_or(&blocks[DIRTY_MEMORY_MIGRATION][idx][offset],
+                                  temp);
                     }
 
                     if (tcg_enabled()) {
-                        qatomic_or(&blocks[DIRTY_MEMORY_CODE][idx][offset],
-                                   temp);
+                        atomic_or(&blocks[DIRTY_MEMORY_CODE][idx][offset],
+                                  temp);
                     }
                 }
 
@@ -397,7 +392,7 @@ static inline void cpu_physical_memory_set_dirty_lebitmap(unsigned long *bitmap,
     } else {
         uint8_t clients = tcg_enabled() ? DIRTY_CLIENTS_ALL : DIRTY_CLIENTS_NOCODE;
 
-        if (!global_dirty_tracking) {
+        if (!global_dirty_log) {
             clients &= ~(1 << DIRTY_MEMORY_MIGRATION);
         }
 
@@ -408,9 +403,6 @@ static inline void cpu_physical_memory_set_dirty_lebitmap(unsigned long *bitmap,
         for (i = 0; i < len; i++) {
             if (bitmap[i] != 0) {
                 c = leul_to_cpu(bitmap[i]);
-                if (unlikely(global_dirty_tracking & GLOBAL_DIRTY_DIRTY_RATE)) {
-                    total_dirty_pages += ctpopl(c);
-                }
                 do {
                     j = ctzl(c);
                     c &= ~(1ul << j);
@@ -469,12 +461,12 @@ uint64_t cpu_physical_memory_sync_dirty_bitmap(RAMBlock *rb,
                                         DIRTY_MEMORY_BLOCK_SIZE);
         unsigned long page = BIT_WORD(start >> TARGET_PAGE_BITS);
 
-        src = qatomic_rcu_read(
+        src = atomic_rcu_read(
                 &ram_list.dirty_memory[DIRTY_MEMORY_MIGRATION])->blocks;
 
         for (k = page; k < page + nr; k++) {
             if (src[idx][offset]) {
-                unsigned long bits = qatomic_xchg(&src[idx][offset], 0);
+                unsigned long bits = atomic_xchg(&src[idx][offset], 0);
                 unsigned long new_dirty;
                 new_dirty = ~dest[k];
                 dest[k] |= bits;

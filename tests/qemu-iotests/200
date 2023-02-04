@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw
 #
 # Block job co-routine race condition test.
 #
@@ -22,7 +21,7 @@
 #
 
 # creator
-owner=codyprime@gmail.com
+owner=jcody@redhat.com
 
 seq=`basename $0`
 echo "QA output created by $seq"
@@ -43,9 +42,10 @@ trap "_cleanup; exit \$status" 0 1 2 3 15
 . ./common.qemu
 
 _supported_fmt qcow2 qed
-_supported_proto file fuse
+_supported_proto file
 
-BACKING_IMG="$TEST_IMG.base"
+BACKING_IMG="${TEST_DIR}/backing.img"
+TEST_IMG="${TEST_DIR}/test.img"
 
 TEST_IMG="$BACKING_IMG" _make_test_img 512M
 _make_test_img -F $IMGFMT -b "$BACKING_IMG" 512M

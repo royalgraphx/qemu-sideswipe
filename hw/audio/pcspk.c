@@ -33,16 +33,15 @@
 #include "migration/vmstate.h"
 #include "hw/audio/pcspk.h"
 #include "qapi/error.h"
-#include "qom/object.h"
 
 #define PCSPK_BUF_LEN 1792
 #define PCSPK_SAMPLE_RATE 32000
 #define PCSPK_MAX_FREQ (PCSPK_SAMPLE_RATE >> 1)
 #define PCSPK_MIN_COUNT DIV_ROUND_UP(PIT_FREQ, PCSPK_MAX_FREQ)
 
-OBJECT_DECLARE_SIMPLE_TYPE(PCSpkState, PC_SPEAKER)
+#define PC_SPEAKER(obj) OBJECT_CHECK(PCSpkState, (obj), TYPE_PC_SPEAKER)
 
-struct PCSpkState {
+typedef struct {
     ISADevice parent_obj;
 
     MemoryRegion ioport;
@@ -57,7 +56,7 @@ struct PCSpkState {
     uint8_t data_on;
     uint8_t dummy_refresh_clock;
     bool migrate;
-};
+} PCSpkState;
 
 static const char *s_spk = "pcspk";
 static PCSpkState *pcspk_state;
@@ -209,6 +208,7 @@ static const VMStateDescription vmstate_spk = {
     .name = "pcspk",
     .version_id = 1,
     .minimum_version_id = 1,
+    .minimum_version_id_old = 1,
     .needed = migrate_needed,
     .fields      = (VMStateField[]) {
         VMSTATE_UINT8(data_on, PCSpkState),
@@ -245,8 +245,18 @@ static const TypeInfo pcspk_info = {
     .class_init     = pcspk_class_initfn,
 };
 
+static int pcspk_audio_init_soundhw(ISABus *bus)
+{
+    PCSpkState *s = pcspk_state;
+
+    warn_report("'-soundhw pcspk' is deprecated, "
+                "please set a backend using '-machine pcspk-audiodev=<name>' instead");
+    return pcspk_audio_init(s);
+}
+
 static void pcspk_register(void)
 {
     type_register_static(&pcspk_info);
+    isa_register_soundhw("pcspk", "PC speaker", pcspk_audio_init_soundhw);
 }
 type_init(pcspk_register)

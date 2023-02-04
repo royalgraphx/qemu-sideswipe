@@ -164,7 +164,7 @@ distclean_gen:	clean_top
 
 common-libs:
 	@echo " ====== Building common libraries ======"
-	$(MAKE) -C $(LIBCMNDIR) $(COMMON_LIBS)  RELEASE=-DRELEASE=\"\\\"$(RELEASE)\\\"\"
+	$(MAKE) -C $(LIBCMNDIR) $(COMMON_LIBS)
 
 board-libs:
 	$(MAKE) -C lib $(MAKEARG)

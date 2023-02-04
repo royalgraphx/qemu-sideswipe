@@ -133,7 +133,7 @@ static uint64_t get_features(VirtIODevice *vdev, uint64_t f, Error **errp)
     return f;
 }
 
-static void virtio_rng_vm_state_change(void *opaque, bool running,
+static void virtio_rng_vm_state_change(void *opaque, int running,
                                        RunState state)
 {
     VirtIORNG *vrng = opaque;
@@ -215,7 +215,7 @@ static void virtio_rng_device_realize(DeviceState *dev, Error **errp)
         return;
     }
 
-    virtio_init(vdev, VIRTIO_ID_RNG, 0);
+    virtio_init(vdev, "virtio-rng", VIRTIO_ID_RNG, 0);
 
     vrng->vq = virtio_add_queue(vdev, 8, handle_input);
     vrng->quota_remaining = vrng->conf.max_bytes;
@@ -233,6 +233,7 @@ static void virtio_rng_device_unrealize(DeviceState *dev)
     VirtIORNG *vrng = VIRTIO_RNG(dev);
 
     qemu_del_vm_change_state_handler(vrng->vmstate);
+    timer_del(vrng->rate_limit_timer);
     timer_free(vrng->rate_limit_timer);
     virtio_del_queue(vdev, 0);
     virtio_cleanup(vdev);

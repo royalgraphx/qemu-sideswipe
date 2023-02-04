@@ -1,5 +1,5 @@
 /** @file
-  Timer Architectural Protocol module using High Precision Event Timer (HPET)
+  Timer Architectural Protocol module using High Precesion Event Timer (HPET)
 
   Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
@@ -120,8 +120,8 @@ TimerDriverSetTimerPeriod (
 EFI_STATUS
 EFIAPI
 TimerDriverGetTimerPeriod (
-  IN EFI_TIMER_ARCH_PROTOCOL  *This,
-  OUT UINT64                  *TimerPeriod
+  IN EFI_TIMER_ARCH_PROTOCOL   *This,
+  OUT UINT64                   *TimerPeriod
   );
 
 /**
@@ -149,7 +149,7 @@ TimerDriverGenerateSoftInterrupt (
 ///
 /// The handle onto which the Timer Architectural Protocol will be installed.
 ///
-EFI_HANDLE  mTimerHandle = NULL;
+EFI_HANDLE   mTimerHandle = NULL;
 
 ///
 /// The Timer Architectural Protocol that this driver produces.
@@ -246,7 +246,7 @@ HpetRead (
 /**
   Write a 64-bit HPET register.
 
-  @param  Offset  Specifies the offset of the HPET register to write.
+  @param  Offset  Specifies the ofsfert of the HPET register to write.
   @param  Value   Specifies the value to write to the HPET register specified by Offset.
 
   @return  The 64-bit value written to HPET register specified by Offset.
@@ -288,8 +288,8 @@ HpetEnable (
 VOID
 EFIAPI
 TimerInterruptHandler (
-  IN EFI_EXCEPTION_TYPE  InterruptType,
-  IN EFI_SYSTEM_CONTEXT  SystemContext
+  IN EFI_EXCEPTION_TYPE   InterruptType,
+  IN EFI_SYSTEM_CONTEXT   SystemContext
   )
 {
   UINT64  MainCounter;
@@ -300,9 +300,7 @@ TimerInterruptHandler (
   //
   // Count number of ticks
   //
-  DEBUG_CODE (
-    mNumTicks++;
-    );
+  DEBUG_CODE (mNumTicks++;);
 
   //
   // Clear HPET timer interrupt status
@@ -378,7 +376,6 @@ TimerInterruptHandler (
       //
       Delta = (mCounterMask - mPreviousMainCounter) + MainCounter;
     }
-
     TimerPeriod = DivU64x32 (
                     MultU64x32 (
                       Delta & mCounterMask,
@@ -440,11 +437,10 @@ TimerDriverRegisterHandler (
   //
   // Check for invalid parameters
   //
-  if ((NotifyFunction == NULL) && (mTimerNotifyFunction == NULL)) {
+  if (NotifyFunction == NULL && mTimerNotifyFunction == NULL) {
     return EFI_INVALID_PARAMETER;
   }
-
-  if ((NotifyFunction != NULL) && (mTimerNotifyFunction != NULL)) {
+  if (NotifyFunction != NULL && mTimerNotifyFunction != NULL) {
     return EFI_ALREADY_STARTED;
   }
 
@@ -517,7 +513,6 @@ TimerDriverSetTimerPeriod (
       } else {
         Delta = MainCounter - mPreviousMainCounter;
       }
-
       if ((Delta & mCounterMask) >= mTimerCount) {
         //
         // Interrupt still happens after disable HPET, wait to be processed
@@ -526,7 +521,7 @@ TimerDriverSetTimerPeriod (
         CurrentComparator = HpetRead (HPET_TIMER_COMPARATOR_OFFSET + mTimerIndex * HPET_TIMER_STRIDE);
         while (CurrentComparator == mPreviousComparator) {
           CurrentComparator = HpetRead (HPET_TIMER_COMPARATOR_OFFSET + mTimerIndex * HPET_TIMER_STRIDE);
-          CpuPause ();
+          CpuPause();
         }
       }
     }
@@ -535,7 +530,7 @@ TimerDriverSetTimerPeriod (
     // If TimerPeriod is 0, then mask HPET Timer interrupts
     //
 
-    if ((mTimerConfiguration.Bits.MsiInterruptCapability != 0) && FeaturePcdGet (PcdHpetMsiEnable)) {
+    if (mTimerConfiguration.Bits.MsiInterruptCapablity != 0 && FeaturePcdGet (PcdHpetMsiEnable)) {
       //
       // Disable HPET MSI interrupt generation
       //
@@ -572,7 +567,6 @@ TimerDriverSetTimerPeriod (
     } else {
       Delta = (mCounterMask - mPreviousMainCounter) + MainCounter;
     }
-
     if ((Delta & mCounterMask) >= mTimerCount) {
       HpetWrite (HPET_TIMER_COMPARATOR_OFFSET + mTimerIndex * HPET_TIMER_STRIDE, (MainCounter + 1) & mCounterMask);
     } else {
@@ -582,7 +576,7 @@ TimerDriverSetTimerPeriod (
     //
     // Enable HPET Timer interrupt generation
     //
-    if ((mTimerConfiguration.Bits.MsiInterruptCapability != 0) && FeaturePcdGet (PcdHpetMsiEnable)) {
+    if (mTimerConfiguration.Bits.MsiInterruptCapablity != 0 && FeaturePcdGet (PcdHpetMsiEnable)) {
       //
       // Program MSI Address and MSI Data values in the selected HPET Timer
       // Program HPET register with APIC ID of current BSP in case BSP has been switched
@@ -648,8 +642,8 @@ TimerDriverSetTimerPeriod (
 EFI_STATUS
 EFIAPI
 TimerDriverGetTimerPeriod (
-  IN EFI_TIMER_ARCH_PROTOCOL  *This,
-  OUT UINT64                  *TimerPeriod
+  IN EFI_TIMER_ARCH_PROTOCOL   *This,
+  OUT UINT64                   *TimerPeriod
   )
 {
   if (TimerPeriod == NULL) {
@@ -763,10 +757,10 @@ TimerDriverInitialize (
   IN EFI_SYSTEM_TABLE  *SystemTable
   )
 {
-  EFI_STATUS                     Status;
-  UINTN                          TimerIndex;
-  UINTN                          MsiTimerIndex;
-  HPET_TIMER_MSI_ROUTE_REGISTER  HpetTimerMsiRoute;
+  EFI_STATUS                             Status;
+  UINTN                                  TimerIndex;
+  UINTN                                  MsiTimerIndex;
+  HPET_TIMER_MSI_ROUTE_REGISTER          HpetTimerMsiRoute;
 
   DEBUG ((DEBUG_INFO, "Init HPET Timer Driver\n"));
 
@@ -778,7 +772,7 @@ TimerDriverInitialize (
   //
   // Find the CPU architectural protocol.
   //
-  Status = gBS->LocateProtocol (&gEfiCpuArchProtocolGuid, NULL, (VOID **)&mCpu);
+  Status = gBS->LocateProtocol (&gEfiCpuArchProtocolGuid, NULL, (VOID **) &mCpu);
   ASSERT_EFI_ERROR (Status);
 
   //
@@ -793,7 +787,7 @@ TimerDriverInitialize (
   //
   ASSERT (mHpetGeneralCapabilities.Uint64 != 0);
   ASSERT (mHpetGeneralCapabilities.Uint64 != 0xFFFFFFFFFFFFFFFFULL);
-  if ((mHpetGeneralCapabilities.Uint64 == 0) || (mHpetGeneralCapabilities.Uint64 == 0xFFFFFFFFFFFFFFFFULL)) {
+  if (mHpetGeneralCapabilities.Uint64 == 0 || mHpetGeneralCapabilities.Uint64 == 0xFFFFFFFFFFFFFFFFULL) {
     DEBUG ((DEBUG_ERROR, "HPET device is not present.  Unload HPET driver.\n"));
     return EFI_DEVICE_ERROR;
   }
@@ -806,20 +800,19 @@ TimerDriverInitialize (
   //
   // Dump HPET Configuration Information
   //
-  DEBUG_CODE_BEGIN ();
-  DEBUG ((DEBUG_INFO, "HPET Base Address = 0x%08x\n", PcdGet32 (PcdHpetBaseAddress)));
-  DEBUG ((DEBUG_INFO, "  HPET_GENERAL_CAPABILITIES_ID  = 0x%016lx\n", mHpetGeneralCapabilities));
-  DEBUG ((DEBUG_INFO, "  HPET_GENERAL_CONFIGURATION    = 0x%016lx\n", mHpetGeneralConfiguration.Uint64));
-  DEBUG ((DEBUG_INFO, "  HPET_GENERAL_INTERRUPT_STATUS = 0x%016lx\n", HpetRead (HPET_GENERAL_INTERRUPT_STATUS_OFFSET)));
-  DEBUG ((DEBUG_INFO, "  HPET_MAIN_COUNTER             = 0x%016lx\n", HpetRead (HPET_MAIN_COUNTER_OFFSET)));
-  DEBUG ((DEBUG_INFO, "  HPET Main Counter Period      = %d (fs)\n", mHpetGeneralCapabilities.Bits.CounterClockPeriod));
-  for (TimerIndex = 0; TimerIndex <= mHpetGeneralCapabilities.Bits.NumberOfTimers; TimerIndex++) {
-    DEBUG ((DEBUG_INFO, "  HPET_TIMER%d_CONFIGURATION     = 0x%016lx\n", TimerIndex, HpetRead (HPET_TIMER_CONFIGURATION_OFFSET + TimerIndex * HPET_TIMER_STRIDE)));
-    DEBUG ((DEBUG_INFO, "  HPET_TIMER%d_COMPARATOR        = 0x%016lx\n", TimerIndex, HpetRead (HPET_TIMER_COMPARATOR_OFFSET    + TimerIndex * HPET_TIMER_STRIDE)));
-    DEBUG ((DEBUG_INFO, "  HPET_TIMER%d_MSI_ROUTE         = 0x%016lx\n", TimerIndex, HpetRead (HPET_TIMER_MSI_ROUTE_OFFSET     + TimerIndex * HPET_TIMER_STRIDE)));
-  }
-
-  DEBUG_CODE_END ();
+  DEBUG_CODE (
+    DEBUG ((DEBUG_INFO, "HPET Base Address = 0x%08x\n", PcdGet32 (PcdHpetBaseAddress)));
+    DEBUG ((DEBUG_INFO, "  HPET_GENERAL_CAPABILITIES_ID  = 0x%016lx\n", mHpetGeneralCapabilities));
+    DEBUG ((DEBUG_INFO, "  HPET_GENERAL_CONFIGURATION    = 0x%016lx\n", mHpetGeneralConfiguration.Uint64));
+    DEBUG ((DEBUG_INFO, "  HPET_GENERAL_INTERRUPT_STATUS = 0x%016lx\n", HpetRead (HPET_GENERAL_INTERRUPT_STATUS_OFFSET)));
+    DEBUG ((DEBUG_INFO, "  HPET_MAIN_COUNTER             = 0x%016lx\n", HpetRead (HPET_MAIN_COUNTER_OFFSET)));
+    DEBUG ((DEBUG_INFO, "  HPET Main Counter Period      = %d (fs)\n", mHpetGeneralCapabilities.Bits.CounterClockPeriod));
+    for (TimerIndex = 0; TimerIndex <= mHpetGeneralCapabilities.Bits.NumberOfTimers; TimerIndex++) {
+      DEBUG ((DEBUG_INFO, "  HPET_TIMER%d_CONFIGURATION     = 0x%016lx\n", TimerIndex, HpetRead (HPET_TIMER_CONFIGURATION_OFFSET + TimerIndex * HPET_TIMER_STRIDE)));
+      DEBUG ((DEBUG_INFO, "  HPET_TIMER%d_COMPARATOR        = 0x%016lx\n", TimerIndex, HpetRead (HPET_TIMER_COMPARATOR_OFFSET    + TimerIndex * HPET_TIMER_STRIDE)));
+      DEBUG ((DEBUG_INFO, "  HPET_TIMER%d_MSI_ROUTE         = 0x%016lx\n", TimerIndex, HpetRead (HPET_TIMER_MSI_ROUTE_OFFSET     + TimerIndex * HPET_TIMER_STRIDE)));
+    }
+  );
 
   //
   // Capture the current HPET main counter value.
@@ -841,7 +834,7 @@ TimerDriverInitialize (
     //
     // Check to see if this HPET Timer supports MSI
     //
-    if (mTimerConfiguration.Bits.MsiInterruptCapability != 0) {
+    if (mTimerConfiguration.Bits.MsiInterruptCapablity != 0) {
       //
       // Save the index of the first HPET Timer that supports MSI interrupts
       //
@@ -864,11 +857,11 @@ TimerDriverInitialize (
     }
   }
 
-  if (FeaturePcdGet (PcdHpetMsiEnable) && (MsiTimerIndex != HPET_INVALID_TIMER_INDEX)) {
+  if (FeaturePcdGet (PcdHpetMsiEnable) && MsiTimerIndex != HPET_INVALID_TIMER_INDEX) {
     //
     // Use MSI interrupt if supported
     //
-    mTimerIndex = MsiTimerIndex;
+    mTimerIndex  = MsiTimerIndex;
 
     //
     // Program MSI Address and MSI Data values in the selected HPET Timer
@@ -881,7 +874,7 @@ TimerDriverInitialize (
     // Read the HPET Timer Capabilities and Configuration register and initialize for MSI mode
     //   Clear LevelTriggeredInterrupt to use edge triggered interrupts when in MSI mode
     //
-    mTimerConfiguration.Uint64                       = HpetRead (HPET_TIMER_CONFIGURATION_OFFSET + mTimerIndex * HPET_TIMER_STRIDE);
+    mTimerConfiguration.Uint64 = HpetRead (HPET_TIMER_CONFIGURATION_OFFSET + mTimerIndex * HPET_TIMER_STRIDE);
     mTimerConfiguration.Bits.LevelTriggeredInterrupt = 0;
   } else {
     //
@@ -905,7 +898,7 @@ TimerDriverInitialize (
     //   Set LevelTriggeredInterrupt to use level triggered interrupts when in I/O APIC mode
     //   Set InterruptRoute field based in mTimerIrq
     //
-    mTimerConfiguration.Uint64                       = HpetRead (HPET_TIMER_CONFIGURATION_OFFSET + mTimerIndex * HPET_TIMER_STRIDE);
+    mTimerConfiguration.Uint64 = HpetRead (HPET_TIMER_CONFIGURATION_OFFSET + mTimerIndex * HPET_TIMER_STRIDE);
     mTimerConfiguration.Bits.LevelTriggeredInterrupt = 1;
     mTimerConfiguration.Bits.InterruptRoute          = mTimerIrq;
   }
@@ -965,37 +958,33 @@ TimerDriverInitialize (
   //
   // Show state of enabled HPET timer
   //
-  DEBUG_CODE_BEGIN ();
-  if ((mTimerConfiguration.Bits.MsiInterruptCapability != 0) && FeaturePcdGet (PcdHpetMsiEnable)) {
-    DEBUG ((DEBUG_INFO, "HPET Interrupt Mode MSI\n"));
-  } else {
-    DEBUG ((DEBUG_INFO, "HPET Interrupt Mode I/O APIC\n"));
-    DEBUG ((DEBUG_INFO, "HPET I/O APIC IRQ         = 0x%02x\n", mTimerIrq));
-  }
+  DEBUG_CODE (
+    if (mTimerConfiguration.Bits.MsiInterruptCapablity != 0 && FeaturePcdGet (PcdHpetMsiEnable)) {
+      DEBUG ((DEBUG_INFO, "HPET Interrupt Mode MSI\n"));
+    } else {
+      DEBUG ((DEBUG_INFO, "HPET Interrupt Mode I/O APIC\n"));
+      DEBUG ((DEBUG_INFO, "HPET I/O APIC IRQ         = 0x%02x\n",  mTimerIrq));
+    }
+    DEBUG ((DEBUG_INFO, "HPET Interrupt Vector     = 0x%02x\n",    PcdGet8 (PcdHpetLocalApicVector)));
+    DEBUG ((DEBUG_INFO, "HPET Counter Mask         = 0x%016lx\n",  mCounterMask));
+    DEBUG ((DEBUG_INFO, "HPET Timer Period         = %d\n",        mTimerPeriod));
+    DEBUG ((DEBUG_INFO, "HPET Timer Count          = 0x%016lx\n",  mTimerCount));
+    DEBUG ((DEBUG_INFO, "HPET_TIMER%d_CONFIGURATION = 0x%016lx\n", mTimerIndex, HpetRead (HPET_TIMER_CONFIGURATION_OFFSET + mTimerIndex * HPET_TIMER_STRIDE)));
+    DEBUG ((DEBUG_INFO, "HPET_TIMER%d_COMPARATOR    = 0x%016lx\n", mTimerIndex, HpetRead (HPET_TIMER_COMPARATOR_OFFSET    + mTimerIndex * HPET_TIMER_STRIDE)));
+    DEBUG ((DEBUG_INFO, "HPET_TIMER%d_MSI_ROUTE     = 0x%016lx\n", mTimerIndex, HpetRead (HPET_TIMER_MSI_ROUTE_OFFSET     + mTimerIndex * HPET_TIMER_STRIDE)));
 
-  DEBUG ((DEBUG_INFO, "HPET Interrupt Vector     = 0x%02x\n", PcdGet8 (PcdHpetLocalApicVector)));
-  DEBUG ((DEBUG_INFO, "HPET Counter Mask         = 0x%016lx\n", mCounterMask));
-  DEBUG ((DEBUG_INFO, "HPET Timer Period         = %d\n", mTimerPeriod));
-  DEBUG ((DEBUG_INFO, "HPET Timer Count          = 0x%016lx\n", mTimerCount));
-  DEBUG ((DEBUG_INFO, "HPET_TIMER%d_CONFIGURATION = 0x%016lx\n", mTimerIndex, HpetRead (HPET_TIMER_CONFIGURATION_OFFSET + mTimerIndex * HPET_TIMER_STRIDE)));
-  DEBUG ((DEBUG_INFO, "HPET_TIMER%d_COMPARATOR    = 0x%016lx\n", mTimerIndex, HpetRead (HPET_TIMER_COMPARATOR_OFFSET    + mTimerIndex * HPET_TIMER_STRIDE)));
-  DEBUG ((DEBUG_INFO, "HPET_TIMER%d_MSI_ROUTE     = 0x%016lx\n", mTimerIndex, HpetRead (HPET_TIMER_MSI_ROUTE_OFFSET     + mTimerIndex * HPET_TIMER_STRIDE)));
-
-  //
-  // Wait for a few timer interrupts to fire before continuing
-  //
-  while (mNumTicks < 10) {
-  }
-
-  DEBUG_CODE_END ();
+    //
+    // Wait for a few timer interrupts to fire before continuing
+    //
+    while (mNumTicks < 10);
+  );
 
   //
   // Install the Timer Architectural Protocol onto a new handle
   //
   Status = gBS->InstallMultipleProtocolInterfaces (
                   &mTimerHandle,
-                  &gEfiTimerArchProtocolGuid,
-                  &mTimer,
+                  &gEfiTimerArchProtocolGuid, &mTimer,
                   NULL
                   );
   ASSERT_EFI_ERROR (Status);

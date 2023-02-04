@@ -18,12 +18,9 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "qemu.h"
-#include "qemu/timer.h"
-#include "user-internals.h"
 #include "cpu_loop-common.h"
-#include "signal-common.h"
-#include "user-mmap.h"
 
 /***********************************************************/
 /* CPUX86 core interface */
@@ -84,6 +81,17 @@ static void set_idt(int n, unsigned int dpl)
 }
 #endif
 
+static void gen_signal(CPUX86State *env, int sig, int code, abi_ptr addr)
+{
+    target_siginfo_t info = {
+        .si_signo = sig,
+        .si_code = code,
+        ._sifields._sigfault._addr = addr
+    };
+
+    queue_signal(env, info.si_signo, QEMU_SI_FAULT, &info);
+}
+
 #ifdef TARGET_X86_64
 static bool write_ok_or_segv(CPUX86State *env, abi_ptr addr, size_t len)
 {
@@ -91,12 +99,12 @@ static bool write_ok_or_segv(CPUX86State *env, abi_ptr addr, size_t len)
      * For all the vsyscalls, NULL means "don't write anything" not
      * "write it at address 0".
      */
-    if (addr == 0 || access_ok(env_cpu(env), VERIFY_WRITE, addr, len)) {
+    if (addr == 0 || access_ok(VERIFY_WRITE, addr, len)) {
         return true;
     }
 
     env->error_code = PG_ERROR_W_MASK | PG_ERROR_U_MASK;
-    force_sig_fault(TARGET_SIGSEGV, TARGET_SEGV_MAPERR, addr);
+    gen_signal(env, TARGET_SIGSEGV, TARGET_SEGV_MAPERR, addr);
     return false;
 }
 
@@ -137,7 +145,7 @@ static void emulate_vsyscall(CPUX86State *env)
     }
 
     /*
-     * Validate the pointer arguments.
+     * Validate the the pointer arguments.
      */
     switch (syscall) {
     case TARGET_NR_gettimeofday:
@@ -169,8 +177,8 @@ static void emulate_vsyscall(CPUX86State *env)
     ret = do_syscall(env, syscall, env->regs[R_EDI], env->regs[R_ESI],
                      env->regs[R_EDX], env->regs[10], env->regs[8],
                      env->regs[9], 0, 0);
-    g_assert(ret != -QEMU_ERESTARTSYS);
-    g_assert(ret != -QEMU_ESIGRETURN);
+    g_assert(ret != -TARGET_ERESTARTSYS);
+    g_assert(ret != -TARGET_QEMU_ESIGRETURN);
     if (ret == -TARGET_EFAULT) {
         goto sigsegv;
     }
@@ -182,25 +190,16 @@ static void emulate_vsyscall(CPUX86State *env)
     return;
 
  sigsegv:
-    force_sig(TARGET_SIGSEGV);
+    /* Like force_sig(SIGSEGV).  */
+    gen_signal(env, TARGET_SIGSEGV, TARGET_SI_KERNEL, 0);
 }
 #endif
-
-static bool maybe_handle_vm86_trap(CPUX86State *env, int trapnr)
-{
-#ifndef TARGET_X86_64
-    if (env->eflags & VM_MASK) {
-        handle_vm86_trap(env, trapnr);
-        return true;
-    }
-#endif
-    return false;
-}
 
 void cpu_loop(CPUX86State *env)
 {
     CPUState *cs = env_cpu(env);
     int trapnr;
+    abi_ulong pc;
     abi_ulong ret;
 
     for(;;) {
@@ -221,9 +220,9 @@ void cpu_loop(CPUX86State *env)
                              env->regs[R_EDI],
                              env->regs[R_EBP],
                              0, 0);
-            if (ret == -QEMU_ERESTARTSYS) {
+            if (ret == -TARGET_ERESTARTSYS) {
                 env->eip -= 2;
-            } else if (ret != -QEMU_ESIGRETURN) {
+            } else if (ret != -TARGET_QEMU_ESIGRETURN) {
                 env->regs[R_EAX] = ret;
             }
             break;
@@ -239,9 +238,9 @@ void cpu_loop(CPUX86State *env)
                              env->regs[8],
                              env->regs[9],
                              0, 0);
-            if (ret == -QEMU_ERESTARTSYS) {
+            if (ret == -TARGET_ERESTARTSYS) {
                 env->eip -= 2;
-            } else if (ret != -QEMU_ESIGRETURN) {
+            } else if (ret != -TARGET_QEMU_ESIGRETURN) {
                 env->regs[R_EAX] = ret;
             }
             break;
@@ -253,61 +252,73 @@ void cpu_loop(CPUX86State *env)
 #endif
         case EXCP0B_NOSEG:
         case EXCP0C_STACK:
-            force_sig(TARGET_SIGBUS);
+            gen_signal(env, TARGET_SIGBUS, TARGET_SI_KERNEL, 0);
             break;
         case EXCP0D_GPF:
             /* XXX: potential problem if ABI32 */
-            if (maybe_handle_vm86_trap(env, trapnr)) {
+#ifndef TARGET_X86_64
+            if (env->eflags & VM_MASK) {
+                handle_vm86_fault(env);
                 break;
             }
-            force_sig(TARGET_SIGSEGV);
+#endif
+            gen_signal(env, TARGET_SIGSEGV, TARGET_SI_KERNEL, 0);
             break;
         case EXCP0E_PAGE:
-            force_sig_fault(TARGET_SIGSEGV,
-                            (env->error_code & PG_ERROR_P_MASK ?
-                             TARGET_SEGV_ACCERR : TARGET_SEGV_MAPERR),
-                            env->cr[2]);
+            gen_signal(env, TARGET_SIGSEGV,
+                       (env->error_code & 1 ?
+                        TARGET_SEGV_ACCERR : TARGET_SEGV_MAPERR),
+                       env->cr[2]);
             break;
         case EXCP00_DIVZ:
-            if (maybe_handle_vm86_trap(env, trapnr)) {
+#ifndef TARGET_X86_64
+            if (env->eflags & VM_MASK) {
+                handle_vm86_trap(env, trapnr);
                 break;
             }
-            force_sig_fault(TARGET_SIGFPE, TARGET_FPE_INTDIV, env->eip);
+#endif
+            gen_signal(env, TARGET_SIGFPE, TARGET_FPE_INTDIV, env->eip);
             break;
         case EXCP01_DB:
-            if (maybe_handle_vm86_trap(env, trapnr)) {
-                break;
-            }
-            force_sig_fault(TARGET_SIGTRAP, TARGET_TRAP_BRKPT, env->eip);
-            break;
         case EXCP03_INT3:
-            if (maybe_handle_vm86_trap(env, trapnr)) {
+#ifndef TARGET_X86_64
+            if (env->eflags & VM_MASK) {
+                handle_vm86_trap(env, trapnr);
                 break;
             }
-            force_sig(TARGET_SIGTRAP);
+#endif
+            if (trapnr == EXCP01_DB) {
+                gen_signal(env, TARGET_SIGTRAP, TARGET_TRAP_BRKPT, env->eip);
+            } else {
+                gen_signal(env, TARGET_SIGTRAP, TARGET_SI_KERNEL, 0);
+            }
             break;
         case EXCP04_INTO:
         case EXCP05_BOUND:
-            if (maybe_handle_vm86_trap(env, trapnr)) {
+#ifndef TARGET_X86_64
+            if (env->eflags & VM_MASK) {
+                handle_vm86_trap(env, trapnr);
                 break;
             }
-            force_sig(TARGET_SIGSEGV);
+#endif
+            gen_signal(env, TARGET_SIGSEGV, TARGET_SI_KERNEL, 0);
             break;
         case EXCP06_ILLOP:
-            force_sig_fault(TARGET_SIGILL, TARGET_ILL_ILLOPN, env->eip);
+            gen_signal(env, TARGET_SIGILL, TARGET_ILL_ILLOPN, env->eip);
             break;
         case EXCP_INTERRUPT:
             /* just indicate that signals should be handled asap */
             break;
         case EXCP_DEBUG:
-            force_sig_fault(TARGET_SIGTRAP, TARGET_TRAP_BRKPT, env->eip);
+            gen_signal(env, TARGET_SIGTRAP, TARGET_TRAP_BRKPT, 0);
             break;
         case EXCP_ATOMIC:
             cpu_exec_step_atomic(cs);
             break;
         default:
-            EXCP_DUMP(env, "qemu: unhandled CPU exception 0x%x - aborting\n",
-                      trapnr);
+            pc = env->segs[R_CS].base + env->eip;
+            EXCP_DUMP(env, "qemu: 0x%08lx: unhandled CPU exception 0x%x - aborting\n",
+                      (long)pc, trapnr);
             abort();
         }
         process_pending_signals(env);
@@ -368,7 +379,7 @@ void target_cpu_copy_regs(CPUArchState *env, struct target_pt_regs *regs)
     env->idt.base = target_mmap(0, sizeof(uint64_t) * (env->idt.limit + 1),
                                 PROT_READ|PROT_WRITE,
                                 MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
-    idt_table = g2h_untagged(env->idt.base);
+    idt_table = g2h(env->idt.base);
     set_idt(0, 0);
     set_idt(1, 0);
     set_idt(2, 0);
@@ -398,7 +409,7 @@ void target_cpu_copy_regs(CPUArchState *env, struct target_pt_regs *regs)
                                     PROT_READ|PROT_WRITE,
                                     MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
         env->gdt.limit = sizeof(uint64_t) * TARGET_GDT_ENTRIES - 1;
-        gdt_table = g2h_untagged(env->gdt.base);
+        gdt_table = g2h(env->gdt.base);
 #ifdef TARGET_ABI32
         write_dt(&gdt_table[__USER_CS >> 3], 0, 0xfffff,
                  DESC_G_MASK | DESC_B_MASK | DESC_P_MASK | DESC_S_MASK |

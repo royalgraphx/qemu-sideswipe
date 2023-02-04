@@ -18,6 +18,7 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "qapi/qmp/qstring.h"
 #include "qapi/qmp/qdict.h"
 #include "qapi/qmp/qlist.h"
@@ -103,8 +104,7 @@ static QList *device_type_list(QTestState *qts, bool abstract)
 static void test_one_device(QTestState *qts, const char *type)
 {
     QDict *resp;
-    char *help, *escaped;
-    GRegex *comma;
+    char *help;
 
     g_test_message("Testing device '%s'", type);
 
@@ -113,13 +113,8 @@ static void test_one_device(QTestState *qts, const char *type)
                type);
     qobject_unref(resp);
 
-    comma = g_regex_new(",", 0, 0, NULL);
-    escaped = g_regex_replace_literal(comma, type, -1, 0, ",,", 0, NULL);
-    g_regex_unref(comma);
-
-    help = qtest_hmp(qts, "device_add \"%s,help\"", escaped);
+    help = qtest_hmp(qts, "device_add \"%s,help\"", type);
     g_free(help);
-    g_free(escaped);
 }
 
 static void test_device_intro_list(void)

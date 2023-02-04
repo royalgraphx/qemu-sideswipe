@@ -2,10 +2,10 @@
   PEI Dispatcher Dependency Evaluator
 
   This routine evaluates a dependency expression (DEPENDENCY_EXPRESSION) to determine
-  if a driver can be scheduled for execution.  The criteria to be scheduled is
-  that the dependency expression is satisfied.
+  if a driver can be scheduled for execution.  The criteria for
+  schedulability is that the dependency expression is satisfied.
 
-Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -45,23 +45,23 @@ IsPpiInstalled (
   }
 
   //
-  // Copy the GUID into a local variable so that there are no
+  // Copy the Guid into a locale variable so that there are no
   // possibilities of alignment faults for cross-compilation
   // environments such as Intel?Itanium(TM).
   //
-  CopyMem (&PpiGuid, Stack->Operator, sizeof (EFI_GUID));
+  CopyMem(&PpiGuid, Stack->Operator, sizeof(EFI_GUID));
 
   //
   // Check if the PPI is installed.
   //
-  Status = PeiServicesLocatePpi (
+  Status = PeiServicesLocatePpi(
              &PpiGuid,        // GUID
              0,               // INSTANCE
              NULL,            // EFI_PEI_PPI_DESCRIPTOR
              &PeiInstance     // PPI
              );
 
-  if (EFI_ERROR (Status)) {
+  if (EFI_ERROR(Status)) {
     return FALSE;
   }
 
@@ -72,7 +72,7 @@ IsPpiInstalled (
 
   This is the POSTFIX version of the dependency evaluator.  When a
   PUSH [PPI GUID] is encountered, a pointer to the GUID is stored on
-  the evaluation stack.  When that entry is popped from the evaluation
+  the evaluation stack.  When that entry is poped from the evaluation
   stack, the PPI is checked if it is installed.  This method allows
   some time savings as not all PPIs must be checked for certain
   operation types (AND, OR).
@@ -90,20 +90,22 @@ IsPpiInstalled (
 **/
 BOOLEAN
 PeimDispatchReadiness (
-  IN EFI_PEI_SERVICES  **PeiServices,
-  IN VOID              *DependencyExpression
+  IN EFI_PEI_SERVICES   **PeiServices,
+  IN VOID               *DependencyExpression
   )
 {
   DEPENDENCY_EXPRESSION_OPERAND  *Iterator;
   EVAL_STACK_ENTRY               *StackPtr;
   EVAL_STACK_ENTRY               EvalStack[MAX_GRAMMAR_SIZE];
 
-  Iterator = DependencyExpression;
+  Iterator  = DependencyExpression;
 
   StackPtr = EvalStack;
 
   while (TRUE) {
+
     switch (*(Iterator++)) {
+
       //
       // For performance reason we put the frequently used items in front of
       // the rarely used  items
@@ -121,10 +123,10 @@ PeimDispatchReadiness (
 
         //
         // Push the pointer to the PUSH opcode operator (pointer to PPI GUID)
-        // We will evaluate if the PPI is installed on the POP operation.
+        // We will evaluate if the PPI is insalled on the POP operation.
         //
-        StackPtr->Operator = (VOID *)Iterator;
-        Iterator           = Iterator + sizeof (EFI_GUID);
+        StackPtr->Operator = (VOID *) Iterator;
+        Iterator = Iterator + sizeof (EFI_GUID);
         DEBUG ((DEBUG_DISPATCH, "  PUSH GUID(%g) = %a\n", StackPtr->Operator, IsPpiInstalled (PeiServices, StackPtr) ? "TRUE" : "FALSE"));
         StackPtr++;
         break;
@@ -136,7 +138,6 @@ PeimDispatchReadiness (
         } else {
           DEBUG ((DEBUG_DISPATCH, "  OR\n"));
         }
-
         //
         // Check to make sure the dependency grammar doesn't underflow the
         // EvalStack on the two POPs for the AND operation.  Don't need to
@@ -165,16 +166,15 @@ PeimDispatchReadiness (
         //
         if (*(Iterator - 1) == EFI_DEP_AND) {
           if (!(IsPpiInstalled (PeiServices, StackPtr))) {
-            (StackPtr-1)->Result   = FALSE;
+            (StackPtr-1)->Result = FALSE;
             (StackPtr-1)->Operator = NULL;
           }
         } else {
           if (IsPpiInstalled (PeiServices, StackPtr)) {
-            (StackPtr-1)->Result   = TRUE;
+            (StackPtr-1)->Result = TRUE;
             (StackPtr-1)->Operator = NULL;
           }
         }
-
         break;
 
       case (EFI_DEP_END):
@@ -188,7 +188,6 @@ PeimDispatchReadiness (
           DEBUG ((DEBUG_DISPATCH, "  RESULT = FALSE (Underflow Error)\n"));
           return FALSE;
         }
-
         DEBUG ((DEBUG_DISPATCH, "  RESULT = %a\n", IsPpiInstalled (PeiServices, StackPtr) ? "TRUE" : "FALSE"));
         return IsPpiInstalled (PeiServices, StackPtr);
 
@@ -204,8 +203,7 @@ PeimDispatchReadiness (
           DEBUG ((DEBUG_DISPATCH, "  RESULT = FALSE (Underflow Error)\n"));
           return FALSE;
         }
-
-        (StackPtr-1)->Result   = (BOOLEAN) !IsPpiInstalled (PeiServices, (StackPtr-1));
+        (StackPtr-1)->Result = (BOOLEAN) !IsPpiInstalled (PeiServices, (StackPtr-1));
         (StackPtr-1)->Operator = NULL;
         break;
 
@@ -216,7 +214,6 @@ PeimDispatchReadiness (
         } else {
           DEBUG ((DEBUG_DISPATCH, "  FALSE\n"));
         }
-
         //
         // Check to make sure the dependency grammar doesn't overflow the
         // EvalStack on the push
@@ -225,7 +222,6 @@ PeimDispatchReadiness (
           DEBUG ((DEBUG_DISPATCH, "  RESULT = FALSE (Underflow Error)\n"));
           return FALSE;
         }
-
         //
         // Iterator has increased by 1 after we retrieve the operand, so here we
         // should get the value pointed by (Iterator - 1), in order to obtain the
@@ -236,7 +232,6 @@ PeimDispatchReadiness (
         } else {
           StackPtr->Result = FALSE;
         }
-
         StackPtr->Operator = NULL;
         StackPtr++;
         break;

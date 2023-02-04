@@ -9,6 +9,7 @@
 #ifndef __SERIALIZE_VARIABLES_LIB__
 #define __SERIALIZE_VARIABLES_LIB__
 
+
 /**
   Callback function for each variable
 
@@ -34,6 +35,7 @@ RETURN_STATUS
   IN  VOID                         *Data
   );
 
+
 /**
   Creates a new variable serialization instance
 
@@ -48,8 +50,9 @@ RETURN_STATUS
 RETURN_STATUS
 EFIAPI
 SerializeVariablesNewInstance (
-  OUT EFI_HANDLE  *Handle
+  OUT EFI_HANDLE                      *Handle
   );
+
 
 /**
   Free memory associated with a variable serialization instance
@@ -65,8 +68,9 @@ SerializeVariablesNewInstance (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesFreeInstance (
-  IN EFI_HANDLE  Handle
+  IN EFI_HANDLE Handle
   );
+
 
 /**
   Creates a new variable serialization instance using the given
@@ -88,10 +92,11 @@ SerializeVariablesFreeInstance (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesNewInstanceFromBuffer (
-  OUT EFI_HANDLE  *Handle,
-  IN  VOID        *Buffer,
-  IN  UINTN       Size
+  OUT EFI_HANDLE                          *Handle,
+  IN  VOID                                *Buffer,
+  IN  UINTN                               Size
   );
+
 
 /**
   Iterates all variables found with RuntimeServices GetNextVariableName
@@ -110,9 +115,10 @@ SerializeVariablesNewInstanceFromBuffer (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesIterateSystemVariables (
-  IN VARIABLE_SERIALIZATION_ITERATION_CALLBACK  CallbackFunction,
-  IN VOID                                       *Context
+  IN VARIABLE_SERIALIZATION_ITERATION_CALLBACK CallbackFunction,
+  IN VOID                                      *Context
   );
+
 
 /**
   Iterates all variables found in the variable serialization instance
@@ -132,10 +138,11 @@ SerializeVariablesIterateSystemVariables (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesIterateInstanceVariables (
-  IN EFI_HANDLE                                 Handle,
-  IN VARIABLE_SERIALIZATION_ITERATION_CALLBACK  CallbackFunction,
-  IN VOID                                       *Context
+  IN EFI_HANDLE                                Handle,
+  IN VARIABLE_SERIALIZATION_ITERATION_CALLBACK CallbackFunction,
+  IN VOID                                      *Context
   );
+
 
 /**
   Sets all variables found in the variable serialization instance
@@ -152,8 +159,9 @@ SerializeVariablesIterateInstanceVariables (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesSetSerializedVariables (
-  IN EFI_HANDLE  Handle
+  IN EFI_HANDLE                       Handle
   );
+
 
 /**
   Adds a variable to the variable serialization instance
@@ -173,13 +181,14 @@ SerializeVariablesSetSerializedVariables (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesAddVariable (
-  IN EFI_HANDLE  Handle,
-  IN CHAR16      *VariableName,
-  IN EFI_GUID    *VendorGuid,
-  IN UINT32      Attributes,
-  IN UINTN       DataSize,
-  IN VOID        *Data
+  IN EFI_HANDLE                   Handle,
+  IN CHAR16                       *VariableName,
+  IN EFI_GUID                     *VendorGuid,
+  IN UINT32                       Attributes,
+  IN UINTN                        DataSize,
+  IN VOID                         *Data
   );
+
 
 /**
   Serializes the variables known to this instance into the
@@ -204,9 +213,11 @@ SerializeVariablesAddVariable (
 RETURN_STATUS
 EFIAPI
 SerializeVariablesToBuffer (
-  IN     EFI_HANDLE  Handle,
-  OUT    VOID        *Buffer,
-  IN OUT UINTN       *Size
+  IN     EFI_HANDLE                       Handle,
+  OUT    VOID                             *Buffer,
+  IN OUT UINTN                            *Size
   );
 
+
 #endif
+

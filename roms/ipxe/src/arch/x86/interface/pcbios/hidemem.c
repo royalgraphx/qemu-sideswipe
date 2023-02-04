@@ -229,7 +229,6 @@ static void unhide_etherboot ( int flags __unused ) {
 
 /** Hide Etherboot startup function */
 struct startup_fn hide_etherboot_startup_fn __startup_fn ( STARTUP_EARLY ) = {
-	.name = "hidemem",
 	.startup = hide_etherboot,
 	.shutdown = unhide_etherboot,
 };

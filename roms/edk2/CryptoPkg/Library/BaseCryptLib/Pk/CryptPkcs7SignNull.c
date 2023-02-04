@@ -51,3 +51,4 @@ Pkcs7Sign (
   ASSERT (FALSE);
   return FALSE;
 }
+

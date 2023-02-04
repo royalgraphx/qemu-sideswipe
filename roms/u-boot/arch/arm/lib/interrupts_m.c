@@ -5,8 +5,6 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
-#include <irq_func.h>
 
 /*
  * Upon exception entry ARMv7-M processors automatically save stack
@@ -31,8 +29,6 @@ struct autosave_regs {
 
 int interrupt_init(void)
 {
-	enable_interrupts();
-
 	return 0;
 }
 
@@ -59,7 +55,7 @@ void dump_regs(struct autosave_regs *regs)
 void bad_mode(void)
 {
 	panic("Resetting CPU ...\n");
-	reset_cpu();
+	reset_cpu(0);
 }
 
 void do_hard_fault(struct autosave_regs *autosave_regs)

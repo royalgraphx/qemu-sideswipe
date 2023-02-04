@@ -12,8 +12,7 @@
 #define HW_S390_TOD_H
 
 #include "hw/qdev-core.h"
-#include "tcg/s390-tod.h"
-#include "qom/object.h"
+#include "target/s390x/s390-tod.h"
 
 typedef struct S390TOD {
     uint8_t high;
@@ -21,11 +20,15 @@ typedef struct S390TOD {
 } S390TOD;
 
 #define TYPE_S390_TOD "s390-tod"
-OBJECT_DECLARE_TYPE(S390TODState, S390TODClass, S390_TOD)
+#define S390_TOD(obj) OBJECT_CHECK(S390TODState, (obj), TYPE_S390_TOD)
+#define S390_TOD_CLASS(oc) OBJECT_CLASS_CHECK(S390TODClass, (oc), \
+                                              TYPE_S390_TOD)
+#define S390_TOD_GET_CLASS(obj) OBJECT_GET_CLASS(S390TODClass, (obj), \
+                                                 TYPE_S390_TOD)
 #define TYPE_KVM_S390_TOD TYPE_S390_TOD "-kvm"
 #define TYPE_QEMU_S390_TOD TYPE_S390_TOD "-qemu"
 
-struct S390TODState {
+typedef struct S390TODState {
     /* private */
     DeviceState parent_obj;
 
@@ -36,9 +39,9 @@ struct S390TODState {
     S390TOD base;
     /* Used by KVM to remember if the TOD is stopped and base is valid. */
     bool stopped;
-};
+} S390TODState;
 
-struct S390TODClass {
+typedef struct S390TODClass {
     /* private */
     DeviceClass parent_class;
     void (*parent_realize)(DeviceState *dev, Error **errp);
@@ -46,7 +49,7 @@ struct S390TODClass {
     /* public */
     void (*get)(const S390TODState *td, S390TOD *tod, Error **errp);
     void (*set)(S390TODState *td, const S390TOD *tod, Error **errp);
-};
+} S390TODClass;
 
 void s390_init_tod(void);
 S390TODState *s390_get_todstate(void);

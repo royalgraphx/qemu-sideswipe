@@ -37,7 +37,6 @@ class QAPISchemaTestVisitor(QAPISchemaVisitor):
         for m in members:
             print('    member %s' % m.name)
             self._print_if(m.ifcond, indent=8)
-            self._print_features(m.features, indent=8)
         self._print_if(ifcond)
         self._print_features(features)
 
@@ -69,13 +68,12 @@ class QAPISchemaTestVisitor(QAPISchemaVisitor):
 
     def visit_command(self, name, info, ifcond, features,
                       arg_type, ret_type, gen, success_response, boxed,
-                      allow_oob, allow_preconfig, coroutine):
+                      allow_oob, allow_preconfig):
         print('command %s %s -> %s'
               % (name, arg_type and arg_type.name,
                  ret_type and ret_type.name))
-        print('    gen=%s success_response=%s boxed=%s oob=%s preconfig=%s%s'
-              % (gen, success_response, boxed, allow_oob, allow_preconfig,
-                 " coroutine=True" if coroutine else ""))
+        print('    gen=%s success_response=%s boxed=%s oob=%s preconfig=%s'
+              % (gen, success_response, boxed, allow_oob, allow_preconfig))
         self._print_if(ifcond)
         self._print_features(features)
 
@@ -95,17 +93,8 @@ class QAPISchemaTestVisitor(QAPISchemaVisitor):
 
     @staticmethod
     def _print_if(ifcond, indent=4):
-        # TODO Drop this hack after replacing OrderedDict by plain
-        # dict (requires Python 3.7)
-        def _massage(subcond):
-            if isinstance(subcond, str):
-                return subcond
-            if isinstance(subcond, list):
-                return [_massage(val) for val in subcond]
-            return {key: _massage(val) for key, val in subcond.items()}
-
-        if ifcond.is_present():
-            print('%sif %s' % (' ' * indent, _massage(ifcond.ifcond)))
+        if ifcond:
+            print('%sif %s' % (' ' * indent, ifcond))
 
     @classmethod
     def _print_features(cls, features, indent=4):
@@ -133,22 +122,14 @@ def test_frontend(fname):
             print('    section=%s\n%s' % (section.name, section.text))
 
 
-def open_test_result(dir_name, file_name, update):
-    mode = 'r+' if update else 'r'
-    try:
-        fp = open(os.path.join(dir_name, file_name), mode)
-    except FileNotFoundError:
-        if not update:
-            raise
-        fp = open(os.path.join(dir_name, file_name), 'w+')
-    return fp
-
-
 def test_and_diff(test_name, dir_name, update):
     sys.stdout = StringIO()
     try:
         test_frontend(os.path.join(dir_name, test_name + '.json'))
     except QAPIError as err:
+        if err.info.fname is None:
+            print("%s" % err, file=sys.stderr)
+            return 2
         errstr = str(err) + '\n'
         if dir_name:
             errstr = errstr.replace(dir_name + '/', '')
@@ -160,12 +141,13 @@ def test_and_diff(test_name, dir_name, update):
         sys.stdout.close()
         sys.stdout = sys.__stdout__
 
+    mode = 'r+' if update else 'r'
     try:
-        outfp = open_test_result(dir_name, test_name + '.out', update)
-        errfp = open_test_result(dir_name, test_name + '.err', update)
+        outfp = open(os.path.join(dir_name, test_name + '.out'), mode)
+        errfp = open(os.path.join(dir_name, test_name + '.err'), mode)
         expected_out = outfp.readlines()
         expected_err = errfp.readlines()
-    except OSError as err:
+    except IOError as err:
         print("%s: can't open '%s': %s"
               % (sys.argv[0], err.filename, err.strerror),
               file=sys.stderr)
@@ -191,7 +173,7 @@ def test_and_diff(test_name, dir_name, update):
         errfp.truncate(0)
         errfp.seek(0)
         errfp.writelines(actual_err)
-    except OSError as err:
+    except IOError as err:
         print("%s: can't write '%s': %s"
               % (sys.argv[0], err.filename, err.strerror),
               file=sys.stderr)

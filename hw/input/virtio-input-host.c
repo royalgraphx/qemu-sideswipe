@@ -114,10 +114,7 @@ static void virtio_input_host_realize(DeviceState *dev, Error **errp)
         error_setg_file_open(errp, errno, vih->evdev);
         return;
     }
-    if (!g_unix_set_fd_nonblocking(vih->fd, true, NULL)) {
-        error_setg_errno(errp, errno, "Failed to set FD nonblocking");
-        goto err_close;
-    }
+    qemu_set_nonblock(vih->fd);
 
     rc = ioctl(vih->fd, EVIOCGVERSION, &ver);
     if (rc < 0) {
@@ -196,16 +193,13 @@ static void virtio_input_host_handle_status(VirtIOInput *vinput,
 {
     VirtIOInputHost *vih = VIRTIO_INPUT_HOST(vinput);
     struct input_event evdev;
-    struct timeval tval;
     int rc;
 
-    if (gettimeofday(&tval, NULL)) {
+    if (gettimeofday(&evdev.time, NULL)) {
         perror("virtio_input_host_handle_status: gettimeofday");
         return;
     }
 
-    evdev.input_event_sec = tval.tv_sec;
-    evdev.input_event_usec = tval.tv_usec;
     evdev.type = le16_to_cpu(event->type);
     evdev.code = le16_to_cpu(event->code);
     evdev.value = le32_to_cpu(event->value);

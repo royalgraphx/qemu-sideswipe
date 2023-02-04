@@ -55,10 +55,27 @@
 #endif
 
 /*
+ * SPI Flash configuration
+ */
+#ifdef CONFIG_CMD_SF
+#ifndef CONFIG_ENV_SPI_BUS
+# define CONFIG_ENV_SPI_BUS		0
+#endif
+#ifndef CONFIG_ENV_SPI_CS
+# define CONFIG_ENV_SPI_CS		0
+#endif
+#ifndef CONFIG_ENV_SPI_MAX_HZ
+# define CONFIG_ENV_SPI_MAX_HZ		50000000
+#endif
+#endif
+
+/*
  * Ethernet Driver configuration
  */
 #ifdef CONFIG_CMD_NET
+#define CONFIG_NETCONSOLE	/* include NetConsole support   */
 #define CONFIG_SYS_FAULT_ECHO_LINK_DOWN	/* detect link using phy */
+#define CONFIG_ENV_OVERWRITE	/* ethaddr can be reprogrammed */
 #define CONFIG_RESET_PHY_R	/* use reset_phy() to init mv8831116 PHY */
 #endif /* CONFIG_CMD_NET */
 
@@ -74,6 +91,8 @@
  */
 #ifdef CONFIG_IDE
 #define __io
+#define CONFIG_IDE_PREINIT
+#define CONFIG_MVSATA_IDE_USE_PORT1
 /* Needs byte-swapping for ATA data register */
 #define CONFIG_IDE_SWAP_IO
 /* Data, registers and alternate blocks are at the same offset */
@@ -94,7 +113,7 @@
 /*
  * I2C related stuff
  */
-#if defined(CONFIG_CMD_I2C) && !CONFIG_IS_ENABLED(DM_I2C)
+#if defined(CONFIG_CMD_I2C) && !defined(CONFIG_DM_I2C)
 #ifndef CONFIG_SYS_I2C_SOFT
 #define CONFIG_SYS_I2C
 #define CONFIG_SYS_I2C_MVTWSI

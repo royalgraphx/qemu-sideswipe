@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw
 #
 # qcow2 pattern test with various cluster sizes
 #

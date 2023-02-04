@@ -23,20 +23,21 @@
 #include "migration/colo.h"
 #include "util.h"
 
-#define TYPE_FILTER_REWRITER "filter-rewriter"
-OBJECT_DECLARE_SIMPLE_TYPE(RewriterState, FILTER_REWRITER)
+#define FILTER_COLO_REWRITER(obj) \
+    OBJECT_CHECK(RewriterState, (obj), TYPE_FILTER_REWRITER)
 
+#define TYPE_FILTER_REWRITER "filter-rewriter"
 #define FAILOVER_MODE_ON  true
 #define FAILOVER_MODE_OFF false
 
-struct RewriterState {
+typedef struct RewriterState {
     NetFilterState parent_obj;
     NetQueue *incoming_queue;
     /* hashtable to save connection */
     GHashTable *connection_track_table;
     bool vnet_hdr;
     bool failover_mode;
-};
+} RewriterState;
 
 static void filter_rewriter_failover_mode(RewriterState *s)
 {
@@ -45,7 +46,7 @@ static void filter_rewriter_failover_mode(RewriterState *s)
 
 static void filter_rewriter_flush(NetFilterState *nf)
 {
-    RewriterState *s = FILTER_REWRITER(nf);
+    RewriterState *s = FILTER_COLO_REWRITER(nf);
 
     if (!qemu_net_queue_flush(s->incoming_queue)) {
         /* Unable to empty the queue, purge remaining packets */
@@ -75,14 +76,11 @@ static int handle_primary_tcp_pkt(RewriterState *rf,
     struct tcp_hdr *tcp_pkt;
 
     tcp_pkt = (struct tcp_hdr *)pkt->transport_header;
-    if (trace_event_get_state_backends(TRACE_COLO_FILTER_REWRITER_PKT_INFO)) {
+    if (trace_event_get_state_backends(TRACE_COLO_FILTER_REWRITER_DEBUG)) {
         trace_colo_filter_rewriter_pkt_info(__func__,
                     inet_ntoa(pkt->ip->ip_src), inet_ntoa(pkt->ip->ip_dst),
                     ntohl(tcp_pkt->th_seq), ntohl(tcp_pkt->th_ack),
                     tcp_pkt->th_flags);
-    }
-    if (trace_event_get_state_backends(
-          TRACE_COLO_FILTER_REWRITER_CONN_OFFSET)) {
         trace_colo_filter_rewriter_conn_offset(conn->offset);
     }
 
@@ -114,7 +112,7 @@ static int handle_primary_tcp_pkt(RewriterState *rf,
             tcp_pkt->th_ack = htonl(ntohl(tcp_pkt->th_ack) + conn->offset);
 
             net_checksum_calculate((uint8_t *)pkt->data + pkt->vnet_hdr_len,
-                                   pkt->size - pkt->vnet_hdr_len, CSUM_TCP);
+                                   pkt->size - pkt->vnet_hdr_len);
         }
 
         /*
@@ -182,14 +180,11 @@ static int handle_secondary_tcp_pkt(RewriterState *rf,
 
     tcp_pkt = (struct tcp_hdr *)pkt->transport_header;
 
-    if (trace_event_get_state_backends(TRACE_COLO_FILTER_REWRITER_PKT_INFO)) {
+    if (trace_event_get_state_backends(TRACE_COLO_FILTER_REWRITER_DEBUG)) {
         trace_colo_filter_rewriter_pkt_info(__func__,
                     inet_ntoa(pkt->ip->ip_src), inet_ntoa(pkt->ip->ip_dst),
                     ntohl(tcp_pkt->th_seq), ntohl(tcp_pkt->th_ack),
                     tcp_pkt->th_flags);
-    }
-    if (trace_event_get_state_backends(
-          TRACE_COLO_FILTER_REWRITER_CONN_OFFSET)) {
         trace_colo_filter_rewriter_conn_offset(conn->offset);
     }
 
@@ -216,7 +211,7 @@ static int handle_secondary_tcp_pkt(RewriterState *rf,
             tcp_pkt->th_seq = htonl(ntohl(tcp_pkt->th_seq) - conn->offset);
 
             net_checksum_calculate((uint8_t *)pkt->data + pkt->vnet_hdr_len,
-                                   pkt->size - pkt->vnet_hdr_len, CSUM_TCP);
+                                   pkt->size - pkt->vnet_hdr_len);
         }
     }
 
@@ -256,7 +251,7 @@ static ssize_t colo_rewriter_receive_iov(NetFilterState *nf,
                                          int iovcnt,
                                          NetPacketSent *sent_cb)
 {
-    RewriterState *s = FILTER_REWRITER(nf);
+    RewriterState *s = FILTER_COLO_REWRITER(nf);
     Connection *conn;
     ConnectionKey key;
     Packet *pkt;
@@ -270,7 +265,8 @@ static ssize_t colo_rewriter_receive_iov(NetFilterState *nf,
         vnet_hdr_len = nf->netdev->vnet_hdr_len;
     }
 
-    pkt = packet_new_nocopy(buf, size, vnet_hdr_len);
+    pkt = packet_new(buf, size, vnet_hdr_len);
+    g_free(buf);
 
     /*
      * if we get tcp packet
@@ -279,7 +275,15 @@ static ssize_t colo_rewriter_receive_iov(NetFilterState *nf,
      */
     if (pkt && is_tcp_packet(pkt)) {
 
-        fill_connection_key(pkt, &key, sender == nf->netdev);
+        fill_connection_key(pkt, &key);
+
+        if (sender == nf->netdev) {
+            /*
+             * We need make tcp TX and RX packet
+             * into one connection.
+             */
+            reverse_connection_key(&key);
+        }
 
         /* After failover we needn't change new TCP packet */
         if (s->failover_mode &&
@@ -345,7 +349,7 @@ static gboolean offset_is_nonzero(gpointer key,
 static void colo_rewriter_handle_event(NetFilterState *nf, int event,
                                        Error **errp)
 {
-    RewriterState *rs = FILTER_REWRITER(nf);
+    RewriterState *rs = FILTER_COLO_REWRITER(nf);
 
     switch (event) {
     case COLO_EVENT_CHECKPOINT:
@@ -365,31 +369,29 @@ static void colo_rewriter_handle_event(NetFilterState *nf, int event,
 
 static void colo_rewriter_cleanup(NetFilterState *nf)
 {
-    RewriterState *s = FILTER_REWRITER(nf);
+    RewriterState *s = FILTER_COLO_REWRITER(nf);
 
     /* flush packets */
     if (s->incoming_queue) {
         filter_rewriter_flush(nf);
         g_free(s->incoming_queue);
     }
-
-    g_hash_table_destroy(s->connection_track_table);
 }
 
 static void colo_rewriter_setup(NetFilterState *nf, Error **errp)
 {
-    RewriterState *s = FILTER_REWRITER(nf);
+    RewriterState *s = FILTER_COLO_REWRITER(nf);
 
     s->connection_track_table = g_hash_table_new_full(connection_key_hash,
                                                       connection_key_equal,
                                                       g_free,
-                                                      NULL);
+                                                      connection_destroy);
     s->incoming_queue = qemu_new_net_queue(qemu_netfilter_pass_to_next, nf);
 }
 
 static bool filter_rewriter_get_vnet_hdr(Object *obj, Error **errp)
 {
-    RewriterState *s = FILTER_REWRITER(obj);
+    RewriterState *s = FILTER_COLO_REWRITER(obj);
 
     return s->vnet_hdr;
 }
@@ -398,26 +400,25 @@ static void filter_rewriter_set_vnet_hdr(Object *obj,
                                          bool value,
                                          Error **errp)
 {
-    RewriterState *s = FILTER_REWRITER(obj);
+    RewriterState *s = FILTER_COLO_REWRITER(obj);
 
     s->vnet_hdr = value;
 }
 
 static void filter_rewriter_init(Object *obj)
 {
-    RewriterState *s = FILTER_REWRITER(obj);
+    RewriterState *s = FILTER_COLO_REWRITER(obj);
 
     s->vnet_hdr = false;
     s->failover_mode = FAILOVER_MODE_OFF;
+    object_property_add_bool(obj, "vnet_hdr_support",
+                             filter_rewriter_get_vnet_hdr,
+                             filter_rewriter_set_vnet_hdr);
 }
 
 static void colo_rewriter_class_init(ObjectClass *oc, void *data)
 {
     NetFilterClass *nfc = NETFILTER_CLASS(oc);
-
-    object_class_property_add_bool(oc, "vnet_hdr_support",
-                                   filter_rewriter_get_vnet_hdr,
-                                   filter_rewriter_set_vnet_hdr);
 
     nfc->setup = colo_rewriter_setup;
     nfc->cleanup = colo_rewriter_cleanup;

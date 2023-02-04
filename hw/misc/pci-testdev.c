@@ -24,7 +24,6 @@
 #include "qemu/event_notifier.h"
 #include "qemu/module.h"
 #include "sysemu/kvm.h"
-#include "qom/object.h"
 
 typedef struct PCITestDevHdr {
     uint8_t test;
@@ -79,7 +78,7 @@ enum {
 #define IOTEST_ACCESS_TYPE uint8_t
 #define IOTEST_ACCESS_WIDTH (sizeof(uint8_t))
 
-struct PCITestDevState {
+typedef struct PCITestDevState {
     /*< private >*/
     PCIDevice parent_obj;
     /*< public >*/
@@ -91,11 +90,12 @@ struct PCITestDevState {
 
     uint64_t membar_size;
     MemoryRegion membar;
-};
+} PCITestDevState;
 
 #define TYPE_PCI_TEST_DEV "pci-testdev"
 
-OBJECT_DECLARE_SIMPLE_TYPE(PCITestDevState, PCI_TEST_DEV)
+#define PCI_TEST_DEV(obj) \
+    OBJECT_CHECK(PCITestDevState, (obj), TYPE_PCI_TEST_DEV)
 
 #define IOTEST_IS_MEM(i) (strcmp(IOTEST_TYPE(i), "portio"))
 #define IOTEST_REGION(d, i) (IOTEST_IS_MEM(i) ?  &(d)->mmio : &(d)->portio)

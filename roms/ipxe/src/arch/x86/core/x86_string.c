@@ -30,14 +30,6 @@
 FILE_LICENCE ( GPL2_OR_LATER_OR_UBDL );
 
 #include <string.h>
-#include <config/defaults.h>
-
-/* Use generic_memcpy_reverse() if we cannot safely set the direction flag */
-#ifdef UNSAFE_STD
-#define USE_GENERIC_MEMCPY_REVERSE 1
-#else
-#define USE_GENERIC_MEMCPY_REVERSE 0
-#endif
 
 /**
  * Copy memory area
@@ -84,12 +76,6 @@ void * __attribute__ (( noinline )) __memcpy_reverse ( void *dest,
 	void *edi = ( dest + len - 1 );
 	const void *esi = ( src + len - 1 );
 	int discard_ecx;
-
-	/* Use unoptimised version if we are not permitted to modify
-	 * the direction flag.
-	 */
-	if ( USE_GENERIC_MEMCPY_REVERSE )
-		return generic_memcpy_reverse ( dest, src, len );
 
 	/* Assume memmove() is not performance-critical, and perform a
 	 * bytewise copy for simplicity.

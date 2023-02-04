@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto quick
 #
 # Resizing images
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=stefanha@redhat.com
+owner=stefanha@linux.vnet.ibm.com
 
 seq=`basename $0`
 echo "QA output created by $seq"
@@ -39,7 +38,7 @@ trap "_cleanup; exit \$status" 0 1 2 3 15
 . ./common.pattern
 
 _supported_fmt raw qcow2 qed luks
-_supported_proto file rbd nfs fuse
+_supported_proto file sheepdog rbd nfs
 
 echo "=== Creating image"
 echo

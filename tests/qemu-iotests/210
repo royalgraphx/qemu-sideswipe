@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# group: rw
 #
 # Test luks and file image creation
 #
@@ -62,7 +61,7 @@ with iotests.FilePath('t.luks') as disk_path, \
         'driver=luks,file.driver=file,file.filename=%s,key-secret=keysec0' % (disk_path),
         filter_path=disk_path,
         extra_args=['--object', 'secret,id=keysec0,data=foo'],
-        use_image_opts=True)
+        imgopts=True)
 
     #
     # Successful image creation (with non-default options)
@@ -83,8 +82,8 @@ with iotests.FilePath('t.luks') as disk_path, \
                          },
                          'size': size,
                          'key-secret': 'keysec0',
-                         'cipher-alg': 'aes-128',
-                         'cipher-mode': 'cbc',
+                         'cipher-alg': 'twofish-128',
+                         'cipher-mode': 'ctr',
                          'ivgen-alg': 'plain64',
                          'ivgen-hash-alg': 'md5',
                          'hash-alg': 'sha1',
@@ -96,7 +95,7 @@ with iotests.FilePath('t.luks') as disk_path, \
         'driver=luks,file.driver=file,file.filename=%s,key-secret=keysec0' % (disk_path),
         filter_path=disk_path,
         extra_args=['--object', 'secret,id=keysec0,data=foo'],
-        use_image_opts=True)
+        imgopts=True)
 
     #
     # Invalid BlockdevRef
@@ -132,7 +131,7 @@ with iotests.FilePath('t.luks') as disk_path, \
         'driver=luks,file.driver=file,file.filename=%s,key-secret=keysec0' % (disk_path),
         filter_path=disk_path,
         extra_args=['--object', 'secret,id=keysec0,data=foo'],
-        use_image_opts=True)
+        imgopts=True)
 
     #
     # Invalid sizes
@@ -176,4 +175,4 @@ with iotests.FilePath('t.luks') as disk_path, \
         'driver=luks,file.driver=file,file.filename=%s,key-secret=keysec0' % (disk_path),
         filter_path=disk_path,
         extra_args=['--object', 'secret,id=keysec0,data=foo'],
-        use_image_opts=True)
+        imgopts=True)

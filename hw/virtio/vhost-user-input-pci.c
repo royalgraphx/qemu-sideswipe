@@ -9,15 +9,14 @@
 #include "hw/virtio/virtio-input.h"
 #include "qapi/error.h"
 #include "qemu/error-report.h"
-#include "hw/virtio/virtio-pci.h"
-#include "qom/object.h"
+#include "virtio-pci.h"
 
 typedef struct VHostUserInputPCI VHostUserInputPCI;
 
 #define TYPE_VHOST_USER_INPUT_PCI "vhost-user-input-pci"
 
-DECLARE_INSTANCE_CHECKER(VHostUserInputPCI, VHOST_USER_INPUT_PCI,
-                         TYPE_VHOST_USER_INPUT_PCI)
+#define VHOST_USER_INPUT_PCI(obj) \
+    OBJECT_CHECK(VHostUserInputPCI, (obj), TYPE_VHOST_USER_INPUT_PCI)
 
 struct VHostUserInputPCI {
     VirtIOPCIProxy parent_obj;

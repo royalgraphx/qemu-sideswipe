@@ -8,8 +8,6 @@
  */
 
 #include <common.h>
-#include <command.h>
-#include <cpu_func.h>
 #include <asm/io.h>
 #include <asm/gpio.h>
 #include "cpld.h"
@@ -125,8 +123,7 @@ void cpld_init(void)
 #endif
 }
 
-static int do_cpld(struct cmd_tbl *cmdtp, int flag, int argc,
-		   char *const argv[])
+static int do_cpld(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	u32 addr, val;
 
@@ -163,7 +160,7 @@ U_BOOT_CMD(
 	"cpld write addr val\n"
 );
 
-void reset_cpu(void)
+void reset_cpu(ulong addr)
 {
 	cpld_write(CPLD_ADDR_RESET, 1);
 }

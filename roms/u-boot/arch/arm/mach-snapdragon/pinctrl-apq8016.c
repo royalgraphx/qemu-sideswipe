@@ -39,11 +39,11 @@ static const char *apq8016_get_function_name(struct udevice *dev,
 static const char *apq8016_get_pin_name(struct udevice *dev,
 					unsigned int selector)
 {
-	if (selector < 122) {
+	if (selector < 130) {
 		snprintf(pin_name, MAX_PIN_NAME_LEN, "GPIO_%u", selector);
 		return pin_name;
 	} else {
-		return msm_pinctrl_pins[selector - 122];
+		return msm_pinctrl_pins[selector - 130];
 	}
 }
 
@@ -53,7 +53,7 @@ static unsigned int apq8016_get_function_mux(unsigned int selector)
 }
 
 struct msm_pinctrl_data apq8016_data = {
-	.pin_count = 133,
+	.pin_count = 140,
 	.functions_count = ARRAY_SIZE(msm_pinctrl_functions),
 	.get_function_name = apq8016_get_function_name,
 	.get_function_mux = apq8016_get_function_mux,

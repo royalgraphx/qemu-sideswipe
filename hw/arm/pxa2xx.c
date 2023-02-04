@@ -8,6 +8,7 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "qemu/error-report.h"
 #include "qemu/module.h"
 #include "qapi/error.h"
@@ -20,17 +21,12 @@
 #include "hw/i2c/i2c.h"
 #include "hw/irq.h"
 #include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
 #include "hw/ssi/ssi.h"
-#include "hw/sd/sd.h"
 #include "chardev/char-fe.h"
 #include "sysemu/blockdev.h"
 #include "sysemu/qtest.h"
-#include "sysemu/rtc.h"
 #include "qemu/cutils.h"
 #include "qemu/log.h"
-#include "qom/object.h"
-#include "target/arm/cpregs.h"
 
 static struct {
     hwaddr io_base;
@@ -384,6 +380,7 @@ static const ARMCPRegInfo pxa_cp_reginfo[] = {
     { .name = "PWRMODE", .cp = 14, .crn = 7, .crm = 0, .opc1 = 0, .opc2 = 0,
       .access = PL1_RW, .type = ARM_CP_IO,
       .readfn = arm_cp_read_zero, .writefn = pxa2xx_pwrmode_write },
+    REGINFO_SENTINEL
 };
 
 static void pxa2xx_setup_cp14(PXA2xxState *s)
@@ -445,7 +442,7 @@ static void pxa2xx_mm_write(void *opaque, hwaddr addr,
             s->mm_regs[addr >> 2] = value;
             break;
         }
-        /* fallthrough */
+
     default:
         qemu_log_mask(LOG_GUEST_ERROR,
                       "%s: Bad write offset 0x%"HWADDR_PRIx"\n",
@@ -471,10 +468,11 @@ static const VMStateDescription vmstate_pxa2xx_mm = {
 };
 
 #define TYPE_PXA2XX_SSP "pxa2xx-ssp"
-OBJECT_DECLARE_SIMPLE_TYPE(PXA2xxSSPState, PXA2XX_SSP)
+#define PXA2XX_SSP(obj) \
+    OBJECT_CHECK(PXA2xxSSPState, (obj), TYPE_PXA2XX_SSP)
 
 /* Synchronous Serial Ports */
-struct PXA2xxSSPState {
+typedef struct {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
@@ -496,7 +494,7 @@ struct PXA2xxSSPState {
     uint32_t rx_fifo[16];
     uint32_t rx_level;
     uint32_t rx_start;
-};
+} PXA2xxSSPState;
 
 static bool pxa2xx_ssp_vmstate_validate(void *opaque, int version_id)
 {
@@ -676,7 +674,7 @@ static void pxa2xx_ssp_write(void *opaque, hwaddr addr,
         if (value & SSCR0_MOD)
             printf("%s: Attempt to use network mode\n", __func__);
         if (s->enable && SSCR0_DSS(value) < 4)
-            printf("%s: Wrong data size: %u bits\n", __func__,
+            printf("%s: Wrong data size: %i bits\n", __func__,
                             SSCR0_DSS(value));
         if (!(value & SSCR0_SSE)) {
             s->sssr = 0;
@@ -810,9 +808,10 @@ static void pxa2xx_ssp_init(Object *obj)
 #define PIAR		0x38	/* RTC Periodic Interrupt Alarm register */
 
 #define TYPE_PXA2XX_RTC "pxa2xx_rtc"
-OBJECT_DECLARE_SIMPLE_TYPE(PXA2xxRTCState, PXA2XX_RTC)
+#define PXA2XX_RTC(obj) \
+    OBJECT_CHECK(PXA2xxRTCState, (obj), TYPE_PXA2XX_RTC)
 
-struct PXA2xxRTCState {
+typedef struct {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
@@ -843,7 +842,7 @@ struct PXA2xxRTCState {
     QEMUTimer *rtc_swal2;
     QEMUTimer *rtc_pi;
     qemu_irq rtc_irq;
-};
+} PXA2xxRTCState;
 
 static inline void pxa2xx_rtc_int_update(PXA2xxRTCState *s)
 {
@@ -1242,13 +1241,18 @@ static const TypeInfo pxa2xx_rtc_sysbus_info = {
 /* I2C Interface */
 
 #define TYPE_PXA2XX_I2C_SLAVE "pxa2xx-i2c-slave"
-OBJECT_DECLARE_SIMPLE_TYPE(PXA2xxI2CSlaveState, PXA2XX_I2C_SLAVE)
+#define PXA2XX_I2C_SLAVE(obj) \
+    OBJECT_CHECK(PXA2xxI2CSlaveState, (obj), TYPE_PXA2XX_I2C_SLAVE)
 
-struct PXA2xxI2CSlaveState {
+typedef struct PXA2xxI2CSlaveState {
     I2CSlave parent_obj;
 
     PXA2xxI2CState *host;
-};
+} PXA2xxI2CSlaveState;
+
+#define TYPE_PXA2XX_I2C "pxa2xx_i2c"
+#define PXA2XX_I2C(obj) \
+    OBJECT_CHECK(PXA2xxI2CState, (obj), TYPE_PXA2XX_I2C)
 
 struct PXA2xxI2CState {
     /*< private >*/
@@ -1305,8 +1309,6 @@ static int pxa2xx_i2c_event(I2CSlave *i2c, enum i2c_event event)
     case I2C_NACK:
         s->status |= 1 << 1;				/* set ACKNAK */
         break;
-    default:
-        return -1;
     }
     pxa2xx_i2c_update(s);
 
@@ -1439,7 +1441,7 @@ static void pxa2xx_i2c_write(void *opaque, hwaddr addr,
         break;
 
     case ISAR:
-        i2c_slave_set_address(I2C_SLAVE(s->slave), value & 0x7f);
+        i2c_set_slave_address(I2C_SLAVE(s->slave), value & 0x7f);
         break;
 
     case IDBR:
@@ -1784,6 +1786,9 @@ static PXA2xxI2SState *pxa2xx_i2s_init(MemoryRegion *sysmem,
 }
 
 /* PXA Fast Infra-red Communications Port */
+#define TYPE_PXA2XX_FIR "pxa2xx-fir"
+#define PXA2XX_FIR(obj) OBJECT_CHECK(PXA2xxFIrState, (obj), TYPE_PXA2XX_FIR)
+
 struct PXA2xxFIrState {
     /*< private >*/
     SysBusDevice parent_obj;
@@ -2131,24 +2136,15 @@ PXA2xxState *pxa270_init(MemoryRegion *address_space,
 
     s->gpio = pxa2xx_gpio_init(0x40e00000, s->cpu, s->pic, 121);
 
+    dinfo = drive_get(IF_SD, 0, 0);
+    if (!dinfo && !qtest_enabled()) {
+        warn_report("missing SecureDigital device");
+    }
     s->mmc = pxa2xx_mmci_init(address_space, 0x41100000,
+                    dinfo ? blk_by_legacy_dinfo(dinfo) : NULL,
                     qdev_get_gpio_in(s->pic, PXA2XX_PIC_MMC),
                     qdev_get_gpio_in(s->dma, PXA2XX_RX_RQ_MMCI),
                     qdev_get_gpio_in(s->dma, PXA2XX_TX_RQ_MMCI));
-    dinfo = drive_get(IF_SD, 0, 0);
-    if (dinfo) {
-        DeviceState *carddev;
-
-        /* Create and plug in the sd card */
-        carddev = qdev_new(TYPE_SD_CARD);
-        qdev_prop_set_drive_err(carddev, "drive",
-                                blk_by_legacy_dinfo(dinfo), &error_fatal);
-        qdev_realize_and_unref(carddev, qdev_get_child_bus(DEVICE(s->mmc),
-                                                           "sd-bus"),
-                               &error_fatal);
-    } else if (!qtest_enabled()) {
-        warn_report("missing SecureDigital device");
-    }
 
     for (i = 0; pxa270_serial[i].io_base; i++) {
         if (serial_hd(i)) {
@@ -2264,24 +2260,15 @@ PXA2xxState *pxa255_init(MemoryRegion *address_space, unsigned int sdram_size)
 
     s->gpio = pxa2xx_gpio_init(0x40e00000, s->cpu, s->pic, 85);
 
+    dinfo = drive_get(IF_SD, 0, 0);
+    if (!dinfo && !qtest_enabled()) {
+        warn_report("missing SecureDigital device");
+    }
     s->mmc = pxa2xx_mmci_init(address_space, 0x41100000,
+                    dinfo ? blk_by_legacy_dinfo(dinfo) : NULL,
                     qdev_get_gpio_in(s->pic, PXA2XX_PIC_MMC),
                     qdev_get_gpio_in(s->dma, PXA2XX_RX_RQ_MMCI),
                     qdev_get_gpio_in(s->dma, PXA2XX_TX_RQ_MMCI));
-    dinfo = drive_get(IF_SD, 0, 0);
-    if (dinfo) {
-        DeviceState *carddev;
-
-        /* Create and plug in the sd card */
-        carddev = qdev_new(TYPE_SD_CARD);
-        qdev_prop_set_drive_err(carddev, "drive",
-                                blk_by_legacy_dinfo(dinfo), &error_fatal);
-        qdev_realize_and_unref(carddev, qdev_get_child_bus(DEVICE(s->mmc),
-                                                           "sd-bus"),
-                               &error_fatal);
-    } else if (!qtest_enabled()) {
-        warn_report("missing SecureDigital device");
-    }
 
     for (i = 0; pxa255_serial[i].io_base; i++) {
         if (serial_hd(i)) {

@@ -1,7 +1,7 @@
 /** @file
   Definitions to install Multiple Processor PPI.
 
-  Copyright (c) 2015 - 2021, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2015 - 2018, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -15,7 +15,6 @@
 #include <Ppi/SecPlatformInformation.h>
 #include <Ppi/SecPlatformInformation2.h>
 #include <Ppi/EndOfPeiPhase.h>
-#include <Ppi/MpServices2.h>
 
 #include <Library/BaseLib.h>
 #include <Library/DebugLib.h>
@@ -27,9 +26,8 @@
 #include <Library/CpuExceptionHandlerLib.h>
 #include <Library/MpInitLib.h>
 #include <Library/BaseMemoryLib.h>
-#include <Library/MemoryAllocationLib.h>
 
-extern EFI_PEI_PPI_DESCRIPTOR  mPeiCpuMpPpiDesc;
+extern EFI_PEI_PPI_DESCRIPTOR   mPeiCpuMpPpiDesc;
 
 /**
   This service retrieves the number of logical processor in the platform
@@ -68,10 +66,10 @@ extern EFI_PEI_PPI_DESCRIPTOR  mPeiCpuMpPpiDesc;
 EFI_STATUS
 EFIAPI
 PeiGetNumberOfProcessors (
-  IN  CONST EFI_PEI_SERVICES   **PeiServices,
-  IN  EFI_PEI_MP_SERVICES_PPI  *This,
-  OUT UINTN                    *NumberOfProcessors,
-  OUT UINTN                    *NumberOfEnabledProcessors
+  IN  CONST EFI_PEI_SERVICES    **PeiServices,
+  IN  EFI_PEI_MP_SERVICES_PPI   *This,
+  OUT UINTN                     *NumberOfProcessors,
+  OUT UINTN                     *NumberOfEnabledProcessors
   );
 
 /**
@@ -175,12 +173,12 @@ PeiGetProcessorInfo (
 EFI_STATUS
 EFIAPI
 PeiStartupAllAPs (
-  IN  CONST EFI_PEI_SERVICES   **PeiServices,
-  IN  EFI_PEI_MP_SERVICES_PPI  *This,
-  IN  EFI_AP_PROCEDURE         Procedure,
-  IN  BOOLEAN                  SingleThread,
-  IN  UINTN                    TimeoutInMicroSeconds,
-  IN  VOID                     *ProcedureArgument      OPTIONAL
+  IN  CONST EFI_PEI_SERVICES    **PeiServices,
+  IN  EFI_PEI_MP_SERVICES_PPI   *This,
+  IN  EFI_AP_PROCEDURE          Procedure,
+  IN  BOOLEAN                   SingleThread,
+  IN  UINTN                     TimeoutInMicroSeconds,
+  IN  VOID                      *ProcedureArgument      OPTIONAL
   );
 
 /**
@@ -232,12 +230,12 @@ PeiStartupAllAPs (
 EFI_STATUS
 EFIAPI
 PeiStartupThisAP (
-  IN  CONST EFI_PEI_SERVICES   **PeiServices,
-  IN  EFI_PEI_MP_SERVICES_PPI  *This,
-  IN  EFI_AP_PROCEDURE         Procedure,
-  IN  UINTN                    ProcessorNumber,
-  IN  UINTN                    TimeoutInMicroseconds,
-  IN  VOID                     *ProcedureArgument      OPTIONAL
+  IN  CONST EFI_PEI_SERVICES    **PeiServices,
+  IN  EFI_PEI_MP_SERVICES_PPI   *This,
+  IN  EFI_AP_PROCEDURE          Procedure,
+  IN  UINTN                     ProcessorNumber,
+  IN  UINTN                     TimeoutInMicroseconds,
+  IN  VOID                      *ProcedureArgument      OPTIONAL
   );
 
 /**
@@ -325,11 +323,11 @@ PeiSwitchBSP (
 EFI_STATUS
 EFIAPI
 PeiEnableDisableAP (
-  IN  CONST EFI_PEI_SERVICES   **PeiServices,
-  IN  EFI_PEI_MP_SERVICES_PPI  *This,
-  IN  UINTN                    ProcessorNumber,
-  IN  BOOLEAN                  EnableAP,
-  IN  UINT32                   *HealthFlag OPTIONAL
+  IN  CONST EFI_PEI_SERVICES    **PeiServices,
+  IN  EFI_PEI_MP_SERVICES_PPI   *This,
+  IN  UINTN                     ProcessorNumber,
+  IN  BOOLEAN                   EnableAP,
+  IN  UINT32                    *HealthFlag OPTIONAL
   );
 
 /**
@@ -375,7 +373,7 @@ PeiWhoAmI (
 **/
 VOID
 CollectBistDataFromPpi (
-  IN CONST EFI_PEI_SERVICES  **PeiServices
+  IN CONST EFI_PEI_SERVICES             **PeiServices
   );
 
 /**
@@ -393,21 +391,9 @@ CollectBistDataFromPpi (
 EFI_STATUS
 EFIAPI
 SecPlatformInformation2 (
-  IN CONST EFI_PEI_SERVICES                 **PeiServices,
-  IN OUT UINT64                             *StructureSize,
-  OUT EFI_SEC_PLATFORM_INFORMATION_RECORD2  *PlatformInformationRecord2
-  );
-
-/**
-  Migrates the Global Descriptor Table (GDT) to permanent memory.
-
-  @retval   EFI_SUCCESS           The GDT was migrated successfully.
-  @retval   EFI_OUT_OF_RESOURCES  The GDT could not be migrated due to lack of available memory.
-
-**/
-EFI_STATUS
-MigrateGdt (
-  VOID
+  IN CONST EFI_PEI_SERVICES                   **PeiServices,
+  IN OUT UINT64                               *StructureSize,
+     OUT EFI_SEC_PLATFORM_INFORMATION_RECORD2 *PlatformInformationRecord2
   );
 
 /**
@@ -421,11 +407,11 @@ MigrateGdt (
 **/
 EFI_STATUS
 InitializeCpuMpWorker (
-  IN CONST EFI_PEI_SERVICES  **PeiServices
+  IN CONST EFI_PEI_SERVICES     **PeiServices
   );
 
 /**
-  Enable/setup stack guard for each processor if PcdCpuStackGuard is set to TRUE.
+  Enabl/setup stack guard for each processor if PcdCpuStackGuard is set to TRUE.
 
   Doing this in the memory-discovered callback is to make sure the Stack Guard
   feature to cover as most PEI code as possible.

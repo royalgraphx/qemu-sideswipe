@@ -1,8 +1,17 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * Produce and consume flattened device trees
+/* Copyright 2013-2014 IBM Corp.
  *
- * Copyright 2013-2019 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <skiboot.h>
@@ -136,7 +145,7 @@ static void flatten_dt_node(void *fdt, const struct dt_node *root,
 static void create_dtb_reservemap(void *fdt, const struct dt_node *root)
 {
 	uint64_t base, size;
-	const __be64 *ranges;
+	const uint64_t *ranges;
 	const struct dt_property *prop;
 	int i;
 
@@ -146,8 +155,8 @@ static void create_dtb_reservemap(void *fdt, const struct dt_node *root)
 		ranges = (const void *)prop->prop;
 
 		for (i = 0; i < prop->len / (sizeof(uint64_t) * 2); i++) {
-			base = be64_to_cpu(*(ranges++));
-			size = be64_to_cpu(*(ranges++));
+			base = *(ranges++);
+			size = *(ranges++);
 			save_err(fdt_add_reservemap_entry(fdt, base, size));
 		}
 	}

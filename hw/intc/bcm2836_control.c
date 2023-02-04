@@ -157,22 +157,22 @@ static void bcm2836_control_set_local_irq(void *opaque, int core, int local_irq,
 
 static void bcm2836_control_set_local_irq0(void *opaque, int core, int level)
 {
-    bcm2836_control_set_local_irq(opaque, core, IRQ_CNTPSIRQ, level);
+    bcm2836_control_set_local_irq(opaque, core, 0, level);
 }
 
 static void bcm2836_control_set_local_irq1(void *opaque, int core, int level)
 {
-    bcm2836_control_set_local_irq(opaque, core, IRQ_CNTPNSIRQ, level);
+    bcm2836_control_set_local_irq(opaque, core, 1, level);
 }
 
 static void bcm2836_control_set_local_irq2(void *opaque, int core, int level)
 {
-    bcm2836_control_set_local_irq(opaque, core, IRQ_CNTHPIRQ, level);
+    bcm2836_control_set_local_irq(opaque, core, 2, level);
 }
 
 static void bcm2836_control_set_local_irq3(void *opaque, int core, int level)
 {
-    bcm2836_control_set_local_irq(opaque, core, IRQ_CNTVIRQ, level);
+    bcm2836_control_set_local_irq(opaque, core, 3, level);
 }
 
 static void bcm2836_control_set_gpu_irq(void *opaque, int irq, int level)
@@ -392,7 +392,7 @@ static void bcm2836_control_class_init(ObjectClass *klass, void *data)
     dc->vmsd = &vmstate_bcm2836_control;
 }
 
-static const TypeInfo bcm2836_control_info = {
+static TypeInfo bcm2836_control_info = {
     .name          = TYPE_BCM2836_CONTROL,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(BCM2836ControlState),

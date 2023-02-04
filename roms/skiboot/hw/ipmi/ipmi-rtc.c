@@ -1,8 +1,17 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * Talk to a Real Time Clock (RTC) over IPMI
+/* Copyright 2013-2014 IBM Corp.
  *
- * Copyright 2013-2015 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <stdlib.h>
@@ -62,13 +71,12 @@ static int64_t ipmi_set_sel_time(uint32_t _tv)
 	return ipmi_queue_msg(msg);
 }
 
-static int64_t ipmi_opal_rtc_read(__be32 *__ymd, __be64 *__hmsm)
+static int64_t ipmi_opal_rtc_read(uint32_t *y_m_d,
+				 uint64_t *h_m_s_m)
 {
 	int ret = 0;
-	uint32_t ymd;
-	uint64_t hmsm;
 
-	if (!__ymd || !__hmsm)
+	if (!y_m_d || !h_m_s_m)
 		return OPAL_PARAMETER;
 
 	switch(time_status) {
@@ -84,9 +92,7 @@ static int64_t ipmi_opal_rtc_read(__be32 *__ymd, __be64 *__hmsm)
 		break;
 
 	case updated:
-		rtc_cache_get_datetime(&ymd, &hmsm);
-		*__ymd = cpu_to_be32(ymd);
-		*__hmsm = cpu_to_be64(hmsm);
+		rtc_cache_get_datetime(y_m_d, h_m_s_m);
 		time_status = idle;
 		ret = OPAL_SUCCESS;
 		break;

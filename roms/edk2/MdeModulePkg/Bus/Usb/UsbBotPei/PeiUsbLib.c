@@ -1,5 +1,5 @@
 /** @file
-Common Library  for PEI USB.
+Common Libarary  for PEI USB.
 
 Copyright (c) 2006 - 2018, Intel Corporation. All rights reserved.<BR>
 
@@ -9,6 +9,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include "UsbPeim.h"
 #include "PeiUsbLib.h"
+
 
 /**
   Clear a given usb feature.
@@ -26,11 +27,11 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 EFI_STATUS
 PeiUsbClearDeviceFeature (
-  IN EFI_PEI_SERVICES   **PeiServices,
-  IN PEI_USB_IO_PPI     *UsbIoPpi,
-  IN EFI_USB_RECIPIENT  Recipient,
-  IN UINT16             Value,
-  IN UINT16             Target
+  IN EFI_PEI_SERVICES         **PeiServices,
+  IN PEI_USB_IO_PPI           *UsbIoPpi,
+  IN EFI_USB_RECIPIENT        Recipient,
+  IN UINT16                   Value,
+  IN UINT16                   Target
   )
 {
   EFI_USB_DEVICE_REQUEST  DevReq;
@@ -38,23 +39,23 @@ PeiUsbClearDeviceFeature (
   ASSERT (UsbIoPpi != NULL);
 
   switch (Recipient) {
-    case EfiUsbDevice:
-      DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_D;
-      break;
+  case EfiUsbDevice:
+    DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_D;
+    break;
 
-    case EfiUsbInterface:
-      DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_I;
-      break;
+  case EfiUsbInterface:
+    DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_I;
+    break;
 
-    case EfiUsbEndpoint:
-      DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_E;
-      break;
+  case EfiUsbEndpoint:
+    DevReq.RequestType = USB_DEV_CLEAR_FEATURE_REQ_TYPE_E;
+    break;
   }
 
-  DevReq.Request = USB_DEV_CLEAR_FEATURE;
-  DevReq.Value   = Value;
-  DevReq.Index   = Target;
-  DevReq.Length  = 0;
+  DevReq.Request      = USB_DEV_CLEAR_FEATURE;
+  DevReq.Value        = Value;
+  DevReq.Index        = Target;
+  DevReq.Length       = 0;
 
   return UsbIoPpi->UsbControlTransfer (
                      PeiServices,
@@ -66,6 +67,7 @@ PeiUsbClearDeviceFeature (
                      0
                      );
 }
+
 
 /**
   Clear Endpoint Halt.
@@ -81,9 +83,9 @@ PeiUsbClearDeviceFeature (
 **/
 EFI_STATUS
 PeiUsbClearEndpointHalt (
-  IN EFI_PEI_SERVICES  **PeiServices,
-  IN PEI_USB_IO_PPI    *UsbIoPpi,
-  IN UINT8             EndpointAddress
+  IN EFI_PEI_SERVICES         **PeiServices,
+  IN PEI_USB_IO_PPI           *UsbIoPpi,
+  IN UINT8                    EndpointAddress
   )
 {
   EFI_STATUS                    Status;
@@ -91,18 +93,18 @@ PeiUsbClearEndpointHalt (
   EFI_USB_ENDPOINT_DESCRIPTOR   *EndpointDescriptor;
   UINT8                         EndpointIndex;
 
+
   //
   // Check its interface
   //
   Status = UsbIoPpi->UsbGetInterfaceDescriptor (
-                       PeiServices,
-                       UsbIoPpi,
-                       &InterfaceDesc
-                       );
+                      PeiServices,
+                      UsbIoPpi,
+                      &InterfaceDesc
+                      );
   if (EFI_ERROR (Status)) {
     return Status;
   }
-
   for (EndpointIndex = 0; EndpointIndex < InterfaceDesc->NumEndpoints; EndpointIndex++) {
     Status = UsbIoPpi->UsbGetEndpointDescriptor (PeiServices, UsbIoPpi, EndpointIndex, &EndpointDescriptor);
     if (EFI_ERROR (Status)) {
@@ -119,12 +121,14 @@ PeiUsbClearEndpointHalt (
   }
 
   Status = PeiUsbClearDeviceFeature (
-             PeiServices,
-             UsbIoPpi,
-             EfiUsbEndpoint,
-             EfiUsbEndpointHalt,
-             EndpointAddress
-             );
+            PeiServices,
+            UsbIoPpi,
+            EfiUsbEndpoint,
+            EfiUsbEndpointHalt,
+            EndpointAddress
+            );
 
   return Status;
 }
+
+

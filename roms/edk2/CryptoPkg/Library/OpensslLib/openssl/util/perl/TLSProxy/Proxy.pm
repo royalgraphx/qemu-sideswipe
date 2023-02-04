@@ -19,7 +19,6 @@ use TLSProxy::ClientHello;
 use TLSProxy::ServerHello;
 use TLSProxy::EncryptedExtensions;
 use TLSProxy::Certificate;
-use TLSProxy::CertificateRequest;
 use TLSProxy::CertificateVerify;
 use TLSProxy::ServerKeyExchange;
 use TLSProxy::NewSessionTicket;
@@ -452,7 +451,7 @@ sub clientstart
     } else {
         # It's a bit counter-intuitive spot to make next connection to
         # the s_server. Rationale is that established connection works
-        # as synchronization point, in sense that this way we know that
+        # as syncronization point, in sense that this way we know that
         # s_server is actually done with current session...
         $self->connect_to_server();
     }

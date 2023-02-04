@@ -24,7 +24,8 @@
         "granularity": 65536,
         "name": "Transient",
         "persistent": false,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -32,7 +33,8 @@
         "granularity": 131072,
         "name": "Large",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -40,7 +42,8 @@
         "granularity": 65536,
         "name": "Medium",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -48,7 +51,8 @@
         "granularity": 32768,
         "name": "Small",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       }
     ]
   }
@@ -64,7 +68,8 @@
         "granularity": 32768,
         "name": "Small",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -72,7 +77,8 @@
         "granularity": 65536,
         "name": "Medium",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -80,7 +86,8 @@
         "granularity": 131072,
         "name": "Large",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       }
     ]
   }
@@ -101,7 +108,8 @@
         "granularity": 65536,
         "name": "Newtwo",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -109,7 +117,8 @@
         "granularity": 65536,
         "name": "New",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -117,7 +126,8 @@
         "granularity": 32768,
         "name": "Small",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -125,7 +135,8 @@
         "granularity": 65536,
         "name": "Medium",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -133,7 +144,8 @@
         "granularity": 131072,
         "name": "Large",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       }
     ]
   }
@@ -151,7 +163,8 @@
         "granularity": 65536,
         "name": "New",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -159,7 +172,8 @@
         "granularity": 65536,
         "name": "Newtwo",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -167,7 +181,8 @@
         "granularity": 32768,
         "name": "Small",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -175,7 +190,8 @@
         "granularity": 65536,
         "name": "Medium",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -183,7 +199,8 @@
         "granularity": 131072,
         "name": "Large",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       }
     ]
   }
@@ -215,7 +232,8 @@
         "granularity": 65536,
         "name": "NewB",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -223,7 +241,8 @@
         "granularity": 65536,
         "name": "NewC",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -231,7 +250,8 @@
         "granularity": 32768,
         "name": "Small",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -239,7 +259,8 @@
         "granularity": 65536,
         "name": "Medium",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       },
       {
         "busy": false,
@@ -247,7 +268,8 @@
         "granularity": 131072,
         "name": "Large",
         "persistent": true,
-        "recording": true
+        "recording": true,
+        "status": "active"
       }
     ]
   }

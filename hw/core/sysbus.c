@@ -6,7 +6,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -64,7 +64,7 @@ void foreach_dynamic_sysbus_device(FindSysbusDeviceFunc *func, void *opaque)
         .opaque = opaque,
     };
 
-    /* Loop through all sysbus devices that were spawned outside the machine */
+    /* Loop through all sysbus devices that were spawened outside the machine */
     container = container_get(qdev_get_machine(), "/peripheral");
     find_sysbus_device(container, &find);
     container = container_get(qdev_get_machine(), "/peripheral-anon");
@@ -93,7 +93,7 @@ bool sysbus_has_irq(SysBusDevice *dev, int n)
     char *prop = g_strdup_printf("%s[%d]", SYSBUS_DEVICE_GPIO_IRQ, n);
     ObjectProperty *r;
 
-    r = object_property_find(OBJECT(dev), prop);
+    r = object_property_find(OBJECT(dev), prop, NULL);
     g_free(prop);
 
     return (r != NULL);
@@ -199,7 +199,6 @@ void sysbus_init_mmio(SysBusDevice *dev, MemoryRegion *memory)
 
 MemoryRegion *sysbus_mmio_get_region(SysBusDevice *dev, int n)
 {
-    assert(n >= 0 && n < QDEV_MAX_MMIO);
     return dev->mmio[n].memory;
 }
 
@@ -340,13 +339,11 @@ static BusState *main_system_bus;
 
 static void main_system_bus_create(void)
 {
-    /*
-     * assign main_system_bus before qbus_init()
-     * in order to make "if (bus != sysbus_get_default())" work
-     */
+    /* assign main_system_bus before qbus_create_inplace()
+     * in order to make "if (bus != sysbus_get_default())" work */
     main_system_bus = g_malloc0(system_bus_info.instance_size);
-    qbus_init(main_system_bus, system_bus_info.instance_size,
-              TYPE_SYSTEM_BUS, NULL, "main-system-bus");
+    qbus_create_inplace(main_system_bus, system_bus_info.instance_size,
+                        TYPE_SYSTEM_BUS, NULL, "main-system-bus");
     OBJECT(main_system_bus)->free = g_free;
 }
 

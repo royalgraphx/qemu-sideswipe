@@ -93,7 +93,7 @@ int parse_integer ( char *text, unsigned int *value ) {
 
 	/* Parse integer */
 	*value = strtoul ( text, &endp, 0 );
-	if ( *endp || ( ! *text ) ) {
+	if ( *endp ) {
 		printf ( "\"%s\": invalid integer value\n", text );
 		return -EINVAL_INTEGER;
 	}

@@ -32,13 +32,12 @@
 #include "hw/isa/isa.h"
 #include "hw/i386/vmport.h"
 #include "hw/qdev-properties.h"
-#include "hw/boards.h"
 #include "sysemu/sysemu.h"
 #include "sysemu/hw_accel.h"
 #include "sysemu/qtest.h"
 #include "qemu/log.h"
+#include "cpu.h"
 #include "trace.h"
-#include "qom/object.h"
 
 #define VMPORT_MAGIC   0x564D5868
 
@@ -63,9 +62,9 @@
 #define VCPU_INFO_LEGACY_X2APIC_BIT     3
 #define VCPU_INFO_RESERVED_BIT          31
 
-OBJECT_DECLARE_SIMPLE_TYPE(VMPortState, VMPORT)
+#define VMPORT(obj) OBJECT_CHECK(VMPortState, (obj), TYPE_VMPORT)
 
-struct VMPortState {
+typedef struct VMPortState {
     ISADevice parent_obj;
 
     MemoryRegion io;
@@ -76,7 +75,7 @@ struct VMPortState {
     uint8_t vmware_vmx_type;
 
     uint32_t compat_flags;
-};
+} VMPortState;
 
 static VMPortState *port_state;
 
@@ -188,7 +187,7 @@ static uint32_t vmport_cmd_ram_size(void *opaque, uint32_t addr)
         return -1;
     }
     cpu->env.regs[R_EBX] = 0x1177;
-    return current_machine->ram_size;
+    return ram_size;
 }
 
 static uint32_t vmport_cmd_get_hz(void *opaque, uint32_t addr)

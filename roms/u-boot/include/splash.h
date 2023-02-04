@@ -66,10 +66,10 @@ void splash_get_pos(int *x, int *y);
 static inline void splash_get_pos(int *x, int *y) { }
 #endif
 
-#if defined(CONFIG_SPLASH_SCREEN) && defined(CONFIG_CMD_BMP)
-int splash_display(void);
+#if defined(CONFIG_SPLASH_SCREEN) && defined(CONFIG_LCD)
+int lcd_splash(ulong addr);
 #else
-static inline int splash_display(void)
+static inline int lcd_splash(ulong addr)
 {
 	return -ENOSYS;
 }

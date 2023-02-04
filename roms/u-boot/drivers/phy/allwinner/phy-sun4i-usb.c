@@ -11,21 +11,14 @@
  */
 
 #include <common.h>
-#include <clk.h>
 #include <dm.h>
-#include <log.h>
 #include <dm/device.h>
 #include <generic-phy.h>
 #include <phy-sun4i-usb.h>
-#include <reset.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/cpu.h>
-#include <dm/device_compat.h>
-#include <linux/bitops.h>
-#include <linux/delay.h>
-#include <linux/err.h>
 
 #define REG_ISCR			0x00
 #define REG_PHYCTL_A10			0x04
@@ -78,10 +71,8 @@ enum sun4i_usb_phy_type {
 	sun8i_a33_phy,
 	sun8i_a83t_phy,
 	sun8i_h3_phy,
-	sun8i_r40_phy,
 	sun8i_v3s_phy,
 	sun50i_a64_phy,
-	sun50i_h6_phy,
 };
 
 struct sun4i_usb_phy_cfg {
@@ -89,31 +80,38 @@ struct sun4i_usb_phy_cfg {
 	enum sun4i_usb_phy_type type;
 	u32 disc_thresh;
 	u8 phyctl_offset;
-	bool dedicated_clocks;
 	bool enable_pmu_unk1;
 	bool phy0_dual_route;
-	int missing_phys;
 };
 
 struct sun4i_usb_phy_info {
 	const char *gpio_vbus;
 	const char *gpio_vbus_det;
 	const char *gpio_id_det;
+	int rst_mask;
 } phy_info[] = {
 	{
 		.gpio_vbus = CONFIG_USB0_VBUS_PIN,
 		.gpio_vbus_det = CONFIG_USB0_VBUS_DET,
 		.gpio_id_det = CONFIG_USB0_ID_DET,
+		.rst_mask = (CCM_USB_CTRL_PHY0_RST | CCM_USB_CTRL_PHY0_CLK),
 	},
 	{
 		.gpio_vbus = CONFIG_USB1_VBUS_PIN,
 		.gpio_vbus_det = NULL,
 		.gpio_id_det = NULL,
+		.rst_mask = (CCM_USB_CTRL_PHY1_RST | CCM_USB_CTRL_PHY1_CLK),
 	},
 	{
 		.gpio_vbus = CONFIG_USB2_VBUS_PIN,
 		.gpio_vbus_det = NULL,
 		.gpio_id_det = NULL,
+#ifdef CONFIG_MACH_SUN8I_A83T
+		.rst_mask = (CCM_USB_CTRL_HSIC_RST | CCM_USB_CTRL_HSIC_CLK |
+			     CCM_USB_CTRL_12M_CLK),
+#else
+		.rst_mask = (CCM_USB_CTRL_PHY2_RST | CCM_USB_CTRL_PHY2_CLK),
+#endif
 	},
 	{
 		.gpio_vbus = CONFIG_USB3_VBUS_PIN,
@@ -128,13 +126,13 @@ struct sun4i_usb_phy_plat {
 	int gpio_vbus;
 	int gpio_vbus_det;
 	int gpio_id_det;
-	struct clk clocks;
-	struct reset_ctl resets;
+	int rst_mask;
 	int id;
 };
 
 struct sun4i_usb_phy_data {
 	void __iomem *base;
+	struct sunxi_ccm_reg *ccm;
 	const struct sun4i_usb_phy_cfg *cfg;
 	struct sun4i_usb_phy_plat *usb_phy;
 };
@@ -268,24 +266,10 @@ static int sun4i_usb_phy_init(struct phy *phy)
 	struct sun4i_usb_phy_data *data = dev_get_priv(phy->dev);
 	struct sun4i_usb_phy_plat *usb_phy = &data->usb_phy[phy->id];
 	u32 val;
-	int ret;
 
-	ret = clk_enable(&usb_phy->clocks);
-	if (ret) {
-		dev_err(phy->dev, "failed to enable usb_%ldphy clock\n",
-			phy->id);
-		return ret;
-	}
+	setbits_le32(&data->ccm->usb_clk_cfg, usb_phy->rst_mask);
 
-	ret = reset_deassert(&usb_phy->resets);
-	if (ret) {
-		dev_err(phy->dev, "failed to deassert usb_%ldreset reset\n",
-			phy->id);
-		return ret;
-	}
-
-	if (data->cfg->type == sun8i_a83t_phy ||
-	    data->cfg->type == sun50i_h6_phy) {
+	if (data->cfg->type == sun8i_a83t_phy) {
 		if (phy->id == 0) {
 			val = readl(data->base + data->cfg->phyctl_offset);
 			val |= PHY_CTL_VBUSVLDEXT;
@@ -324,11 +308,9 @@ static int sun4i_usb_phy_exit(struct phy *phy)
 {
 	struct sun4i_usb_phy_data *data = dev_get_priv(phy->dev);
 	struct sun4i_usb_phy_plat *usb_phy = &data->usb_phy[phy->id];
-	int ret;
 
 	if (phy->id == 0) {
-		if (data->cfg->type == sun8i_a83t_phy ||
-		    data->cfg->type == sun50i_h6_phy) {
+		if (data->cfg->type == sun8i_a83t_phy) {
 			void __iomem *phyctl = data->base +
 				data->cfg->phyctl_offset;
 
@@ -338,19 +320,7 @@ static int sun4i_usb_phy_exit(struct phy *phy)
 
 	sun4i_usb_phy_passby(phy, false);
 
-	ret = clk_disable(&usb_phy->clocks);
-	if (ret) {
-		dev_err(phy->dev, "failed to disable usb_%ldphy clock\n",
-			phy->id);
-		return ret;
-	}
-
-	ret = reset_assert(&usb_phy->resets);
-	if (ret) {
-		dev_err(phy->dev, "failed to assert usb_%ldreset reset\n",
-			phy->id);
-		return ret;
-	}
+	clrbits_le32(&data->ccm->usb_clk_cfg, usb_phy->rst_mask);
 
 	return 0;
 }
@@ -362,9 +332,6 @@ static int sun4i_usb_phy_xlate(struct phy *phy,
 
 	if (args->args_count >= data->cfg->num_phys)
 		return -EINVAL;
-
-	if (data->cfg->missing_phys & BIT(args->args[0]))
-		return -ENODEV;
 
 	if (args->args_count)
 		phy->id = args->args[0];
@@ -428,7 +395,7 @@ static struct phy_ops sun4i_usb_phy_ops = {
 
 static int sun4i_usb_phy_probe(struct udevice *dev)
 {
-	struct sun4i_usb_phy_plat *plat = dev_get_plat(dev);
+	struct sun4i_usb_phy_plat *plat = dev_get_platdata(dev);
 	struct sun4i_usb_phy_data *data = dev_get_priv(dev);
 	int i, ret;
 
@@ -440,14 +407,15 @@ static int sun4i_usb_phy_probe(struct udevice *dev)
 	if (IS_ERR(data->base))
 		return PTR_ERR(data->base);
 
+	data->ccm = (struct sunxi_ccm_reg *)SUNXI_CCM_BASE;
+	if (IS_ERR(data->ccm))
+		return PTR_ERR(data->ccm);
+
 	data->usb_phy = plat;
 	for (i = 0; i < data->cfg->num_phys; i++) {
 		struct sun4i_usb_phy_plat *phy = &plat[i];
 		struct sun4i_usb_phy_info *info = &phy_info[i];
 		char name[16];
-
-		if (data->cfg->missing_phys & BIT(i))
-			continue;
 
 		phy->gpio_vbus = sunxi_name_to_gpio(info->gpio_vbus);
 		if (phy->gpio_vbus >= 0) {
@@ -480,24 +448,6 @@ static int sun4i_usb_phy_probe(struct udevice *dev)
 			sunxi_gpio_set_pull(phy->gpio_id_det, SUNXI_GPIO_PULL_UP);
 		}
 
-		if (data->cfg->dedicated_clocks)
-			snprintf(name, sizeof(name), "usb%d_phy", i);
-		else
-			strlcpy(name, "usb_phy", sizeof(name));
-
-		ret = clk_get_by_name(dev, name, &phy->clocks);
-		if (ret) {
-			dev_err(dev, "failed to get usb%d_phy clock phandle\n", i);
-			return ret;
-		}
-
-		snprintf(name, sizeof(name), "usb%d_reset", i);
-		ret = reset_get_by_name(dev, name, &phy->resets);
-		if (ret) {
-			dev_err(dev, "failed to get usb%d_reset reset phandle\n", i);
-			return ret;
-		}
-
 		if (i || data->cfg->phy0_dual_route) {
 			snprintf(name, sizeof(name), "pmu%d", i);
 			phy->pmu = (void __iomem *)devfdt_get_addr_name(dev, name);
@@ -506,6 +456,9 @@ static int sun4i_usb_phy_probe(struct udevice *dev)
 		}
 
 		phy->id = i;
+		phy->rst_mask = info->rst_mask;
+		if ((data->cfg->type == sun8i_h3_phy) && (phy->id == 3))
+			phy->rst_mask = (BIT(3) | BIT(11));
 	};
 
 	debug("Allwinner Sun4I USB PHY driver loaded\n");
@@ -517,7 +470,6 @@ static const struct sun4i_usb_phy_cfg sun4i_a10_cfg = {
 	.type = sun4i_a10_phy,
 	.disc_thresh = 3,
 	.phyctl_offset = REG_PHYCTL_A10,
-	.dedicated_clocks = false,
 	.enable_pmu_unk1 = false,
 };
 
@@ -526,7 +478,6 @@ static const struct sun4i_usb_phy_cfg sun5i_a13_cfg = {
 	.type = sun4i_a10_phy,
 	.disc_thresh = 2,
 	.phyctl_offset = REG_PHYCTL_A10,
-	.dedicated_clocks = false,
 	.enable_pmu_unk1 = false,
 };
 
@@ -535,7 +486,6 @@ static const struct sun4i_usb_phy_cfg sun6i_a31_cfg = {
 	.type = sun6i_a31_phy,
 	.disc_thresh = 3,
 	.phyctl_offset = REG_PHYCTL_A10,
-	.dedicated_clocks = true,
 	.enable_pmu_unk1 = false,
 };
 
@@ -544,7 +494,6 @@ static const struct sun4i_usb_phy_cfg sun7i_a20_cfg = {
 	.type = sun4i_a10_phy,
 	.disc_thresh = 2,
 	.phyctl_offset = REG_PHYCTL_A10,
-	.dedicated_clocks = false,
 	.enable_pmu_unk1 = false,
 };
 
@@ -553,7 +502,6 @@ static const struct sun4i_usb_phy_cfg sun8i_a23_cfg = {
 	.type = sun4i_a10_phy,
 	.disc_thresh = 3,
 	.phyctl_offset = REG_PHYCTL_A10,
-	.dedicated_clocks = true,
 	.enable_pmu_unk1 = false,
 };
 
@@ -562,7 +510,6 @@ static const struct sun4i_usb_phy_cfg sun8i_a33_cfg = {
 	.type = sun8i_a33_phy,
 	.disc_thresh = 3,
 	.phyctl_offset = REG_PHYCTL_A33,
-	.dedicated_clocks = true,
 	.enable_pmu_unk1 = false,
 };
 
@@ -570,7 +517,6 @@ static const struct sun4i_usb_phy_cfg sun8i_a83t_cfg = {
 	.num_phys = 3,
 	.type = sun8i_a83t_phy,
 	.phyctl_offset = REG_PHYCTL_A33,
-	.dedicated_clocks = true,
 };
 
 static const struct sun4i_usb_phy_cfg sun8i_h3_cfg = {
@@ -578,17 +524,6 @@ static const struct sun4i_usb_phy_cfg sun8i_h3_cfg = {
 	.type = sun8i_h3_phy,
 	.disc_thresh = 3,
 	.phyctl_offset = REG_PHYCTL_A33,
-	.dedicated_clocks = true,
-	.enable_pmu_unk1 = true,
-	.phy0_dual_route = true,
-};
-
-static const struct sun4i_usb_phy_cfg sun8i_r40_cfg = {
-	.num_phys = 3,
-	.type = sun8i_r40_phy,
-	.disc_thresh = 3,
-	.phyctl_offset = REG_PHYCTL_A33,
-	.dedicated_clocks = true,
 	.enable_pmu_unk1 = true,
 	.phy0_dual_route = true,
 };
@@ -598,7 +533,6 @@ static const struct sun4i_usb_phy_cfg sun8i_v3s_cfg = {
 	.type = sun8i_v3s_phy,
 	.disc_thresh = 3,
 	.phyctl_offset = REG_PHYCTL_A33,
-	.dedicated_clocks = true,
 	.enable_pmu_unk1 = true,
 	.phy0_dual_route = true,
 };
@@ -608,20 +542,8 @@ static const struct sun4i_usb_phy_cfg sun50i_a64_cfg = {
 	.type = sun50i_a64_phy,
 	.disc_thresh = 3,
 	.phyctl_offset = REG_PHYCTL_A33,
-	.dedicated_clocks = true,
 	.enable_pmu_unk1 = true,
 	.phy0_dual_route = true,
-};
-
-static const struct sun4i_usb_phy_cfg sun50i_h6_cfg = {
-	.num_phys = 4,
-	.type = sun50i_h6_phy,
-	.disc_thresh = 3,
-	.phyctl_offset = REG_PHYCTL_A33,
-	.dedicated_clocks = true,
-	.enable_pmu_unk1 = true,
-	.phy0_dual_route = true,
-	.missing_phys = BIT(1) | BIT(2),
 };
 
 static const struct udevice_id sun4i_usb_phy_ids[] = {
@@ -633,10 +555,8 @@ static const struct udevice_id sun4i_usb_phy_ids[] = {
 	{ .compatible = "allwinner,sun8i-a33-usb-phy", .data = (ulong)&sun8i_a33_cfg },
 	{ .compatible = "allwinner,sun8i-a83t-usb-phy", .data = (ulong)&sun8i_a83t_cfg },
 	{ .compatible = "allwinner,sun8i-h3-usb-phy", .data = (ulong)&sun8i_h3_cfg },
-	{ .compatible = "allwinner,sun8i-r40-usb-phy", .data = (ulong)&sun8i_r40_cfg },
 	{ .compatible = "allwinner,sun8i-v3s-usb-phy", .data = (ulong)&sun8i_v3s_cfg },
 	{ .compatible = "allwinner,sun50i-a64-usb-phy", .data = (ulong)&sun50i_a64_cfg},
-	{ .compatible = "allwinner,sun50i-h6-usb-phy", .data = (ulong)&sun50i_h6_cfg},
 	{ }
 };
 
@@ -646,6 +566,6 @@ U_BOOT_DRIVER(sun4i_usb_phy) = {
 	.of_match = sun4i_usb_phy_ids,
 	.ops = &sun4i_usb_phy_ops,
 	.probe = sun4i_usb_phy_probe,
-	.plat_auto	= sizeof(struct sun4i_usb_phy_plat[MAX_PHYS]),
-	.priv_auto	= sizeof(struct sun4i_usb_phy_data),
+	.platdata_auto_alloc_size = sizeof(struct sun4i_usb_phy_plat[MAX_PHYS]),
+	.priv_auto_alloc_size = sizeof(struct sun4i_usb_phy_data),
 };

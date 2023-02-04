@@ -172,10 +172,7 @@ void qemu_chr_fe_set_open(CharBackend *be, int fe_open);
  * Chardev.
  */
 void qemu_chr_fe_printf(CharBackend *be, const char *fmt, ...)
-    G_GNUC_PRINTF(2, 3);
-
-
-typedef gboolean (*FEWatchFunc)(void *do_not_use, GIOCondition condition, void *data);
+    GCC_FMT_ATTR(2, 3);
 
 /**
  * qemu_chr_fe_add_watch:
@@ -191,13 +188,10 @@ typedef gboolean (*FEWatchFunc)(void *do_not_use, GIOCondition condition, void *
  * Note that you are responsible to update the front-end sources if
  * you are switching the main context with qemu_chr_fe_set_handlers().
  *
- * Warning: DO NOT use the first callback argument (it may be either
- * a GIOChannel or a QIOChannel, depending on the underlying chardev)
- *
  * Returns: the source tag
  */
 guint qemu_chr_fe_add_watch(CharBackend *be, GIOCondition cond,
-                            FEWatchFunc func, void *user_data);
+                            GIOFunc func, void *user_data);
 
 /**
  * qemu_chr_fe_write:

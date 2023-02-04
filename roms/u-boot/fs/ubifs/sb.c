@@ -16,8 +16,6 @@
 
 #include "ubifs.h"
 #ifndef __UBOOT__
-#include <log.h>
-#include <dm/devres.h>
 #include <linux/slab.h>
 #include <linux/random.h>
 #include <linux/math64.h>

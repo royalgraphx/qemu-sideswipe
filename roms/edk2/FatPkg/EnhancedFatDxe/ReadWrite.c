@@ -25,12 +25,12 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 EFI_STATUS
 EFIAPI
 FatGetPosition (
-  IN  EFI_FILE_PROTOCOL  *FHand,
-  OUT UINT64             *Position
+  IN  EFI_FILE_PROTOCOL *FHand,
+  OUT UINT64            *Position
   )
 {
-  FAT_IFILE  *IFile;
-  FAT_OFILE  *OFile;
+  FAT_IFILE *IFile;
+  FAT_OFILE *OFile;
 
   IFile = IFILE_FROM_FHAND (FHand);
   OFile = IFile->OFile;
@@ -66,8 +66,8 @@ FatSetPosition (
   IN UINT64             Position
   )
 {
-  FAT_IFILE  *IFile;
-  FAT_OFILE  *OFile;
+  FAT_IFILE *IFile;
+  FAT_OFILE *OFile;
 
   IFile = IFILE_FROM_FHAND (FHand);
   OFile = IFile->OFile;
@@ -91,14 +91,12 @@ FatSetPosition (
 
     FatResetODirCursor (OFile);
   }
-
   //
   // Set the position
   //
   if (Position == (UINT64)-1) {
     Position = OFile->FileSize;
   }
-
   //
   // Set the position
   //
@@ -120,9 +118,9 @@ FatSetPosition (
 **/
 EFI_STATUS
 FatIFileReadDir (
-  IN     FAT_IFILE  *IFile,
-  IN OUT UINTN      *BufferSize,
-  OUT VOID          *Buffer
+  IN     FAT_IFILE              *IFile,
+  IN OUT UINTN                  *BufferSize,
+     OUT VOID                   *Buffer
   )
 {
   EFI_STATUS  Status;
@@ -131,9 +129,9 @@ FatIFileReadDir (
   FAT_DIRENT  *DirEnt;
   UINT32      CurrentPos;
 
-  OFile      = IFile->OFile;
-  ODir       = OFile->ODir;
-  CurrentPos = ((UINT32)IFile->Position) / sizeof (FAT_DIRECTORY_ENTRY);
+  OFile       = IFile->OFile;
+  ODir        = OFile->ODir;
+  CurrentPos  = ((UINT32) IFile->Position) / sizeof (FAT_DIRECTORY_ENTRY);
 
   //
   // We need to relocate the directory
@@ -144,13 +142,12 @@ FatIFileReadDir (
     //
     FatResetODirCursor (OFile);
   }
-
   //
   // We seek the next directory entry's position
   //
   do {
     Status = FatGetNextDirEnt (OFile, &DirEnt);
-    if (EFI_ERROR (Status) || (DirEnt == NULL)) {
+    if (EFI_ERROR (Status) || DirEnt == NULL) {
       //
       // Something error occurred or reach the end of directory,
       // return 0 buffersize
@@ -159,7 +156,6 @@ FatIFileReadDir (
       goto Done;
     }
   } while (ODir->CurrentPos <= CurrentPos);
-
   Status = FatGetDirEntInfo (OFile->Volume, DirEnt, BufferSize, Buffer);
 
 Done:
@@ -197,11 +193,11 @@ Done:
 **/
 EFI_STATUS
 FatIFileAccess (
-  IN     EFI_FILE_PROTOCOL  *FHand,
-  IN     IO_MODE            IoMode,
-  IN OUT UINTN              *BufferSize,
-  IN OUT VOID               *Buffer,
-  IN     EFI_FILE_IO_TOKEN  *Token
+  IN     EFI_FILE_PROTOCOL     *FHand,
+  IN     IO_MODE               IoMode,
+  IN OUT UINTN                 *BufferSize,
+  IN OUT VOID                  *Buffer,
+  IN     EFI_FILE_IO_TOKEN     *Token
   )
 {
   EFI_STATUS  Status;
@@ -257,7 +253,6 @@ FatIFileAccess (
     if (FHand->Revision < EFI_FILE_PROTOCOL_REVISION2) {
       return EFI_UNSUPPORTED;
     }
-
     Task = FatCreateTask (IFile, Token);
     if (Task == NULL) {
       return EFI_OUT_OF_RESOURCES;
@@ -274,7 +269,7 @@ FatIFileAccess (
       //
       ASSERT (IoMode == ReadData);
       Status = FatIFileReadDir (IFile, BufferSize, Buffer);
-      OFile  = NULL;
+      OFile = NULL;
     } else {
       //
       // Access a file
@@ -288,7 +283,7 @@ FatIFileAccess (
           //
           // Adjust the actual size read
           //
-          *BufferSize -= (UINTN)EndPosition - OFile->FileSize;
+          *BufferSize -= (UINTN) EndPosition - OFile->FileSize;
         } else {
           //
           // We expand the file size of OFile
@@ -309,7 +304,7 @@ FatIFileAccess (
         }
       }
 
-      Status           = FatAccessOFile (OFile, IoMode, (UINTN)IFile->Position, BufferSize, Buffer, Task);
+      Status = FatAccessOFile (OFile, IoMode, (UINTN) IFile->Position, BufferSize, Buffer, Task);
       IFile->Position += *BufferSize;
     }
   }
@@ -360,7 +355,7 @@ EFIAPI
 FatRead (
   IN     EFI_FILE_PROTOCOL  *FHand,
   IN OUT UINTN              *BufferSize,
-  OUT VOID                  *Buffer
+     OUT VOID               *Buffer
   )
 {
   return FatIFileAccess (FHand, ReadData, BufferSize, Buffer, NULL);
@@ -458,12 +453,12 @@ FatWriteEx (
 **/
 EFI_STATUS
 FatAccessOFile (
-  IN     FAT_OFILE  *OFile,
-  IN     IO_MODE    IoMode,
-  IN     UINTN      Position,
-  IN OUT UINTN      *DataBufferSize,
-  IN OUT UINT8      *UserBuffer,
-  IN FAT_TASK       *Task
+  IN     FAT_OFILE      *OFile,
+  IN     IO_MODE        IoMode,
+  IN     UINTN          Position,
+  IN OUT UINTN          *DataBufferSize,
+  IN OUT UINT8          *UserBuffer,
+  IN FAT_TASK           *Task
   )
 {
   FAT_VOLUME  *Volume;
@@ -471,8 +466,8 @@ FatAccessOFile (
   EFI_STATUS  Status;
   UINTN       BufferSize;
 
-  BufferSize = *DataBufferSize;
-  Volume     = OFile->Volume;
+  BufferSize  = *DataBufferSize;
+  Volume      = OFile->Volume;
   ASSERT_VOLUME_LOCKED (Volume);
 
   Status = EFI_SUCCESS;
@@ -484,7 +479,6 @@ FatAccessOFile (
     if (EFI_ERROR (Status)) {
       break;
     }
-
     //
     // Clip length to block run
     //
@@ -497,7 +491,6 @@ FatAccessOFile (
     if (EFI_ERROR (Status)) {
       break;
     }
-
     //
     // Data was successfully accessed
     //
@@ -505,16 +498,14 @@ FatAccessOFile (
     UserBuffer += Len;
     BufferSize -= Len;
     if (IoMode == WriteData) {
-      OFile->Dirty   = TRUE;
-      OFile->Archive = TRUE;
+      OFile->Dirty    = TRUE;
+      OFile->Archive  = TRUE;
     }
-
     //
     // Make sure no outbound occurred
     //
     ASSERT (Position <= OFile->FileSize);
   }
-
   //
   // Update the number of bytes accessed
   //
@@ -535,15 +526,15 @@ FatAccessOFile (
 **/
 EFI_STATUS
 FatExpandOFile (
-  IN FAT_OFILE  *OFile,
-  IN UINT64     ExpandedSize
+  IN FAT_OFILE          *OFile,
+  IN UINT64             ExpandedSize
   )
 {
   EFI_STATUS  Status;
   UINTN       WritePos;
 
-  WritePos = OFile->FileSize;
-  Status   = FatGrowEof (OFile, ExpandedSize);
+  WritePos  = OFile->FileSize;
+  Status    = FatGrowEof (OFile, ExpandedSize);
   if (!EFI_ERROR (Status)) {
     Status = FatWriteZeroPool (OFile, WritePos);
   }
@@ -575,8 +566,8 @@ FatWriteZeroPool (
   UINTN       BufferSize;
   UINTN       WriteSize;
 
-  AppendedSize = OFile->FileSize - WritePos;
-  BufferSize   = AppendedSize;
+  AppendedSize  = OFile->FileSize - WritePos;
+  BufferSize    = AppendedSize;
   if (AppendedSize > FAT_MAX_ALLOCATE_SIZE) {
     //
     // If the appended size is larger, maybe we can not allocate the whole
@@ -593,9 +584,9 @@ FatWriteZeroPool (
   }
 
   do {
-    WriteSize     = AppendedSize > BufferSize ? BufferSize : (UINTN)AppendedSize;
+    WriteSize     = AppendedSize > BufferSize ? BufferSize : (UINTN) AppendedSize;
     AppendedSize -= WriteSize;
-    Status        = FatAccessOFile (OFile, WriteData, WritePos, &WriteSize, ZeroBuffer, NULL);
+    Status = FatAccessOFile (OFile, WriteData, WritePos, &WriteSize, ZeroBuffer, NULL);
     if (EFI_ERROR (Status)) {
       break;
     }
@@ -620,8 +611,8 @@ FatWriteZeroPool (
 **/
 EFI_STATUS
 FatTruncateOFile (
-  IN FAT_OFILE  *OFile,
-  IN UINTN      TruncatedSize
+  IN FAT_OFILE          *OFile,
+  IN UINTN              TruncatedSize
   )
 {
   OFile->FileSize = TruncatedSize;

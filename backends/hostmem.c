@@ -12,6 +12,7 @@
 
 #include "qemu/osdep.h"
 #include "sysemu/hostmem.h"
+#include "sysemu/sysemu.h"
 #include "hw/boards.h"
 #include "qapi/error.h"
 #include "qapi/qapi-builtin-visit.h"
@@ -19,7 +20,6 @@
 #include "qemu/config-file.h"
 #include "qom/object_interfaces.h"
 #include "qemu/mmap-alloc.h"
-#include "qemu/madvise.h"
 
 #ifdef CONFIG_NUMA
 #include <numaif.h>
@@ -80,7 +80,7 @@ host_memory_backend_get_host_nodes(Object *obj, Visitor *v, const char *name,
 {
     HostMemoryBackend *backend = MEMORY_BACKEND(obj);
     uint16List *host_nodes = NULL;
-    uint16List **tail = &host_nodes;
+    uint16List **node = &host_nodes;
     unsigned long value;
 
     value = find_first_bit(backend->host_nodes, MAX_NODES);
@@ -88,7 +88,9 @@ host_memory_backend_get_host_nodes(Object *obj, Visitor *v, const char *name,
         goto ret;
     }
 
-    QAPI_LIST_APPEND(tail, value);
+    *node = g_malloc0(sizeof(**node));
+    (*node)->value = value;
+    node = &(*node)->next;
 
     do {
         value = find_next_bit(backend->host_nodes, MAX_NODES, value + 1);
@@ -96,12 +98,13 @@ host_memory_backend_get_host_nodes(Object *obj, Visitor *v, const char *name,
             break;
         }
 
-        QAPI_LIST_APPEND(tail, value);
+        *node = g_malloc0(sizeof(**node));
+        (*node)->value = value;
+        node = &(*node)->next;
     } while (true);
 
 ret:
     visit_type_uint16List(v, name, &host_nodes, errp);
-    qapi_free_uint16List(host_nodes);
 }
 
 static void
@@ -217,11 +220,6 @@ static void host_memory_backend_set_prealloc(Object *obj, bool value,
     Error *local_err = NULL;
     HostMemoryBackend *backend = MEMORY_BACKEND(obj);
 
-    if (!backend->reserve && value) {
-        error_setg(errp, "'prealloc=on' and 'reserve=off' are incompatible");
-        return;
-    }
-
     if (!host_memory_backend_mr_inited(backend)) {
         backend->prealloc = value;
         return;
@@ -232,8 +230,7 @@ static void host_memory_backend_set_prealloc(Object *obj, bool value,
         void *ptr = memory_region_get_ram_ptr(&backend->mr);
         uint64_t sz = memory_region_size(&backend->mr);
 
-        qemu_prealloc_mem(fd, ptr, sz, backend->prealloc_threads,
-                          backend->prealloc_context, &local_err);
+        os_mem_prealloc(fd, ptr, sz, backend->prealloc_threads, &local_err);
         if (local_err) {
             error_propagate(errp, local_err);
             return;
@@ -274,8 +271,7 @@ static void host_memory_backend_init(Object *obj)
     /* TODO: convert access to globals to compat properties */
     backend->merge = machine_mem_merge(machine);
     backend->dump = machine_dump_guest_core(machine);
-    backend->reserve = true;
-    backend->prealloc_threads = machine->smp.cpus;
+    backend->prealloc_threads = 1;
 }
 
 static void host_memory_backend_post_init(Object *obj)
@@ -307,12 +303,22 @@ bool host_memory_backend_is_mapped(HostMemoryBackend *backend)
     return backend->is_mapped;
 }
 
+#ifdef __linux__
 size_t host_memory_backend_pagesize(HostMemoryBackend *memdev)
 {
-    size_t pagesize = qemu_ram_pagesize(memdev->mr.ram_block);
-    g_assert(pagesize >= qemu_real_host_page_size());
+    Object *obj = OBJECT(memdev);
+    char *path = object_property_get_str(obj, "mem-path", NULL);
+    size_t pagesize = qemu_mempath_getpagesize(path);
+
+    g_free(path);
     return pagesize;
 }
+#else
+size_t host_memory_backend_pagesize(HostMemoryBackend *memdev)
+{
+    return qemu_real_host_page_size;
+}
+#endif
 
 static void
 host_memory_backend_memory_complete(UserCreatable *uc, Error **errp)
@@ -384,9 +390,8 @@ host_memory_backend_memory_complete(UserCreatable *uc, Error **errp)
          * specified NUMA policy in place.
          */
         if (backend->prealloc) {
-            qemu_prealloc_mem(memory_region_get_fd(&backend->mr), ptr, sz,
-                              backend->prealloc_threads,
-                              backend->prealloc_context, &local_err);
+            os_mem_prealloc(memory_region_get_fd(&backend->mr), ptr, sz,
+                            backend->prealloc_threads, &local_err);
             if (local_err) {
                 goto out;
             }
@@ -423,30 +428,6 @@ static void host_memory_backend_set_share(Object *o, bool value, Error **errp)
     }
     backend->share = value;
 }
-
-#ifdef CONFIG_LINUX
-static bool host_memory_backend_get_reserve(Object *o, Error **errp)
-{
-    HostMemoryBackend *backend = MEMORY_BACKEND(o);
-
-    return backend->reserve;
-}
-
-static void host_memory_backend_set_reserve(Object *o, bool value, Error **errp)
-{
-    HostMemoryBackend *backend = MEMORY_BACKEND(o);
-
-    if (host_memory_backend_mr_inited(backend)) {
-        error_setg(errp, "cannot change property value");
-        return;
-    }
-    if (backend->prealloc && !value) {
-        error_setg(errp, "'prealloc=on' and 'reserve=off' are incompatible");
-        return;
-    }
-    backend->reserve = value;
-}
-#endif /* CONFIG_LINUX */
 
 static bool
 host_memory_backend_get_use_canonical_path(Object *obj, Error **errp)
@@ -494,11 +475,6 @@ host_memory_backend_class_init(ObjectClass *oc, void *data)
         NULL, NULL);
     object_class_property_set_description(oc, "prealloc-threads",
         "Number of CPU threads to use for prealloc");
-    object_class_property_add_link(oc, "prealloc-context",
-        TYPE_THREAD_CONTEXT, offsetof(HostMemoryBackend, prealloc_context),
-        object_property_allow_set_link, OBJ_PROP_LINK_STRONG);
-    object_class_property_set_description(oc, "prealloc-context",
-        "Context to use for creating CPU threads for preallocation");
     object_class_property_add(oc, "size", "int",
         host_memory_backend_get_size,
         host_memory_backend_set_size,
@@ -521,22 +497,6 @@ host_memory_backend_class_init(ObjectClass *oc, void *data)
         host_memory_backend_get_share, host_memory_backend_set_share);
     object_class_property_set_description(oc, "share",
         "Mark the memory as private to QEMU or shared");
-#ifdef CONFIG_LINUX
-    object_class_property_add_bool(oc, "reserve",
-        host_memory_backend_get_reserve, host_memory_backend_set_reserve);
-    object_class_property_set_description(oc, "reserve",
-        "Reserve swap space (or huge pages) if applicable");
-#endif /* CONFIG_LINUX */
-    /*
-     * Do not delete/rename option. This option must be considered stable
-     * (as if it didn't have the 'x-' prefix including deprecation period) as
-     * long as 4.0 and older machine types exists.
-     * Option will be used by upper layers to override (disable) canonical path
-     * for ramblock-id set by compat properties on old machine types ( <= 4.0),
-     * to keep migration working when backend is used for main RAM with
-     * -machine memory-backend= option (main RAM historically used prefix-less
-     * ramblock-id).
-     */
     object_class_property_add_bool(oc, "x-use-canonical-path-for-ramblock-id",
         host_memory_backend_get_use_canonical_path,
         host_memory_backend_set_use_canonical_path);

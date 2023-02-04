@@ -9,7 +9,6 @@
 #include <asm/cacheops.h>
 #include <asm/io.h>
 #include <asm/reboot.h>
-#include <linux/bitops.h>
 #include <mach/common.h>
 
 #define MIPS_VCOREIII_MEMORY_DDR3
@@ -26,7 +25,7 @@
 #define VC3_MPAR_CL               6
 #define VC3_MPAR_tWTR             4
 #define VC3_MPAR_tRC              16
-#define VC3_MPAR_tFAW             16
+#define VC3_MPR_tFAW             16
 #define VC3_MPAR_tRP              5
 #define VC3_MPAR_tRRD             4
 #define VC3_MPAR_tRCD             5
@@ -162,8 +161,7 @@
 
 #endif
 
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
-	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL)
+#ifdef CONFIG_SOC_OCELOT
 #define MIPS_VCOREIII_MEMORY_16BIT 1
 #endif
 
@@ -241,8 +239,7 @@
 	ICPU_MEMCTRL_CFG_MSB_ROW_ADDR(VC3_MPAR_row_addr_cnt - 1) |	\
 	ICPU_MEMCTRL_CFG_MSB_COL_ADDR(VC3_MPAR_col_addr_cnt - 1)
 
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
-	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL)
+#ifdef CONFIG_SOC_OCELOT
 #define MSCC_MEMPARM_PERIOD					\
 	ICPU_MEMCTRL_REF_PERIOD_MAX_PEND_REF(8) |		\
 	ICPU_MEMCTRL_REF_PERIOD_REF_PERIOD(VC3_MPAR_tREFI)
@@ -381,8 +378,7 @@ static inline void memphy_soft_reset(void)
 	PAUSE();
 }
 
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
-	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL)
+#ifdef CONFIG_SOC_OCELOT
 static u8 training_data[] = { 0xfe, 0x11, 0x33, 0x55, 0x77, 0x99, 0xbb, 0xdd };
 
 static inline void sleep_100ns(u32 val)
@@ -402,7 +398,22 @@ static inline void sleep_100ns(u32 val)
 		;
 }
 
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_SERVAL)
+static inline void hal_vcoreiii_ddr_reset_assert(void)
+{
+	/* DDR has reset pin on GPIO 19 toggle Low-High to release */
+	setbits_le32(BASE_DEVCPU_GCB + PERF_GPIO_OE, BIT(19));
+	writel(BIT(19), BASE_DEVCPU_GCB + PERF_GPIO_OUT_CLR);
+	sleep_100ns(10000);
+}
+
+static inline void hal_vcoreiii_ddr_reset_release(void)
+{
+	/* DDR has reset pin on GPIO 19 toggle Low-High to release */
+	setbits_le32(BASE_DEVCPU_GCB + PERF_GPIO_OE, BIT(19));
+	writel(BIT(19), BASE_DEVCPU_GCB + PERF_GPIO_OUT_SET);
+	sleep_100ns(10000);
+}
+
 /*
  * DDR memory sanity checking failed, tally and do hard reset
  *
@@ -412,11 +423,9 @@ static inline void hal_vcoreiii_ddr_failed(void)
 {
 	register u32 reset;
 
-#if defined(CONFIG_SOC_OCELOT)
 	writel(readl(BASE_CFG + ICPU_GPR(6)) + 1, BASE_CFG + ICPU_GPR(6));
 
 	clrbits_le32(BASE_DEVCPU_GCB + PERF_GPIO_OE, BIT(19));
-#endif
 
 	/* We have to execute the reset function from cache. Indeed,
 	 * the reboot workaround in _machine_restart() will change the
@@ -436,44 +445,9 @@ static inline void hal_vcoreiii_ddr_failed(void)
 	reset = KSEG0ADDR(_machine_restart);
 	icache_lock((void *)reset, 128);
 	asm volatile ("jr %0"::"r" (reset));
-}
-#else				/* JR2 || ServalT */
-static inline void hal_vcoreiii_ddr_failed(void)
-{
-	writel(0, BASE_CFG + ICPU_RESET);
-	writel(PERF_SOFT_RST_SOFT_CHIP_RST, BASE_CFG + PERF_SOFT_RST);
-}
-#endif
 
-#if defined(CONFIG_SOC_OCELOT)
-static inline void hal_vcoreiii_ddr_reset_assert(void)
-{
-	/* DDR has reset pin on GPIO 19 toggle Low-High to release */
-	setbits_le32(BASE_DEVCPU_GCB + PERF_GPIO_OE, BIT(19));
-	writel(BIT(19), BASE_DEVCPU_GCB + PERF_GPIO_OUT_CLR);
-	sleep_100ns(10000);
+	panic("DDR init failed\n");
 }
-
-static inline void hal_vcoreiii_ddr_reset_release(void)
-{
-	/* DDR has reset pin on GPIO 19 toggle Low-High to release */
-	setbits_le32(BASE_DEVCPU_GCB + PERF_GPIO_OE, BIT(19));
-	writel(BIT(19), BASE_DEVCPU_GCB + PERF_GPIO_OUT_SET);
-	sleep_100ns(10000);
-}
-
-#else				/* JR2 || ServalT || Serval */
-static inline void hal_vcoreiii_ddr_reset_assert(void)
-{
-	/* Ensure the memory controller physical iface is forced reset */
-	writel(readl(BASE_CFG + ICPU_MEMPHY_CFG) |
-	       ICPU_MEMPHY_CFG_PHY_RST, BASE_CFG + ICPU_MEMPHY_CFG);
-
-	/* Ensure the memory controller is forced reset */
-	writel(readl(BASE_CFG + ICPU_RESET) |
-	       ICPU_RESET_MEM_RST_FORCE, BASE_CFG + ICPU_RESET);
-}
-#endif				/* JR2 || ServalT || Serval */
 
 /*
  * DDR memory sanity checking done, possibly enable ECC.
@@ -764,8 +738,7 @@ static inline void hal_vcoreiii_init_memctl(void)
 	/* Wait for ZCAL to clear */
 	while (readl(BASE_CFG + ICPU_MEMPHY_ZCAL) & ICPU_MEMPHY_ZCAL_ZCAL_ENA)
 		;
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
-	defined(CONFIG_SOC_SERVALT)
+#ifdef CONFIG_SOC_OCELOT
 	/* Check no ZCAL_ERR */
 	if (readl(BASE_CFG + ICPU_MEMPHY_ZCAL_STAT)
 	    & ICPU_MEMPHY_ZCAL_STAT_ZCAL_ERR)
@@ -779,8 +752,7 @@ static inline void hal_vcoreiii_init_memctl(void)
 	writel(MSCC_MEMPARM_MEMCFG, BASE_CFG + ICPU_MEMCTRL_CFG);
 	writel(MSCC_MEMPARM_PERIOD, BASE_CFG + ICPU_MEMCTRL_REF_PERIOD);
 
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
-	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL)
+#ifdef CONFIG_SOC_OCELOT
 	writel(MSCC_MEMPARM_TIMING0, BASE_CFG + ICPU_MEMCTRL_TIMING0);
 #else /* Luton */
 	clrbits_le32(BASE_CFG + ICPU_MEMCTRL_TIMING0, ((1 << 20) - 1));
@@ -795,7 +767,7 @@ static inline void hal_vcoreiii_init_memctl(void)
 	writel(MSCC_MEMPARM_MR2, BASE_CFG + ICPU_MEMCTRL_MR2_VAL);
 	writel(MSCC_MEMPARM_MR3, BASE_CFG + ICPU_MEMCTRL_MR3_VAL);
 
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_SERVAL)
+#ifdef CONFIG_SOC_OCELOT
 	/* Termination setup - enable ODT */
 	writel(ICPU_MEMCTRL_TERMRES_CTRL_LOCAL_ODT_RD_ENA |
 	       /* Assert ODT0 for any write */
@@ -803,14 +775,9 @@ static inline void hal_vcoreiii_init_memctl(void)
 	       BASE_CFG + ICPU_MEMCTRL_TERMRES_CTRL);
 
 	/* Release Reset from DDR */
-#if defined(CONFIG_SOC_OCELOT)
 	hal_vcoreiii_ddr_reset_release();
-#endif
 
 	writel(readl(BASE_CFG + ICPU_GPR(7)) + 1, BASE_CFG + ICPU_GPR(7));
-#elif defined(CONFIG_SOC_JR2) || defined(CONFIG_SOC_SERVALT)
-	writel(ICPU_MEMCTRL_TERMRES_CTRL_ODT_WR_ENA(3),
-	       BASE_CFG + ICPU_MEMCTRL_TERMRES_CTRL);
 #else				/* Luton */
 	/* Termination setup - disable ODT */
 	writel(0, BASE_CFG + ICPU_MEMCTRL_TERMRES_CTRL);
@@ -829,8 +796,7 @@ static inline void hal_vcoreiii_wait_memctl(void)
 
 	/* Settle...? */
 	sleep_100ns(10000);
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_JR2) || \
-	defined(CONFIG_SOC_SERVALT) || defined(CONFIG_SOC_SERVAL)
+#ifdef CONFIG_SOC_OCELOT
 	/* Establish data contents in DDR RAM for training */
 
 	__raw_writel(0xcacafefe, ((void __iomem *)MSCC_DDR_TO));

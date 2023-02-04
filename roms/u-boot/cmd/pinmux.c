@@ -14,8 +14,7 @@
 
 static struct udevice *currdev;
 
-static int do_dev(struct cmd_tbl *cmdtp, int flag, int argc,
-		  char *const argv[])
+static int do_dev(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	const char *name;
 	int ret;
@@ -28,7 +27,6 @@ static int do_dev(struct cmd_tbl *cmdtp, int flag, int argc,
 			printf("Can't get the pin-controller: %s!\n", name);
 			return CMD_RET_FAILURE;
 		}
-		/* fall through */
 	case 1:
 		if (!currdev) {
 			printf("Pin-controller device is not set!\n");
@@ -76,8 +74,7 @@ static int show_pinmux(struct udevice *dev)
 	return 0;
 }
 
-static int do_status(struct cmd_tbl *cmdtp, int flag, int argc,
-		     char *const argv[])
+static int do_status(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	struct udevice *dev;
 	int ret = CMD_RET_USAGE;
@@ -101,8 +98,7 @@ static int do_status(struct cmd_tbl *cmdtp, int flag, int argc,
 	return ret;
 }
 
-static int do_list(struct cmd_tbl *cmdtp, int flag, int argc,
-		   char *const argv[])
+static int do_list(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	struct udevice *dev;
 
@@ -121,16 +117,16 @@ static int do_list(struct cmd_tbl *cmdtp, int flag, int argc,
 	return CMD_RET_SUCCESS;
 }
 
-static struct cmd_tbl pinmux_subcmd[] = {
+static cmd_tbl_t pinmux_subcmd[] = {
 	U_BOOT_CMD_MKENT(dev, 2, 1, do_dev, "", ""),
 	U_BOOT_CMD_MKENT(list, 1, 1, do_list, "", ""),
 	U_BOOT_CMD_MKENT(status, 2, 1, do_status, "", ""),
 };
 
-static int do_pinmux(struct cmd_tbl *cmdtp, int flag, int argc,
-		     char *const argv[])
+static int do_pinmux(cmd_tbl_t *cmdtp, int flag, int argc,
+		     char * const argv[])
 {
-	struct cmd_tbl *cmd;
+	cmd_tbl_t *cmd;
 
 	argc--;
 	argv++;

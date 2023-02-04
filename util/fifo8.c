@@ -31,7 +31,9 @@ void fifo8_destroy(Fifo8 *fifo)
 
 void fifo8_push(Fifo8 *fifo, uint8_t data)
 {
-    assert(fifo->num < fifo->capacity);
+    if (fifo->num == fifo->capacity) {
+        abort();
+    }
     fifo->data[(fifo->head + fifo->num) % fifo->capacity] = data;
     fifo->num++;
 }
@@ -40,7 +42,9 @@ void fifo8_push_all(Fifo8 *fifo, const uint8_t *data, uint32_t num)
 {
     uint32_t start, avail;
 
-    assert(fifo->num + num <= fifo->capacity);
+    if (fifo->num + num > fifo->capacity) {
+        abort();
+    }
 
     start = (fifo->head + fifo->num) % fifo->capacity;
 
@@ -59,7 +63,9 @@ uint8_t fifo8_pop(Fifo8 *fifo)
 {
     uint8_t ret;
 
-    assert(fifo->num > 0);
+    if (fifo->num == 0) {
+        abort();
+    }
     ret = fifo->data[fifo->head++];
     fifo->head %= fifo->capacity;
     fifo->num--;
@@ -70,7 +76,9 @@ const uint8_t *fifo8_pop_buf(Fifo8 *fifo, uint32_t max, uint32_t *num)
 {
     uint8_t *ret;
 
-    assert(max > 0 && max <= fifo->num);
+    if (max == 0 || max > fifo->num) {
+        abort();
+    }
     *num = MIN(fifo->capacity - fifo->head, max);
     ret = &fifo->data[fifo->head];
     fifo->head += *num;

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw
 #
 # Test ref count checks on encrypted images
 #

@@ -63,7 +63,7 @@ static int guess_disk_lchs(BlockBackend *blk,
 
     blk_get_geometry(blk, &nb_sectors);
 
-    if (blk_pread(blk, 0, BDRV_SECTOR_SIZE, buf, 0) < 0) {
+    if (blk_pread(blk, 0, buf, BDRV_SECTOR_SIZE) < 0) {
         return -1;
     }
     /* test msdos magic */
@@ -150,12 +150,7 @@ void hd_geometry_guess(BlockBackend *blk,
         translation = BIOS_ATA_TRANSLATION_NONE;
     }
     if (ptrans) {
-        if (*ptrans == BIOS_ATA_TRANSLATION_AUTO) {
-            *ptrans = translation;
-        } else {
-            /* Defer to the translation specified by the user.  */
-            translation = *ptrans;
-        }
+        *ptrans = translation;
     }
     trace_hd_geometry_guess(blk, *pcyls, *pheads, *psecs, translation);
 }

@@ -11,7 +11,6 @@
 #include <dm.h>
 #include <errno.h>
 #include <pci.h>
-#include <linux/bitops.h>
 
 /* AHB-PCI Bridge PCI communication registers */
 #define RCAR_AHBPCI_PCICOM_OFFSET	0x800
@@ -108,7 +107,7 @@ static int rcar_gen2_pci_addr_valid(pci_dev_t d, uint offset)
 	return 0;
 }
 
-static u32 get_bus_address(const struct udevice *dev, pci_dev_t bdf, u32 offset)
+static u32 get_bus_address(struct udevice *dev, pci_dev_t bdf, u32 offset)
 {
 	struct rcar_gen2_pci_priv *priv = dev_get_priv(dev);
 
@@ -127,7 +126,7 @@ static u32 setup_bus_address(struct udevice *dev, pci_dev_t bdf, u32 offset)
 	return get_bus_address(dev, bdf, offset);
 }
 
-static int rcar_gen2_pci_read_config(const struct udevice *dev, pci_dev_t bdf,
+static int rcar_gen2_pci_read_config(struct udevice *dev, pci_dev_t bdf,
 				     uint offset, ulong *value,
 				     enum pci_size_t size)
 {
@@ -231,7 +230,7 @@ static int rcar_gen2_pci_probe(struct udevice *dev)
 	return 0;
 }
 
-static int rcar_gen2_pci_of_to_plat(struct udevice *dev)
+static int rcar_gen2_pci_ofdata_to_platdata(struct udevice *dev)
 {
 	struct rcar_gen2_pci_priv *priv = dev_get_priv(dev);
 
@@ -259,6 +258,6 @@ U_BOOT_DRIVER(rcar_gen2_pci) = {
 	.of_match		= rcar_gen2_pci_ids,
 	.ops			= &rcar_gen2_pci_ops,
 	.probe			= rcar_gen2_pci_probe,
-	.of_to_plat	= rcar_gen2_pci_of_to_plat,
-	.priv_auto	= sizeof(struct rcar_gen2_pci_priv),
+	.ofdata_to_platdata	= rcar_gen2_pci_ofdata_to_platdata,
+	.priv_auto_alloc_size	= sizeof(struct rcar_gen2_pci_priv),
 };

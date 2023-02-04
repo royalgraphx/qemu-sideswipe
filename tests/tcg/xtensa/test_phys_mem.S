@@ -2,7 +2,7 @@
 
 test_suite phys_mem
 
-#if XCHAL_HAVE_PTP_MMU
+#if XCHAL_HAVE_PTP_MMU && !XCHAL_HAVE_SPANNING_WAY
 
 .purgem test_init
 
@@ -13,14 +13,6 @@ test_suite phys_mem
     witlb   a2, a3
     movi    a2, 0xc0000000
     wsr     a2, ptevaddr
-#if XCHAL_HAVE_SPANNING_WAY
-    movi    a2, 0xc0000000 | XCHAL_SPANNING_WAY
-    idtlb   a2
-    iitlb   a2
-    movi    a2, 0x20000000 | XCHAL_SPANNING_WAY
-    idtlb   a2
-    iitlb   a2
-#endif
 .endm
 
 test inst_fetch_get_pte_no_phys

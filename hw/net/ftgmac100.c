@@ -453,8 +453,7 @@ static void do_phy_ctl(FTGMAC100State *s)
 
 static int ftgmac100_read_bd(FTGMAC100Desc *bd, dma_addr_t addr)
 {
-    if (dma_memory_read(&address_space_memory, addr,
-                        bd, sizeof(*bd), MEMTXATTRS_UNSPECIFIED)) {
+    if (dma_memory_read(&address_space_memory, addr, bd, sizeof(*bd))) {
         qemu_log_mask(LOG_GUEST_ERROR, "%s: failed to read descriptor @ 0x%"
                       HWADDR_PRIx "\n", __func__, addr);
         return -1;
@@ -474,44 +473,12 @@ static int ftgmac100_write_bd(FTGMAC100Desc *bd, dma_addr_t addr)
     lebd.des1 = cpu_to_le32(bd->des1);
     lebd.des2 = cpu_to_le32(bd->des2);
     lebd.des3 = cpu_to_le32(bd->des3);
-    if (dma_memory_write(&address_space_memory, addr,
-                         &lebd, sizeof(lebd), MEMTXATTRS_UNSPECIFIED)) {
+    if (dma_memory_write(&address_space_memory, addr, &lebd, sizeof(lebd))) {
         qemu_log_mask(LOG_GUEST_ERROR, "%s: failed to write descriptor @ 0x%"
                       HWADDR_PRIx "\n", __func__, addr);
         return -1;
     }
     return 0;
-}
-
-static int ftgmac100_insert_vlan(FTGMAC100State *s, int frame_size,
-                                  uint8_t vlan_tci)
-{
-    uint8_t *vlan_hdr = s->frame + (ETH_ALEN * 2);
-    uint8_t *payload = vlan_hdr + sizeof(struct vlan_header);
-
-    if (frame_size < sizeof(struct eth_header)) {
-        qemu_log_mask(LOG_GUEST_ERROR,
-                      "%s: frame too small for VLAN insertion : %d bytes\n",
-                      __func__, frame_size);
-        s->isr |= FTGMAC100_INT_XPKT_LOST;
-        goto out;
-    }
-
-    if (frame_size + sizeof(struct vlan_header) > sizeof(s->frame)) {
-        qemu_log_mask(LOG_GUEST_ERROR,
-                      "%s: frame too big : %d bytes\n",
-                      __func__, frame_size);
-        s->isr |= FTGMAC100_INT_XPKT_LOST;
-        frame_size -= sizeof(struct vlan_header);
-    }
-
-    memmove(payload, vlan_hdr, frame_size - (ETH_ALEN * 2));
-    stw_be_p(vlan_hdr, ETH_P_VLAN);
-    stw_be_p(vlan_hdr + 2, vlan_tci);
-    frame_size += sizeof(struct vlan_header);
-
-out:
-    return frame_size;
 }
 
 static void ftgmac100_do_tx(FTGMAC100State *s, uint32_t tx_ring,
@@ -540,15 +507,6 @@ static void ftgmac100_do_tx(FTGMAC100State *s, uint32_t tx_ring,
         }
 
         len = FTGMAC100_TXDES0_TXBUF_SIZE(bd.des0);
-        if (!len) {
-            /*
-             * 0 is an invalid size, however the HW does not raise any
-             * interrupt. Flag an error because the guest is buggy.
-             */
-            qemu_log_mask(LOG_GUEST_ERROR, "%s: invalid segment size\n",
-                          __func__);
-        }
-
         if (frame_size + len > sizeof(s->frame)) {
             qemu_log_mask(LOG_GUEST_ERROR, "%s: frame too big : %d bytes\n",
                           __func__, len);
@@ -556,44 +514,42 @@ static void ftgmac100_do_tx(FTGMAC100State *s, uint32_t tx_ring,
             len =  sizeof(s->frame) - frame_size;
         }
 
-        if (dma_memory_read(&address_space_memory, bd.des3,
-                            ptr, len, MEMTXATTRS_UNSPECIFIED)) {
+        if (dma_memory_read(&address_space_memory, bd.des3, ptr, len)) {
             qemu_log_mask(LOG_GUEST_ERROR, "%s: failed to read packet @ 0x%x\n",
                           __func__, bd.des3);
-            s->isr |= FTGMAC100_INT_AHB_ERR;
+            s->isr |= FTGMAC100_INT_NO_NPTXBUF;
             break;
+        }
+
+        /* Check for VLAN */
+        if (bd.des0 & FTGMAC100_TXDES0_FTS &&
+            bd.des1 & FTGMAC100_TXDES1_INS_VLANTAG &&
+            be16_to_cpu(PKT_GET_ETH_HDR(ptr)->h_proto) != ETH_P_VLAN) {
+            if (frame_size + len + 4 > sizeof(s->frame)) {
+                qemu_log_mask(LOG_GUEST_ERROR, "%s: frame too big : %d bytes\n",
+                              __func__, len);
+                s->isr |= FTGMAC100_INT_XPKT_LOST;
+                len =  sizeof(s->frame) - frame_size - 4;
+            }
+            memmove(ptr + 16, ptr + 12, len - 12);
+            stw_be_p(ptr + 12, ETH_P_VLAN);
+            stw_be_p(ptr + 14, bd.des1);
+            len += 4;
         }
 
         ptr += len;
         frame_size += len;
         if (bd.des0 & FTGMAC100_TXDES0_LTS) {
-            int csum = 0;
-
-            /* Check for VLAN */
-            if (flags & FTGMAC100_TXDES1_INS_VLANTAG &&
-                be16_to_cpu(PKT_GET_ETH_HDR(s->frame)->h_proto) != ETH_P_VLAN) {
-                frame_size = ftgmac100_insert_vlan(s, frame_size,
-                                            FTGMAC100_TXDES1_VLANTAG_CI(flags));
-            }
-
             if (flags & FTGMAC100_TXDES1_IP_CHKSUM) {
-                csum |= CSUM_IP;
+                net_checksum_calculate(s->frame, frame_size);
             }
-            if (flags & FTGMAC100_TXDES1_TCP_CHKSUM) {
-                csum |= CSUM_TCP;
-            }
-            if (flags & FTGMAC100_TXDES1_UDP_CHKSUM) {
-                csum |= CSUM_UDP;
-            }
-            if (csum) {
-                net_checksum_calculate(s->frame, frame_size, csum);
-            }
-
             /* Last buffer in frame.  */
             qemu_send_packet(qemu_get_queue(s->nic), s->frame, frame_size);
             ptr = s->frame;
             frame_size = 0;
-            s->isr |= FTGMAC100_INT_XPKT_ETH;
+            if (flags & FTGMAC100_TXDES1_TXIC) {
+                s->isr |= FTGMAC100_INT_XPKT_ETH;
+            }
         }
 
         if (flags & FTGMAC100_TXDES1_TX2FIC) {
@@ -663,8 +619,10 @@ static uint32_t ftgmac100_rxpoll(FTGMAC100State *s)
     return cnt / div[speed];
 }
 
-static void ftgmac100_do_reset(FTGMAC100State *s, bool sw_reset)
+static void ftgmac100_reset(DeviceState *d)
 {
+    FTGMAC100State *s = FTGMAC100(d);
+
     /* Reset the FTGMAC100 */
     s->isr = 0;
     s->ier = 0;
@@ -683,23 +641,13 @@ static void ftgmac100_do_reset(FTGMAC100State *s, bool sw_reset)
     s->fear1 = 0;
     s->tpafcr = 0xf1;
 
-    if (sw_reset) {
-        s->maccr &= FTGMAC100_MACCR_GIGA_MODE | FTGMAC100_MACCR_FAST_MODE;
-    } else {
-        s->maccr = 0;
-    }
-
+    s->maccr = 0;
     s->phycr = 0;
     s->phydata = 0;
     s->fcr = 0x400;
 
     /* and the PHY */
     phy_reset(s);
-}
-
-static void ftgmac100_reset(DeviceState *d)
-{
-    ftgmac100_do_reset(FTGMAC100(d), false);
 }
 
 static uint64_t ftgmac100_read(void *opaque, hwaddr addr, unsigned size)
@@ -721,10 +669,6 @@ static uint64_t ftgmac100_read(void *opaque, hwaddr addr, unsigned size)
         return s->math[0];
     case FTGMAC100_MATH1:
         return s->math[1];
-    case FTGMAC100_RXR_BADR:
-        return s->rx_ring;
-    case FTGMAC100_NPTXR_BADR:
-        return s->tx_ring;
     case FTGMAC100_ITC:
         return s->itc;
     case FTGMAC100_DBLAC:
@@ -846,7 +790,7 @@ static void ftgmac100_write(void *opaque, hwaddr addr,
     case FTGMAC100_MACCR: /* MAC Device control */
         s->maccr = value;
         if (value & FTGMAC100_MACCR_SW_RST) {
-            ftgmac100_do_reset(s, true);
+            ftgmac100_reset(DEVICE(s));
         }
 
         if (ftgmac100_can_receive(qemu_get_queue(s->nic))) {
@@ -1004,7 +948,6 @@ static ssize_t ftgmac100_receive(NetClientState *nc, const uint8_t *buf,
         break;
     }
 
-    s->isr |= FTGMAC100_INT_RPKT_FIFO;
     addr = s->rx_descriptor;
     while (size > 0) {
         if (!ftgmac100_can_receive(nc)) {
@@ -1033,24 +976,20 @@ static ssize_t ftgmac100_receive(NetClientState *nc, const uint8_t *buf,
             bd.des1 = lduw_be_p(buf + 14) | FTGMAC100_RXDES1_VLANTAG_AVAIL;
 
             if (s->maccr & FTGMAC100_MACCR_RM_VLAN) {
-                dma_memory_write(&address_space_memory, buf_addr, buf, 12,
-                                 MEMTXATTRS_UNSPECIFIED);
-                dma_memory_write(&address_space_memory, buf_addr + 12,
-                                 buf + 16, buf_len - 16,
-                                 MEMTXATTRS_UNSPECIFIED);
+                dma_memory_write(&address_space_memory, buf_addr, buf, 12);
+                dma_memory_write(&address_space_memory, buf_addr + 12, buf + 16,
+                                 buf_len - 16);
             } else {
-                dma_memory_write(&address_space_memory, buf_addr, buf,
-                                 buf_len, MEMTXATTRS_UNSPECIFIED);
+                dma_memory_write(&address_space_memory, buf_addr, buf, buf_len);
             }
         } else {
             bd.des1 = 0;
-            dma_memory_write(&address_space_memory, buf_addr, buf, buf_len,
-                             MEMTXATTRS_UNSPECIFIED);
+            dma_memory_write(&address_space_memory, buf_addr, buf, buf_len);
         }
         buf += buf_len;
         if (size < 4) {
             dma_memory_write(&address_space_memory, buf_addr + buf_len,
-                             crc_ptr, 4 - size, MEMTXATTRS_UNSPECIFIED);
+                             crc_ptr, 4 - size);
             crc_ptr += 4 - size;
         }
 
@@ -1060,6 +999,8 @@ static ssize_t ftgmac100_receive(NetClientState *nc, const uint8_t *buf,
             /* Last buffer in frame.  */
             bd.des0 |= flags | FTGMAC100_RXDES0_LRS;
             s->isr |= FTGMAC100_INT_RPKT_BUF;
+        } else {
+            s->isr |= FTGMAC100_INT_RPKT_FIFO;
         }
         ftgmac100_write_bd(&bd, addr);
         if (bd.des0 & s->rxdes0_edorr) {

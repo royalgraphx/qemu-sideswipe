@@ -11,20 +11,20 @@
 #define HW_HYPERV_VMBUS_BRIDGE_H
 
 #include "hw/sysbus.h"
-#include "hw/hyperv/vmbus.h"
-#include "qom/object.h"
 
 #define TYPE_VMBUS_BRIDGE "vmbus-bridge"
 
-struct VMBusBridge {
+typedef struct VMBus VMBus;
+
+typedef struct VMBusBridge {
     SysBusDevice parent_obj;
 
     uint8_t irq;
 
     VMBus *bus;
-};
+} VMBusBridge;
 
-OBJECT_DECLARE_SIMPLE_TYPE(VMBusBridge, VMBUS_BRIDGE)
+#define VMBUS_BRIDGE(obj) OBJECT_CHECK(VMBusBridge, (obj), TYPE_VMBUS_BRIDGE)
 
 static inline VMBusBridge *vmbus_bridge_find(void)
 {

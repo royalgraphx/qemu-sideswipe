@@ -1,7 +1,7 @@
 /** @file
   CPU DXE Module to produce CPU ARCH Protocol and CPU MP Protocol.
 
-  Copyright (c) 2008 - 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2008 - 2017, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -13,7 +13,7 @@
 
 #include <Protocol/Cpu.h>
 #include <Protocol/MpService.h>
-#include <Register/Intel/Msr.h>
+#include <Register/Msr.h>
 
 #include <Ppi/SecPlatformInformation.h>
 #include <Ppi/SecPlatformInformation2.h>
@@ -39,6 +39,18 @@
 #include <Guid/IdleLoopEvent.h>
 #include <Guid/VectorHandoffTable.h>
 
+#define EFI_MEMORY_CACHETYPE_MASK     (EFI_MEMORY_UC  | \
+                                       EFI_MEMORY_WC  | \
+                                       EFI_MEMORY_WT  | \
+                                       EFI_MEMORY_WB  | \
+                                       EFI_MEMORY_UCE   \
+                                       )
+
+#define EFI_MEMORY_PAGETYPE_MASK      (EFI_MEMORY_RP  | \
+                                       EFI_MEMORY_XP  | \
+                                       EFI_MEMORY_RO    \
+                                       )
+
 #define HEAP_GUARD_NONSTOP_MODE       \
         ((PcdGet8 (PcdHeapGuardPropertyMask) & (BIT6|BIT4|BIT1|BIT0)) > BIT6)
 
@@ -63,10 +75,10 @@
 EFI_STATUS
 EFIAPI
 CpuFlushCpuDataCache (
-  IN EFI_CPU_ARCH_PROTOCOL  *This,
-  IN EFI_PHYSICAL_ADDRESS   Start,
-  IN UINT64                 Length,
-  IN EFI_CPU_FLUSH_TYPE     FlushType
+  IN EFI_CPU_ARCH_PROTOCOL     *This,
+  IN EFI_PHYSICAL_ADDRESS      Start,
+  IN UINT64                    Length,
+  IN EFI_CPU_FLUSH_TYPE        FlushType
   );
 
 /**
@@ -81,7 +93,7 @@ CpuFlushCpuDataCache (
 EFI_STATUS
 EFIAPI
 CpuEnableInterrupt (
-  IN EFI_CPU_ARCH_PROTOCOL  *This
+  IN EFI_CPU_ARCH_PROTOCOL     *This
   );
 
 /**
@@ -96,7 +108,7 @@ CpuEnableInterrupt (
 EFI_STATUS
 EFIAPI
 CpuDisableInterrupt (
-  IN EFI_CPU_ARCH_PROTOCOL  *This
+  IN EFI_CPU_ARCH_PROTOCOL     *This
   );
 
 /**
@@ -112,8 +124,8 @@ CpuDisableInterrupt (
 EFI_STATUS
 EFIAPI
 CpuGetInterruptState (
-  IN  EFI_CPU_ARCH_PROTOCOL  *This,
-  OUT BOOLEAN                *State
+  IN  EFI_CPU_ARCH_PROTOCOL     *This,
+  OUT BOOLEAN                   *State
   );
 
 /**
@@ -131,8 +143,8 @@ CpuGetInterruptState (
 EFI_STATUS
 EFIAPI
 CpuInit (
-  IN EFI_CPU_ARCH_PROTOCOL  *This,
-  IN EFI_CPU_INIT_TYPE      InitType
+  IN EFI_CPU_ARCH_PROTOCOL     *This,
+  IN EFI_CPU_INIT_TYPE         InitType
   );
 
 /**
@@ -158,9 +170,9 @@ CpuInit (
 EFI_STATUS
 EFIAPI
 CpuRegisterInterruptHandler (
-  IN EFI_CPU_ARCH_PROTOCOL      *This,
-  IN EFI_EXCEPTION_TYPE         InterruptType,
-  IN EFI_CPU_INTERRUPT_HANDLER  InterruptHandler
+  IN EFI_CPU_ARCH_PROTOCOL         *This,
+  IN EFI_EXCEPTION_TYPE            InterruptType,
+  IN EFI_CPU_INTERRUPT_HANDLER     InterruptHandler
   );
 
 /**
@@ -189,14 +201,14 @@ CpuRegisterInterruptHandler (
 EFI_STATUS
 EFIAPI
 CpuGetTimerValue (
-  IN  EFI_CPU_ARCH_PROTOCOL  *This,
-  IN  UINT32                 TimerIndex,
-  OUT UINT64                 *TimerValue,
-  OUT UINT64                 *TimerPeriod OPTIONAL
+  IN  EFI_CPU_ARCH_PROTOCOL       *This,
+  IN  UINT32                      TimerIndex,
+  OUT UINT64                      *TimerValue,
+  OUT UINT64                      *TimerPeriod OPTIONAL
   );
 
 /**
-  Set memory cacheability attributes for given range of memory.
+  Set memory cacheability attributes for given range of memeory.
 
   @param  This                   Protocol instance structure
   @param  BaseAddress            Specifies the start address of the
@@ -214,10 +226,10 @@ CpuGetTimerValue (
 EFI_STATUS
 EFIAPI
 CpuSetMemoryAttributes (
-  IN EFI_CPU_ARCH_PROTOCOL  *This,
-  IN EFI_PHYSICAL_ADDRESS   BaseAddress,
-  IN UINT64                 Length,
-  IN UINT64                 Attributes
+  IN EFI_CPU_ARCH_PROTOCOL      *This,
+  IN EFI_PHYSICAL_ADDRESS       BaseAddress,
+  IN UINT64                     Length,
+  IN UINT64                     Attributes
   );
 
 /**
@@ -238,7 +250,7 @@ InitGlobalDescriptorTable (
 VOID
 EFIAPI
 SetCodeSelector (
-  UINT16  Selector
+  UINT16 Selector
   );
 
 /**
@@ -250,7 +262,7 @@ SetCodeSelector (
 VOID
 EFIAPI
 SetDataSelectors (
-  UINT16  Selector
+  UINT16 Selector
   );
 
 /**
@@ -273,8 +285,8 @@ RefreshGcdMemoryAttributesFromPaging (
 VOID
 EFIAPI
 DebugExceptionHandler (
-  IN EFI_EXCEPTION_TYPE  ExceptionType,
-  IN EFI_SYSTEM_CONTEXT  SystemContext
+  IN EFI_EXCEPTION_TYPE   ExceptionType,
+  IN EFI_SYSTEM_CONTEXT   SystemContext
   );
 
 /**
@@ -289,11 +301,12 @@ DebugExceptionHandler (
 VOID
 EFIAPI
 PageFaultExceptionHandler (
-  IN EFI_EXCEPTION_TYPE  ExceptionType,
-  IN EFI_SYSTEM_CONTEXT  SystemContext
+  IN EFI_EXCEPTION_TYPE   ExceptionType,
+  IN EFI_SYSTEM_CONTEXT   SystemContext
   );
 
-extern BOOLEAN  mIsAllocatingPageTable;
-extern UINTN    mNumberOfProcessors;
+extern BOOLEAN mIsAllocatingPageTable;
+extern UINTN   mNumberOfProcessors;
 
 #endif
+

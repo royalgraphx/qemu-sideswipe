@@ -16,69 +16,69 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 //
 //
 UNICODE_TO_CHAR  UnicodeToPcAnsiOrAscii[] = {
-  { BOXDRAW_HORIZONTAL,                 0xc4, L'-'  },
-  { BOXDRAW_VERTICAL,                   0xb3, L'|'  },
-  { BOXDRAW_DOWN_RIGHT,                 0xda, L'/'  },
+  { BOXDRAW_HORIZONTAL,                 0xc4, L'-' },
+  { BOXDRAW_VERTICAL,                   0xb3, L'|' },
+  { BOXDRAW_DOWN_RIGHT,                 0xda, L'/' },
   { BOXDRAW_DOWN_LEFT,                  0xbf, L'\\' },
   { BOXDRAW_UP_RIGHT,                   0xc0, L'\\' },
-  { BOXDRAW_UP_LEFT,                    0xd9, L'/'  },
-  { BOXDRAW_VERTICAL_RIGHT,             0xc3, L'|'  },
-  { BOXDRAW_VERTICAL_LEFT,              0xb4, L'|'  },
-  { BOXDRAW_DOWN_HORIZONTAL,            0xc2, L'+'  },
-  { BOXDRAW_UP_HORIZONTAL,              0xc1, L'+'  },
-  { BOXDRAW_VERTICAL_HORIZONTAL,        0xc5, L'+'  },
-  { BOXDRAW_DOUBLE_HORIZONTAL,          0xcd, L'-'  },
-  { BOXDRAW_DOUBLE_VERTICAL,            0xba, L'|'  },
-  { BOXDRAW_DOWN_RIGHT_DOUBLE,          0xd5, L'/'  },
-  { BOXDRAW_DOWN_DOUBLE_RIGHT,          0xd6, L'/'  },
-  { BOXDRAW_DOUBLE_DOWN_RIGHT,          0xc9, L'/'  },
+  { BOXDRAW_UP_LEFT,                    0xd9, L'/' },
+  { BOXDRAW_VERTICAL_RIGHT,             0xc3, L'|' },
+  { BOXDRAW_VERTICAL_LEFT,              0xb4, L'|' },
+  { BOXDRAW_DOWN_HORIZONTAL,            0xc2, L'+' },
+  { BOXDRAW_UP_HORIZONTAL,              0xc1, L'+' },
+  { BOXDRAW_VERTICAL_HORIZONTAL,        0xc5, L'+' },
+  { BOXDRAW_DOUBLE_HORIZONTAL,          0xcd, L'-' },
+  { BOXDRAW_DOUBLE_VERTICAL,            0xba, L'|' },
+  { BOXDRAW_DOWN_RIGHT_DOUBLE,          0xd5, L'/' },
+  { BOXDRAW_DOWN_DOUBLE_RIGHT,          0xd6, L'/' },
+  { BOXDRAW_DOUBLE_DOWN_RIGHT,          0xc9, L'/' },
   { BOXDRAW_DOWN_LEFT_DOUBLE,           0xb8, L'\\' },
   { BOXDRAW_DOWN_DOUBLE_LEFT,           0xb7, L'\\' },
   { BOXDRAW_DOUBLE_DOWN_LEFT,           0xbb, L'\\' },
   { BOXDRAW_UP_RIGHT_DOUBLE,            0xd4, L'\\' },
   { BOXDRAW_UP_DOUBLE_RIGHT,            0xd3, L'\\' },
   { BOXDRAW_DOUBLE_UP_RIGHT,            0xc8, L'\\' },
-  { BOXDRAW_UP_LEFT_DOUBLE,             0xbe, L'/'  },
-  { BOXDRAW_UP_DOUBLE_LEFT,             0xbd, L'/'  },
-  { BOXDRAW_DOUBLE_UP_LEFT,             0xbc, L'/'  },
-  { BOXDRAW_VERTICAL_RIGHT_DOUBLE,      0xc6, L'|'  },
-  { BOXDRAW_VERTICAL_DOUBLE_RIGHT,      0xc7, L'|'  },
-  { BOXDRAW_DOUBLE_VERTICAL_RIGHT,      0xcc, L'|'  },
-  { BOXDRAW_VERTICAL_LEFT_DOUBLE,       0xb5, L'|'  },
-  { BOXDRAW_VERTICAL_DOUBLE_LEFT,       0xb6, L'|'  },
-  { BOXDRAW_DOUBLE_VERTICAL_LEFT,       0xb9, L'|'  },
-  { BOXDRAW_DOWN_HORIZONTAL_DOUBLE,     0xd1, L'+'  },
-  { BOXDRAW_DOWN_DOUBLE_HORIZONTAL,     0xd2, L'+'  },
-  { BOXDRAW_DOUBLE_DOWN_HORIZONTAL,     0xcb, L'+'  },
-  { BOXDRAW_UP_HORIZONTAL_DOUBLE,       0xcf, L'+'  },
-  { BOXDRAW_UP_DOUBLE_HORIZONTAL,       0xd0, L'+'  },
-  { BOXDRAW_DOUBLE_UP_HORIZONTAL,       0xca, L'+'  },
-  { BOXDRAW_VERTICAL_HORIZONTAL_DOUBLE, 0xd8, L'+'  },
-  { BOXDRAW_VERTICAL_DOUBLE_HORIZONTAL, 0xd7, L'+'  },
-  { BOXDRAW_DOUBLE_VERTICAL_HORIZONTAL, 0xce, L'+'  },
+  { BOXDRAW_UP_LEFT_DOUBLE,             0xbe, L'/' },
+  { BOXDRAW_UP_DOUBLE_LEFT,             0xbd, L'/' },
+  { BOXDRAW_DOUBLE_UP_LEFT,             0xbc, L'/' },
+  { BOXDRAW_VERTICAL_RIGHT_DOUBLE,      0xc6, L'|' },
+  { BOXDRAW_VERTICAL_DOUBLE_RIGHT,      0xc7, L'|' },
+  { BOXDRAW_DOUBLE_VERTICAL_RIGHT,      0xcc, L'|' },
+  { BOXDRAW_VERTICAL_LEFT_DOUBLE,       0xb5, L'|' },
+  { BOXDRAW_VERTICAL_DOUBLE_LEFT,       0xb6, L'|' },
+  { BOXDRAW_DOUBLE_VERTICAL_LEFT,       0xb9, L'|' },
+  { BOXDRAW_DOWN_HORIZONTAL_DOUBLE,     0xd1, L'+' },
+  { BOXDRAW_DOWN_DOUBLE_HORIZONTAL,     0xd2, L'+' },
+  { BOXDRAW_DOUBLE_DOWN_HORIZONTAL,     0xcb, L'+' },
+  { BOXDRAW_UP_HORIZONTAL_DOUBLE,       0xcf, L'+' },
+  { BOXDRAW_UP_DOUBLE_HORIZONTAL,       0xd0, L'+' },
+  { BOXDRAW_DOUBLE_UP_HORIZONTAL,       0xca, L'+' },
+  { BOXDRAW_VERTICAL_HORIZONTAL_DOUBLE, 0xd8, L'+' },
+  { BOXDRAW_VERTICAL_DOUBLE_HORIZONTAL, 0xd7, L'+' },
+  { BOXDRAW_DOUBLE_VERTICAL_HORIZONTAL, 0xce, L'+' },
 
-  { BLOCKELEMENT_FULL_BLOCK,            0xdb, L'*'  },
-  { BLOCKELEMENT_LIGHT_SHADE,           0xb0, L'+'  },
+  { BLOCKELEMENT_FULL_BLOCK,            0xdb, L'*' },
+  { BLOCKELEMENT_LIGHT_SHADE,           0xb0, L'+' },
 
-  { GEOMETRICSHAPE_UP_TRIANGLE,         '^',  L'^'  },
-  { GEOMETRICSHAPE_RIGHT_TRIANGLE,      '>',  L'>'  },
-  { GEOMETRICSHAPE_DOWN_TRIANGLE,       'v',  L'v'  },
-  { GEOMETRICSHAPE_LEFT_TRIANGLE,       '<',  L'<'  },
+  { GEOMETRICSHAPE_UP_TRIANGLE,         '^', L'^' },
+  { GEOMETRICSHAPE_RIGHT_TRIANGLE,      '>', L'>' },
+  { GEOMETRICSHAPE_DOWN_TRIANGLE,       'v', L'v' },
+  { GEOMETRICSHAPE_LEFT_TRIANGLE,       '<', L'<' },
 
-  { ARROW_LEFT,                         '<',  L'<'  },
-  { ARROW_UP,                           '^',  L'^'  },
-  { ARROW_RIGHT,                        '>',  L'>'  },
-  { ARROW_DOWN,                         'v',  L'v'  },
+  { ARROW_LEFT,                         '<', L'<' },
+  { ARROW_UP,                           '^', L'^' },
+  { ARROW_RIGHT,                        '>', L'>' },
+  { ARROW_DOWN,                         'v', L'v' },
 
   { 0x0000,                             0x00, L'\0' }
 };
 
-CHAR16  mSetModeString[]           = { ESC, '[', '=', '3', 'h', 0 };
-CHAR16  mSetAttributeString[]      = { ESC, '[', '0', 'm', ESC, '[', '4', '0', 'm', ESC, '[', '4', '0', 'm', 0 };
-CHAR16  mClearScreenString[]       = { ESC, '[', '2', 'J', 0 };
-CHAR16  mSetCursorPositionString[] = { ESC, '[', '0', '0', ';', '0', '0', 'H', 0 };
-CHAR16  mCursorForwardString[]     = { ESC, '[', '0', '0', 'C', 0 };
-CHAR16  mCursorBackwardString[]    = { ESC, '[', '0', '0', 'D', 0 };
+CHAR16 mSetModeString[]            = { ESC, '[', '=', '3', 'h', 0 };
+CHAR16 mSetAttributeString[]       = { ESC, '[', '0', 'm', ESC, '[', '4', '0', 'm', ESC, '[', '4', '0', 'm', 0 };
+CHAR16 mClearScreenString[]        = { ESC, '[', '2', 'J', 0 };
+CHAR16 mSetCursorPositionString[]  = { ESC, '[', '0', '0', ';', '0', '0', 'H', 0 };
+CHAR16 mCursorForwardString[]      = { ESC, '[', '0', '0', 'C', 0 };
+CHAR16 mCursorBackwardString[]     = { ESC, '[', '0', '0', 'D', 0 };
 
 //
 // Body of the ConOut functions
@@ -147,6 +147,7 @@ TerminalConOutReset (
   return Status;
 }
 
+
 /**
   Implements EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.OutputString().
 
@@ -171,26 +172,26 @@ TerminalConOutOutputString (
   IN  CHAR16                           *WString
   )
 {
-  TERMINAL_DEV                 *TerminalDevice;
-  EFI_SIMPLE_TEXT_OUTPUT_MODE  *Mode;
-  UINTN                        MaxColumn;
-  UINTN                        MaxRow;
-  UINTN                        Length;
-  UTF8_CHAR                    Utf8Char;
-  CHAR8                        GraphicChar;
-  CHAR8                        AsciiChar;
-  EFI_STATUS                   Status;
-  UINT8                        ValidBytes;
-  CHAR8                        CrLfStr[2];
+  TERMINAL_DEV                *TerminalDevice;
+  EFI_SIMPLE_TEXT_OUTPUT_MODE *Mode;
+  UINTN                       MaxColumn;
+  UINTN                       MaxRow;
+  UINTN                       Length;
+  UTF8_CHAR                   Utf8Char;
+  CHAR8                       GraphicChar;
+  CHAR8                       AsciiChar;
+  EFI_STATUS                  Status;
+  UINT8                       ValidBytes;
+  CHAR8                       CrLfStr[2];
   //
   //  flag used to indicate whether condition happens which will cause
   //  return EFI_WARN_UNKNOWN_GLYPH
   //
-  BOOLEAN  Warning;
+  BOOLEAN                     Warning;
 
-  ValidBytes = 0;
-  Warning    = FALSE;
-  AsciiChar  = 0;
+  ValidBytes  = 0;
+  Warning     = FALSE;
+  AsciiChar   = 0;
 
   //
   //  get Terminal device data structure pointer.
@@ -213,134 +214,133 @@ TerminalConOutOutputString (
           &MaxRow
           );
 
-  for ( ; *WString != CHAR_NULL; WString++) {
+  for (; *WString != CHAR_NULL; WString++) {
+
     switch (TerminalDevice->TerminalType) {
-      case TerminalTypePcAnsi:
-      case TerminalTypeVt100:
-      case TerminalTypeVt100Plus:
-      case TerminalTypeTtyTerm:
-      case TerminalTypeLinux:
-      case TerminalTypeXtermR6:
-      case TerminalTypeVt400:
-      case TerminalTypeSCO:
 
-        if (!TerminalIsValidTextGraphics (*WString, &GraphicChar, &AsciiChar)) {
-          //
-          // If it's not a graphic character convert Unicode to ASCII.
-          //
-          GraphicChar = (CHAR8)*WString;
+    case TerminalTypePcAnsi:
+    case TerminalTypeVt100:
+    case TerminalTypeVt100Plus:
+    case TerminalTypeTtyTerm:
 
-          if (!(TerminalIsValidAscii (GraphicChar) || TerminalIsValidEfiCntlChar (GraphicChar))) {
-            //
-            // when this driver use the OutputString to output control string,
-            // TerminalDevice->OutputEscChar is set to let the Esc char
-            // to be output to the terminal emulation software.
-            //
-            if ((GraphicChar == 27) && TerminalDevice->OutputEscChar) {
-              GraphicChar = 27;
-            } else {
-              GraphicChar = '?';
-              Warning     = TRUE;
-            }
+      if (!TerminalIsValidTextGraphics (*WString, &GraphicChar, &AsciiChar)) {
+        //
+        // If it's not a graphic character convert Unicode to ASCII.
+        //
+        GraphicChar = (CHAR8) *WString;
+
+        if (!(TerminalIsValidAscii (GraphicChar) || TerminalIsValidEfiCntlChar (GraphicChar))) {
+          //
+          // when this driver use the OutputString to output control string,
+          // TerminalDevice->OutputEscChar is set to let the Esc char
+          // to be output to the terminal emulation software.
+          //
+          if ((GraphicChar == 27) && TerminalDevice->OutputEscChar) {
+            GraphicChar = 27;
+          } else {
+            GraphicChar = '?';
+            Warning     = TRUE;
           }
-
-          AsciiChar = GraphicChar;
         }
 
-        if (TerminalDevice->TerminalType != TerminalTypePcAnsi) {
-          GraphicChar = AsciiChar;
-        }
+        AsciiChar = GraphicChar;
 
-        Length = 1;
+      }
 
-        Status = TerminalDevice->SerialIo->Write (
-                                             TerminalDevice->SerialIo,
-                                             &Length,
-                                             &GraphicChar
-                                             );
+      if (TerminalDevice->TerminalType != TerminalTypePcAnsi) {
+        GraphicChar = AsciiChar;
+      }
 
-        if (EFI_ERROR (Status)) {
-          goto OutputError;
-        }
+      Length = 1;
 
-        break;
+      Status = TerminalDevice->SerialIo->Write (
+                                          TerminalDevice->SerialIo,
+                                          &Length,
+                                          &GraphicChar
+                                          );
 
-      case TerminalTypeVtUtf8:
-        UnicodeToUtf8 (*WString, &Utf8Char, &ValidBytes);
-        Length = ValidBytes;
-        Status = TerminalDevice->SerialIo->Write (
-                                             TerminalDevice->SerialIo,
-                                             &Length,
-                                             (UINT8 *)&Utf8Char
-                                             );
-        if (EFI_ERROR (Status)) {
-          goto OutputError;
-        }
+      if (EFI_ERROR (Status)) {
+        goto OutputError;
+      }
 
-        break;
+      break;
+
+    case TerminalTypeVtUtf8:
+      UnicodeToUtf8 (*WString, &Utf8Char, &ValidBytes);
+      Length = ValidBytes;
+      Status = TerminalDevice->SerialIo->Write (
+                                          TerminalDevice->SerialIo,
+                                          &Length,
+                                          (UINT8 *) &Utf8Char
+                                          );
+      if (EFI_ERROR (Status)) {
+        goto OutputError;
+      }
+      break;
     }
-
     //
     //  Update cursor position.
     //
     switch (*WString) {
-      case CHAR_BACKSPACE:
-        if (Mode->CursorColumn > 0) {
-          Mode->CursorColumn--;
-        }
 
-        break;
+    case CHAR_BACKSPACE:
+      if (Mode->CursorColumn > 0) {
+        Mode->CursorColumn--;
+      }
+      break;
 
-      case CHAR_LINEFEED:
-        if (Mode->CursorRow < (INT32)(MaxRow - 1)) {
+    case CHAR_LINEFEED:
+      if (Mode->CursorRow < (INT32) (MaxRow - 1)) {
+        Mode->CursorRow++;
+      }
+      break;
+
+    case CHAR_CARRIAGE_RETURN:
+      Mode->CursorColumn = 0;
+      break;
+
+    default:
+      if (Mode->CursorColumn < (INT32) (MaxColumn - 1)) {
+
+        Mode->CursorColumn++;
+
+      } else {
+
+        Mode->CursorColumn = 0;
+        if (Mode->CursorRow < (INT32) (MaxRow - 1)) {
           Mode->CursorRow++;
         }
 
-        break;
+        if (TerminalDevice->TerminalType == TerminalTypeTtyTerm &&
+            !TerminalDevice->OutputEscChar) {
+          //
+          // We've written the last character on the line.  The
+          // terminal doesn't actually wrap its cursor until we print
+          // the next character, but the driver thinks it has wrapped
+          // already.  Print CR LF to synchronize the terminal with
+          // the driver, but only if we're not in the middle of
+          // printing an escape sequence.
+          //
+          CrLfStr[0] = '\r';
+          CrLfStr[1] = '\n';
 
-      case CHAR_CARRIAGE_RETURN:
-        Mode->CursorColumn = 0;
-        break;
+          Length = sizeof(CrLfStr);
 
-      default:
-        if (Mode->CursorColumn < (INT32)(MaxColumn - 1)) {
-          Mode->CursorColumn++;
-        } else {
-          Mode->CursorColumn = 0;
-          if (Mode->CursorRow < (INT32)(MaxRow - 1)) {
-            Mode->CursorRow++;
-          }
+          Status = TerminalDevice->SerialIo->Write (
+                                                TerminalDevice->SerialIo,
+                                                &Length,
+                                                CrLfStr
+                                                );
 
-          if ((TerminalDevice->TerminalType == TerminalTypeTtyTerm) &&
-              !TerminalDevice->OutputEscChar)
-          {
-            //
-            // We've written the last character on the line.  The
-            // terminal doesn't actually wrap its cursor until we print
-            // the next character, but the driver thinks it has wrapped
-            // already.  Print CR LF to synchronize the terminal with
-            // the driver, but only if we're not in the middle of
-            // printing an escape sequence.
-            //
-            CrLfStr[0] = '\r';
-            CrLfStr[1] = '\n';
-
-            Length = sizeof (CrLfStr);
-
-            Status = TerminalDevice->SerialIo->Write (
-                                                 TerminalDevice->SerialIo,
-                                                 &Length,
-                                                 CrLfStr
-                                                 );
-
-            if (EFI_ERROR (Status)) {
-              goto OutputError;
-            }
+          if (EFI_ERROR (Status)) {
+            goto OutputError;
           }
         }
+      }
+      break;
 
-        break;
-    }
+    };
+
   }
 
   if (Warning) {
@@ -358,6 +358,7 @@ OutputError:
 
   return EFI_DEVICE_ERROR;
 }
+
 
 /**
   Implements EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.TestString().
@@ -390,24 +391,26 @@ TerminalConOutTestString (
   TerminalDevice = TERMINAL_CON_OUT_DEV_FROM_THIS (This);
 
   switch (TerminalDevice->TerminalType) {
-    case TerminalTypePcAnsi:
-    case TerminalTypeVt100:
-    case TerminalTypeVt100Plus:
-    case TerminalTypeTtyTerm:
-      Status = AnsiTestString (TerminalDevice, WString);
-      break;
 
-    case TerminalTypeVtUtf8:
-      Status = VTUTF8TestString (TerminalDevice, WString);
-      break;
+  case TerminalTypePcAnsi:
+  case TerminalTypeVt100:
+  case TerminalTypeVt100Plus:
+  case TerminalTypeTtyTerm:
+    Status = AnsiTestString (TerminalDevice, WString);
+    break;
 
-    default:
-      Status = EFI_UNSUPPORTED;
-      break;
+  case TerminalTypeVtUtf8:
+    Status = VTUTF8TestString (TerminalDevice, WString);
+    break;
+
+  default:
+    Status = EFI_UNSUPPORTED;
+    break;
   }
 
   return Status;
 }
+
 
 /**
   Implements EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.QueryMode().
@@ -435,7 +438,7 @@ TerminalConOutQueryMode (
 {
   TERMINAL_DEV  *TerminalDevice;
 
-  if (ModeNumber >= (UINTN)This->Mode->MaxMode) {
+  if (ModeNumber >= (UINTN) This->Mode->MaxMode) {
     return EFI_UNSUPPORTED;
   }
 
@@ -443,11 +446,12 @@ TerminalConOutQueryMode (
   // Get Terminal device data structure pointer.
   //
   TerminalDevice = TERMINAL_CON_OUT_DEV_FROM_THIS (This);
-  *Columns       = TerminalDevice->TerminalConsoleModeData[ModeNumber].Columns;
-  *Rows          = TerminalDevice->TerminalConsoleModeData[ModeNumber].Rows;
+  *Columns = TerminalDevice->TerminalConsoleModeData[ModeNumber].Columns;
+  *Rows    = TerminalDevice->TerminalConsoleModeData[ModeNumber].Rows;
 
   return EFI_SUCCESS;
 }
+
 
 /**
   Implements EFI_SIMPLE_TEXT_OUT.SetMode().
@@ -479,14 +483,14 @@ TerminalConOutSetMode (
   //
   TerminalDevice = TERMINAL_CON_OUT_DEV_FROM_THIS (This);
 
-  if (ModeNumber >= (UINTN)This->Mode->MaxMode) {
+  if (ModeNumber >= (UINTN) This->Mode->MaxMode) {
     return EFI_UNSUPPORTED;
   }
 
   //
   // Set the current mode
   //
-  This->Mode->Mode = (INT32)ModeNumber;
+  This->Mode->Mode = (INT32) ModeNumber;
 
   This->ClearScreen (This);
 
@@ -498,15 +502,17 @@ TerminalConOutSetMode (
     return EFI_DEVICE_ERROR;
   }
 
-  This->Mode->Mode = (INT32)ModeNumber;
+  This->Mode->Mode  = (INT32) ModeNumber;
 
-  Status = This->ClearScreen (This);
+  Status            = This->ClearScreen (This);
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
 
   return EFI_SUCCESS;
+
 }
+
 
 /**
   Implements EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.SetAttribute().
@@ -554,7 +560,7 @@ TerminalConOutSetAttribute (
   // Skip outputting the command string for the same attribute
   // It improves the terminal performance significantly
   //
-  if (This->Mode->Attribute == (INT32)Attribute) {
+  if (This->Mode->Attribute == (INT32) Attribute) {
     return EFI_SUCCESS;
   }
 
@@ -563,102 +569,103 @@ TerminalConOutSetAttribute (
   //  understandable foreground color
   //
   switch (Attribute & 0x07) {
-    case EFI_BLACK:
-      ForegroundControl = 30;
-      break;
 
-    case EFI_BLUE:
-      ForegroundControl = 34;
-      break;
+  case EFI_BLACK:
+    ForegroundControl = 30;
+    break;
 
-    case EFI_GREEN:
-      ForegroundControl = 32;
-      break;
+  case EFI_BLUE:
+    ForegroundControl = 34;
+    break;
 
-    case EFI_CYAN:
-      ForegroundControl = 36;
-      break;
+  case EFI_GREEN:
+    ForegroundControl = 32;
+    break;
 
-    case EFI_RED:
-      ForegroundControl = 31;
-      break;
+  case EFI_CYAN:
+    ForegroundControl = 36;
+    break;
 
-    case EFI_MAGENTA:
-      ForegroundControl = 35;
-      break;
+  case EFI_RED:
+    ForegroundControl = 31;
+    break;
 
-    case EFI_BROWN:
-      ForegroundControl = 33;
-      break;
+  case EFI_MAGENTA:
+    ForegroundControl = 35;
+    break;
 
-    default:
+  case EFI_BROWN:
+    ForegroundControl = 33;
+    break;
 
-    case EFI_LIGHTGRAY:
-      ForegroundControl = 37;
-      break;
+  default:
+
+  case EFI_LIGHTGRAY:
+    ForegroundControl = 37;
+    break;
+
   }
-
   //
   //  bit4 of the Attribute indicates bright control
   //  of terminal emulator.
   //
-  BrightControl = (UINT8)((Attribute >> 3) & 1);
+  BrightControl = (UINT8) ((Attribute >> 3) & 1);
 
   //
   //  convert Attribute value to terminal emulator
   //  understandable background color.
   //
   switch ((Attribute >> 4) & 0x07) {
-    case EFI_BLACK:
-      BackgroundControl = 40;
-      break;
 
-    case EFI_BLUE:
-      BackgroundControl = 44;
-      break;
+  case EFI_BLACK:
+    BackgroundControl = 40;
+    break;
 
-    case EFI_GREEN:
-      BackgroundControl = 42;
-      break;
+  case EFI_BLUE:
+    BackgroundControl = 44;
+    break;
 
-    case EFI_CYAN:
-      BackgroundControl = 46;
-      break;
+  case EFI_GREEN:
+    BackgroundControl = 42;
+    break;
 
-    case EFI_RED:
-      BackgroundControl = 41;
-      break;
+  case EFI_CYAN:
+    BackgroundControl = 46;
+    break;
 
-    case EFI_MAGENTA:
-      BackgroundControl = 45;
-      break;
+  case EFI_RED:
+    BackgroundControl = 41;
+    break;
 
-    case EFI_BROWN:
-      BackgroundControl = 43;
-      break;
+  case EFI_MAGENTA:
+    BackgroundControl = 45;
+    break;
 
-    default:
+  case EFI_BROWN:
+    BackgroundControl = 43;
+    break;
 
-    case EFI_LIGHTGRAY:
-      BackgroundControl = 47;
-      break;
+  default:
+
+  case EFI_LIGHTGRAY:
+    BackgroundControl = 47;
+    break;
   }
-
   //
   // terminal emulator's control sequence to set attributes
   //
-  mSetAttributeString[BRIGHT_CONTROL_OFFSET]         = (CHAR16)('0' + BrightControl);
-  mSetAttributeString[FOREGROUND_CONTROL_OFFSET + 0] = (CHAR16)('0' + (ForegroundControl / 10));
-  mSetAttributeString[FOREGROUND_CONTROL_OFFSET + 1] = (CHAR16)('0' + (ForegroundControl % 10));
-  mSetAttributeString[BACKGROUND_CONTROL_OFFSET + 0] = (CHAR16)('0' + (BackgroundControl / 10));
-  mSetAttributeString[BACKGROUND_CONTROL_OFFSET + 1] = (CHAR16)('0' + (BackgroundControl % 10));
+  mSetAttributeString[BRIGHT_CONTROL_OFFSET]          = (CHAR16) ('0' + BrightControl);
+  mSetAttributeString[FOREGROUND_CONTROL_OFFSET + 0]  = (CHAR16) ('0' + (ForegroundControl / 10));
+  mSetAttributeString[FOREGROUND_CONTROL_OFFSET + 1]  = (CHAR16) ('0' + (ForegroundControl % 10));
+  mSetAttributeString[BACKGROUND_CONTROL_OFFSET + 0]  = (CHAR16) ('0' + (BackgroundControl / 10));
+  mSetAttributeString[BACKGROUND_CONTROL_OFFSET + 1]  = (CHAR16) ('0' + (BackgroundControl % 10));
 
   //
   // save current column and row
   // for future scrolling back use.
   //
-  SavedColumn = This->Mode->CursorColumn;
-  SavedRow    = This->Mode->CursorRow;
+  SavedColumn                   = This->Mode->CursorColumn;
+  SavedRow                      = This->Mode->CursorRow;
 
   TerminalDevice->OutputEscChar = TRUE;
   Status                        = This->OutputString (This, mSetAttributeString);
@@ -667,17 +674,18 @@ TerminalConOutSetAttribute (
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
-
   //
   //  scroll back to saved cursor position.
   //
-  This->Mode->CursorColumn = SavedColumn;
-  This->Mode->CursorRow    = SavedRow;
+  This->Mode->CursorColumn  = SavedColumn;
+  This->Mode->CursorRow     = SavedRow;
 
-  This->Mode->Attribute = (INT32)Attribute;
+  This->Mode->Attribute     = (INT32) Attribute;
 
   return EFI_SUCCESS;
+
 }
+
 
 /**
   Implements EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.ClearScreen().
@@ -718,6 +726,7 @@ TerminalConOutClearScreen (
   return Status;
 }
 
+
 /**
   Implements EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.SetCursorPosition().
 
@@ -739,12 +748,12 @@ TerminalConOutSetCursorPosition (
   IN  UINTN                            Row
   )
 {
-  EFI_SIMPLE_TEXT_OUTPUT_MODE  *Mode;
-  UINTN                        MaxColumn;
-  UINTN                        MaxRow;
-  EFI_STATUS                   Status;
-  TERMINAL_DEV                 *TerminalDevice;
-  CHAR16                       *String;
+  EFI_SIMPLE_TEXT_OUTPUT_MODE *Mode;
+  UINTN                       MaxColumn;
+  UINTN                       MaxRow;
+  EFI_STATUS                  Status;
+  TERMINAL_DEV                *TerminalDevice;
+  CHAR16                      *String;
 
   TerminalDevice = TERMINAL_CON_OUT_DEV_FROM_THIS (This);
 
@@ -757,19 +766,18 @@ TerminalConOutSetCursorPosition (
   //  get geometry of current mode
   //
   Status = This->QueryMode (
-                   This,
-                   Mode->Mode,
-                   &MaxColumn,
-                   &MaxRow
-                   );
+                  This,
+                  Mode->Mode,
+                  &MaxColumn,
+                  &MaxRow
+                  );
   if (EFI_ERROR (Status)) {
     return EFI_UNSUPPORTED;
   }
 
-  if ((Column >= MaxColumn) || (Row >= MaxRow)) {
+  if (Column >= MaxColumn || Row >= MaxRow) {
     return EFI_UNSUPPORTED;
   }
-
   //
   // control sequence to move the cursor
   //
@@ -777,45 +785,47 @@ TerminalConOutSetCursorPosition (
   // within the current line if possible, and don't output anyting if
   // it isn't necessary.
   //
-  if ((TerminalDevice->TerminalType == TerminalTypeTtyTerm) &&
-      ((UINTN)Mode->CursorRow == Row))
-  {
+  if (TerminalDevice->TerminalType == TerminalTypeTtyTerm &&
+      (UINTN)Mode->CursorRow == Row) {
     if ((UINTN)Mode->CursorColumn > Column) {
-      mCursorBackwardString[FW_BACK_OFFSET + 0] = (CHAR16)('0' + ((Mode->CursorColumn - Column) / 10));
-      mCursorBackwardString[FW_BACK_OFFSET + 1] = (CHAR16)('0' + ((Mode->CursorColumn - Column) % 10));
-      String                                    = mCursorBackwardString;
-    } else if (Column > (UINTN)Mode->CursorColumn) {
-      mCursorForwardString[FW_BACK_OFFSET + 0] = (CHAR16)('0' + ((Column - Mode->CursorColumn) / 10));
-      mCursorForwardString[FW_BACK_OFFSET + 1] = (CHAR16)('0' + ((Column - Mode->CursorColumn) % 10));
-      String                                   = mCursorForwardString;
-    } else {
+      mCursorBackwardString[FW_BACK_OFFSET + 0] = (CHAR16) ('0' + ((Mode->CursorColumn - Column) / 10));
+      mCursorBackwardString[FW_BACK_OFFSET + 1] = (CHAR16) ('0' + ((Mode->CursorColumn - Column) % 10));
+      String = mCursorBackwardString;
+    }
+    else if (Column > (UINTN)Mode->CursorColumn) {
+      mCursorForwardString[FW_BACK_OFFSET + 0] = (CHAR16) ('0' + ((Column - Mode->CursorColumn) / 10));
+      mCursorForwardString[FW_BACK_OFFSET + 1] = (CHAR16) ('0' + ((Column - Mode->CursorColumn) % 10));
+      String = mCursorForwardString;
+    }
+    else {
       String = L"";  // No cursor motion necessary
     }
-  } else {
-    mSetCursorPositionString[ROW_OFFSET + 0]    = (CHAR16)('0' + ((Row + 1) / 10));
-    mSetCursorPositionString[ROW_OFFSET + 1]    = (CHAR16)('0' + ((Row + 1) % 10));
-    mSetCursorPositionString[COLUMN_OFFSET + 0] = (CHAR16)('0' + ((Column + 1) / 10));
-    mSetCursorPositionString[COLUMN_OFFSET + 1] = (CHAR16)('0' + ((Column + 1) % 10));
-    String                                      = mSetCursorPositionString;
+  }
+  else {
+    mSetCursorPositionString[ROW_OFFSET + 0]    = (CHAR16) ('0' + ((Row + 1) / 10));
+    mSetCursorPositionString[ROW_OFFSET + 1]    = (CHAR16) ('0' + ((Row + 1) % 10));
+    mSetCursorPositionString[COLUMN_OFFSET + 0] = (CHAR16) ('0' + ((Column + 1) / 10));
+    mSetCursorPositionString[COLUMN_OFFSET + 1] = (CHAR16) ('0' + ((Column + 1) % 10));
+    String = mSetCursorPositionString;
   }
 
-  TerminalDevice->OutputEscChar = TRUE;
-  Status                        = This->OutputString (This, String);
+  TerminalDevice->OutputEscChar               = TRUE;
+  Status = This->OutputString (This, String);
   TerminalDevice->OutputEscChar = FALSE;
 
   if (EFI_ERROR (Status)) {
     return EFI_DEVICE_ERROR;
   }
-
   //
   //  update current cursor position
   //  in the Mode data structure.
   //
-  Mode->CursorColumn = (INT32)Column;
-  Mode->CursorRow    = (INT32)Row;
+  Mode->CursorColumn  = (INT32) Column;
+  Mode->CursorRow     = (INT32) Row;
 
   return EFI_SUCCESS;
 }
+
 
 /**
   Implements SIMPLE_TEXT_OUTPUT.EnableCursor().
@@ -844,6 +854,7 @@ TerminalConOutEnableCursor (
   return EFI_SUCCESS;
 }
 
+
 /**
   Detects if a Unicode char is for Box Drawing text graphics.
 
@@ -859,11 +870,11 @@ TerminalConOutEnableCursor (
 BOOLEAN
 TerminalIsValidTextGraphics (
   IN  CHAR16  Graphic,
-  OUT CHAR8   *PcAnsi  OPTIONAL,
+  OUT CHAR8   *PcAnsi, OPTIONAL
   OUT CHAR8   *Ascii OPTIONAL
   )
 {
-  UNICODE_TO_CHAR  *Table;
+  UNICODE_TO_CHAR *Table;
 
   if ((((Graphic & 0xff00) != 0x2500) && ((Graphic & 0xff00) != 0x2100))) {
     //
@@ -931,13 +942,12 @@ TerminalIsValidEfiCntlChar (
   //
   // only support four control characters.
   //
-  if ((CharC == CHAR_NULL) ||
-      (CharC == CHAR_BACKSPACE) ||
-      (CharC == CHAR_LINEFEED) ||
-      (CharC == CHAR_CARRIAGE_RETURN) ||
-      (CharC == CHAR_TAB)
-      )
-  {
+  if (CharC == CHAR_NULL ||
+      CharC == CHAR_BACKSPACE ||
+      CharC == CHAR_LINEFEED ||
+      CharC == CHAR_CARRIAGE_RETURN ||
+      CharC == CHAR_TAB
+      ) {
     return TRUE;
   }
 

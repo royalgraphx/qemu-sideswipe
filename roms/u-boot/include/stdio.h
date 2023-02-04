@@ -5,7 +5,7 @@
 #include <linux/compiler.h>
 
 /* stdin */
-int getchar(void);
+int getc(void);
 int tstc(void);
 
 /* stdout */

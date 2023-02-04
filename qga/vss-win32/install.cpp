@@ -13,11 +13,7 @@
 #include "qemu/osdep.h"
 
 #include "vss-common.h"
-#ifdef HAVE_VSS_SDK
-#include <vscoordint.h>
-#else
-#include <vsadmin.h>
-#endif
+#include <inc/win2003/vscoordint.h>
 #include "install.h"
 #include <wbemidl.h>
 #include <comdef.h>
@@ -46,8 +42,7 @@ void errmsg(DWORD err, const char *text)
      * If text doesn't contains '(', negative precision is given, which is
      * treated as though it were missing.
      */
-    char *msg = NULL;
-    const char *nul = strchr(text, '(');
+    char *msg = NULL, *nul = strchr(text, '(');
     int len = nul ? nul - text : -1;
 
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |

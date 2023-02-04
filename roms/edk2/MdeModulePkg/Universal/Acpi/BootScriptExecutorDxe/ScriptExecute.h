@@ -10,7 +10,6 @@ Copyright (c) 2017, AMD Incorporated. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-
 #ifndef _BOOT_SCRIPT_EXECUTOR_H_
 #define _BOOT_SCRIPT_EXECUTOR_H_
 
@@ -52,10 +51,9 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 VOID
 AsmTransferControl (
-  IN   UINT32  S3WakingVector,
-  IN   UINT32  AcpiLowMemoryBase
+  IN   UINT32           S3WakingVector,
+  IN   UINT32           AcpiLowMemoryBase
   );
-
 /**
   a 32bit ASM function to transfer control to OS.
 
@@ -64,10 +62,9 @@ AsmTransferControl (
 **/
 VOID
 AsmTransferControl32 (
-  IN   UINT32  S3WakingVector,
-  IN   UINT32  AcpiLowMemoryBase
+  IN   UINT32           S3WakingVector,
+  IN   UINT32           AcpiLowMemoryBase
   );
-
 /**
   a 16bit ASM function to transfer control to OS.
 **/
@@ -75,7 +72,6 @@ VOID
 AsmTransferControl16 (
   VOID
   );
-
 /**
   Set a IDT entry for interrupt vector 3 for debug purpose.
 
@@ -84,12 +80,12 @@ AsmTransferControl16 (
 **/
 VOID
 SetIdtEntry (
-  IN ACPI_S3_CONTEXT  *AcpiS3Context
+  IN ACPI_S3_CONTEXT     *AcpiS3Context
   );
 
-extern UINT32   AsmFixAddress16;
-extern UINT32   AsmJmpAddr32;
-extern BOOLEAN  mPage1GSupport;
-extern UINT64   mAddressEncMask;
+extern UINT32 AsmFixAddress16;
+extern UINT32 AsmJmpAddr32;
+extern BOOLEAN mPage1GSupport;
+extern UINT64 mAddressEncMask;
 
 #endif //_BOOT_SCRIPT_EXECUTOR_H_

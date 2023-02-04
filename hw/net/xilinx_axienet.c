@@ -35,7 +35,6 @@
 #include "hw/irq.h"
 #include "hw/qdev-properties.h"
 #include "hw/stream.h"
-#include "qom/object.h"
 
 #define DPHY(x)
 
@@ -43,16 +42,19 @@
 #define TYPE_XILINX_AXI_ENET_DATA_STREAM "xilinx-axienet-data-stream"
 #define TYPE_XILINX_AXI_ENET_CONTROL_STREAM "xilinx-axienet-control-stream"
 
-OBJECT_DECLARE_SIMPLE_TYPE(XilinxAXIEnet, XILINX_AXI_ENET)
+#define XILINX_AXI_ENET(obj) \
+     OBJECT_CHECK(XilinxAXIEnet, (obj), TYPE_XILINX_AXI_ENET)
 
-typedef struct XilinxAXIEnetStreamSink XilinxAXIEnetStreamSink;
-DECLARE_INSTANCE_CHECKER(XilinxAXIEnetStreamSink, XILINX_AXI_ENET_DATA_STREAM,
-                         TYPE_XILINX_AXI_ENET_DATA_STREAM)
+#define XILINX_AXI_ENET_DATA_STREAM(obj) \
+     OBJECT_CHECK(XilinxAXIEnetStreamSlave, (obj),\
+     TYPE_XILINX_AXI_ENET_DATA_STREAM)
 
-DECLARE_INSTANCE_CHECKER(XilinxAXIEnetStreamSink, XILINX_AXI_ENET_CONTROL_STREAM,
-                         TYPE_XILINX_AXI_ENET_CONTROL_STREAM)
+#define XILINX_AXI_ENET_CONTROL_STREAM(obj) \
+     OBJECT_CHECK(XilinxAXIEnetStreamSlave, (obj),\
+     TYPE_XILINX_AXI_ENET_CONTROL_STREAM)
 
 /* Advertisement control register. */
+#define ADVERTISE_10HALF        0x0020  /* Try for 10mbps half-duplex  */
 #define ADVERTISE_10FULL        0x0040  /* Try for 10mbps full-duplex  */
 #define ADVERTISE_100HALF       0x0080  /* Try for 100mbps half-duplex */
 #define ADVERTISE_100FULL       0x0100  /* Try for 100mbps full-duplex */
@@ -167,6 +169,28 @@ tdk_init(struct PHY *phy)
 }
 
 struct MDIOBus {
+    /* bus.  */
+    int mdc;
+    int mdio;
+
+    /* decoder.  */
+    enum {
+        PREAMBLE,
+        SOF,
+        OPC,
+        ADDR,
+        REQ,
+        TURNAROUND,
+        DATA
+    } state;
+    unsigned int drive;
+
+    unsigned int cnt;
+    unsigned int addr;
+    unsigned int opc;
+    unsigned int req;
+    unsigned int data;
+
     struct PHY *devs[32];
 };
 
@@ -309,8 +333,10 @@ struct TEMAC  {
     void *parent;
 };
 
+typedef struct XilinxAXIEnetStreamSlave XilinxAXIEnetStreamSlave;
+typedef struct XilinxAXIEnet XilinxAXIEnet;
 
-struct XilinxAXIEnetStreamSink {
+struct XilinxAXIEnetStreamSlave {
     Object parent;
 
     struct XilinxAXIEnet *enet;
@@ -320,10 +346,10 @@ struct XilinxAXIEnet {
     SysBusDevice busdev;
     MemoryRegion iomem;
     qemu_irq irq;
-    StreamSink *tx_data_dev;
-    StreamSink *tx_control_dev;
-    XilinxAXIEnetStreamSink rx_data_dev;
-    XilinxAXIEnetStreamSink rx_control_dev;
+    StreamSlave *tx_data_dev;
+    StreamSlave *tx_control_dev;
+    XilinxAXIEnetStreamSlave rx_data_dev;
+    XilinxAXIEnetStreamSlave rx_control_dev;
     NICState *nic;
     NICConf conf;
 
@@ -852,11 +878,11 @@ static ssize_t eth_rx(NetClientState *nc, const uint8_t *buf, size_t size)
 }
 
 static size_t
-xilinx_axienet_control_stream_push(StreamSink *obj, uint8_t *buf, size_t len,
+xilinx_axienet_control_stream_push(StreamSlave *obj, uint8_t *buf, size_t len,
                                    bool eop)
 {
     int i;
-    XilinxAXIEnetStreamSink *cs = XILINX_AXI_ENET_CONTROL_STREAM(obj);
+    XilinxAXIEnetStreamSlave *cs = XILINX_AXI_ENET_CONTROL_STREAM(obj);
     XilinxAXIEnet *s = cs->enet;
 
     assert(eop);
@@ -874,10 +900,10 @@ xilinx_axienet_control_stream_push(StreamSink *obj, uint8_t *buf, size_t len,
 }
 
 static size_t
-xilinx_axienet_data_stream_push(StreamSink *obj, uint8_t *buf, size_t size,
+xilinx_axienet_data_stream_push(StreamSlave *obj, uint8_t *buf, size_t size,
                                 bool eop)
 {
-    XilinxAXIEnetStreamSink *ds = XILINX_AXI_ENET_DATA_STREAM(obj);
+    XilinxAXIEnetStreamSlave *ds = XILINX_AXI_ENET_DATA_STREAM(obj);
     XilinxAXIEnet *s = ds->enet;
 
     /* TX enable ?  */
@@ -951,8 +977,8 @@ static NetClientInfo net_xilinx_enet_info = {
 static void xilinx_enet_realize(DeviceState *dev, Error **errp)
 {
     XilinxAXIEnet *s = XILINX_AXI_ENET(dev);
-    XilinxAXIEnetStreamSink *ds = XILINX_AXI_ENET_DATA_STREAM(&s->rx_data_dev);
-    XilinxAXIEnetStreamSink *cs = XILINX_AXI_ENET_CONTROL_STREAM(
+    XilinxAXIEnetStreamSlave *ds = XILINX_AXI_ENET_DATA_STREAM(&s->rx_data_dev);
+    XilinxAXIEnetStreamSlave *cs = XILINX_AXI_ENET_CONTROL_STREAM(
                                                             &s->rx_control_dev);
 
     object_property_add_link(OBJECT(ds), "enet", "xlnx.axi-ethernet",
@@ -1002,9 +1028,9 @@ static Property xilinx_enet_properties[] = {
     DEFINE_PROP_UINT32("txmem", XilinxAXIEnet, c_txmem, 0x1000),
     DEFINE_NIC_PROPERTIES(XilinxAXIEnet, conf),
     DEFINE_PROP_LINK("axistream-connected", XilinxAXIEnet,
-                     tx_data_dev, TYPE_STREAM_SINK, StreamSink *),
+                     tx_data_dev, TYPE_STREAM_SLAVE, StreamSlave *),
     DEFINE_PROP_LINK("axistream-control-connected", XilinxAXIEnet,
-                     tx_control_dev, TYPE_STREAM_SINK, StreamSink *),
+                     tx_control_dev, TYPE_STREAM_SLAVE, StreamSlave *),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -1020,14 +1046,14 @@ static void xilinx_enet_class_init(ObjectClass *klass, void *data)
 static void xilinx_enet_control_stream_class_init(ObjectClass *klass,
                                                   void *data)
 {
-    StreamSinkClass *ssc = STREAM_SINK_CLASS(klass);
+    StreamSlaveClass *ssc = STREAM_SLAVE_CLASS(klass);
 
     ssc->push = xilinx_axienet_control_stream_push;
 }
 
 static void xilinx_enet_data_stream_class_init(ObjectClass *klass, void *data)
 {
-    StreamSinkClass *ssc = STREAM_SINK_CLASS(klass);
+    StreamSlaveClass *ssc = STREAM_SLAVE_CLASS(klass);
 
     ssc->push = xilinx_axienet_data_stream_push;
 }
@@ -1043,10 +1069,10 @@ static const TypeInfo xilinx_enet_info = {
 static const TypeInfo xilinx_enet_data_stream_info = {
     .name          = TYPE_XILINX_AXI_ENET_DATA_STREAM,
     .parent        = TYPE_OBJECT,
-    .instance_size = sizeof(XilinxAXIEnetStreamSink),
+    .instance_size = sizeof(struct XilinxAXIEnetStreamSlave),
     .class_init    = xilinx_enet_data_stream_class_init,
     .interfaces = (InterfaceInfo[]) {
-            { TYPE_STREAM_SINK },
+            { TYPE_STREAM_SLAVE },
             { }
     }
 };
@@ -1054,10 +1080,10 @@ static const TypeInfo xilinx_enet_data_stream_info = {
 static const TypeInfo xilinx_enet_control_stream_info = {
     .name          = TYPE_XILINX_AXI_ENET_CONTROL_STREAM,
     .parent        = TYPE_OBJECT,
-    .instance_size = sizeof(XilinxAXIEnetStreamSink),
+    .instance_size = sizeof(struct XilinxAXIEnetStreamSlave),
     .class_init    = xilinx_enet_control_stream_class_init,
     .interfaces = (InterfaceInfo[]) {
-            { TYPE_STREAM_SINK },
+            { TYPE_STREAM_SLAVE },
             { }
     }
 };

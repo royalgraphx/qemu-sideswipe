@@ -22,7 +22,12 @@
 
 #define SDRAM_BANK_SIZE			(256 << 20)	/* 256 MB */
 
+/* select serial console configuration */
+
+/* Console configuration */
+
 #define CONFIG_BOOTCOMMAND		"run mmcboot"
+#define CONFIG_DEFAULT_CONSOLE		"console=ttySAC1,115200n8\0"
 
 #define CONFIG_SYS_INIT_SP_ADDR	(CONFIG_SYS_LOAD_ADDR \
 					- GENERATED_GBL_DATA_SIZE)
@@ -32,6 +37,8 @@
 #define CONFIG_SYS_MONITOR_BASE	0x00000000
 
 /* memtest works on */
+#define CONFIG_SYS_MEMTEST_START	CONFIG_SYS_SDRAM_BASE
+#define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_SDRAM_BASE + 0x5000000)
 #define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + 0x4800000)
 
 /* Actual modem binary size is 16MiB. Add 2MiB for bad block handling */
@@ -47,6 +54,10 @@
 #define CONFIG_ENV_UBI_MTD	" ubi.mtd=${ubiblock} ubi.mtd=4 ubi.mtd=7"
 #define CONFIG_BOOTBLOCK	"10"
 #define CONFIG_UBIBLOCK		"9"
+
+#define CONFIG_SYS_MMC_ENV_DEV		CONFIG_MMC_DEFAULT_DEV
+#define CONFIG_ENV_SIZE			4096
+#define CONFIG_ENV_OFFSET		((32 - 4) << 10) /* 32KiB - 4KiB */
 
 #define CONFIG_ENV_UBIFS_OPTION	" rootflags=bulk_read,no_chk_data_crc "
 #define CONFIG_ENV_FLASHBOOT	CONFIG_ENV_UBI_MTD CONFIG_ENV_UBIFS_OPTION \
@@ -97,7 +108,7 @@
 	"mmcoops=mmc read 0 0x40000000 0x40 8; md 0x40000000 0x400\0" \
 	"verify=n\0" \
 	"rootfstype=ext4\0" \
-	"console=console=ttySAC1,115200n8\0" \
+	"console=" CONFIG_DEFAULT_CONSOLE \
 	"mtdparts=" CONFIG_MTDPARTS_DEFAULT \
 	"mbrparts=" MBRPARTS_DEFAULT \
 	"meminfo=crashkernel=32M@0x50000000\0" \
@@ -153,7 +164,9 @@ int universal_spi_read(void);
 /*
  * LCD Settings
  */
+#define CONFIG_BMP_16BPP
 #define CONFIG_LD9040
+#define CONFIG_VIDEO_BMP_GZIP
 #define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE ((500 * 160 * 4) + 54)
 
 #endif	/* __CONFIG_H */

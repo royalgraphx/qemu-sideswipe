@@ -15,8 +15,8 @@
  * https://developer.arm.com/products/system-design/development-boards/iot-test-chips-and-boards/musca-a-test-chip-board
  * https://developer.arm.com/products/system-design/development-boards/iot-test-chips-and-boards/musca-b-test-chip-board
  * We model the A and B1 variants of this board, as described in the TRMs:
- * https://developer.arm.com/documentation/101107/latest/
- * https://developer.arm.com/documentation/101312/latest/
+ * http://infocenter.arm.com/help/topic/com.arm.doc.101107_0000_00_en/index.html
+ * http://infocenter.arm.com/help/topic/com.arm.doc.101312_0000_00_en/index.html
  */
 
 #include "qemu/osdep.h"
@@ -33,8 +33,6 @@
 #include "hw/misc/tz-ppc.h"
 #include "hw/misc/unimp.h"
 #include "hw/rtc/pl031.h"
-#include "hw/qdev-clock.h"
-#include "qom/object.h"
 
 #define MUSCA_NUMIRQ_MAX 96
 #define MUSCA_PPC_MAX 3
@@ -47,7 +45,7 @@ typedef enum MuscaType {
     MUSCA_B1,
 } MuscaType;
 
-struct MuscaMachineClass {
+typedef struct {
     MachineClass parent;
     MuscaType type;
     uint32_t init_svtor;
@@ -55,9 +53,9 @@ struct MuscaMachineClass {
     int num_irqs;
     const MPCInfo *mpc_info;
     int num_mpcs;
-};
+} MuscaMachineClass;
 
-struct MuscaMachineState {
+typedef struct {
     MachineState parent;
 
     ARMSSE sse;
@@ -83,15 +81,18 @@ struct MuscaMachineState {
     UnimplementedDeviceState sdio;
     UnimplementedDeviceState gpio;
     UnimplementedDeviceState cryptoisland;
-    Clock *sysclk;
-    Clock *s32kclk;
-};
+} MuscaMachineState;
 
 #define TYPE_MUSCA_MACHINE "musca"
 #define TYPE_MUSCA_A_MACHINE MACHINE_TYPE_NAME("musca-a")
 #define TYPE_MUSCA_B1_MACHINE MACHINE_TYPE_NAME("musca-b1")
 
-OBJECT_DECLARE_TYPE(MuscaMachineState, MuscaMachineClass, MUSCA_MACHINE)
+#define MUSCA_MACHINE(obj) \
+    OBJECT_CHECK(MuscaMachineState, obj, TYPE_MUSCA_MACHINE)
+#define MUSCA_MACHINE_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(MuscaMachineClass, obj, TYPE_MUSCA_MACHINE)
+#define MUSCA_MACHINE_CLASS(klass) \
+    OBJECT_CLASS_CHECK(MuscaMachineClass, klass, TYPE_MUSCA_MACHINE)
 
 /*
  * Main SYSCLK frequency in Hz
@@ -99,8 +100,6 @@ OBJECT_DECLARE_TYPE(MuscaMachineState, MuscaMachineClass, MUSCA_MACHINE)
  * don't model that in our SSE-200 model yet.
  */
 #define SYSCLK_FRQ 40000000
-/* Slow 32Khz S32KCLK frequency in Hz */
-#define S32KCLK_FRQ (32 * 1000)
 
 static qemu_irq get_sse_irq_in(MuscaMachineState *mms, int irqno)
 {
@@ -372,11 +371,6 @@ static void musca_init(MachineState *machine)
         exit(1);
     }
 
-    mms->sysclk = clock_new(OBJECT(machine), "SYSCLK");
-    clock_set_hz(mms->sysclk, SYSCLK_FRQ);
-    mms->s32kclk = clock_new(OBJECT(machine), "S32KCLK");
-    clock_set_hz(mms->s32kclk, S32KCLK_FRQ);
-
     object_initialize_child(OBJECT(machine), "sse-200", &mms->sse,
                             TYPE_SSE200);
     ssedev = DEVICE(&mms->sse);
@@ -385,8 +379,7 @@ static void musca_init(MachineState *machine)
     qdev_prop_set_uint32(ssedev, "EXP_NUMIRQ", mmc->num_irqs);
     qdev_prop_set_uint32(ssedev, "init-svtor", mmc->init_svtor);
     qdev_prop_set_uint32(ssedev, "SRAM_ADDR_WIDTH", mmc->sram_addr_width);
-    qdev_connect_clock_in(ssedev, "MAINCLK", mms->sysclk);
-    qdev_connect_clock_in(ssedev, "S32KCLK", mms->s32kclk);
+    qdev_prop_set_uint32(ssedev, "MAINCLK", SYSCLK_FRQ);
     /*
      * Musca-A takes the default SSE-200 FPU/DSP settings (ie no for
      * CPU0 and yes for CPU1); Musca-B1 explicitly enables them for CPU0.
@@ -597,8 +590,7 @@ static void musca_init(MachineState *machine)
                                                      "cfg_sec_resp", 0));
     }
 
-    armv7m_load_kernel(ARM_CPU(first_cpu), machine->kernel_filename,
-                       0, 0x2000000);
+    armv7m_load_kernel(ARM_CPU(first_cpu), machine->kernel_filename, 0x2000000);
 }
 
 static void musca_class_init(ObjectClass *oc, void *data)

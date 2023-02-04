@@ -1,5 +1,5 @@
 ## @file
-#  Provides the capability to configure secure boot in a setup browser
+#  Provides the capbility to configure secure boot in a setup browser
 #  By this module, user may change the content of DB, DBX, PK and KEK.
 #
 # Copyright (c) 2011 - 2018, Intel Corporation. All rights reserved.<BR>
@@ -54,8 +54,6 @@
   DevicePathLib
   FileExplorerLib
   PeCoffLib
-  SecureBootVariableLib
-  SecureBootVariableProvisionLib
 
 [Guids]
   ## SOMETIMES_CONSUMES      ## Variable:L"CustomMode"
@@ -110,7 +108,6 @@
 [Protocols]
   gEfiHiiConfigAccessProtocolGuid               ## PRODUCES
   gEfiDevicePathProtocolGuid                    ## PRODUCES
-  gEfiHiiPopupProtocolGuid
 
 [Depex]
   gEfiHiiConfigRoutingProtocolGuid  AND

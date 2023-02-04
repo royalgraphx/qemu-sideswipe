@@ -1,4 +1,4 @@
-.. _QEMU monitor:
+.. _pcsys_005fmonitor:
 
 QEMU Monitor
 ------------

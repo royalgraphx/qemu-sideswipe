@@ -96,7 +96,7 @@
 			};
 		};
 
-		pcie {
+		pcie-controller {
 			status = "okay";
 
 			pcie@1,0 {

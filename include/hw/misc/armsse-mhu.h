@@ -12,7 +12,7 @@
 /*
  * This is a model of the Message Handling Unit (MHU) which is part of the
  * Arm SSE-200 and documented in
- * https://developer.arm.com/documentation/101104/latest/
+ * http://infocenter.arm.com/help/topic/com.arm.doc.101104_0100_00_en/corelink_sse200_subsystem_for_embedded_technical_reference_manual_101104_0100_00_en.pdf
  *
  * QEMU interface:
  *  + sysbus MMIO region 0: the system information register bank
@@ -24,12 +24,11 @@
 #define HW_MISC_ARMSSE_MHU_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define TYPE_ARMSSE_MHU "armsse-mhu"
-OBJECT_DECLARE_SIMPLE_TYPE(ARMSSEMHU, ARMSSE_MHU)
+#define ARMSSE_MHU(obj) OBJECT_CHECK(ARMSSEMHU, (obj), TYPE_ARMSSE_MHU)
 
-struct ARMSSEMHU {
+typedef struct ARMSSEMHU {
     /*< private >*/
     SysBusDevice parent_obj;
 
@@ -40,6 +39,6 @@ struct ARMSSEMHU {
 
     uint32_t cpu0intr;
     uint32_t cpu1intr;
-};
+} ARMSSEMHU;
 
 #endif

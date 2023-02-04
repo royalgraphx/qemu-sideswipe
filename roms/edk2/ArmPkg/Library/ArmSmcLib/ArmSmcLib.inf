@@ -20,9 +20,6 @@
 [Sources.AARCH64]
   AArch64/ArmSmc.S
 
-[Sources]
-  ArmSmc.c
-
 [Packages]
   MdePkg/MdePkg.dec
   ArmPkg/ArmPkg.dec

@@ -1,4 +1,3 @@
-# struct 'data' member with dict value is (longhand) member
-# definition, not inline complex type
-{ 'struct': 'Foo',
+# Long form of member must have a value member 'type'
+{ 'struct': 'foo',
   'data': { '*a': { 'case': 'foo' } } }

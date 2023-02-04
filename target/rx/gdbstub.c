@@ -16,12 +16,13 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "cpu.h"
 #include "exec/gdbstub.h"
 
 int rx_cpu_gdb_read_register(CPUState *cs, GByteArray *mem_buf, int n)
 {
-    RXCPU *cpu = RX_CPU(cs);
+    RXCPU *cpu = RXCPU(cs);
     CPURXState *env = &cpu->env;
 
     switch (n) {
@@ -53,7 +54,7 @@ int rx_cpu_gdb_read_register(CPUState *cs, GByteArray *mem_buf, int n)
 
 int rx_cpu_gdb_write_register(CPUState *cs, uint8_t *mem_buf, int n)
 {
-    RXCPU *cpu = RX_CPU(cs);
+    RXCPU *cpu = RXCPU(cs);
     CPURXState *env = &cpu->env;
     uint32_t psw;
     switch (n) {

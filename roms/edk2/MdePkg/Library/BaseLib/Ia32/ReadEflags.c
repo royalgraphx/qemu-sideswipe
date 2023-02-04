@@ -6,6 +6,9 @@
 
 **/
 
+
+
+
 /**
   Reads the current value of the EFLAGS register.
 
@@ -27,3 +30,4 @@ AsmReadEflags (
     pop     eax
   }
 }
+

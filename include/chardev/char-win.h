@@ -25,9 +25,8 @@
 #define CHAR_WIN_H
 
 #include "chardev/char.h"
-#include "qom/object.h"
 
-struct WinChardev {
+typedef struct {
     Chardev parent;
 
     bool keep_open; /* console do not close file */
@@ -37,15 +36,13 @@ struct WinChardev {
 
     /* Protected by the Chardev chr_write_lock.  */
     OVERLAPPED osend;
-};
-typedef struct WinChardev WinChardev;
+} WinChardev;
 
 #define NSENDBUF 2048
 #define NRECVBUF 2048
 
 #define TYPE_CHARDEV_WIN "chardev-win"
-DECLARE_INSTANCE_CHECKER(WinChardev, WIN_CHARDEV,
-                         TYPE_CHARDEV_WIN)
+#define WIN_CHARDEV(obj) OBJECT_CHECK(WinChardev, (obj), TYPE_CHARDEV_WIN)
 
 void win_chr_set_file(Chardev *chr, HANDLE file, bool keep_open);
 int win_chr_serial_init(Chardev *chr, const char *filename, Error **errp);

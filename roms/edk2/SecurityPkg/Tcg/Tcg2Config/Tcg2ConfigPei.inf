@@ -28,7 +28,6 @@
 [Sources]
   Tcg2ConfigPeim.c
   Tcg2ConfigNvData.h
-  Tcg2Internal.h
   TpmDetection.c
 
 [Packages]

@@ -16,14 +16,13 @@
  */
 
 #include <common.h>
-#include <cpu_func.h>
 #include <asm/io.h>
 #include <asm/arch/imx-regs.h>
 
 /*
  * Reset the cpu by setting up the watchdog timer and let it time out
  */
-void reset_cpu(void)
+void reset_cpu(ulong ignored)
 {
 	struct wdog_regs *regs = (struct wdog_regs *)IMX_WDT_BASE;
 	/* Disable watchdog and set Time-Out field to 0 */

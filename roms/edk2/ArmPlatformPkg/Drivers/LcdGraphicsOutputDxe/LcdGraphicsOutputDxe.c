@@ -1,7 +1,7 @@
 /** @file
   This file implements the Graphics Output protocol for Arm platforms
 
-  Copyright (c) 2011 - 2020, Arm Limited. All rights reserved.<BR>
+  Copyright (c) 2011-2018, ARM Ltd. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -21,37 +21,37 @@
 // Global variables
 //
 
-BOOLEAN  mDisplayInitialized = FALSE;
+BOOLEAN mDisplayInitialized = FALSE;
 
-LCD_INSTANCE  mLcdTemplate = {
+LCD_INSTANCE mLcdTemplate = {
   LCD_INSTANCE_SIGNATURE,
-  NULL,                                        // Handle
-  {               // ModeInfo
-    0,            // Version
-    0,            // HorizontalResolution
-    0,            // VerticalResolution
+  NULL, // Handle
+  { // ModeInfo
+    0, // Version
+    0, // HorizontalResolution
+    0, // VerticalResolution
     PixelBltOnly, // PixelFormat
-    { 0 },        // PixelInformation
-    0,            // PixelsPerScanLine
+    { 0 }, // PixelInformation
+    0, // PixelsPerScanLine
   },
   {
-    0,    // MaxMode;
-    0,    // Mode;
+    0, // MaxMode;
+    0, // Mode;
     NULL, // Info;
-    0,    // SizeOfInfo;
-    0,    // FrameBufferBase;
-    0     // FrameBufferSize;
+    0, // SizeOfInfo;
+    0, // FrameBufferBase;
+    0 // FrameBufferSize;
   },
-  {                       // Gop
-    LcdGraphicsQueryMode, // QueryMode
-    LcdGraphicsSetMode,   // SetMode
-    LcdGraphicsBlt,       // Blt
-    NULL                  // *Mode
+  { // Gop
+    LcdGraphicsQueryMode,  // QueryMode
+    LcdGraphicsSetMode,    // SetMode
+    LcdGraphicsBlt,        // Blt
+    NULL                     // *Mode
   },
   { // DevicePath
     {
       {
-        HARDWARE_DEVICE_PATH,                  HW_VENDOR_DP,
+        HARDWARE_DEVICE_PATH, HW_VENDOR_DP,
         {
           (UINT8)(sizeof (VENDOR_DEVICE_PATH)),
           (UINT8)((sizeof (VENDOR_DEVICE_PATH)) >> 8)
@@ -75,10 +75,10 @@ LCD_INSTANCE  mLcdTemplate = {
 
 EFI_STATUS
 LcdInstanceContructor (
-  OUT LCD_INSTANCE  **NewInstance
+  OUT LCD_INSTANCE** NewInstance
   )
 {
-  LCD_INSTANCE  *Instance;
+  LCD_INSTANCE* Instance;
 
   Instance = AllocateCopyPool (sizeof (LCD_INSTANCE), &mLcdTemplate);
   if (Instance == NULL) {
@@ -99,12 +99,12 @@ LcdInstanceContructor (
 
 EFI_STATUS
 InitializeDisplay (
-  IN LCD_INSTANCE  *Instance
+  IN LCD_INSTANCE* Instance
   )
 {
-  EFI_STATUS            Status;
-  EFI_PHYSICAL_ADDRESS  VramBaseAddress;
-  UINTN                 VramSize;
+  EFI_STATUS             Status = EFI_SUCCESS;
+  EFI_PHYSICAL_ADDRESS   VramBaseAddress;
+  UINTN                  VramSize;
 
   Status = LcdPlatformGetVram (&VramBaseAddress, &VramSize);
   if (EFI_ERROR (Status)) {
@@ -144,12 +144,12 @@ EXIT:
 EFI_STATUS
 EFIAPI
 LcdGraphicsOutputDxeInitialize (
-  IN EFI_HANDLE        ImageHandle,
-  IN EFI_SYSTEM_TABLE  *SystemTable
+  IN EFI_HANDLE         ImageHandle,
+  IN EFI_SYSTEM_TABLE   *SystemTable
   )
 {
-  EFI_STATUS    Status;
-  LCD_INSTANCE  *Instance;
+  EFI_STATUS  Status = EFI_SUCCESS;
+  LCD_INSTANCE* Instance;
 
   Status = LcdIdentify ();
   if (EFI_ERROR (Status)) {
@@ -240,14 +240,14 @@ LcdGraphicsExitBootServicesEvent (
 EFI_STATUS
 EFIAPI
 LcdGraphicsQueryMode (
-  IN EFI_GRAPHICS_OUTPUT_PROTOCOL           *This,
-  IN UINT32                                 ModeNumber,
-  OUT UINTN                                 *SizeOfInfo,
-  OUT EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  **Info
+  IN EFI_GRAPHICS_OUTPUT_PROTOCOL            *This,
+  IN UINT32                                  ModeNumber,
+  OUT UINTN                                  *SizeOfInfo,
+  OUT EFI_GRAPHICS_OUTPUT_MODE_INFORMATION   **Info
   )
 {
-  EFI_STATUS    Status;
-  LCD_INSTANCE  *Instance;
+  EFI_STATUS Status = EFI_SUCCESS;
+  LCD_INSTANCE *Instance;
 
   Instance = LCD_INSTANCE_FROM_GOP_THIS (This);
 
@@ -263,8 +263,7 @@ LcdGraphicsQueryMode (
   if ((This == NULL) ||
       (Info == NULL) ||
       (SizeOfInfo == NULL) ||
-      (ModeNumber >= This->Mode->MaxMode))
-  {
+      (ModeNumber >= This->Mode->MaxMode)) {
     DEBUG ((DEBUG_ERROR, "LcdGraphicsQueryMode: ERROR - For mode number %d : Invalid Parameter.\n", ModeNumber));
     Status = EFI_INVALID_PARAMETER;
     goto EXIT;
@@ -293,14 +292,14 @@ EXIT:
 EFI_STATUS
 EFIAPI
 LcdGraphicsSetMode (
-  IN EFI_GRAPHICS_OUTPUT_PROTOCOL  *This,
-  IN UINT32                        ModeNumber
+  IN EFI_GRAPHICS_OUTPUT_PROTOCOL   *This,
+  IN UINT32                         ModeNumber
   )
 {
-  EFI_STATUS                     Status;
-  EFI_GRAPHICS_OUTPUT_BLT_PIXEL  FillColour;
-  LCD_INSTANCE                   *Instance;
-  LCD_BPP                        Bpp;
+  EFI_STATUS                      Status = EFI_SUCCESS;
+  EFI_GRAPHICS_OUTPUT_BLT_PIXEL   FillColour;
+  LCD_INSTANCE*                   Instance;
+  LCD_BPP                         Bpp;
 
   Instance = LCD_INSTANCE_FROM_GOP_THIS (This);
 
@@ -334,10 +333,9 @@ LcdGraphicsSetMode (
     DEBUG ((DEBUG_ERROR, "LcdGraphicsSetMode: ERROR - Couldn't get bytes per pixel, status: %r\n", Status));
     goto EXIT;
   }
-
   This->Mode->FrameBufferSize =  Instance->ModeInfo.VerticalResolution
-                                * Instance->ModeInfo.PixelsPerScanLine
-                                * GetBytesPerPixel (Bpp);
+                                 * Instance->ModeInfo.PixelsPerScanLine
+                                 * GetBytesPerPixel (Bpp);
 
   // Set the hardware to the new mode
   Status = LcdSetMode (ModeNumber);
@@ -354,17 +352,17 @@ LcdGraphicsSetMode (
 
   // Fill the entire visible area with the same colour.
   Status = This->Blt (
-                   This,
-                   &FillColour,
-                   EfiBltVideoFill,
-                   0,
-                   0,
-                   0,
-                   0,
-                   This->Mode->Info->HorizontalResolution,
-                   This->Mode->Info->VerticalResolution,
-                   0
-                   );
+      This,
+      &FillColour,
+      EfiBltVideoFill,
+      0,
+      0,
+      0,
+      0,
+      This->Mode->Info->HorizontalResolution,
+      This->Mode->Info->VerticalResolution,
+      0
+      );
 
 EXIT:
   return Status;
@@ -372,25 +370,25 @@ EXIT:
 
 UINTN
 GetBytesPerPixel (
-  IN  LCD_BPP  Bpp
+  IN  LCD_BPP       Bpp
   )
 {
   switch (Bpp) {
-    case LcdBitsPerPixel_24:
-      return 4;
+  case LCD_BITS_PER_PIXEL_24:
+    return 4;
 
-    case LcdBitsPerPixel_16_565:
-    case LcdBitsPerPixel_16_555:
-    case LcdBitsPerPixel_12_444:
-      return 2;
+  case LCD_BITS_PER_PIXEL_16_565:
+  case LCD_BITS_PER_PIXEL_16_555:
+  case LCD_BITS_PER_PIXEL_12_444:
+    return 2;
 
-    case LcdBitsPerPixel_8:
-    case LcdBitsPerPixel_4:
-    case LcdBitsPerPixel_2:
-    case LcdBitsPerPixel_1:
-      return 1;
+  case LCD_BITS_PER_PIXEL_8:
+  case LCD_BITS_PER_PIXEL_4:
+  case LCD_BITS_PER_PIXEL_2:
+  case LCD_BITS_PER_PIXEL_1:
+    return 1;
 
-    default:
-      return 0;
+  default:
+    return 0;
   }
 }

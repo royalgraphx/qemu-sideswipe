@@ -4,7 +4,6 @@ This file contains the internal functions required to generate a Firmware Volume
 Copyright (c) 2004 - 2018, Intel Corporation. All rights reserved.<BR>
 Portions Copyright (c) 2011 - 2013, ARM Ltd. All rights reserved.<BR>
 Portions Copyright (c) 2016 HP Development Company, L.P.<BR>
-Portions Copyright (c) 2020, Hewlett Packard Enterprise Development LP. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -34,29 +33,10 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #include "FvLib.h"
 #include "PeCoffLib.h"
 
+#define ARMT_UNCONDITIONAL_JUMP_INSTRUCTION       0xEB000000
 #define ARM64_UNCONDITIONAL_JUMP_INSTRUCTION      0x14000000
 
-/*
- * Arm instruction to jump to Fv entry instruction in Arm or Thumb mode.
- * From ARM Arch Ref Manual versions b/c/d, section A8.8.25 BL, BLX (immediate)
- * BLX (encoding A2) branches to offset in Thumb instruction set mode.
- * BL (encoding A1) branches to offset in Arm instruction set mode.
- */
-#define ARM_JUMP_OFFSET_MAX        0xffffff
-#define ARM_JUMP_TO_ARM(Offset)    (0xeb000000 | ((Offset - 8) >> 2))
-
-#define _ARM_JUMP_TO_THUMB(Imm32)  (0xfa000000 | \
-                                    (((Imm32) & (1 << 1)) << (24 - 1)) | \
-                                    (((Imm32) >> 2) & 0x7fffff))
-#define ARM_JUMP_TO_THUMB(Offset)  _ARM_JUMP_TO_THUMB((Offset) - 8)
-
-/*
- * Arm instruction to return from exception (MOVS PC, LR)
- */
-#define ARM_RETURN_FROM_EXCEPTION  0xE1B0F07E
-
 BOOLEAN mArm = FALSE;
-BOOLEAN mRiscV = FALSE;
 STATIC UINT32   MaxFfsAlignment = 0;
 BOOLEAN VtfFileFlag = FALSE;
 
@@ -811,7 +791,6 @@ Returns:
   FILE                                *PeMapFile;
   CHAR8                               Line [MAX_LINE_LEN];
   CHAR8                               KeyWord [MAX_LINE_LEN];
-  CHAR8                               KeyWord2 [MAX_LINE_LEN];
   CHAR8                               FunctionName [MAX_LINE_LEN];
   EFI_PHYSICAL_ADDRESS                FunctionAddress;
   UINT32                              FunctionType;
@@ -826,7 +805,6 @@ Returns:
   UINT32                              TextVirtualAddress;
   UINT32                              DataVirtualAddress;
   EFI_PHYSICAL_ADDRESS                LinkTimeBaseAddress;
-  BOOLEAN                             IsUseClang;
 
   //
   // Init local variable
@@ -921,12 +899,7 @@ Returns:
     fprintf (FvMapFile, "BaseAddress=0x%010llx, ", (unsigned long long) (ImageBaseAddress + Offset));
   }
 
-  fprintf (FvMapFile, "EntryPoint=0x%010llx, ", (unsigned long long) (ImageBaseAddress + AddressOfEntryPoint));
-  if (!pImageContext->IsTeImage) {
-    fprintf (FvMapFile, "Type=PE");
-  } else {
-    fprintf (FvMapFile, "Type=TE");
-  }
+  fprintf (FvMapFile, "EntryPoint=0x%010llx", (unsigned long long) (ImageBaseAddress + AddressOfEntryPoint));
   fprintf (FvMapFile, ")\n");
 
   fprintf (FvMapFile, "(GUID=%s", FileGuidName);
@@ -959,7 +932,6 @@ Returns:
   // Output Functions information into Fv Map file
   //
   LinkTimeBaseAddress = 0;
-  IsUseClang = FALSE;
   while (fgets (Line, MAX_LINE_LEN, PeMapFile) != NULL) {
     //
     // Skip blank line
@@ -974,12 +946,6 @@ Returns:
     if (FunctionType == 0) {
       sscanf (Line, "%s", KeyWord);
       if (stricmp (KeyWord, "Address") == 0) {
-        sscanf (Line, "%s %s", KeyWord, KeyWord2);
-        if (stricmp (KeyWord2, "Size") == 0) {
-          IsUseClang = TRUE;
-          FunctionType = 1;
-          continue;
-        }
         //
         // function list
         //
@@ -1001,20 +967,11 @@ Returns:
     // Printf Function Information
     //
     if (FunctionType == 1) {
-      if (IsUseClang) {
-        sscanf (Line, "%llx %s %s %s", &TempLongAddress, KeyWord, KeyWord2, FunctionTypeName);
-        FunctionAddress = (UINT64) TempLongAddress;
-        if (FunctionTypeName [0] == '_' ) {
-          fprintf (FvMapFile, "  0x%010llx    ", (unsigned long long) (ImageBaseAddress + FunctionAddress - LinkTimeBaseAddress));
-          fprintf (FvMapFile, "%s\n", FunctionTypeName);
-        }
-      } else {
-        sscanf (Line, "%s %s %llx %s", KeyWord, FunctionName, &TempLongAddress, FunctionTypeName);
-        FunctionAddress = (UINT64) TempLongAddress;
-        if (FunctionTypeName [1] == '\0' && (FunctionTypeName [0] == 'f' || FunctionTypeName [0] == 'F')) {
-          fprintf (FvMapFile, "  0x%010llx    ", (unsigned long long) (ImageBaseAddress + FunctionAddress - LinkTimeBaseAddress));
-          fprintf (FvMapFile, "%s\n", FunctionName);
-        }
+      sscanf (Line, "%s %s %llx %s", KeyWord, FunctionName, &TempLongAddress, FunctionTypeName);
+      FunctionAddress = (UINT64) TempLongAddress;
+      if (FunctionTypeName [1] == '\0' && (FunctionTypeName [0] == 'f' || FunctionTypeName [0] == 'F')) {
+        fprintf (FvMapFile, "  0x%010llx    ", (unsigned long long) (ImageBaseAddress + FunctionAddress - LinkTimeBaseAddress));
+        fprintf (FvMapFile, "%s\n", FunctionName);
       }
     } else if (FunctionType == 2) {
       sscanf (Line, "%s %s %llx %s", KeyWord, FunctionName, &TempLongAddress, FunctionTypeName);
@@ -2221,25 +2178,23 @@ Returns:
     // if we found an SEC core entry point then generate a branch instruction
     // to it and populate a debugger SWI entry as well
     if (UpdateVectorSec) {
-      UINT32                    EntryOffset;
 
       VerboseMsg("UpdateArmResetVectorIfNeeded updating ARM SEC vector");
 
-      EntryOffset = (INT32)(SecCoreEntryAddress - FvInfo->BaseAddress);
+      // B SecEntryPoint - signed_immed_24 part +/-32MB offset
+      // on ARM, the PC is always 8 ahead, so we're not really jumping from the base address, but from base address + 8
+      ResetVector[0] = (INT32)(SecCoreEntryAddress - FvInfo->BaseAddress - 8) >> 2;
 
-      if (EntryOffset > ARM_JUMP_OFFSET_MAX) {
-          Error(NULL, 0, 3000, "Invalid", "SEC Entry point offset above 1MB of the start of the FV");
+      if (ResetVector[0] > 0x00FFFFFF) {
+        Error(NULL, 0, 3000, "Invalid", "SEC Entry point must be within 32MB of the start of the FV");
         return EFI_ABORTED;
       }
 
-      if ((SecCoreEntryAddress & 1) != 0) {
-        ResetVector[0] = ARM_JUMP_TO_THUMB(EntryOffset);
-      } else {
-        ResetVector[0] = ARM_JUMP_TO_ARM(EntryOffset);
-      }
+      // Add opcode for an unconditional branch with no link. i.e.: " B SecEntryPoint"
+      ResetVector[0] |= ARMT_UNCONDITIONAL_JUMP_INSTRUCTION;
 
       // SWI handler movs   pc,lr. Just in case a debugger uses SWI
-      ResetVector[2] = ARM_RETURN_FROM_EXCEPTION;
+      ResetVector[2] = 0xE1B0F07E;
 
       // Place holder to support a common interrupt handler from ROM.
       // Currently not supported. For this to be used the reset vector would not be in this FV
@@ -2314,104 +2269,6 @@ Returns:
     Error(NULL, 0, 3000, "Invalid", "Unknown machine type");
     return EFI_ABORTED;
   }
-
-  return EFI_SUCCESS;
-}
-
-EFI_STATUS
-UpdateRiscvResetVectorIfNeeded (
-  MEMORY_FILE            *FvImage,
-  FV_INFO                *FvInfo
-  )
-/*++
-
-Routine Description:
-  This parses the FV looking for SEC and patches that address into the
-  beginning of the FV header.
-
-  For RISC-V ISA, the reset vector is at 0xfff~ff00h or 200h
-
-Arguments:
-  FvImage       Memory file for the FV memory image/
-  FvInfo        Information read from INF file.
-
-Returns:
-
-  EFI_SUCCESS             Function Completed successfully.
-  EFI_ABORTED             Error encountered.
-  EFI_INVALID_PARAMETER   A required parameter was NULL.
-  EFI_NOT_FOUND           PEI Core file not found.
-
---*/
-{
-  EFI_STATUS                Status;
-  UINT16                    MachineType;
-  EFI_FILE_SECTION_POINTER  SecPe32;
-  EFI_PHYSICAL_ADDRESS      SecCoreEntryAddress;
-
-  UINT32 bSecCore;
-  UINT32 tmp;
-
-
-  //
-  // Verify input parameters
-  //
-  if (FvImage == NULL || FvInfo == NULL) {
-    return EFI_INVALID_PARAMETER;
-  }
-  //
-  // Initialize FV library
-  //
-  InitializeFvLib (FvImage->FileImage, FvInfo->Size);
-
-  //
-  // Find the Sec Core
-  //
-  Status = FindCorePeSection(FvImage->FileImage, FvInfo->Size, EFI_FV_FILETYPE_SECURITY_CORE, &SecPe32);
-  if(EFI_ERROR(Status)) {
-    printf("skip because Secutiry Core not found\n");
-    return EFI_SUCCESS;
-  }
-
-  DebugMsg (NULL, 0, 9, "Update SEC core in FV Header", NULL);
-
-  Status = GetCoreMachineType(SecPe32, &MachineType);
-  if(EFI_ERROR(Status)) {
-    Error(NULL, 0, 3000, "Invalid", "Could not get the PE32 machine type for SEC core.");
-    return EFI_ABORTED;
-  }
-
-  if (MachineType != EFI_IMAGE_MACHINE_RISCV64) {
-    Error(NULL, 0, 3000, "Invalid", "Could not update SEC core because Machine type is not RiscV.");
-    return EFI_ABORTED;
-  }
-
-  Status = GetCoreEntryPointAddress(FvImage->FileImage, FvInfo, SecPe32, &SecCoreEntryAddress);
-  if(EFI_ERROR(Status)) {
-    Error(NULL, 0, 3000, "Invalid", "Could not get the PE32 entry point address for SEC Core.");
-    return EFI_ABORTED;
-  }
-
-  VerboseMsg("SecCore entry point Address = 0x%llX", (unsigned long long) SecCoreEntryAddress);
-  VerboseMsg("BaseAddress = 0x%llX", (unsigned long long) FvInfo->BaseAddress);
-  bSecCore = (UINT32)(SecCoreEntryAddress - FvInfo->BaseAddress);
-  VerboseMsg("offset = 0x%llX", bSecCore);
-
-  if(bSecCore > 0x0fffff) {
-    Error(NULL, 0, 3000, "Invalid", "SEC Entry point must be within 1MB of start of the FV");
-    return EFI_ABORTED;
-  }
-
-  tmp = bSecCore;
-  bSecCore = 0;
-  //J-type
-  bSecCore  = (tmp&0x100000)<<11; //imm[20]    at bit[31]
-  bSecCore |= (tmp&0x0007FE)<<20; //imm[10:1]  at bit[30:21]
-  bSecCore |= (tmp&0x000800)<<9;  //imm[11]    at bit[20]
-  bSecCore |= (tmp&0x0FF000);     //imm[19:12] at bit[19:12]
-  bSecCore |= 0x6F; //JAL opcode
-
-  memcpy(FvImage->FileImage, &bSecCore, sizeof(bSecCore));
 
   return EFI_SUCCESS;
 }
@@ -2508,8 +2365,7 @@ Returns:
   // Verify machine type is supported
   //
   if ((*MachineType != EFI_IMAGE_MACHINE_IA32) &&  (*MachineType != EFI_IMAGE_MACHINE_X64) && (*MachineType != EFI_IMAGE_MACHINE_EBC) &&
-      (*MachineType != EFI_IMAGE_MACHINE_ARMT) && (*MachineType != EFI_IMAGE_MACHINE_AARCH64) &&
-      (*MachineType != EFI_IMAGE_MACHINE_RISCV64)) {
+      (*MachineType != EFI_IMAGE_MACHINE_ARMT) && (*MachineType != EFI_IMAGE_MACHINE_AARCH64)) {
     Error (NULL, 0, 3000, "Invalid", "Unrecognized machine type in the PE32 file.");
     return EFI_UNSUPPORTED;
   }
@@ -2952,8 +2808,7 @@ Returns:
       Error (NULL, 0, 4002, "Resource", "FV space is full, cannot add pad file between the last file and the VTF file.");
       goto Finish;
     }
-
-    if (!mArm && !mRiscV) {
+    if (!mArm) {
       //
       // Update reset vector (SALE_ENTRY for IPF)
       // Now for IA32 and IA64 platform, the fv which has bsf file must have the
@@ -2981,22 +2836,6 @@ Returns:
       goto Finish;
     }
 
-    //
-    // Update Checksum for FvHeader
-    //
-    FvHeader->Checksum = 0;
-    FvHeader->Checksum = CalculateChecksum16 ((UINT16 *) FvHeader, FvHeader->HeaderLength / sizeof (UINT16));
-  }
-
-  if (mRiscV) {
-     //
-     // Update RISCV reset vector.
-     //
-     Status = UpdateRiscvResetVectorIfNeeded (&FvImageMemoryFile, &mFvDataInfo);
-     if (EFI_ERROR (Status)) {
-       Error (NULL, 0, 3000, "Invalid", "Could not update the reset vector for RISC-V.");
-       goto Finish;
-    }
     //
     // Update Checksum for FvHeader
     //
@@ -3165,7 +3004,6 @@ Returns:
 --*/
 {
   UINTN               CurrentOffset;
-  UINTN               OrigOffset;
   UINTN               Index;
   FILE                *fpin;
   UINTN               FfsFileSize;
@@ -3174,10 +3012,8 @@ Returns:
   UINT32              FfsHeaderSize;
   EFI_FFS_FILE_HEADER FfsHeader;
   UINTN               VtfFileSize;
-  UINTN               MaxPadFileSize;
 
   FvExtendHeaderSize = 0;
-  MaxPadFileSize = 0;
   VtfFileSize = 0;
   fpin  = NULL;
   Index = 0;
@@ -3286,12 +3122,8 @@ Returns:
         //
         // Only EFI_FFS_FILE_HEADER is needed for a pad section.
         //
-        OrigOffset    = CurrentOffset;
         CurrentOffset = (CurrentOffset + FfsHeaderSize + sizeof(EFI_FFS_FILE_HEADER) + FfsAlignment - 1) & ~(FfsAlignment - 1);
         CurrentOffset -= FfsHeaderSize;
-        if ((CurrentOffset - OrigOffset) > MaxPadFileSize) {
-          MaxPadFileSize = CurrentOffset - OrigOffset;
-        }
       }
     }
 
@@ -3335,12 +3167,6 @@ Returns:
   //
   mFvTotalSize = FvInfoPtr->Size;
   mFvTakenSize = CurrentOffset;
-  if ((mFvTakenSize == mFvTotalSize) && (MaxPadFileSize > 0)) {
-    //
-    // This FV means TOP FFS has been taken. Then, check whether there is padding data for use.
-    //
-    mFvTakenSize = mFvTakenSize - MaxPadFileSize;
-  }
 
   return EFI_SUCCESS;
 }
@@ -3604,10 +3430,6 @@ Returns:
       mArm = TRUE;
     }
 
-    if (ImageContext.Machine == EFI_IMAGE_MACHINE_RISCV64) {
-      mRiscV = TRUE;
-    }
-
     //
     // Keep Image Context for PE image in FV
     //
@@ -3761,7 +3583,7 @@ Returns:
     ImageContext.DestinationAddress = NewPe32BaseAddress;
     Status                          = PeCoffLoaderRelocateImage (&ImageContext);
     if (EFI_ERROR (Status)) {
-      Error (NULL, 0, 3000, "Invalid", "RelocateImage() call failed on rebase of %s Status=%d", FileName, Status);
+      Error (NULL, 0, 3000, "Invalid", "RelocateImage() call failed on rebase of %s", FileName);
       free ((VOID *) MemoryImagePointer);
       return Status;
     }

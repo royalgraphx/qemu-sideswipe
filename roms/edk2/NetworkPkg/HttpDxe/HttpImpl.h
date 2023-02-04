@@ -11,12 +11,13 @@
 #ifndef __EFI_HTTP_IMPL_H__
 #define __EFI_HTTP_IMPL_H__
 
-#define HTTP_DEFAULT_PORT                      80
-#define HTTP_END_OF_HDR_STR                    "\r\n\r\n"
-#define HTTP_CRLF_STR                          "\r\n"
-#define HTTP_VERSION_STR                       HTTP_VERSION
-#define HTTP_VERSION_CRLF_STR                  " HTTP/1.1\r\n"
-#define HTTP_ERROR_OR_NOT_SUPPORT_STATUS_CODE  300
+#define HTTP_DEFAULT_PORT        80
+#define HTTP_END_OF_HDR_STR      "\r\n\r\n"
+#define HTTP_CRLF_STR            "\r\n"
+#define HTTP_VERSION_STR         HTTP_VERSION
+#define HTTP_VERSION_CRLF_STR    " HTTP/1.1\r\n"
+#define HTTP_ERROR_OR_NOT_SUPPORT_STATUS_CODE         300
+
 
 /**
   Returns the operational parameters for the current HTTP child instance.
@@ -44,8 +45,8 @@
 EFI_STATUS
 EFIAPI
 EfiHttpGetModeData (
-  IN  EFI_HTTP_PROTOCOL     *This,
-  OUT EFI_HTTP_CONFIG_DATA  *HttpConfigData
+  IN  EFI_HTTP_PROTOCOL         *This,
+  OUT EFI_HTTP_CONFIG_DATA      *HttpConfigData
   );
 
 /**
@@ -82,8 +83,8 @@ EfiHttpGetModeData (
 EFI_STATUS
 EFIAPI
 EfiHttpConfigure (
-  IN  EFI_HTTP_PROTOCOL     *This,
-  IN  EFI_HTTP_CONFIG_DATA  *HttpConfigData
+  IN  EFI_HTTP_PROTOCOL         *This,
+  IN  EFI_HTTP_CONFIG_DATA      *HttpConfigData
   );
 
 /**
@@ -115,8 +116,8 @@ EfiHttpConfigure (
 EFI_STATUS
 EFIAPI
 EfiHttpRequest (
-  IN  EFI_HTTP_PROTOCOL  *This,
-  IN  EFI_HTTP_TOKEN     *Token
+  IN  EFI_HTTP_PROTOCOL         *This,
+  IN  EFI_HTTP_TOKEN            *Token
   );
 
 /**
@@ -143,8 +144,8 @@ EfiHttpRequest (
 EFI_STATUS
 EFIAPI
 EfiHttpCancel (
-  IN  EFI_HTTP_PROTOCOL  *This,
-  IN  EFI_HTTP_TOKEN     *Token
+  IN  EFI_HTTP_PROTOCOL         *This,
+  IN  EFI_HTTP_TOKEN            *Token
   );
 
 /**
@@ -197,8 +198,8 @@ EfiHttpCancel (
 EFI_STATUS
 EFIAPI
 EfiHttpResponse (
-  IN  EFI_HTTP_PROTOCOL  *This,
-  IN  EFI_HTTP_TOKEN     *Token
+  IN  EFI_HTTP_PROTOCOL         *This,
+  IN  EFI_HTTP_TOKEN            *Token
   );
 
 /**
@@ -224,7 +225,7 @@ EfiHttpResponse (
 EFI_STATUS
 EFIAPI
 EfiHttpPoll (
-  IN  EFI_HTTP_PROTOCOL  *This
+  IN  EFI_HTTP_PROTOCOL         *This
   );
 
 extern EFI_HTTP_PROTOCOL  mEfiHttpTemplate;

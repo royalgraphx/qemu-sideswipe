@@ -297,10 +297,6 @@
     <ErrorID>8006</ErrorID>
   </Exception>
   <Exception>
-    <KeyWord>_ModuleEntryPoint</KeyWord>
-    <ErrorID>8006</ErrorID>
-  </Exception>
-  <Exception>
     <KeyWord>ASSERT</KeyWord>
     <ErrorID>10015</ErrorID>
   </Exception>

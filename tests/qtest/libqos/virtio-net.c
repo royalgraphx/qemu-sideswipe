@@ -17,10 +17,10 @@
  */
 
 #include "qemu/osdep.h"
-#include "../libqtest.h"
+#include "libqtest.h"
 #include "qemu/module.h"
-#include "qgraph.h"
-#include "virtio-net.h"
+#include "libqos/qgraph.h"
+#include "libqos/virtio-net.h"
 #include "hw/virtio/virtio-net.h"
 
 

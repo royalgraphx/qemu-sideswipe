@@ -6,9 +6,11 @@
  */
 
 #include "qemu/osdep.h"
-#include "malloc-spapr.h"
+#include "libqos/malloc-spapr.h"
 
-#define SPAPR_PAGE_SIZE 4096
+#include "qemu-common.h"
+
+#define PAGE_SIZE 4096
 
 /* Memory must be a multiple of 256 MB,
  * so we have at least 256MB
@@ -17,5 +19,5 @@
 
 void spapr_alloc_init(QGuestAllocator *s, QTestState *qts, QAllocOpts flags)
 {
-    alloc_init(s, flags, 1 << 20, SPAPR_MIN_SIZE, SPAPR_PAGE_SIZE);
+    alloc_init(s, flags, 1 << 20, SPAPR_MIN_SIZE, PAGE_SIZE);
 }

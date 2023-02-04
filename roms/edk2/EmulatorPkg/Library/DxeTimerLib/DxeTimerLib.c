@@ -1,7 +1,7 @@
 /** @file
   A non-functional instance of the Timer Library.
 
-  Copyright (c) 2007 - 2019, Intel Corporation. All rights reserved.<BR>
+  Copyright (c) 2007 - 2010, Intel Corporation. All rights reserved.<BR>
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -16,16 +16,17 @@
 
 #include <Protocol/Timer.h>
 
-STATIC UINT64                   gTimerPeriod   = 0;
-STATIC EFI_TIMER_ARCH_PROTOCOL  *gTimerAp      = NULL;
-STATIC EFI_EVENT                gTimerEvent    = NULL;
-STATIC VOID                     *gRegistration = NULL;
+
+STATIC UINT64                  gTimerPeriod = 0;
+STATIC EFI_TIMER_ARCH_PROTOCOL *gTimerAp = NULL;
+STATIC EFI_EVENT               gTimerEvent = NULL;
+STATIC VOID                    *gRegistration = NULL;
 
 VOID
 EFIAPI
 RegisterTimerArchProtocol (
-  IN EFI_EVENT  Event,
-  IN VOID       *Context
+  IN EFI_EVENT     Event,
+  IN VOID          *Context
   )
 {
   EFI_STATUS  Status;
@@ -39,11 +40,13 @@ RegisterTimerArchProtocol (
     gTimerPeriod = MultU64x32 (gTimerPeriod, 100);
 
     if (gTimerEvent == NULL) {
-      Status = gBS->CreateEvent (EVT_TIMER, 0, NULL, NULL, &gTimerEvent);
+      Status = gBS->CreateEvent (EVT_TIMER, 0, NULL, NULL, (VOID **)&gTimerEvent);
       ASSERT_EFI_ERROR (Status);
     }
   }
 }
+
+
 
 /**
   Stalls the CPU for at least the given number of microseconds.
@@ -58,11 +61,12 @@ RegisterTimerArchProtocol (
 UINTN
 EFIAPI
 MicroSecondDelay (
-  IN      UINTN  MicroSeconds
+  IN      UINTN                     MicroSeconds
   )
 {
   return NanoSecondDelay (MicroSeconds * 1000);
 }
+
 
 /**
   Stalls the CPU for at least the given number of nanoseconds.
@@ -77,7 +81,7 @@ MicroSecondDelay (
 UINTN
 EFIAPI
 NanoSecondDelay (
-  IN      UINTN  NanoSeconds
+  IN      UINTN                     NanoSeconds
   )
 {
   EFI_STATUS  Status;
@@ -86,24 +90,24 @@ NanoSecondDelay (
 
   if ((gTimerPeriod != 0) &&
       ((UINT64)NanoSeconds > gTimerPeriod) &&
-      (EfiGetCurrentTpl () == TPL_APPLICATION))
-  {
+      (EfiGetCurrentTpl () == TPL_APPLICATION)) {
     //
     // This stall is long, so use gBS->WaitForEvent () to yield CPU to DXE Core
     //
 
     HundredNanoseconds = DivU64x32 (NanoSeconds, 100);
-    Status             = gBS->SetTimer (gTimerEvent, TimerRelative, HundredNanoseconds);
+    Status = gBS->SetTimer (gTimerEvent, TimerRelative, HundredNanoseconds);
     ASSERT_EFI_ERROR (Status);
 
     Status = gBS->WaitForEvent (sizeof (gTimerEvent)/sizeof (EFI_EVENT), &gTimerEvent, &Index);
     ASSERT_EFI_ERROR (Status);
+
   } else {
     gEmuThunk->Sleep (NanoSeconds);
   }
-
   return NanoSeconds;
 }
+
 
 /**
   Retrieves the current value of a 64-bit free running performance counter.
@@ -151,20 +155,21 @@ GetPerformanceCounter (
 UINT64
 EFIAPI
 GetPerformanceCounterProperties (
-  OUT      UINT64  *StartValue   OPTIONAL,
-  OUT      UINT64  *EndValue     OPTIONAL
+  OUT      UINT64                    *StartValue,  OPTIONAL
+  OUT      UINT64                    *EndValue     OPTIONAL
   )
 {
+
   if (StartValue != NULL) {
     *StartValue = 0ULL;
   }
-
   if (EndValue != NULL) {
     *EndValue = (UINT64)-1LL;
   }
 
   return gEmuThunk->QueryPerformanceFrequency ();
 }
+
 
 /**
   Register for the Timer AP protocol.
@@ -193,46 +198,3 @@ DxeTimerLibConstructor (
   return EFI_SUCCESS;
 }
 
-/**
-  Converts elapsed ticks of performance counter to time in nanoseconds.
-
-  This function converts the elapsed ticks of running performance counter to
-  time value in unit of nanoseconds.
-
-  @param  Ticks     The number of elapsed ticks of running performance counter.
-
-  @return The elapsed time in nanoseconds.
-
-**/
-UINT64
-EFIAPI
-GetTimeInNanoSecond (
-  IN UINT64  Ticks
-  )
-{
-  UINT64  Frequency;
-  UINT64  NanoSeconds;
-  UINT64  Remainder;
-  INTN    Shift;
-
-  Frequency = GetPerformanceCounterProperties (NULL, NULL);
-
-  //
-  //          Ticks
-  // Time = --------- x 1,000,000,000
-  //        Frequency
-  //
-  NanoSeconds = MultU64x32 (DivU64x64Remainder (Ticks, Frequency, &Remainder), 1000000000u);
-
-  //
-  // Ensure (Remainder * 1,000,000,000) will not overflow 64-bit.
-  // Since 2^29 < 1,000,000,000 = 0x3B9ACA00 < 2^30, Remainder should < 2^(64-30) = 2^34,
-  // i.e. highest bit set in Remainder should <= 33.
-  //
-  Shift        = MAX (0, HighBitSet64 (Remainder) - 33);
-  Remainder    = RShiftU64 (Remainder, (UINTN)Shift);
-  Frequency    = RShiftU64 (Frequency, (UINTN)Shift);
-  NanoSeconds += DivU64x64Remainder (MultU64x32 (Remainder, 1000000000u), Frequency, NULL);
-
-  return NanoSeconds;
-}

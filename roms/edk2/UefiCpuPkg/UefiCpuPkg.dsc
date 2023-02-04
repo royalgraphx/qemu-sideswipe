@@ -1,7 +1,7 @@
 ## @file
 #  UefiCpuPkg Package
 #
-#  Copyright (c) 2007 - 2021, Intel Corporation. All rights reserved.<BR>
+#  Copyright (c) 2007 - 2019, Intel Corporation. All rights reserved.<BR>
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -21,8 +21,6 @@
 # External libraries to build package
 #
 
-!include MdePkg/MdeLibs.dsc.inc
-
 [LibraryClasses]
   BaseLib|MdePkg/Library/BaseLib/BaseLib.inf
   BaseMemoryLib|MdePkg/Library/BaseMemoryLib/BaseMemoryLib.inf
@@ -40,7 +38,6 @@
   UefiRuntimeServicesTableLib|MdePkg/Library/UefiRuntimeServicesTableLib/UefiRuntimeServicesTableLib.inf
   UefiBootServicesTableLib|MdePkg/Library/UefiBootServicesTableLib/UefiBootServicesTableLib.inf
   UefiDriverEntryPoint|MdePkg/Library/UefiDriverEntryPoint/UefiDriverEntryPoint.inf
-  StandaloneMmDriverEntryPoint|MdePkg/Library/StandaloneMmDriverEntryPoint/StandaloneMmDriverEntryPoint.inf
   DxeServicesTableLib|MdePkg/Library/DxeServicesTableLib/DxeServicesTableLib.inf
   PeimEntryPoint|MdePkg/Library/PeimEntryPoint/PeimEntryPoint.inf
   PeiServicesLib|MdePkg/Library/PeiServicesLib/PeiServicesLib.inf
@@ -59,16 +56,10 @@
   PeCoffGetEntryPointLib|MdePkg/Library/BasePeCoffGetEntryPointLib/BasePeCoffGetEntryPointLib.inf
   PeCoffExtraActionLib|MdePkg/Library/BasePeCoffExtraActionLibNull/BasePeCoffExtraActionLibNull.inf
   TpmMeasurementLib|MdeModulePkg/Library/TpmMeasurementLibNull/TpmMeasurementLibNull.inf
-  VmgExitLib|UefiCpuPkg/Library/VmgExitLibNull/VmgExitLibNull.inf
-  MicrocodeLib|UefiCpuPkg/Library/MicrocodeLib/MicrocodeLib.inf
 
 [LibraryClasses.common.SEC]
   PlatformSecLib|UefiCpuPkg/Library/PlatformSecLibNull/PlatformSecLibNull.inf
-!if $(TOOL_CHAIN_TAG) == "XCODE5"
-  CpuExceptionHandlerLib|UefiCpuPkg/Library/CpuExceptionHandlerLib/Xcode5SecPeiCpuExceptionHandlerLib.inf
-!else
   CpuExceptionHandlerLib|UefiCpuPkg/Library/CpuExceptionHandlerLib/SecPeiCpuExceptionHandlerLib.inf
-!endif
   HobLib|MdePkg/Library/PeiHobLib/PeiHobLib.inf
   PeiServicesTablePointerLib|MdePkg/Library/PeiServicesTablePointerLibIdt/PeiServicesTablePointerLibIdt.inf
   MemoryAllocationLib|MdePkg/Library/PeiMemoryAllocationLib/PeiMemoryAllocationLib.inf
@@ -79,7 +70,6 @@
   LockBoxLib|MdeModulePkg/Library/SmmLockBoxLib/SmmLockBoxPeiLib.inf
   MpInitLib|UefiCpuPkg/Library/MpInitLib/PeiMpInitLib.inf
   RegisterCpuFeaturesLib|UefiCpuPkg/Library/RegisterCpuFeaturesLib/PeiRegisterCpuFeaturesLib.inf
-  CpuCacheInfoLib|UefiCpuPkg/Library/CpuCacheInfoLib/PeiCpuCacheInfoLib.inf
 
 [LibraryClasses.IA32.PEIM, LibraryClasses.X64.PEIM]
   PeiServicesTablePointerLib|MdePkg/Library/PeiServicesTablePointerLibIdt/PeiServicesTablePointerLibIdt.inf
@@ -91,17 +81,12 @@
   CpuExceptionHandlerLib|UefiCpuPkg/Library/CpuExceptionHandlerLib/DxeCpuExceptionHandlerLib.inf
   MpInitLib|UefiCpuPkg/Library/MpInitLib/DxeMpInitLib.inf
   RegisterCpuFeaturesLib|UefiCpuPkg/Library/RegisterCpuFeaturesLib/DxeRegisterCpuFeaturesLib.inf
-  CpuCacheInfoLib|UefiCpuPkg/Library/CpuCacheInfoLib/DxeCpuCacheInfoLib.inf
 
 [LibraryClasses.common.DXE_SMM_DRIVER]
   SmmServicesTableLib|MdePkg/Library/SmmServicesTableLib/SmmServicesTableLib.inf
-  MmServicesTableLib|MdePkg/Library/MmServicesTableLib/MmServicesTableLib.inf
   MemoryAllocationLib|MdePkg/Library/SmmMemoryAllocationLib/SmmMemoryAllocationLib.inf
   HobLib|MdePkg/Library/DxeHobLib/DxeHobLib.inf
   CpuExceptionHandlerLib|UefiCpuPkg/Library/CpuExceptionHandlerLib/SmmCpuExceptionHandlerLib.inf
-
-[LibraryClasses.common.MM_STANDALONE]
-  MmServicesTableLib|MdePkg/Library/StandaloneMmServicesTableLib/StandaloneMmServicesTableLib.inf
 
 [LibraryClasses.common.UEFI_APPLICATION]
   UefiApplicationEntryPoint|MdePkg/Library/UefiApplicationEntryPoint/UefiApplicationEntryPoint.inf
@@ -116,10 +101,6 @@
   UefiCpuPkg/CpuIoPei/CpuIoPei.inf
   UefiCpuPkg/Library/SecPeiDxeTimerLibUefiCpu/SecPeiDxeTimerLibUefiCpu.inf
   UefiCpuPkg/Application/Cpuid/Cpuid.inf
-  UefiCpuPkg/Library/CpuTimerLib/BaseCpuTimerLib.inf
-  UefiCpuPkg/Library/CpuCacheInfoLib/PeiCpuCacheInfoLib.inf
-  UefiCpuPkg/Library/CpuCacheInfoLib/DxeCpuCacheInfoLib.inf
-  UefiCpuPkg/MicrocodeMeasurementDxe/MicrocodeMeasurementDxe.inf
 
 [Components.IA32, Components.X64]
   UefiCpuPkg/CpuDxe/CpuDxe.inf
@@ -132,24 +113,18 @@
       NULL|UefiCpuPkg/Library/CpuCommonFeaturesLib/CpuCommonFeaturesLib.inf
   }
   UefiCpuPkg/CpuIo2Smm/CpuIo2Smm.inf
-  UefiCpuPkg/CpuIo2Smm/CpuIo2StandaloneMm.inf
   UefiCpuPkg/CpuMpPei/CpuMpPei.inf
   UefiCpuPkg/CpuS3DataDxe/CpuS3DataDxe.inf
   UefiCpuPkg/Library/BaseUefiCpuLib/BaseUefiCpuLib.inf
   UefiCpuPkg/Library/BaseXApicLib/BaseXApicLib.inf
   UefiCpuPkg/Library/BaseXApicX2ApicLib/BaseXApicX2ApicLib.inf
-  UefiCpuPkg/Library/CpuCommonFeaturesLib/CpuCommonFeaturesLib.inf
   UefiCpuPkg/Library/CpuExceptionHandlerLib/DxeCpuExceptionHandlerLib.inf
-!if $(TOOL_CHAIN_TAG) != "XCODE5"
   UefiCpuPkg/Library/CpuExceptionHandlerLib/SecPeiCpuExceptionHandlerLib.inf
-!endif
   UefiCpuPkg/Library/CpuExceptionHandlerLib/SmmCpuExceptionHandlerLib.inf
   UefiCpuPkg/Library/CpuExceptionHandlerLib/PeiCpuExceptionHandlerLib.inf
-  UefiCpuPkg/Library/CpuExceptionHandlerLib/Xcode5SecPeiCpuExceptionHandlerLib.inf
   UefiCpuPkg/Library/MpInitLib/PeiMpInitLib.inf
   UefiCpuPkg/Library/MpInitLib/DxeMpInitLib.inf
   UefiCpuPkg/Library/MpInitLibUp/MpInitLibUp.inf
-  UefiCpuPkg/Library/MicrocodeLib/MicrocodeLib.inf
   UefiCpuPkg/Library/MtrrLib/MtrrLib.inf
   UefiCpuPkg/Library/PlatformSecLibNull/PlatformSecLibNull.inf
   UefiCpuPkg/Library/RegisterCpuFeaturesLib/PeiRegisterCpuFeaturesLib.inf
@@ -157,13 +132,9 @@
   UefiCpuPkg/Library/SmmCpuPlatformHookLibNull/SmmCpuPlatformHookLibNull.inf
   UefiCpuPkg/Library/SmmCpuFeaturesLib/SmmCpuFeaturesLib.inf
   UefiCpuPkg/Library/SmmCpuFeaturesLib/SmmCpuFeaturesLibStm.inf
-  UefiCpuPkg/Library/SmmCpuFeaturesLib/StandaloneMmCpuFeaturesLib.inf
-  UefiCpuPkg/Library/VmgExitLibNull/VmgExitLibNull.inf
   UefiCpuPkg/PiSmmCommunication/PiSmmCommunicationPei.inf
   UefiCpuPkg/PiSmmCommunication/PiSmmCommunicationSmm.inf
   UefiCpuPkg/SecCore/SecCore.inf
-  UefiCpuPkg/SecCore/SecCoreNative.inf
-  UefiCpuPkg/SecMigrationPei/SecMigrationPei.inf
   UefiCpuPkg/PiSmmCpuDxeSmm/PiSmmCpuDxeSmm.inf
   UefiCpuPkg/PiSmmCpuDxeSmm/PiSmmCpuDxeSmm.inf {
     <Defines>
@@ -172,7 +143,6 @@
       SmmCpuFeaturesLib|UefiCpuPkg/Library/SmmCpuFeaturesLib/SmmCpuFeaturesLibStm.inf
   }
   UefiCpuPkg/Universal/Acpi/S3Resume2Pei/S3Resume2Pei.inf
-  UefiCpuPkg/ResetVector/Vtf0/Bin/ResetVector.inf
 
 [BuildOptions]
   *_*_*_CC_FLAGS = -D DISABLE_NEW_DEPRECATED_INTERFACES

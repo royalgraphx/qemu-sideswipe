@@ -19,9 +19,7 @@
 
 #include "qemu/osdep.h"
 #include "qemu.h"
-#include "user-internals.h"
 #include "cpu_loop-common.h"
-#include "signal-common.h"
 
 static void xtensa_rfw(CPUXtensaState *env)
 {
@@ -126,6 +124,7 @@ static void xtensa_underflow12(CPUXtensaState *env)
 void cpu_loop(CPUXtensaState *env)
 {
     CPUState *cs = env_cpu(env);
+    target_siginfo_t info;
     abi_ulong ret;
     int trapnr;
 
@@ -162,12 +161,14 @@ void cpu_loop(CPUXtensaState *env)
         case EXC_USER:
             switch (env->sregs[EXCCAUSE]) {
             case ILLEGAL_INSTRUCTION_CAUSE:
-                force_sig_fault(TARGET_SIGILL, TARGET_ILL_ILLOPC,
-                                env->sregs[EPC1]);
-                break;
             case PRIVILEGED_CAUSE:
-                force_sig_fault(TARGET_SIGILL, TARGET_ILL_PRVOPC,
-                                env->sregs[EPC1]);
+                info.si_signo = TARGET_SIGILL;
+                info.si_errno = 0;
+                info.si_code =
+                    env->sregs[EXCCAUSE] == ILLEGAL_INSTRUCTION_CAUSE ?
+                    TARGET_ILL_ILLOPC : TARGET_ILL_PRVOPC;
+                info._sifields._sigfault._addr = env->sregs[EPC1];
+                queue_signal(env, info.si_signo, QEMU_SI_FAULT, &info);
                 break;
 
             case SYSCALL_CAUSE:
@@ -181,11 +182,11 @@ void cpu_loop(CPUXtensaState *env)
                     env->regs[2] = ret;
                     break;
 
-                case -QEMU_ERESTARTSYS:
+                case -TARGET_ERESTARTSYS:
                     env->pc -= 3;
                     break;
 
-                case -QEMU_ESIGRETURN:
+                case -TARGET_QEMU_ESIGRETURN:
                     break;
                 }
                 break;
@@ -216,8 +217,20 @@ void cpu_loop(CPUXtensaState *env)
                 break;
 
             case INTEGER_DIVIDE_BY_ZERO_CAUSE:
-                force_sig_fault(TARGET_SIGFPE, TARGET_FPE_INTDIV,
-                                env->sregs[EPC1]);
+                info.si_signo = TARGET_SIGFPE;
+                info.si_errno = 0;
+                info.si_code = TARGET_FPE_INTDIV;
+                info._sifields._sigfault._addr = env->sregs[EPC1];
+                queue_signal(env, info.si_signo, QEMU_SI_FAULT, &info);
+                break;
+
+            case LOAD_PROHIBITED_CAUSE:
+            case STORE_PROHIBITED_CAUSE:
+                info.si_signo = TARGET_SIGSEGV;
+                info.si_errno = 0;
+                info.si_code = TARGET_SEGV_ACCERR;
+                info._sifields._sigfault._addr = env->sregs[EXCVADDR];
+                queue_signal(env, info.si_signo, QEMU_SI_FAULT, &info);
                 break;
 
             default:
@@ -226,8 +239,10 @@ void cpu_loop(CPUXtensaState *env)
             }
             break;
         case EXCP_DEBUG:
-            force_sig_fault(TARGET_SIGTRAP, TARGET_TRAP_BRKPT,
-                            env->sregs[EPC1]);
+            info.si_signo = TARGET_SIGTRAP;
+            info.si_errno = 0;
+            info.si_code = TARGET_TRAP_BRKPT;
+            queue_signal(env, info.si_signo, QEMU_SI_FAULT, &info);
             break;
         case EXC_DEBUG:
         default:

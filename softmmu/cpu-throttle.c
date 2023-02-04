@@ -23,6 +23,7 @@
  */
 
 #include "qemu/osdep.h"
+#include "qemu-common.h"
 #include "qemu/thread.h"
 #include "hw/core/cpu.h"
 #include "qemu/main-loop.h"
@@ -63,7 +64,7 @@ static void cpu_throttle_thread(CPUState *cpu, run_on_cpu_data opaque)
         }
         sleeptime_ns = endtime_ns - qemu_clock_get_ns(QEMU_CLOCK_REALTIME);
     }
-    qatomic_set(&cpu->throttle_thread_scheduled, 0);
+    atomic_set(&cpu->throttle_thread_scheduled, 0);
 }
 
 static void cpu_throttle_timer_tick(void *opaque)
@@ -76,7 +77,7 @@ static void cpu_throttle_timer_tick(void *opaque)
         return;
     }
     CPU_FOREACH(cpu) {
-        if (!qatomic_xchg(&cpu->throttle_thread_scheduled, 1)) {
+        if (!atomic_xchg(&cpu->throttle_thread_scheduled, 1)) {
             async_run_on_cpu(cpu, cpu_throttle_thread,
                              RUN_ON_CPU_NULL);
         }
@@ -89,26 +90,19 @@ static void cpu_throttle_timer_tick(void *opaque)
 
 void cpu_throttle_set(int new_throttle_pct)
 {
-    /*
-     * boolean to store whether throttle is already active or not,
-     * before modifying throttle_percentage
-     */
-    bool throttle_active = cpu_throttle_active();
-
     /* Ensure throttle percentage is within valid range */
     new_throttle_pct = MIN(new_throttle_pct, CPU_THROTTLE_PCT_MAX);
     new_throttle_pct = MAX(new_throttle_pct, CPU_THROTTLE_PCT_MIN);
 
-    qatomic_set(&throttle_percentage, new_throttle_pct);
+    atomic_set(&throttle_percentage, new_throttle_pct);
 
-    if (!throttle_active) {
-        cpu_throttle_timer_tick(NULL);
-    }
+    timer_mod(throttle_timer, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL_RT) +
+                                       CPU_THROTTLE_TIMESLICE_NS);
 }
 
 void cpu_throttle_stop(void)
 {
-    qatomic_set(&throttle_percentage, 0);
+    atomic_set(&throttle_percentage, 0);
 }
 
 bool cpu_throttle_active(void)
@@ -118,7 +112,7 @@ bool cpu_throttle_active(void)
 
 int cpu_throttle_get_percentage(void)
 {
-    return qatomic_read(&throttle_percentage);
+    return atomic_read(&throttle_percentage);
 }
 
 void cpu_throttle_init(void)

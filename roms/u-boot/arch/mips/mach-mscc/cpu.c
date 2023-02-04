@@ -4,13 +4,9 @@
  */
 
 #include <common.h>
-#include <init.h>
-#include <asm/global_data.h>
-#include <linux/bitops.h>
 
 #include <asm/io.h>
 #include <asm/types.h>
-#include <asm/mipsregs.h>
 
 #include <mach/tlb.h>
 #include <mach/ddr.h>
@@ -57,6 +53,7 @@ void vcoreiii_tlb_init(void)
 		   MMU_REGIO_RW);
 #endif
 
+#if  CONFIG_SYS_TEXT_BASE == MSCC_FLASH_TO
 	/*
 	 * If U-Boot is located in NOR then we want to be able to use
 	 * the data cache in order to boot in a decent duration
@@ -74,10 +71,9 @@ void vcoreiii_tlb_init(void)
 	create_tlb(tlbix++, MSCC_DDR_TO, MSCC_RAM_TLB_SIZE, MMU_REGIO_RW,
 		   MSCC_ATTRIB2);
 
-	/* Enable mapping (using TLB) kuseg by clearing the bit ERL,
-	 * which is set on reset.
-	 */
-	write_c0_status(read_c0_status() & ~ST0_ERL);
+	/* Enable caches by clearing the bit ERL, which is set on reset */
+	write_c0_status(read_c0_status() & ~BIT(2));
+#endif /* CONFIG_SYS_TEXT_BASE */
 }
 
 int mach_cpu_init(void)
@@ -91,15 +87,8 @@ int mach_cpu_init(void)
 	       ICPU_SPI_MST_CFG_CS_DESELECT_TIME(0x19) +
 	       ICPU_SPI_MST_CFG_CLK_DIV(9), BASE_CFG + ICPU_SPI_MST_CFG);
 #else
-#if defined(CONFIG_SOC_OCELOT) || defined(CONFIG_SOC_SERVAL)
 	writel(ICPU_SPI_MST_CFG_CS_DESELECT_TIME(0x19) +
 	       ICPU_SPI_MST_CFG_CLK_DIV(9), BASE_CFG + ICPU_SPI_MST_CFG);
-#endif
-#if defined(CONFIG_SOC_JR2) || defined(CONFIG_SOC_SERVALT)
-	writel(ICPU_SPI_MST_CFG_FAST_READ_ENA +
-	       ICPU_SPI_MST_CFG_CS_DESELECT_TIME(0x19) +
-	       ICPU_SPI_MST_CFG_CLK_DIV(14), BASE_CFG + ICPU_SPI_MST_CFG);
-#endif
 	/*
 	 * Legacy and mainline linux kernel expect that the
 	 * interruption map was set as it was done by redboot.

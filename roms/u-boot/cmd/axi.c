@@ -14,7 +14,6 @@
 #include <command.h>
 #include <console.h>
 #include <dm.h>
-#include <log.h>
 
 /* Currently selected AXI bus device */
 static struct udevice *axi_cur_bus;
@@ -33,9 +32,9 @@ static void show_bus(struct udevice *bus)
 {
 	struct udevice *dev;
 
-	printf("Bus %d:\t%s", dev_seq(bus), bus->name);
+	printf("Bus %d:\t%s", bus->req_seq, bus->name);
 	if (device_active(bus))
-		printf("  (active)");
+		printf("  (active %d)", bus->seq);
 	printf("\n");
 	for (device_find_first_child(bus, &dev);
 	     dev;
@@ -97,8 +96,8 @@ static int axi_get_cur_bus(struct udevice **busp)
  * Command handlers
  */
 
-static int do_axi_show_bus(struct cmd_tbl *cmdtp, int flag, int argc,
-			   char *const argv[])
+static int do_axi_show_bus(cmd_tbl_t *cmdtp, int flag, int argc,
+			   char * const argv[])
 {
 	struct udevice *dummy;
 
@@ -136,8 +135,8 @@ static int do_axi_show_bus(struct cmd_tbl *cmdtp, int flag, int argc,
 	return 0;
 }
 
-static int do_axi_bus_num(struct cmd_tbl *cmdtp, int flag, int argc,
-			  char *const argv[])
+static int do_axi_bus_num(cmd_tbl_t *cmdtp, int flag, int argc,
+			  char * const argv[])
 {
 	int ret = 0;
 	int bus_no;
@@ -147,7 +146,7 @@ static int do_axi_bus_num(struct cmd_tbl *cmdtp, int flag, int argc,
 		struct udevice *bus;
 
 		if (!axi_get_cur_bus(&bus))
-			bus_no = dev_seq(bus);
+			bus_no = bus->seq;
 		else
 			bus_no = -1;
 
@@ -164,8 +163,7 @@ static int do_axi_bus_num(struct cmd_tbl *cmdtp, int flag, int argc,
 	return ret ? CMD_RET_FAILURE : 0;
 }
 
-static int do_axi_md(struct cmd_tbl *cmdtp, int flag, int argc,
-		     char *const argv[])
+static int do_axi_md(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	/* Print that many bytes per line */
 	const uint DISP_LINE_LEN = 16;
@@ -263,8 +261,7 @@ static int do_axi_md(struct cmd_tbl *cmdtp, int flag, int argc,
 	return 0;
 }
 
-static int do_axi_mw(struct cmd_tbl *cmdtp, int flag, int argc,
-		     char *const argv[])
+static int do_axi_mw(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	u32 writeval;
 	ulong addr, count, size;
@@ -315,17 +312,17 @@ static int do_axi_mw(struct cmd_tbl *cmdtp, int flag, int argc,
 	return 0;
 }
 
-static struct cmd_tbl cmd_axi_sub[] = {
+static cmd_tbl_t cmd_axi_sub[] = {
 	U_BOOT_CMD_MKENT(bus, 1, 1, do_axi_show_bus, "", ""),
 	U_BOOT_CMD_MKENT(dev, 1, 1, do_axi_bus_num, "", ""),
 	U_BOOT_CMD_MKENT(md, 4, 1, do_axi_md, "", ""),
 	U_BOOT_CMD_MKENT(mw, 5, 1, do_axi_mw, "", ""),
 };
 
-static int do_ihs_axi(struct cmd_tbl *cmdtp, int flag, int argc,
-		      char *const argv[])
+static int do_ihs_axi(cmd_tbl_t *cmdtp, int flag, int argc,
+		      char * const argv[])
 {
-	struct cmd_tbl *c;
+	cmd_tbl_t *c;
 
 	if (argc < 2)
 		return CMD_RET_USAGE;

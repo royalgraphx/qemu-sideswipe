@@ -24,10 +24,9 @@
 
 #ifndef CADENCE_GEM_H
 #define CADENCE_GEM_H
-#include "qom/object.h"
 
 #define TYPE_CADENCE_GEM "cadence_gem"
-OBJECT_DECLARE_SIMPLE_TYPE(CadenceGEMState, CADENCE_GEM)
+#define CADENCE_GEM(obj) OBJECT_CHECK(CadenceGEMState, (obj), TYPE_CADENCE_GEM)
 
 #include "net/net.h"
 #include "hw/sysbus.h"
@@ -44,7 +43,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(CadenceGEMState, CADENCE_GEM)
 #define MAX_JUMBO_FRAME_SIZE_MASK 0x3FFF
 #define MAX_FRAME_SIZE MAX_JUMBO_FRAME_SIZE_MASK
 
-struct CadenceGEMState {
+typedef struct CadenceGEMState {
     /*< private >*/
     SysBusDevice parent_obj;
 
@@ -74,8 +73,6 @@ struct CadenceGEMState {
     /* Mask of register bits which are write 1 to clear */
     uint32_t regs_w1c[CADENCE_GEM_MAXREG];
 
-    /* PHY address */
-    uint8_t phy_addr;
     /* PHY registers backing store */
     uint16_t phy_regs[32];
 
@@ -92,6 +89,6 @@ struct CadenceGEMState {
     uint32_t rx_desc[MAX_PRIORITY_QUEUES][DESC_MAX_NUM_WORDS];
 
     bool sar_active[4];
-};
+} CadenceGEMState;
 
 #endif

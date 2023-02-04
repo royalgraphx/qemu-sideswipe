@@ -5,7 +5,7 @@
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -19,6 +19,7 @@
 #include "qemu/osdep.h"
 
 #include "cpu.h"
+#include "qemu-common.h"
 #include "x86_decode.h"
 #include "x86_emu.h"
 #include "vmcs.h"
@@ -61,11 +62,11 @@ bool x86_read_segment_descriptor(struct CPUState *cpu,
     }
 
     if (GDT_SEL == sel.ti) {
-        base  = rvmcs(cpu->hvf->fd, VMCS_GUEST_GDTR_BASE);
-        limit = rvmcs(cpu->hvf->fd, VMCS_GUEST_GDTR_LIMIT);
+        base  = rvmcs(cpu->hvf_fd, VMCS_GUEST_GDTR_BASE);
+        limit = rvmcs(cpu->hvf_fd, VMCS_GUEST_GDTR_LIMIT);
     } else {
-        base  = rvmcs(cpu->hvf->fd, VMCS_GUEST_LDTR_BASE);
-        limit = rvmcs(cpu->hvf->fd, VMCS_GUEST_LDTR_LIMIT);
+        base  = rvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_BASE);
+        limit = rvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_LIMIT);
     }
 
     if (sel.index * 8 >= limit) {
@@ -84,11 +85,11 @@ bool x86_write_segment_descriptor(struct CPUState *cpu,
     uint32_t limit;
     
     if (GDT_SEL == sel.ti) {
-        base  = rvmcs(cpu->hvf->fd, VMCS_GUEST_GDTR_BASE);
-        limit = rvmcs(cpu->hvf->fd, VMCS_GUEST_GDTR_LIMIT);
+        base  = rvmcs(cpu->hvf_fd, VMCS_GUEST_GDTR_BASE);
+        limit = rvmcs(cpu->hvf_fd, VMCS_GUEST_GDTR_LIMIT);
     } else {
-        base  = rvmcs(cpu->hvf->fd, VMCS_GUEST_LDTR_BASE);
-        limit = rvmcs(cpu->hvf->fd, VMCS_GUEST_LDTR_LIMIT);
+        base  = rvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_BASE);
+        limit = rvmcs(cpu->hvf_fd, VMCS_GUEST_LDTR_LIMIT);
     }
     
     if (sel.index * 8 >= limit) {
@@ -102,8 +103,8 @@ bool x86_write_segment_descriptor(struct CPUState *cpu,
 bool x86_read_call_gate(struct CPUState *cpu, struct x86_call_gate *idt_desc,
                         int gate)
 {
-    target_ulong base  = rvmcs(cpu->hvf->fd, VMCS_GUEST_IDTR_BASE);
-    uint32_t limit = rvmcs(cpu->hvf->fd, VMCS_GUEST_IDTR_LIMIT);
+    target_ulong base  = rvmcs(cpu->hvf_fd, VMCS_GUEST_IDTR_BASE);
+    uint32_t limit = rvmcs(cpu->hvf_fd, VMCS_GUEST_IDTR_LIMIT);
 
     memset(idt_desc, 0, sizeof(*idt_desc));
     if (gate * 8 >= limit) {
@@ -117,8 +118,8 @@ bool x86_read_call_gate(struct CPUState *cpu, struct x86_call_gate *idt_desc,
 
 bool x86_is_protected(struct CPUState *cpu)
 {
-    uint64_t cr0 = rvmcs(cpu->hvf->fd, VMCS_GUEST_CR0);
-    return cr0 & CR0_PE_MASK;
+    uint64_t cr0 = rvmcs(cpu->hvf_fd, VMCS_GUEST_CR0);
+    return cr0 & CR0_PE;
 }
 
 bool x86_is_real(struct CPUState *cpu)
@@ -135,7 +136,7 @@ bool x86_is_v8086(struct CPUState *cpu)
 
 bool x86_is_long_mode(struct CPUState *cpu)
 {
-    return rvmcs(cpu->hvf->fd, VMCS_GUEST_IA32_EFER) & MSR_EFER_LMA;
+    return rvmcs(cpu->hvf_fd, VMCS_GUEST_IA32_EFER) & MSR_EFER_LMA;
 }
 
 bool x86_is_long64_mode(struct CPUState *cpu)
@@ -148,14 +149,14 @@ bool x86_is_long64_mode(struct CPUState *cpu)
 
 bool x86_is_paging_mode(struct CPUState *cpu)
 {
-    uint64_t cr0 = rvmcs(cpu->hvf->fd, VMCS_GUEST_CR0);
-    return cr0 & CR0_PG_MASK;
+    uint64_t cr0 = rvmcs(cpu->hvf_fd, VMCS_GUEST_CR0);
+    return cr0 & CR0_PG;
 }
 
 bool x86_is_pae_enabled(struct CPUState *cpu)
 {
-    uint64_t cr4 = rvmcs(cpu->hvf->fd, VMCS_GUEST_CR4);
-    return cr4 & CR4_PAE_MASK;
+    uint64_t cr4 = rvmcs(cpu->hvf_fd, VMCS_GUEST_CR4);
+    return cr4 & CR4_PAE;
 }
 
 target_ulong linear_addr(struct CPUState *cpu, target_ulong addr, X86Seg seg)

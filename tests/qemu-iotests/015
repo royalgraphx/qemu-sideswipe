@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw snapshot
 #
 # Combined test to grow the refcount table and test snapshots.
 #

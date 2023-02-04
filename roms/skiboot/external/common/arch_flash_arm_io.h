@@ -1,7 +1,3 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * Copyright 2015 IBM Corp.
- */
 #ifndef __IO_H
 #define __IO_H
 

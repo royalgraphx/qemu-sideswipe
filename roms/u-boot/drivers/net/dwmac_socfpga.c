@@ -6,8 +6,6 @@
  */
 
 #include <common.h>
-#include <asm/arch/secure_reg_helper.h>
-#include <asm/arch/system_manager.h>
 #include <asm/io.h>
 #include <dm.h>
 #include <clk.h>
@@ -16,18 +14,24 @@
 #include <reset.h>
 #include <syscon.h>
 #include "designware.h"
-#include <dm/device_compat.h>
-#include <linux/err.h>
 
-struct dwmac_socfpga_plat {
-	struct dw_eth_pdata	dw_eth_pdata;
-	void			*phy_intf;
-	u32			reg_shift;
+#include <asm/arch/system_manager.h>
+
+enum dwmac_type {
+	DWMAC_SOCFPGA_GEN5 = 0,
+	DWMAC_SOCFPGA_ARRIA10,
+	DWMAC_SOCFPGA_STRATIX10,
 };
 
-static int dwmac_socfpga_of_to_plat(struct udevice *dev)
+struct dwmac_socfpga_platdata {
+	struct dw_eth_pdata	dw_eth_pdata;
+	enum dwmac_type		type;
+	void			*phy_intf;
+};
+
+static int dwmac_socfpga_ofdata_to_platdata(struct udevice *dev)
 {
-	struct dwmac_socfpga_plat *pdata = dev_get_plat(dev);
+	struct dwmac_socfpga_platdata *pdata = dev_get_platdata(dev);
 	struct regmap *regmap;
 	struct ofnode_phandle_args args;
 	void *range;
@@ -59,74 +63,64 @@ static int dwmac_socfpga_of_to_plat(struct udevice *dev)
 	}
 
 	pdata->phy_intf = range + args.args[0];
-	pdata->reg_shift = args.args[1];
 
-	return designware_eth_of_to_plat(dev);
-}
+	/*
+	 * Sadly, the Altera DT bindings don't have SoC-specific compatibles,
+	 * so we have to guesstimate which SoC we are running on from the
+	 * DWMAC version. Luckily, Altera at least updated the DWMAC with
+	 * each SoC.
+	 */
+	if (ofnode_device_is_compatible(dev->node, "snps,dwmac-3.70a"))
+		pdata->type = DWMAC_SOCFPGA_GEN5;
 
-static int dwmac_socfpga_do_setphy(struct udevice *dev, u32 modereg)
-{
-	struct dwmac_socfpga_plat *pdata = dev_get_plat(dev);
-	u32 modemask = SYSMGR_EMACGRP_CTRL_PHYSEL_MASK << pdata->reg_shift;
+	if (ofnode_device_is_compatible(dev->node, "snps,dwmac-3.72a"))
+		pdata->type = DWMAC_SOCFPGA_ARRIA10;
 
-#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_SPL_ATF)
-	u32 index = ((u64)pdata->phy_intf - socfpga_get_sysmgr_addr() -
-		     SYSMGR_SOC64_EMAC0) >> 2;
+	if (ofnode_device_is_compatible(dev->node, "snps,dwmac-3.74a"))
+		pdata->type = DWMAC_SOCFPGA_STRATIX10;
 
-	u32 id = SOCFPGA_SECURE_REG_SYSMGR_SOC64_EMAC0 + index;
-
-	int ret = socfpga_secure_reg_update32(id,
-					     modemask,
-					     modereg << pdata->reg_shift);
-	if (ret) {
-		dev_err(dev, "Failed to set PHY register via SMC call\n");
-		return ret;
-	}
-#else
-	clrsetbits_le32(pdata->phy_intf, modemask,
-			modereg << pdata->reg_shift);
-#endif
-
-	return 0;
+	return designware_eth_ofdata_to_platdata(dev);
 }
 
 static int dwmac_socfpga_probe(struct udevice *dev)
 {
-	struct dwmac_socfpga_plat *pdata = dev_get_plat(dev);
+	struct dwmac_socfpga_platdata *pdata = dev_get_platdata(dev);
 	struct eth_pdata *edata = &pdata->dw_eth_pdata.eth_pdata;
 	struct reset_ctl_bulk reset_bulk;
 	int ret;
-	u32 modereg;
+	u8 modereg;
 
-	switch (edata->phy_interface) {
-	case PHY_INTERFACE_MODE_MII:
-	case PHY_INTERFACE_MODE_GMII:
-		modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_GMII_MII;
-		break;
-	case PHY_INTERFACE_MODE_RMII:
-		modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_RMII;
-		break;
-	case PHY_INTERFACE_MODE_RGMII:
-		modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_RGMII;
-		break;
-	default:
-		dev_err(dev, "Unsupported PHY mode\n");
-		return -EINVAL;
+	if (pdata->type == DWMAC_SOCFPGA_ARRIA10) {
+		switch (edata->phy_interface) {
+		case PHY_INTERFACE_MODE_MII:
+		case PHY_INTERFACE_MODE_GMII:
+			modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_GMII_MII;
+			break;
+		case PHY_INTERFACE_MODE_RMII:
+			modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_RMII;
+			break;
+		case PHY_INTERFACE_MODE_RGMII:
+			modereg = SYSMGR_EMACGRP_CTRL_PHYSEL_ENUM_RGMII;
+			break;
+		default:
+			dev_err(dev, "Unsupported PHY mode\n");
+			return -EINVAL;
+		}
+
+		ret = reset_get_bulk(dev, &reset_bulk);
+		if (ret) {
+			dev_err(dev, "Failed to get reset: %d\n", ret);
+			return ret;
+		}
+
+		reset_assert_bulk(&reset_bulk);
+
+		clrsetbits_le32(pdata->phy_intf,
+				SYSMGR_EMACGRP_CTRL_PHYSEL_MASK,
+				modereg);
+
+		reset_release_bulk(&reset_bulk);
 	}
-
-	ret = reset_get_bulk(dev, &reset_bulk);
-	if (ret) {
-		dev_err(dev, "Failed to get reset: %d\n", ret);
-		return ret;
-	}
-
-	reset_assert_bulk(&reset_bulk);
-
-	ret = dwmac_socfpga_do_setphy(dev, modereg);
-	if (ret)
-		return ret;
-
-	reset_release_bulk(&reset_bulk);
 
 	return designware_eth_probe(dev);
 }
@@ -140,10 +134,10 @@ U_BOOT_DRIVER(dwmac_socfpga) = {
 	.name		= "dwmac_socfpga",
 	.id		= UCLASS_ETH,
 	.of_match	= dwmac_socfpga_ids,
-	.of_to_plat = dwmac_socfpga_of_to_plat,
+	.ofdata_to_platdata = dwmac_socfpga_ofdata_to_platdata,
 	.probe		= dwmac_socfpga_probe,
 	.ops		= &designware_eth_ops,
-	.priv_auto	= sizeof(struct dw_eth_dev),
-	.plat_auto	= sizeof(struct dwmac_socfpga_plat),
+	.priv_auto_alloc_size = sizeof(struct dw_eth_dev),
+	.platdata_auto_alloc_size = sizeof(struct dwmac_socfpga_platdata),
 	.flags		= DM_FLAG_ALLOC_PRIV_DMA,
 };

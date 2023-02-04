@@ -1,4 +1,3 @@
-# SPDX-License-Identifier: Apache-2.0
 CFLAGS += -m64 -Werror -Wall -g2 -ggdb
 LDFLAGS += -m64
 ASFLAGS = -m64

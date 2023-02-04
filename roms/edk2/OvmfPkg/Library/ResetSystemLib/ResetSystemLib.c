@@ -6,12 +6,44 @@
 
 **/
 
-#include <Base.h>                   // BIT1
+#include <Base.h>
 
-#include <Library/BaseLib.h>        // CpuDeadLoop()
-#include <Library/IoLib.h>          // IoWrite8()
-#include <Library/ResetSystemLib.h> // ResetCold()
-#include <Library/TimerLib.h>       // MicroSecondDelay()
+#include <Library/BaseLib.h>
+#include <Library/DebugLib.h>
+#include <Library/IoLib.h>
+#include <Library/TimerLib.h>
+#include <OvmfPlatforms.h>
+
+#include <OvmfPlatforms.h>
+
+VOID
+AcpiPmControl (
+  UINTN SuspendType
+  )
+{
+  UINT16 AcpiPmBaseAddress;
+  UINT16 HostBridgeDevId;
+
+  ASSERT (SuspendType < 6);
+
+  AcpiPmBaseAddress = 0;
+  HostBridgeDevId = PciRead16 (OVMF_HOSTBRIDGE_DID);
+  switch (HostBridgeDevId) {
+  case INTEL_82441_DEVICE_ID:
+    AcpiPmBaseAddress = PIIX4_PMBA_VALUE;
+    break;
+  case INTEL_Q35_MCH_DEVICE_ID:
+    AcpiPmBaseAddress = ICH9_PMBASE_VALUE;
+    break;
+  default:
+    ASSERT (FALSE);
+    CpuDeadLoop ();
+  }
+
+  IoBitFieldWrite16 (AcpiPmBaseAddress + 4, 10, 13, (UINT16) SuspendType);
+  IoOr16 (AcpiPmBaseAddress + 4, BIT13);
+  CpuDeadLoop ();
+}
 
 /**
   Calling this function causes a system-wide reset. This sets
@@ -53,12 +85,47 @@ ResetWarm (
 }
 
 /**
+  Calling this function causes the system to enter a power state equivalent
+  to the ACPI G2/S5 or G3 states.
+
+  System shutdown should not return, if it returns, it means the system does
+  not support shut down reset.
+**/
+VOID
+EFIAPI
+ResetShutdown (
+  VOID
+  )
+{
+  AcpiPmControl (0);
+  ASSERT (FALSE);
+}
+
+
+/**
+  Calling this function causes the system to enter a power state for capsule
+  update.
+
+  Reset update should not return, if it returns, it means the system does
+  not support capsule update.
+
+**/
+VOID
+EFIAPI
+EnterS3WithImmediateWake (
+  VOID
+  )
+{
+  AcpiPmControl (1);
+  ASSERT (FALSE);
+}
+
+/**
   This function causes a systemwide reset. The exact type of the reset is
-  defined by the EFI_GUID that follows the Null-terminated Unicode string
-  passed into ResetData. If the platform does not recognize the EFI_GUID in
-  ResetData the platform must pick a supported reset type to perform.The
-  platform may optionally log the parameters from any non-normal reset that
-  occurs.
+  defined by the EFI_GUID that follows the Null-terminated Unicode string passed
+  into ResetData. If the platform does not recognize the EFI_GUID in ResetData
+  the platform must pick a supported reset type to perform.The platform may
+  optionally log the parameters from any non-normal reset that occurs.
 
   @param[in]  DataSize   The size, in bytes, of ResetData.
   @param[in]  ResetData  The data buffer starts with a Null-terminated string,
@@ -67,8 +134,8 @@ ResetWarm (
 VOID
 EFIAPI
 ResetPlatformSpecific (
-  IN UINTN  DataSize,
-  IN VOID   *ResetData
+  IN UINTN   DataSize,
+  IN VOID    *ResetData
   )
 {
   ResetCold ();
@@ -80,40 +147,39 @@ ResetPlatformSpecific (
   @param[in] ResetType      The type of reset to perform.
   @param[in] ResetStatus    The status code for the reset.
   @param[in] DataSize       The size, in bytes, of ResetData.
-  @param[in] ResetData      For a ResetType of EfiResetCold, EfiResetWarm, or
-                            EfiResetShutdown the data buffer starts with a
-                            Null-terminated string, optionally followed by
-                            additional binary data. The string is a description
-                            that the caller may use to further indicate the
-                            reason for the system reset.
+  @param[in] ResetData      For a ResetType of EfiResetCold, EfiResetWarm, or EfiResetShutdown
+                            the data buffer starts with a Null-terminated string, optionally
+                            followed by additional binary data. The string is a description
+                            that the caller may use to further indicate the reason for the
+                            system reset.
 **/
 VOID
 EFIAPI
 ResetSystem (
-  IN EFI_RESET_TYPE  ResetType,
-  IN EFI_STATUS      ResetStatus,
-  IN UINTN           DataSize,
-  IN VOID            *ResetData OPTIONAL
+  IN EFI_RESET_TYPE               ResetType,
+  IN EFI_STATUS                   ResetStatus,
+  IN UINTN                        DataSize,
+  IN VOID                         *ResetData OPTIONAL
   )
 {
   switch (ResetType) {
-    case EfiResetWarm:
-      ResetWarm ();
-      break;
+  case EfiResetWarm:
+    ResetWarm ();
+    break;
 
-    case EfiResetCold:
-      ResetCold ();
-      break;
+  case EfiResetCold:
+    ResetCold ();
+    break;
 
-    case EfiResetShutdown:
-      ResetShutdown ();
-      break;
+  case EfiResetShutdown:
+    ResetShutdown ();
+    return;
 
-    case EfiResetPlatformSpecific:
-      ResetPlatformSpecific (DataSize, ResetData);
-      break;
+  case EfiResetPlatformSpecific:
+    ResetPlatformSpecific (DataSize, ResetData);
+    return;
 
-    default:
-      break;
+  default:
+    return;
   }
 }

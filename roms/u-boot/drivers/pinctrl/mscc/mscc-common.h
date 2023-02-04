@@ -9,19 +9,6 @@
 
 #define MSCC_FUNC_PER_PIN	4
 
-enum mscc_regs_gpio {
-	MSCC_GPIO_OUT_SET,
-	MSCC_GPIO_OUT_CLR,
-	MSCC_GPIO_OUT,
-	MSCC_GPIO_IN,
-	MSCC_GPIO_OE,
-	MSCC_GPIO_INTR,
-	MSCC_GPIO_INTR_ENA,
-	MSCC_GPIO_INTR_IDENT,
-	MSCC_GPIO_ALT0,
-	MSCC_GPIO_ALT1,
-};
-
 struct mscc_pin_caps {
 	unsigned int pin;
 	unsigned char functions[MSCC_FUNC_PER_PIN];
@@ -54,13 +41,11 @@ struct mscc_pinctrl {
 	const struct mscc_pin_data *mscc_pins;
 	int num_pins;
 	char * const *function_names;
-	const unsigned long *mscc_gpios;
 };
 
 int mscc_pinctrl_probe(struct udevice *dev, int num_func,
 		       const struct mscc_pin_data *mscc_pins, int num_pins,
-		       char * const *function_names,
-		       const unsigned long *mscc_gpios);
+		       char * const *function_names);
 const struct pinctrl_ops mscc_pinctrl_ops;
 
 const struct dm_gpio_ops mscc_gpio_ops;

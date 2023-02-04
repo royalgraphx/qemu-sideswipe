@@ -8,9 +8,6 @@
  */
 
 #include <common.h>
-#include <clock_legacy.h>
-#include <hang.h>
-#include <init.h>
 #include <spl.h>
 #include <asm/io.h>
 #include <asm/gpio.h>
@@ -19,8 +16,7 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/arch/crm_regs.h>
 #include <asm/mach-imx/iomux-v3.h>
-#include <fsl_esdhc_imx.h>
-#include <linux/delay.h>
+#include <fsl_esdhc.h>
 #include "common.h"
 
 enum ddr_config {
@@ -356,7 +352,7 @@ static struct fsl_esdhc_cfg usdhc_cfg = {
 	.max_bus_width = 4,
 };
 
-int board_mmc_init(struct bd_info *bis)
+int board_mmc_init(bd_t *bis)
 {
 	cm_fx6_set_usdhc_iomux();
 

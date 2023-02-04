@@ -4,8 +4,7 @@
 #  It installs the Capsule Architectural Protocol defined in PI1.0a to signify
 #  the capsule runtime services are ready.
 #
-#  Copyright (c) 2006 - 2020, Intel Corporation. All rights reserved.<BR>
-#  Copyright (c) 2020, Hewlett Packard Enterprise Development LP. All rights reserved.<BR>
+#  Copyright (c) 2006 - 2019, Intel Corporation. All rights reserved.<BR>
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
 ##
@@ -22,20 +21,20 @@
 #
 # The following information is for reference only and not required by the build tools.
 #
-#  VALID_ARCHITECTURES           = IA32 X64 EBC ARM AARCH64 RISCV64
+#  VALID_ARCHITECTURES           = IA32 X64 EBC ARM AARCH64
 #
 
 [Sources]
   CapsuleService.c
   CapsuleService.h
 
-[Sources.Ia32, Sources.EBC, Sources.ARM, Sources.AARCH64, Sources.RISCV64]
+[Sources.Ia32, Sources.EBC, Sources.ARM, Sources.AARCH64]
   SaveLongModeContext.c
 
-[Sources.Ia32, Sources.X64, Sources.ARM, Sources.AARCH64, Sources.RISCV64]
+[Sources.Ia32, Sources.X64, Sources.ARM, Sources.AARCH64]
   CapsuleCache.c
 
-[Sources.Ia32, Sources.X64, Sources.EBC, Sources.RISCV64]
+[Sources.Ia32, Sources.X64, Sources.EBC]
   CapsuleReset.c
 
 [Sources.ARM, Sources.AARCH64]
@@ -83,8 +82,7 @@
   gEdkiiVariableLockProtocolGuid
 
 [FeaturePcd]
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSupportUpdateCapsuleReset        ## CONSUMES
-  gEfiMdeModulePkgTokenSpaceGuid.PcdSupportProcessCapsuleAtRuntime   ## CONSUMES
+  gEfiMdeModulePkgTokenSpaceGuid.PcdSupportUpdateCapsuleReset   ## CONSUMES
 
 [FeaturePcd.X64]
   gEfiMdeModulePkgTokenSpaceGuid.PcdDxeIplSwitchToLongMode      ## CONSUMES
@@ -92,7 +90,6 @@
 [Pcd]
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizeNonPopulateCapsule   ## SOMETIMES_CONSUMES
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxSizePopulateCapsule      ## SOMETIMES_CONSUMES # Populate Image requires reset support.
-  gEfiMdeModulePkgTokenSpaceGuid.PcdCapsuleInRamSupport         ## CONSUMES
 
 [Pcd.X64]
   gEfiMdeModulePkgTokenSpaceGuid.PcdCapsulePeiLongModeStackSize   ## SOMETIMES_CONSUMES

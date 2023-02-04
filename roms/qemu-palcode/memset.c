@@ -19,7 +19,7 @@
    <http://www.gnu.org/licenses/>.  */
 
 
-#include "protos.h"
+#include <string.h>
 
 void *memset(void *optr, int ival, unsigned long size)
 {

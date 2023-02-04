@@ -32,11 +32,10 @@
 #include "hw/or-irq.h"
 #include "hw/ssi/stm32f2xx_spi.h"
 #include "hw/arm/armv7m.h"
-#include "hw/clock.h"
-#include "qom/object.h"
 
 #define TYPE_STM32F205_SOC "stm32f205-soc"
-OBJECT_DECLARE_SIMPLE_TYPE(STM32F205State, STM32F205_SOC)
+#define STM32F205_SOC(obj) \
+    OBJECT_CHECK(STM32F205State, (obj), TYPE_STM32F205_SOC)
 
 #define STM_NUM_USARTS 6
 #define STM_NUM_TIMERS 4
@@ -48,7 +47,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(STM32F205State, STM32F205_SOC)
 #define SRAM_BASE_ADDRESS 0x20000000
 #define SRAM_SIZE (128 * 1024)
 
-struct STM32F205State {
+typedef struct STM32F205State {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
@@ -64,13 +63,6 @@ struct STM32F205State {
     STM32F2XXSPIState spi[STM_NUM_SPIS];
 
     qemu_or_irq *adc_irqs;
-
-    MemoryRegion sram;
-    MemoryRegion flash;
-    MemoryRegion flash_alias;
-
-    Clock *sysclk;
-    Clock *refclk;
-};
+} STM32F205State;
 
 #endif

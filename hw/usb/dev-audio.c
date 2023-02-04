@@ -36,7 +36,6 @@
 #include "migration/vmstate.h"
 #include "desc.h"
 #include "audio/audio.h"
-#include "qom/object.h"
 
 static void usb_audio_reinit(USBDevice *dev, unsigned channels);
 
@@ -168,7 +167,7 @@ static const USBDescIface desc_iface[] = {
                     STRING_FEATURE_UNIT,        /*  u8  iFeature */
                 }
             },{
-                /* Headphone Output Terminal ID3 Descriptor */
+                /* Headphone Ouptut Terminal ID3 Descriptor */
                 .data = (uint8_t[]) {
                     0x09,                       /*  u8  bLength */
                     USB_DT_CS_INTERFACE,        /*  u8  bDescriptorType */
@@ -332,7 +331,7 @@ static const USBDescIface desc_iface_multi[] = {
                     STRING_FEATURE_UNIT,        /*  u8  iFeature */
                 }
             },{
-                /* Headphone Output Terminal ID3 Descriptor */
+                /* Headphone Ouptut Terminal ID3 Descriptor */
                 .data = (uint8_t[]) {
                     0x09,                       /*  u8  bLength */
                     USB_DT_CS_INTERFACE,        /*  u8  bDescriptorType */
@@ -634,7 +633,7 @@ static uint8_t *streambuf_get(struct streambuf *buf, size_t *len)
     return data;
 }
 
-struct USBAudioState {
+typedef struct USBAudioState {
     /* qemu interfaces */
     USBDevice dev;
     QEMUSoundCard card;
@@ -653,10 +652,10 @@ struct USBAudioState {
     uint32_t debug;
     uint32_t buffer_user, buffer;
     bool multi;
-};
+} USBAudioState;
 
 #define TYPE_USB_AUDIO "usb-audio"
-OBJECT_DECLARE_SIMPLE_TYPE(USBAudioState, USB_AUDIO)
+#define USB_AUDIO(obj) OBJECT_CHECK(USBAudioState, (obj), TYPE_USB_AUDIO)
 
 static void output_callback(void *opaque, int avail)
 {
@@ -1024,6 +1023,7 @@ static const TypeInfo usb_audio_info = {
 static void usb_audio_register_types(void)
 {
     type_register_static(&usb_audio_info);
+    usb_legacy_register(TYPE_USB_AUDIO, "audio", NULL);
 }
 
 type_init(usb_audio_register_types)

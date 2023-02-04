@@ -37,6 +37,26 @@
 
 // #define DEBUG_VERBOSE
 
+#if LIBCURL_VERSION_NUM >= 0x071000
+/* The multi interface timer callback was introduced in 7.16.0 */
+#define NEED_CURL_TIMER_CALLBACK
+#define HAVE_SOCKET_ACTION
+#endif
+
+#ifndef HAVE_SOCKET_ACTION
+/* If curl_multi_socket_action isn't available, define it statically here in
+ * terms of curl_multi_socket. Note that ev_bitmask will be ignored, which is
+ * less efficient but still safe. */
+static CURLMcode __curl_multi_socket_action(CURLM *multi_handle,
+                                            curl_socket_t sockfd,
+                                            int ev_bitmask,
+                                            int *running_handles)
+{
+    return curl_multi_socket(multi_handle, sockfd, running_handles);
+}
+#define curl_multi_socket_action __curl_multi_socket_action
+#endif
+
 #define PROTOCOLS (CURLPROTO_HTTP | CURLPROTO_HTTPS | \
                    CURLPROTO_FTP | CURLPROTO_FTPS)
 
@@ -78,7 +98,8 @@ typedef struct CURLAIOCB {
 
 typedef struct CURLSocket {
     int fd;
-    struct BDRVCURLState *s;
+    struct CURLState *state;
+    QLIST_ENTRY(CURLSocket) next;
 } CURLSocket;
 
 typedef struct CURLState
@@ -86,6 +107,7 @@ typedef struct CURLState
     struct BDRVCURLState *s;
     CURLAIOCB *acb[CURL_NUM_ACB];
     CURL *curl;
+    QLIST_HEAD(, CURLSocket) sockets;
     char *orig_buf;
     uint64_t buf_start;
     size_t buf_off;
@@ -100,7 +122,6 @@ typedef struct BDRVCURLState {
     QEMUTimer timer;
     uint64_t len;
     CURLState states[CURL_NUM_STATES];
-    GHashTable *sockets; /* GINT_TO_POINTER(fd) -> socket */
     char *url;
     size_t readahead_size;
     bool sslverify;
@@ -119,21 +140,7 @@ typedef struct BDRVCURLState {
 static void curl_clean_state(CURLState *s);
 static void curl_multi_do(void *arg);
 
-static gboolean curl_drop_socket(void *key, void *value, void *opaque)
-{
-    CURLSocket *socket = value;
-    BDRVCURLState *s = socket->s;
-
-    aio_set_fd_handler(s->aio_context, socket->fd, false,
-                       NULL, NULL, NULL, NULL, NULL);
-    return true;
-}
-
-static void curl_drop_all_sockets(GHashTable *sockets)
-{
-    g_hash_table_foreach_remove(sockets, curl_drop_socket, NULL);
-}
-
+#ifdef NEED_CURL_TIMER_CALLBACK
 /* Called from curl_multi_do_locked, with s->mutex held.  */
 static int curl_timer_cb(CURLM *multi, long timeout_ms, void *opaque)
 {
@@ -149,6 +156,7 @@ static int curl_timer_cb(CURLM *multi, long timeout_ms, void *opaque)
     }
     return 0;
 }
+#endif
 
 /* Called from curl_multi_do_locked, with s->mutex held.  */
 static int curl_sock_cb(CURL *curl, curl_socket_t fd, int action,
@@ -161,37 +169,41 @@ static int curl_sock_cb(CURL *curl, curl_socket_t fd, int action,
     curl_easy_getinfo(curl, CURLINFO_PRIVATE, (char **)&state);
     s = state->s;
 
-    socket = g_hash_table_lookup(s->sockets, GINT_TO_POINTER(fd));
+    QLIST_FOREACH(socket, &state->sockets, next) {
+        if (socket->fd == fd) {
+            break;
+        }
+    }
     if (!socket) {
         socket = g_new0(CURLSocket, 1);
         socket->fd = fd;
-        socket->s = s;
-        g_hash_table_insert(s->sockets, GINT_TO_POINTER(fd), socket);
+        socket->state = state;
+        QLIST_INSERT_HEAD(&state->sockets, socket, next);
     }
 
     trace_curl_sock_cb(action, (int)fd);
     switch (action) {
         case CURL_POLL_IN:
             aio_set_fd_handler(s->aio_context, fd, false,
-                               curl_multi_do, NULL, NULL, NULL, socket);
+                               curl_multi_do, NULL, NULL, socket);
             break;
         case CURL_POLL_OUT:
             aio_set_fd_handler(s->aio_context, fd, false,
-                               NULL, curl_multi_do, NULL, NULL, socket);
+                               NULL, curl_multi_do, NULL, socket);
             break;
         case CURL_POLL_INOUT:
             aio_set_fd_handler(s->aio_context, fd, false,
-                               curl_multi_do, curl_multi_do,
-                               NULL, NULL, socket);
+                               curl_multi_do, curl_multi_do, NULL, socket);
             break;
         case CURL_POLL_REMOVE:
             aio_set_fd_handler(s->aio_context, fd, false,
-                               NULL, NULL, NULL, NULL, NULL);
+                               NULL, NULL, NULL, NULL);
             break;
     }
 
     if (action == CURL_POLL_REMOVE) {
-        g_hash_table_remove(s->sockets, GINT_TO_POINTER(fd));
+        QLIST_REMOVE(socket, next);
+        g_free(socket);
     }
 
     return 0;
@@ -395,7 +407,7 @@ static void curl_multi_check_completion(BDRVCURLState *s)
 /* Called with s->mutex held.  */
 static void curl_multi_do_locked(CURLSocket *socket)
 {
-    BDRVCURLState *s = socket->s;
+    BDRVCURLState *s = socket->state->s;
     int running;
     int r;
 
@@ -411,7 +423,7 @@ static void curl_multi_do_locked(CURLSocket *socket)
 static void curl_multi_do(void *arg)
 {
     CURLSocket *socket = arg;
-    BDRVCURLState *s = socket->s;
+    BDRVCURLState *s = socket->state->s;
 
     qemu_mutex_lock(&s->mutex);
     curl_multi_do_locked(socket);
@@ -421,6 +433,7 @@ static void curl_multi_do(void *arg)
 
 static void curl_multi_timeout_do(void *arg)
 {
+#ifdef NEED_CURL_TIMER_CALLBACK
     BDRVCURLState *s = (BDRVCURLState *)arg;
     int running;
 
@@ -433,6 +446,9 @@ static void curl_multi_timeout_do(void *arg)
 
     curl_multi_check_completion(s);
     qemu_mutex_unlock(&s->mutex);
+#else
+    abort();
+#endif
 }
 
 /* Called with s->mutex held.  */
@@ -458,51 +474,38 @@ static int curl_init_state(BDRVCURLState *s, CURLState *state)
         if (!state->curl) {
             return -EIO;
         }
-        if (curl_easy_setopt(state->curl, CURLOPT_URL, s->url) ||
-            curl_easy_setopt(state->curl, CURLOPT_SSL_VERIFYPEER,
-                             (long) s->sslverify) ||
-            curl_easy_setopt(state->curl, CURLOPT_SSL_VERIFYHOST,
-                             s->sslverify ? 2L : 0L)) {
-            goto err;
-        }
+        curl_easy_setopt(state->curl, CURLOPT_URL, s->url);
+        curl_easy_setopt(state->curl, CURLOPT_SSL_VERIFYPEER,
+                         (long) s->sslverify);
+        curl_easy_setopt(state->curl, CURLOPT_SSL_VERIFYHOST,
+                         s->sslverify ? 2L : 0L);
         if (s->cookie) {
-            if (curl_easy_setopt(state->curl, CURLOPT_COOKIE, s->cookie)) {
-                goto err;
-            }
+            curl_easy_setopt(state->curl, CURLOPT_COOKIE, s->cookie);
         }
-        if (curl_easy_setopt(state->curl, CURLOPT_TIMEOUT, (long)s->timeout) ||
-            curl_easy_setopt(state->curl, CURLOPT_WRITEFUNCTION,
-                             (void *)curl_read_cb) ||
-            curl_easy_setopt(state->curl, CURLOPT_WRITEDATA, (void *)state) ||
-            curl_easy_setopt(state->curl, CURLOPT_PRIVATE, (void *)state) ||
-            curl_easy_setopt(state->curl, CURLOPT_AUTOREFERER, 1) ||
-            curl_easy_setopt(state->curl, CURLOPT_FOLLOWLOCATION, 1) ||
-            curl_easy_setopt(state->curl, CURLOPT_NOSIGNAL, 1) ||
-            curl_easy_setopt(state->curl, CURLOPT_ERRORBUFFER, state->errmsg) ||
-            curl_easy_setopt(state->curl, CURLOPT_FAILONERROR, 1)) {
-            goto err;
-        }
+        curl_easy_setopt(state->curl, CURLOPT_TIMEOUT, (long)s->timeout);
+        curl_easy_setopt(state->curl, CURLOPT_WRITEFUNCTION,
+                         (void *)curl_read_cb);
+        curl_easy_setopt(state->curl, CURLOPT_WRITEDATA, (void *)state);
+        curl_easy_setopt(state->curl, CURLOPT_PRIVATE, (void *)state);
+        curl_easy_setopt(state->curl, CURLOPT_AUTOREFERER, 1);
+        curl_easy_setopt(state->curl, CURLOPT_FOLLOWLOCATION, 1);
+        curl_easy_setopt(state->curl, CURLOPT_NOSIGNAL, 1);
+        curl_easy_setopt(state->curl, CURLOPT_ERRORBUFFER, state->errmsg);
+        curl_easy_setopt(state->curl, CURLOPT_FAILONERROR, 1);
+
         if (s->username) {
-            if (curl_easy_setopt(state->curl, CURLOPT_USERNAME, s->username)) {
-                goto err;
-            }
+            curl_easy_setopt(state->curl, CURLOPT_USERNAME, s->username);
         }
         if (s->password) {
-            if (curl_easy_setopt(state->curl, CURLOPT_PASSWORD, s->password)) {
-                goto err;
-            }
+            curl_easy_setopt(state->curl, CURLOPT_PASSWORD, s->password);
         }
         if (s->proxyusername) {
-            if (curl_easy_setopt(state->curl,
-                                 CURLOPT_PROXYUSERNAME, s->proxyusername)) {
-                goto err;
-            }
+            curl_easy_setopt(state->curl,
+                             CURLOPT_PROXYUSERNAME, s->proxyusername);
         }
         if (s->proxypassword) {
-            if (curl_easy_setopt(state->curl,
-                                 CURLOPT_PROXYPASSWORD, s->proxypassword)) {
-                goto err;
-            }
+            curl_easy_setopt(state->curl,
+                             CURLOPT_PROXYPASSWORD, s->proxypassword);
         }
 
         /* Restrict supported protocols to avoid security issues in the more
@@ -512,27 +515,19 @@ static int curl_init_state(BDRVCURLState *s, CURLState *state)
          * Restricting protocols is only supported from 7.19.4 upwards.
          */
 #if LIBCURL_VERSION_NUM >= 0x071304
-        if (curl_easy_setopt(state->curl, CURLOPT_PROTOCOLS, PROTOCOLS) ||
-            curl_easy_setopt(state->curl, CURLOPT_REDIR_PROTOCOLS, PROTOCOLS)) {
-            goto err;
-        }
+        curl_easy_setopt(state->curl, CURLOPT_PROTOCOLS, PROTOCOLS);
+        curl_easy_setopt(state->curl, CURLOPT_REDIR_PROTOCOLS, PROTOCOLS);
 #endif
 
 #ifdef DEBUG_VERBOSE
-        if (curl_easy_setopt(state->curl, CURLOPT_VERBOSE, 1)) {
-            goto err;
-        }
+        curl_easy_setopt(state->curl, CURLOPT_VERBOSE, 1);
 #endif
     }
 
+    QLIST_INIT(&state->sockets);
     state->s = s;
 
     return 0;
-
-err:
-    curl_easy_cleanup(state->curl);
-    state->curl = NULL;
-    return -EIO;
 }
 
 /* Called with s->mutex held.  */
@@ -545,6 +540,13 @@ static void curl_clean_state(CURLState *s)
 
     if (s->s->multi)
         curl_multi_remove_handle(s->s->multi, s->curl);
+
+    while (!QLIST_EMPTY(&s->sockets)) {
+        CURLSocket *socket = QLIST_FIRST(&s->sockets);
+
+        QLIST_REMOVE(socket, next);
+        g_free(socket);
+    }
 
     s->in_use = 0;
 
@@ -562,24 +564,23 @@ static void curl_detach_aio_context(BlockDriverState *bs)
     BDRVCURLState *s = bs->opaque;
     int i;
 
-    WITH_QEMU_LOCK_GUARD(&s->mutex) {
-        curl_drop_all_sockets(s->sockets);
-        for (i = 0; i < CURL_NUM_STATES; i++) {
-            if (s->states[i].in_use) {
-                curl_clean_state(&s->states[i]);
-            }
-            if (s->states[i].curl) {
-                curl_easy_cleanup(s->states[i].curl);
-                s->states[i].curl = NULL;
-            }
-            g_free(s->states[i].orig_buf);
-            s->states[i].orig_buf = NULL;
+    qemu_mutex_lock(&s->mutex);
+    for (i = 0; i < CURL_NUM_STATES; i++) {
+        if (s->states[i].in_use) {
+            curl_clean_state(&s->states[i]);
         }
-        if (s->multi) {
-            curl_multi_cleanup(s->multi);
-            s->multi = NULL;
+        if (s->states[i].curl) {
+            curl_easy_cleanup(s->states[i].curl);
+            s->states[i].curl = NULL;
         }
+        g_free(s->states[i].orig_buf);
+        s->states[i].orig_buf = NULL;
     }
+    if (s->multi) {
+        curl_multi_cleanup(s->multi);
+        s->multi = NULL;
+    }
+    qemu_mutex_unlock(&s->mutex);
 
     timer_del(&s->timer);
 }
@@ -597,8 +598,10 @@ static void curl_attach_aio_context(BlockDriverState *bs,
     s->multi = curl_multi_init();
     s->aio_context = new_context;
     curl_multi_setopt(s->multi, CURLMOPT_SOCKETFUNCTION, curl_sock_cb);
+#ifdef NEED_CURL_TIMER_CALLBACK
     curl_multi_setopt(s->multi, CURLMOPT_TIMERDATA, s);
     curl_multi_setopt(s->multi, CURLMOPT_TIMERFUNCTION, curl_timer_cb);
+#endif
 }
 
 static QemuOptsList runtime_opts = {
@@ -770,7 +773,6 @@ static int curl_open(BlockDriverState *bs, QDict *options, int flags,
     qemu_co_queue_init(&s->free_state_waitq);
     s->aio_context = bdrv_get_aio_context(bs);
     s->url = g_strdup(file);
-    s->sockets = g_hash_table_new_full(NULL, NULL, NULL, g_free);
     qemu_mutex_lock(&s->mutex);
     state = curl_find_state(s);
     qemu_mutex_unlock(&s->mutex);
@@ -781,19 +783,14 @@ static int curl_open(BlockDriverState *bs, QDict *options, int flags,
     // Get file size
 
     if (curl_init_state(s, state) < 0) {
-        pstrcpy(state->errmsg, CURL_ERROR_SIZE,
-                "curl library initialization failed.");
         goto out;
     }
 
     s->accept_range = false;
-    if (curl_easy_setopt(state->curl, CURLOPT_NOBODY, 1) ||
-        curl_easy_setopt(state->curl, CURLOPT_HEADERFUNCTION, curl_header_cb) ||
-        curl_easy_setopt(state->curl, CURLOPT_HEADERDATA, s)) {
-        pstrcpy(state->errmsg, CURL_ERROR_SIZE,
-                "curl library initialization failed.");
-        goto out;
-    }
+    curl_easy_setopt(state->curl, CURLOPT_NOBODY, 1);
+    curl_easy_setopt(state->curl, CURLOPT_HEADERFUNCTION,
+                     curl_header_cb);
+    curl_easy_setopt(state->curl, CURLOPT_HEADERDATA, s);
     if (curl_easy_perform(state->curl))
         goto out;
     if (curl_easy_getinfo(state->curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &d)) {
@@ -849,13 +846,11 @@ out_noclean:
     g_free(s->username);
     g_free(s->proxyusername);
     g_free(s->proxypassword);
-    curl_drop_all_sockets(s->sockets);
-    g_hash_table_destroy(s->sockets);
     qemu_opts_del(opts);
     return -EINVAL;
 }
 
-static void coroutine_fn curl_setup_preadv(BlockDriverState *bs, CURLAIOCB *acb)
+static void curl_setup_preadv(BlockDriverState *bs, CURLAIOCB *acb)
 {
     CURLState *state;
     int running;
@@ -906,8 +901,9 @@ static void coroutine_fn curl_setup_preadv(BlockDriverState *bs, CURLAIOCB *acb)
 
     snprintf(state->range, 127, "%" PRIu64 "-%" PRIu64, start, end);
     trace_curl_setup_preadv(acb->bytes, start, state->range);
-    if (curl_easy_setopt(state->curl, CURLOPT_RANGE, state->range) ||
-        curl_multi_add_handle(s->multi, state->curl) != CURLM_OK) {
+    curl_easy_setopt(state->curl, CURLOPT_RANGE, state->range);
+
+    if (curl_multi_add_handle(s->multi, state->curl) != CURLM_OK) {
         state->acb[0] = NULL;
         acb->ret = -EIO;
 
@@ -923,8 +919,7 @@ out:
 }
 
 static int coroutine_fn curl_co_preadv(BlockDriverState *bs,
-        int64_t offset, int64_t bytes, QEMUIOVector *qiov,
-        BdrvRequestFlags flags)
+        uint64_t offset, uint64_t bytes, QEMUIOVector *qiov, int flags)
 {
     CURLAIOCB acb = {
         .co = qemu_coroutine_self(),
@@ -949,7 +944,6 @@ static void curl_close(BlockDriverState *bs)
     curl_detach_aio_context(bs);
     qemu_mutex_destroy(&s->mutex);
 
-    g_hash_table_destroy(s->sockets);
     g_free(s->cookie);
     g_free(s->url);
     g_free(s->username);

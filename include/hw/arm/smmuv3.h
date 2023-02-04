@@ -21,7 +21,6 @@
 
 #include "hw/arm/smmu-common.h"
 #include "hw/registerfields.h"
-#include "qom/object.h"
 
 #define TYPE_SMMUV3_IOMMU_MEMORY_REGION "smmuv3-iommu-memory-region"
 
@@ -33,7 +32,7 @@ typedef struct SMMUQueue {
      uint8_t log2size;
 } SMMUQueue;
 
-struct SMMUv3State {
+typedef struct SMMUv3State {
     SMMUState     smmu_state;
 
     uint32_t features;
@@ -42,7 +41,6 @@ struct SMMUv3State {
 
     uint32_t idr[6];
     uint32_t iidr;
-    uint32_t aidr;
     uint32_t cr[3];
     uint32_t cr0ack;
     uint32_t statusr;
@@ -62,7 +60,7 @@ struct SMMUv3State {
 
     qemu_irq     irq[4];
     QemuMutex mutex;
-};
+} SMMUv3State;
 
 typedef enum {
     SMMU_IRQ_EVTQ,
@@ -71,16 +69,20 @@ typedef enum {
     SMMU_IRQ_GERROR,
 } SMMUIrq;
 
-struct SMMUv3Class {
+typedef struct {
     /*< private >*/
     SMMUBaseClass smmu_base_class;
     /*< public >*/
 
     DeviceRealize parent_realize;
     DeviceReset   parent_reset;
-};
+} SMMUv3Class;
 
 #define TYPE_ARM_SMMUV3   "arm-smmuv3"
-OBJECT_DECLARE_TYPE(SMMUv3State, SMMUv3Class, ARM_SMMUV3)
+#define ARM_SMMUV3(obj) OBJECT_CHECK(SMMUv3State, (obj), TYPE_ARM_SMMUV3)
+#define ARM_SMMUV3_CLASS(klass)                              \
+    OBJECT_CLASS_CHECK(SMMUv3Class, (klass), TYPE_ARM_SMMUV3)
+#define ARM_SMMUV3_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(SMMUv3Class, (obj), TYPE_ARM_SMMUV3)
 
 #endif

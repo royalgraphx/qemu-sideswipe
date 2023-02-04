@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: auto quick
 #
 # Make sure we can open read-only images
 #

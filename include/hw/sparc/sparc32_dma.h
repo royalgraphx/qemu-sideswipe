@@ -4,13 +4,14 @@
 #include "hw/sysbus.h"
 #include "hw/scsi/esp.h"
 #include "hw/net/lance.h"
-#include "qom/object.h"
 
 #define DMA_REGS 4
 
 #define TYPE_SPARC32_DMA_DEVICE "sparc32-dma-device"
-OBJECT_DECLARE_SIMPLE_TYPE(DMADeviceState, SPARC32_DMA_DEVICE)
+#define SPARC32_DMA_DEVICE(obj) OBJECT_CHECK(DMADeviceState, (obj), \
+                                             TYPE_SPARC32_DMA_DEVICE)
 
+typedef struct DMADeviceState DMADeviceState;
 
 struct DMADeviceState {
     SysBusDevice parent_obj;
@@ -23,34 +24,37 @@ struct DMADeviceState {
 };
 
 #define TYPE_SPARC32_ESPDMA_DEVICE "sparc32-espdma"
-OBJECT_DECLARE_SIMPLE_TYPE(ESPDMADeviceState, SPARC32_ESPDMA_DEVICE)
+#define SPARC32_ESPDMA_DEVICE(obj) OBJECT_CHECK(ESPDMADeviceState, (obj), \
+                                                TYPE_SPARC32_ESPDMA_DEVICE)
 
-struct ESPDMADeviceState {
+typedef struct ESPDMADeviceState {
     DMADeviceState parent_obj;
 
-    SysBusESPState esp;
-};
+    SysBusESPState *esp;
+} ESPDMADeviceState;
 
 #define TYPE_SPARC32_LEDMA_DEVICE "sparc32-ledma"
-OBJECT_DECLARE_SIMPLE_TYPE(LEDMADeviceState, SPARC32_LEDMA_DEVICE)
+#define SPARC32_LEDMA_DEVICE(obj) OBJECT_CHECK(LEDMADeviceState, (obj), \
+                                               TYPE_SPARC32_LEDMA_DEVICE)
 
-struct LEDMADeviceState {
+typedef struct LEDMADeviceState {
     DMADeviceState parent_obj;
 
-    SysBusPCNetState lance;
-};
+    SysBusPCNetState *lance;
+} LEDMADeviceState;
 
 #define TYPE_SPARC32_DMA "sparc32-dma"
-OBJECT_DECLARE_SIMPLE_TYPE(SPARC32DMAState, SPARC32_DMA)
+#define SPARC32_DMA(obj) OBJECT_CHECK(SPARC32DMAState, (obj), \
+                                      TYPE_SPARC32_DMA)
 
-struct SPARC32DMAState {
+typedef struct SPARC32DMAState {
     SysBusDevice parent_obj;
 
     MemoryRegion dmamem;
     MemoryRegion ledma_alias;
-    ESPDMADeviceState espdma;
-    LEDMADeviceState ledma;
-};
+    ESPDMADeviceState *espdma;
+    LEDMADeviceState *ledma;
+} SPARC32DMAState;
 
 /* sparc32_dma.c */
 void ledma_memory_read(void *opaque, hwaddr addr,

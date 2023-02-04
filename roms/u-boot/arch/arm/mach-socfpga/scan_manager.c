@@ -9,7 +9,6 @@
 #include <asm/arch/freeze_controller.h>
 #include <asm/arch/scan_manager.h>
 #include <asm/arch/system_manager.h>
-#include <linux/delay.h>
 
 /*
  * Maximum polling loop to wait for IO scan chain engine becomes idle
@@ -32,6 +31,8 @@ static const struct socfpga_scan_manager *scan_manager_base =
 		(void *)(SOCFPGA_SCANMGR_ADDRESS);
 static const struct socfpga_freeze_controller *freeze_controller_base =
 		(void *)(SOCFPGA_SYSMGR_ADDRESS + SYSMGR_FRZCTRL_ADDRESS);
+static struct socfpga_system_manager *sys_mgr_base =
+	(struct socfpga_system_manager *)SOCFPGA_SYSMGR_ADDRESS;
 
 /**
  * scan_chain_engine_is_idle() - Check if the JTAG scan chain is idle
@@ -217,7 +218,7 @@ u32 scan_mgr_get_fpga_id(void)
 	int ret;
 
 	/* Enable HPS to talk to JTAG in the FPGA through the System Manager */
-	writel(0x1, socfpga_get_sysmgr_addr() + SYSMGR_GEN5_SCANMGRGRP_CTRL);
+	writel(0x1, &sys_mgr_base->scanmgrgrp_ctrl);
 
 	/* Enable port 7 */
 	writel(0x80, &scan_manager_base->en);
@@ -252,7 +253,7 @@ u32 scan_mgr_get_fpga_id(void)
 
 	/* Disable all port */
 	writel(0, &scan_manager_base->en);
-	writel(0, socfpga_get_sysmgr_addr() + SYSMGR_GEN5_SCANMGRGRP_CTRL);
+	writel(0, &sys_mgr_base->scanmgrgrp_ctrl);
 
 	return id;
 }

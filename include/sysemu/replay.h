@@ -14,7 +14,6 @@
 
 #include "qapi/qapi-types-misc.h"
 #include "qapi/qapi-types-run-state.h"
-#include "qapi/qapi-types-replay.h"
 #include "qapi/qapi-types-ui.h"
 #include "block/aio.h"
 
@@ -73,29 +72,6 @@ void replay_start(void);
 void replay_finish(void);
 /*! Adds replay blocker with the specified error description */
 void replay_add_blocker(Error *reason);
-/* Returns name of the replay log file */
-const char *replay_get_filename(void);
-/*
- * Start making one step in backward direction.
- * Used by gdbstub for backwards debugging.
- * Returns true on success.
- */
-bool replay_reverse_step(void);
-/*
- * Start searching the last breakpoint/watchpoint.
- * Used by gdbstub for backwards debugging.
- * Returns true if the process successfully started.
- */
-bool replay_reverse_continue(void);
-/*
- * Returns true if replay module is processing
- * reverse_continue or reverse_step request
- */
-bool replay_running_debug(void);
-/* Called in reverse debugging mode to collect breakpoint information */
-void replay_breakpoint(void);
-/* Called when gdb is attached to gdbstub */
-void replay_gdb_attached(void);
 
 /* Processing the instructions */
 
@@ -128,20 +104,18 @@ bool replay_has_interrupt(void);
 int64_t replay_save_clock(ReplayClockKind kind, int64_t clock,
                           int64_t raw_icount);
 /*! Read the specified clock from the log or return cached data */
-int64_t replay_read_clock(ReplayClockKind kind, int64_t raw_icount);
+int64_t replay_read_clock(ReplayClockKind kind);
 /*! Saves or reads the clock depending on the current replay mode. */
 #define REPLAY_CLOCK(clock, value)                                      \
-    (replay_mode == REPLAY_MODE_PLAY                                    \
-        ? replay_read_clock((clock), icount_get_raw())                  \
+    (replay_mode == REPLAY_MODE_PLAY ? replay_read_clock((clock))       \
         : replay_mode == REPLAY_MODE_RECORD                             \
-            ? replay_save_clock((clock), (value), icount_get_raw())     \
-            : (value))
+            ? replay_save_clock((clock), (value), cpu_get_icount_raw()) \
+        : (value))
 #define REPLAY_CLOCK_LOCKED(clock, value)                               \
-    (replay_mode == REPLAY_MODE_PLAY                                    \
-        ? replay_read_clock((clock), icount_get_raw_locked())           \
+    (replay_mode == REPLAY_MODE_PLAY ? replay_read_clock((clock))       \
         : replay_mode == REPLAY_MODE_RECORD                             \
-            ? replay_save_clock((clock), (value), icount_get_raw_locked()) \
-            : (value))
+            ? replay_save_clock((clock), (value), cpu_get_icount_raw_locked()) \
+        : (value))
 
 /* Processing data from random generators */
 
@@ -160,14 +134,9 @@ void replay_shutdown_request(ShutdownCause cause);
     Returns 0 in PLAY mode if checkpoint was not found.
     Returns 1 in all other cases. */
 bool replay_checkpoint(ReplayCheckpoint checkpoint);
-/*! Used to determine that checkpoint or async event is pending.
+/*! Used to determine that checkpoint is pending.
     Does not proceed to the next event in the log. */
-bool replay_has_event(void);
-/*
- * Processes the async events added to the queue (while recording)
- * or reads the events from the file (while replaying).
- */
-void replay_async_events(void);
+bool replay_has_checkpoint(void);
 
 /* Asynchronous events queue */
 
@@ -177,8 +146,6 @@ void replay_disable_events(void);
 void replay_enable_events(void);
 /*! Returns true when saving events is enabled */
 bool replay_events_enabled(void);
-/* Flushes events queue */
-void replay_flush_events(void);
 /*! Adds bottom half event to the queue */
 void replay_bh_schedule_event(QEMUBH *bh);
 /* Adds oneshot bottom half event to the queue */
@@ -198,7 +165,7 @@ uint64_t blkreplay_next_id(void);
 /*! Registers char driver to save it's events */
 void replay_register_char_driver(struct Chardev *chr);
 /*! Saves write to char device event to the log */
-void replay_chr_be_write(struct Chardev *s, const uint8_t *buf, int len);
+void replay_chr_be_write(struct Chardev *s, uint8_t *buf, int len);
 /*! Writes char write return value to the replay log. */
 void replay_char_write_event_save(int res, int offset);
 /*! Reads char write return value from the replay log. */

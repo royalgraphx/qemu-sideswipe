@@ -17,11 +17,11 @@
  */
 
 #include "qemu/osdep.h"
-#include "../libqtest.h"
-#include "qgraph.h"
+#include "libqtest.h"
+#include "libqos/qgraph.h"
 #include "pci-spapr.h"
 #include "qemu/module.h"
-#include "malloc-spapr.h"
+#include "libqos/malloc-spapr.h"
 
 typedef struct QSPAPR_pci_host QSPAPR_pci_host;
 typedef struct Qppc64_pseriesMachine Qppc64_pseriesMachine;

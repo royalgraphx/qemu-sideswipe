@@ -16,12 +16,11 @@
 
 #include "hw/sysbus.h"
 #include "qemu/timer.h"
-#include "qom/object.h"
 
 #define TYPE_PL031 "pl031"
-OBJECT_DECLARE_SIMPLE_TYPE(PL031State, PL031)
+#define PL031(obj) OBJECT_CHECK(PL031State, (obj), TYPE_PL031)
 
-struct PL031State {
+typedef struct PL031State {
     SysBusDevice parent_obj;
 
     MemoryRegion iomem;
@@ -43,6 +42,6 @@ struct PL031State {
     uint32_t cr;
     uint32_t im;
     uint32_t is;
-};
+} PL031State;
 
 #endif

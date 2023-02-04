@@ -247,6 +247,7 @@ static void throttle_timer_destroy(QEMUTimer **timer)
 {
     assert(*timer != NULL);
 
+    timer_del(*timer);
     timer_free(*timer);
     *timer = NULL;
 }

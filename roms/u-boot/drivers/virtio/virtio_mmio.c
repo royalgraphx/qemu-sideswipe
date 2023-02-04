@@ -9,13 +9,10 @@
 
 #include <common.h>
 #include <dm.h>
-#include <log.h>
 #include <virtio_types.h>
 #include <virtio.h>
 #include <virtio_ring.h>
-#include <linux/bug.h>
 #include <linux/compat.h>
-#include <linux/err.h>
 #include <linux/io.h>
 #include "virtio_mmio.h"
 
@@ -334,7 +331,7 @@ static int virtio_mmio_notify(struct udevice *udev, struct virtqueue *vq)
 	return 0;
 }
 
-static int virtio_mmio_of_to_plat(struct udevice *udev)
+static int virtio_mmio_ofdata_to_platdata(struct udevice *udev)
 {
 	struct virtio_mmio_priv *priv = dev_get_priv(udev);
 
@@ -366,7 +363,7 @@ static int virtio_mmio_probe(struct udevice *udev)
 		return 0;
 	}
 
-	/* Check device ID */
+	/* Check devicd ID */
 	uc_priv->device = readl(priv->base + VIRTIO_MMIO_DEVICE_ID);
 	if (uc_priv->device == 0) {
 		/*
@@ -411,6 +408,6 @@ U_BOOT_DRIVER(virtio_mmio) = {
 	.of_match = virtio_mmio_ids,
 	.ops	= &virtio_mmio_ops,
 	.probe	= virtio_mmio_probe,
-	.of_to_plat = virtio_mmio_of_to_plat,
-	.priv_auto	= sizeof(struct virtio_mmio_priv),
+	.ofdata_to_platdata = virtio_mmio_ofdata_to_platdata,
+	.priv_auto_alloc_size = sizeof(struct virtio_mmio_priv),
 };

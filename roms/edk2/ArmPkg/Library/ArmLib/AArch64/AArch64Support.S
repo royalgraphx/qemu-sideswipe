@@ -3,7 +3,6 @@
 # Copyright (c) 2008 - 2010, Apple Inc. All rights reserved.<BR>
 # Copyright (c) 2011 - 2017, ARM Limited. All rights reserved.
 # Copyright (c) 2016, Linaro Limited. All rights reserved.
-# Copyright (c) 2020, NUVIA Inc. All rights reserved.
 #
 # SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -396,7 +395,7 @@ ASM_FUNC(ArmReadVBar)
 ASM_FUNC(ArmEnableVFP)
   // Check whether floating-point is implemented in the processor.
   mov   x1, x30                 // Save LR
-  bl    ArmReadIdAA64Pfr0       // Read EL1 Processor Feature Register (PFR0)
+  bl    ArmReadIdPfr0           // Read EL1 Processor Feature Register (PFR0)
   mov   x30, x1                 // Restore LR
   ubfx  x0, x0, #16, #4         // Extract the FP bits 16:19
   cmp   x0, #0xF                // Check if FP bits are '1111b',
@@ -425,22 +424,19 @@ ASM_FUNC(ArmCallWFI)
   wfi
   ret
 
-ASM_FUNC(ArmReadIdAA64Mmfr2)
-  mrs   x0, ID_AA64MMFR2_EL1           // read EL1 MMFR2
-  ret
 
 ASM_FUNC(ArmReadMpidr)
   mrs   x0, mpidr_el1           // read EL1 MPIDR
   ret
 
 
-// Keep old function names for C compatibility for now. Change later?
+// Keep old function names for C compatibilty for now. Change later?
 ASM_FUNC(ArmReadTpidrurw)
   mrs   x0, tpidr_el0           // read tpidr_el0 (v7 TPIDRURW) -> (v8 TPIDR_EL0)
   ret
 
 
-// Keep old function names for C compatibility for now. Change later?
+// Keep old function names for C compatibilty for now. Change later?
 ASM_FUNC(ArmWriteTpidrurw)
   msr   tpidr_el0, x0           // write tpidr_el0 (v7 TPIDRURW) -> (v8 TPIDR_EL0)
   ret
@@ -452,10 +448,18 @@ ASM_FUNC(ArmIsArchTimerImplemented)
   ret
 
 
-ASM_FUNC(ArmReadIdAA64Pfr0)
+ASM_FUNC(ArmReadIdPfr0)
   mrs   x0, id_aa64pfr0_el1   // Read ID_AA64PFR0 Register
   ret
 
+
+// Q: id_aa64pfr1_el1 not defined yet. What does this funtion want to access?
+// A: used to setup arch timer. Check if we have security extensions, permissions to set stuff.
+//    See: ArmPkg/Library/ArmArchTimerLib/AArch64/ArmArchTimerLib.c
+//    Not defined yet, but stick in here for now, should read all zeros.
+ASM_FUNC(ArmReadIdPfr1)
+  mrs   x0, id_aa64pfr1_el1   // Read ID_PFR1 Register
+  ret
 
 // VOID ArmWriteHcr(UINTN Hcr)
 ASM_FUNC(ArmWriteHcr)

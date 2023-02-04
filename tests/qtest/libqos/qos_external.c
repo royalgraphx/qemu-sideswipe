@@ -18,16 +18,16 @@
 
 #include "qemu/osdep.h"
 #include <getopt.h>
-#include "../libqtest.h"
+#include "libqtest.h"
 #include "qapi/qmp/qdict.h"
 #include "qapi/qmp/qbool.h"
 #include "qapi/qmp/qstring.h"
 #include "qemu/module.h"
 #include "qapi/qmp/qlist.h"
-#include "libqos-malloc.h"
-#include "qgraph.h"
-#include "qgraph_internal.h"
-#include "qos_external.h"
+#include "libqos/malloc.h"
+#include "libqos/qgraph.h"
+#include "libqos/qgraph_internal.h"
+#include "libqos/qos_external.h"
 
 static void machine_apply_to_node(const char *name)
 {

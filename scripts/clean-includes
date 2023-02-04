@@ -51,7 +51,7 @@ GIT=no
 DUPHEAD=no
 
 # Extended regular expression defining files to ignore when using --all
-XDIRREGEX='^(tests/tcg|tests/multiboot|pc-bios)'
+XDIRREGEX='^(tests/tcg|tests/multiboot|pc-bios|disas/libvixl)'
 
 while true
 do
@@ -113,7 +113,7 @@ EOT
 
 for f in "$@"; do
   case "$f" in
-    *.c.inc)
+    *.inc.c)
       # These aren't standalone C source files
       echo "SKIPPING $f (not a standalone source file)"
       continue

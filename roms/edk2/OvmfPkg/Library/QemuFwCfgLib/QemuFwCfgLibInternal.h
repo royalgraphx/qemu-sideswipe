@@ -25,6 +25,7 @@ InternalQemuFwCfgIsAvailable (
   VOID
   );
 
+
 /**
   Returns a boolean indicating whether QEMU provides the DMA-like access method
   for fw_cfg.
@@ -54,9 +55,9 @@ InternalQemuFwCfgDmaIsAvailable (
 **/
 VOID
 InternalQemuFwCfgDmaBytes (
-  IN     UINT32  Size,
-  IN OUT VOID    *Buffer OPTIONAL,
-  IN     UINT32  Control
+  IN     UINT32   Size,
+  IN OUT VOID     *Buffer OPTIONAL,
+  IN     UINT32   Control
   );
 
 #endif

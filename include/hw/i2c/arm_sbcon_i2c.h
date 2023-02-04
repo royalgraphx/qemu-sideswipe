@@ -9,22 +9,19 @@
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
-
-#ifndef HW_I2C_ARM_SBCON_I2C_H
-#define HW_I2C_ARM_SBCON_I2C_H
+#ifndef HW_I2C_ARM_SBCON_H
+#define HW_I2C_ARM_SBCON_H
 
 #include "hw/sysbus.h"
 #include "hw/i2c/bitbang_i2c.h"
-#include "qom/object.h"
 
 #define TYPE_VERSATILE_I2C "versatile_i2c"
 #define TYPE_ARM_SBCON_I2C TYPE_VERSATILE_I2C
 
-typedef struct ArmSbconI2CState ArmSbconI2CState;
-DECLARE_INSTANCE_CHECKER(ArmSbconI2CState, ARM_SBCON_I2C,
-                         TYPE_ARM_SBCON_I2C)
+#define ARM_SBCON_I2C(obj) \
+    OBJECT_CHECK(ArmSbconI2CState, (obj), TYPE_ARM_SBCON_I2C)
 
-struct ArmSbconI2CState {
+typedef struct ArmSbconI2CState {
     /*< private >*/
     SysBusDevice parent_obj;
     /*< public >*/
@@ -33,6 +30,6 @@ struct ArmSbconI2CState {
     bitbang_i2c_interface bitbang;
     int out;
     int in;
-};
+} ArmSbconI2CState;
 
-#endif /* HW_I2C_ARM_SBCON_I2C_H */
+#endif /* HW_I2C_ARM_SBCON_H */

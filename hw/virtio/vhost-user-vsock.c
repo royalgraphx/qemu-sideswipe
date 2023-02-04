@@ -13,7 +13,6 @@
 #include "qapi/error.h"
 #include "qemu/error-report.h"
 #include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
 #include "hw/virtio/vhost-user-vsock.h"
 
 static const int user_feature_bits[] = {
@@ -34,12 +33,10 @@ static void vuv_get_config(VirtIODevice *vdev, uint8_t *config)
 static int vuv_handle_config_change(struct vhost_dev *dev)
 {
     VHostUserVSock *vsock = VHOST_USER_VSOCK(dev->vdev);
-    Error *local_err = NULL;
     int ret = vhost_dev_get_config(dev, (uint8_t *)&vsock->vsockcfg,
-                                   sizeof(struct virtio_vsock_config),
-                                   &local_err);
+                                   sizeof(struct virtio_vsock_config));
     if (ret < 0) {
-        error_report_err(local_err);
+        error_report("get config space failed");
         return -1;
     }
 
@@ -55,9 +52,13 @@ const VhostDevConfigOps vsock_ops = {
 static void vuv_set_status(VirtIODevice *vdev, uint8_t status)
 {
     VHostVSockCommon *vvc = VHOST_VSOCK_COMMON(vdev);
-    bool should_start = virtio_device_should_start(vdev, status);
+    bool should_start = status & VIRTIO_CONFIG_S_DRIVER_OK;
 
-    if (vhost_dev_is_started(&vvc->vhost_dev) == should_start) {
+    if (!vdev->vm_running) {
+        should_start = false;
+    }
+
+    if (vvc->vhost_dev.started == should_start) {
         return;
     }
 
@@ -77,9 +78,7 @@ static uint64_t vuv_get_features(VirtIODevice *vdev,
 {
     VHostVSockCommon *vvc = VHOST_VSOCK_COMMON(vdev);
 
-    features = vhost_get_features(&vvc->vhost_dev, user_feature_bits, features);
-
-    return vhost_vsock_common_get_features(vdev, features, errp);
+    return vhost_get_features(&vvc->vhost_dev, user_feature_bits, features);
 }
 
 static const VMStateDescription vuv_vmstate = {
@@ -103,19 +102,21 @@ static void vuv_device_realize(DeviceState *dev, Error **errp)
         return;
     }
 
-    vhost_vsock_common_realize(vdev);
+    vhost_vsock_common_realize(vdev, "vhost-user-vsock");
 
     vhost_dev_set_config_notifier(&vvc->vhost_dev, &vsock_ops);
 
     ret = vhost_dev_init(&vvc->vhost_dev, &vsock->vhost_user,
-                         VHOST_BACKEND_TYPE_USER, 0, errp);
+                         VHOST_BACKEND_TYPE_USER, 0);
     if (ret < 0) {
+        error_setg_errno(errp, -ret, "vhost_dev_init failed");
         goto err_virtio;
     }
 
     ret = vhost_dev_get_config(&vvc->vhost_dev, (uint8_t *)&vsock->vsockcfg,
-                               sizeof(struct virtio_vsock_config), errp);
+                               sizeof(struct virtio_vsock_config));
     if (ret < 0) {
+        error_setg_errno(errp, -ret, "get config space failed");
         goto err_vhost_dev;
     }
 

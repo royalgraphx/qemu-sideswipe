@@ -26,7 +26,6 @@
  */
 
 #include "qemu/osdep.h"
-#include "qemu/log.h"
 #include "qemu/main-loop.h"
 #include "cpu.h"
 #include "exec/helper-proto.h"
@@ -40,6 +39,9 @@ void HELPER(exception)(CPUXtensaState *env, uint32_t excp)
     cs->exception_index = excp;
     if (excp == EXCP_YIELD) {
         env->yield_needed = 0;
+    }
+    if (excp == EXCP_DEBUG) {
+        env->exception_taken = 0;
     }
     cpu_loop_exit(cs);
 }
@@ -126,19 +128,15 @@ void HELPER(check_interrupts)(CPUXtensaState *env)
 
 void HELPER(intset)(CPUXtensaState *env, uint32_t v)
 {
-    qatomic_or(&env->sregs[INTSET],
+    atomic_or(&env->sregs[INTSET],
               v & env->config->inttype_mask[INTTYPE_SOFTWARE]);
-}
-
-static void intclear(CPUXtensaState *env, uint32_t v)
-{
-    qatomic_and(&env->sregs[INTSET], ~v);
 }
 
 void HELPER(intclear)(CPUXtensaState *env, uint32_t v)
 {
-    intclear(env, v & (env->config->inttype_mask[INTTYPE_SOFTWARE] |
-                       env->config->inttype_mask[INTTYPE_EDGE]));
+    atomic_and(&env->sregs[INTSET],
+               ~(v & (env->config->inttype_mask[INTTYPE_SOFTWARE] |
+                      env->config->inttype_mask[INTTYPE_EDGE])));
 }
 
 static uint32_t relocated_vector(CPUXtensaState *env, uint32_t vector)
@@ -161,11 +159,11 @@ static void handle_interrupt(CPUXtensaState *env)
 {
     int level = env->pending_irq_level;
 
-    if ((level > xtensa_get_cintlevel(env) &&
-         level <= env->config->nlevel &&
-         (env->config->level_mask[level] &
-          env->sregs[INTSET] & env->sregs[INTENABLE])) ||
-        level == env->config->nmi_level) {
+    if (level > xtensa_get_cintlevel(env) &&
+        level <= env->config->nlevel &&
+        (env->config->level_mask[level] &
+         env->sregs[INTSET] &
+         env->sregs[INTENABLE])) {
         CPUState *cs = env_cpu(env);
 
         if (level > 1) {
@@ -175,9 +173,6 @@ static void handle_interrupt(CPUXtensaState *env)
                 (env->sregs[PS] & ~PS_INTLEVEL) | level | PS_EXCM;
             env->pc = relocated_vector(env,
                                        env->config->interrupt_vector[level]);
-            if (level == env->config->nmi_level) {
-                intclear(env, env->config->inttype_mask[INTTYPE_NMI]);
-            }
         } else {
             env->sregs[EXCCAUSE] = LEVEL1_INTERRUPT_CAUSE;
 
@@ -195,6 +190,7 @@ static void handle_interrupt(CPUXtensaState *env)
             }
             env->sregs[PS] |= PS_EXCM;
         }
+        env->exception_taken = 1;
     }
 }
 
@@ -239,6 +235,7 @@ void xtensa_cpu_do_interrupt(CPUState *cs)
 
             vector = env->config->exception_vector[cs->exception_index];
             env->pc = relocated_vector(env, vector);
+            env->exception_taken = 1;
         } else {
             qemu_log_mask(CPU_LOG_INT,
                           "%s(pc = %08x) bad exception_index: %d\n",
@@ -256,6 +253,11 @@ void xtensa_cpu_do_interrupt(CPUState *cs)
     }
     check_interrupts(env);
 }
+#else
+void xtensa_cpu_do_interrupt(CPUState *cs)
+{
+}
+#endif
 
 bool xtensa_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
 {
@@ -266,5 +268,3 @@ bool xtensa_cpu_exec_interrupt(CPUState *cs, int interrupt_request)
     }
     return false;
 }
-
-#endif /* !CONFIG_USER_ONLY */

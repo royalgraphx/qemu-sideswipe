@@ -49,10 +49,9 @@
 #include "migration/vmstate.h"
 #include "sysemu/reset.h"
 #include "sysemu/runstate.h"
+#include "exec/address-spaces.h"
 #include "hw/misc/unimp.h"
 #include "hw/registerfields.h"
-#include "qom/object.h"
-#include "trace.h"
 
 /* #define DEBUG_BONITO */
 
@@ -186,8 +185,7 @@ FIELD(BONGENCFG, PCIQUEUE,      12, 1)
 #define BONITO_PCICONF_IDSEL_OFFSET    11
 #define BONITO_PCICONF_FUN_MASK        0x700    /* [10:8] */
 #define BONITO_PCICONF_FUN_OFFSET      8
-#define BONITO_PCICONF_REG_MASK_DS     (~3)         /* Per datasheet */
-#define BONITO_PCICONF_REG_MASK_HW     0xff         /* As seen running PMON */
+#define BONITO_PCICONF_REG_MASK        0xFC
 #define BONITO_PCICONF_REG_OFFSET      0
 
 
@@ -197,11 +195,12 @@ FIELD(BONGENCFG, PCIQUEUE,      12, 1)
 #define PCI_IDSEL_VIA686B          (1 << PCI_IDSEL_VIA686B_BIT)
 
 #define PCI_ADDR(busno , devno , funno , regno)  \
-    ((PCI_BUILD_BDF(busno, PCI_DEVFN(devno , funno)) << 8) + (regno))
+    ((((busno) << 16) & 0xff0000) + (((devno) << 11) & 0xf800) + \
+    (((funno) << 8) & 0x700) + (regno))
 
 typedef struct BonitoState BonitoState;
 
-struct PCIBonitoState {
+typedef struct PCIBonitoState {
     PCIDevice dev;
 
     BonitoState *pcihost;
@@ -229,8 +228,7 @@ struct PCIBonitoState {
     MemoryRegion bonito_pciio;
     MemoryRegion bonito_localio;
 
-};
-typedef struct PCIBonitoState PCIBonitoState;
+} PCIBonitoState;
 
 struct BonitoState {
     PCIHostState parent_obj;
@@ -240,10 +238,12 @@ struct BonitoState {
 };
 
 #define TYPE_BONITO_PCI_HOST_BRIDGE "Bonito-pcihost"
-OBJECT_DECLARE_SIMPLE_TYPE(BonitoState, BONITO_PCI_HOST_BRIDGE)
+#define BONITO_PCI_HOST_BRIDGE(obj) \
+    OBJECT_CHECK(BonitoState, (obj), TYPE_BONITO_PCI_HOST_BRIDGE)
 
 #define TYPE_PCI_BONITO "Bonito"
-OBJECT_DECLARE_SIMPLE_TYPE(PCIBonitoState, PCI_BONITO)
+#define PCI_BONITO(obj) \
+    OBJECT_CHECK(PCIBonitoState, (obj), TYPE_PCI_BONITO)
 
 static void bonito_writel(void *opaque, hwaddr addr,
                           uint64_t val, unsigned size)
@@ -466,11 +466,11 @@ static uint32_t bonito_sbridge_pciaddr(void *opaque, hwaddr addr)
              BONITO_PCICONF_IDSEL_OFFSET;
     devno = ctz32(idsel);
     funno = (cfgaddr & BONITO_PCICONF_FUN_MASK) >> BONITO_PCICONF_FUN_OFFSET;
-    regno = (cfgaddr & BONITO_PCICONF_REG_MASK_HW) >> BONITO_PCICONF_REG_OFFSET;
+    regno = (cfgaddr & BONITO_PCICONF_REG_MASK) >> BONITO_PCICONF_REG_OFFSET;
 
     if (idsel == 0) {
-        error_report("error in bonito pci config address 0x" TARGET_FMT_plx
-                     ",pcimap_cfg=0x%x", addr, s->regs[BONITO_PCIMAP_CFG]);
+        error_report("error in bonito pci config address " TARGET_FMT_plx
+                     ",pcimap_cfg=%x", addr, s->regs[BONITO_PCIMAP_CFG]);
         exit(1);
     }
     pciaddr = PCI_ADDR(pci_bus_num(phb->bus), devno, funno, regno);
@@ -497,9 +497,6 @@ static void bonito_spciconf_write(void *opaque, hwaddr addr, uint64_t val,
     if (pciaddr == 0xffffffff) {
         return;
     }
-    if (addr & ~BONITO_PCICONF_REG_MASK_DS) {
-        trace_bonito_spciconf_small_access(addr, size);
-    }
 
     /* set the pci address in s->config_reg */
     phb->config_reg = (pciaddr) | (1u << 31);
@@ -525,9 +522,6 @@ static uint64_t bonito_spciconf_read(void *opaque, hwaddr addr, unsigned size)
 
     if (pciaddr == 0xffffffff) {
         return MAKE_64BIT_MASK(0, size * 8);
-    }
-    if (addr & ~BONITO_PCICONF_REG_MASK_DS) {
-        trace_bonito_spciconf_small_access(addr, size);
     }
 
     /* set the pci address in s->config_reg */
@@ -577,7 +571,7 @@ static int pci_bonito_map_irq(PCIDevice *pci_dev, int irq_num)
 {
     int slot;
 
-    slot = PCI_SLOT(pci_dev->devfn);
+    slot = (pci_dev->devfn >> 3);
 
     switch (slot) {
     case 5:   /* FULOONG2E_VIA_SLOT, SouthBridge, IDE, USB, ACPI, AC97, MC97 */
@@ -638,7 +632,7 @@ static void bonito_pcihost_realize(DeviceState *dev, Error **errp)
     phb->bus = pci_register_root_bus(dev, "pci",
                                      pci_bonito_set_irq, pci_bonito_map_irq,
                                      dev, &bs->pci_mem, get_system_io(),
-                                     PCI_DEVFN(5, 0), 32, TYPE_PCI_BUS);
+                                     0x28, 32, TYPE_PCI_BUS);
 
     for (size_t i = 0; i < 3; i++) {
         char *name = g_strdup_printf("pci.lomem%zu", i);
@@ -735,8 +729,7 @@ static void bonito_realize(PCIDevice *dev, Error **errp)
     pci_set_word(dev->config + PCI_SUBSYSTEM_ID, 0x0000);
 
     pci_set_byte(dev->config + PCI_INTERRUPT_LINE, 0x00);
-    pci_config_set_interrupt_pin(dev->config, 0x01); /* interrupt pin A */
-
+    pci_set_byte(dev->config + PCI_INTERRUPT_PIN, 0x01);
     pci_set_byte(dev->config + PCI_MIN_GNT, 0x3c);
     pci_set_byte(dev->config + PCI_MAX_LAT, 0x00);
 

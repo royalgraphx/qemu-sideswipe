@@ -17,12 +17,13 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef __PCD_H__
 #define __PCD_H__
 
-extern EFI_GUID  gPcdProtocolGuid;
+extern EFI_GUID gPcdProtocolGuid;
 
 #define PCD_PROTOCOL_GUID \
   { 0x11b34006, 0xd85b, 0x4d0a, { 0xa2, 0x90, 0xd5, 0xa5, 0x71, 0x31, 0xe, 0xf7 } }
 
-#define PCD_INVALID_TOKEN_NUMBER  ((UINTN) 0)
+#define PCD_INVALID_TOKEN_NUMBER ((UINTN) 0)
+
 
 /**
   Sets the SKU value for subsequent calls to set or get PCD token values.
@@ -52,6 +53,8 @@ VOID
   IN  UINTN                  SkuId
   );
 
+
+
 /**
   Retrieves an 8-bit value for a given PCD token.
 
@@ -68,6 +71,8 @@ UINT8
 (EFIAPI *PCD_PROTOCOL_GET8)(
   IN UINTN             TokenNumber
   );
+
+
 
 /**
   Retrieves a 16-bit value for a given PCD token.
@@ -86,6 +91,8 @@ UINT16
   IN UINTN             TokenNumber
   );
 
+
+
 /**
   Retrieves a 32-bit value for a given PCD token.
 
@@ -103,6 +110,8 @@ UINT32
   IN UINTN             TokenNumber
   );
 
+
+
 /**
   Retrieves a 64-bit value for a given PCD token.
 
@@ -119,6 +128,8 @@ UINT64
 (EFIAPI *PCD_PROTOCOL_GET64)(
   IN UINTN             TokenNumber
   );
+
+
 
 /**
   Retrieves a pointer to a value for a given PCD token.
@@ -139,6 +150,8 @@ VOID *
   IN UINTN             TokenNumber
   );
 
+
+
 /**
   Retrieves a Boolean value for a given PCD token.
 
@@ -158,6 +171,8 @@ BOOLEAN
   IN UINTN             TokenNumber
   );
 
+
+
 /**
   Retrieves the size of the value for a given PCD token.
 
@@ -174,6 +189,8 @@ UINTN
 (EFIAPI *PCD_PROTOCOL_GET_SIZE)(
   IN UINTN             TokenNumber
   );
+
+
 
 /**
   Retrieves an 8-bit value for a given PCD token.
@@ -196,6 +213,8 @@ UINT8
   IN UINTN             TokenNumber
   );
 
+
+
 /**
   Retrieves a 16-bit value for a given PCD token.
 
@@ -216,6 +235,8 @@ UINT16
   IN CONST EFI_GUID    *Guid,
   IN UINTN             TokenNumber
   );
+
+
 
 /**
   Retrieves a 32-bit value for a given PCD token.
@@ -238,6 +259,8 @@ UINT32
   IN UINTN             TokenNumber
   );
 
+
+
 /**
   Retrieves an 64-bit value for a given PCD token.
 
@@ -258,6 +281,8 @@ UINT64
   IN CONST EFI_GUID    *Guid,
   IN UINTN             TokenNumber
   );
+
+
 
 /**
   Retrieves a pointer to a value for a given PCD token.
@@ -280,6 +305,8 @@ VOID *
   IN UINTN             TokenNumber
   );
 
+
+
 /**
   Retrieves a Boolean value for a given PCD token.
 
@@ -301,6 +328,8 @@ BOOLEAN
   IN UINTN             TokenNumber
   );
 
+
+
 /**
   Retrieves the size of the value for a given PCD token.
 
@@ -319,6 +348,8 @@ UINTN
   IN CONST EFI_GUID    *Guid,
   IN UINTN             TokenNumber
   );
+
+
 
 /**
   Sets an 8-bit value for a given PCD token.
@@ -344,6 +375,8 @@ EFI_STATUS
   IN UINT8             Value
   );
 
+
+
 /**
   Sets a 16-bit value for a given PCD token.
 
@@ -367,6 +400,8 @@ EFI_STATUS
   IN UINTN              TokenNumber,
   IN UINT16             Value
   );
+
+
 
 /**
   Sets a 32-bit value for a given PCD token.
@@ -392,6 +427,8 @@ EFI_STATUS
   IN UINT32             Value
   );
 
+
+
 /**
   Sets a 64-bit value for a given PCD token.
 
@@ -415,6 +452,8 @@ EFI_STATUS
   IN UINTN             TokenNumber,
   IN UINT64            Value
   );
+
+
 
 /**
   Sets a value of a specified size for a given PCD token.
@@ -445,6 +484,8 @@ EFI_STATUS
   IN      VOID              *Buffer
   );
 
+
+
 /**
   Sets a Boolean value for a given PCD token.
 
@@ -468,6 +509,8 @@ EFI_STATUS
   IN UINTN             TokenNumber,
   IN BOOLEAN           Value
   );
+
+
 
 /**
   Sets an 8-bit value for a given PCD token.
@@ -495,6 +538,8 @@ EFI_STATUS
   IN UINT8             Value
   );
 
+
+
 /**
   Sets an 16-bit value for a given PCD token.
 
@@ -520,6 +565,8 @@ EFI_STATUS
   IN UINTN             TokenNumber,
   IN UINT16            Value
   );
+
+
 
 /**
   Sets a 32-bit value for a given PCD token.
@@ -547,6 +594,8 @@ EFI_STATUS
   IN UINT32             Value
   );
 
+
+
 /**
   Sets a 64-bit value for a given PCD token.
 
@@ -572,6 +621,8 @@ EFI_STATUS
   IN UINTN             TokenNumber,
   IN UINT64            Value
   );
+
+
 
 /**
   Sets a value of a specified size for a given PCD token.
@@ -604,6 +655,8 @@ EFI_STATUS
   IN       VOID              *Buffer
   );
 
+
+
 /**
   Sets a Boolean value for a given PCD token.
 
@@ -630,6 +683,8 @@ EFI_STATUS
   IN BOOLEAN           Value
   );
 
+
+
 /**
   Callback on SET function prototype definition.
 
@@ -652,11 +707,13 @@ EFI_STATUS
 typedef
 VOID
 (EFIAPI *PCD_PROTOCOL_CALLBACK)(
-  IN CONST EFI_GUID         *CallBackGuid  OPTIONAL,
+  IN CONST EFI_GUID         *CallBackGuid, OPTIONAL
   IN       UINTN            CallBackToken,
   IN OUT   VOID             *TokenData,
   IN       UINTN            TokenDataSize
   );
+
+
 
 /**
   Specifies a function to be called anytime the value of a designated token is changed.
@@ -673,10 +730,12 @@ VOID
 typedef
 EFI_STATUS
 (EFIAPI *PCD_PROTOCOL_CALLBACK_ONSET)(
-  IN  CONST EFI_GUID          *Guid  OPTIONAL,
+  IN  CONST EFI_GUID          *Guid, OPTIONAL
   IN  UINTN                   TokenNumber,
   IN  PCD_PROTOCOL_CALLBACK   CallBackFunction
   );
+
+
 
 /**
   Cancels a previously set callback function for a particular PCD token number.
@@ -693,10 +752,12 @@ EFI_STATUS
 typedef
 EFI_STATUS
 (EFIAPI *PCD_PROTOCOL_CANCEL_CALLBACK)(
-  IN  CONST EFI_GUID          *Guid  OPTIONAL,
+  IN  CONST EFI_GUID          *Guid, OPTIONAL
   IN  UINTN                   TokenNumber,
   IN  PCD_PROTOCOL_CALLBACK   CallBackFunction
   );
+
+
 
 /**
   Retrieves the next valid token number in a given namespace.
@@ -727,9 +788,11 @@ EFI_STATUS
 typedef
 EFI_STATUS
 (EFIAPI *PCD_PROTOCOL_GET_NEXT_TOKEN)(
-  IN      CONST EFI_GUID      *Guid  OPTIONAL,
+  IN      CONST EFI_GUID      *Guid, OPTIONAL
   IN OUT  UINTN               *TokenNumber
   );
+
+
 
 /**
   Retrieves the next valid PCD token namespace for a given namespace.
@@ -757,42 +820,42 @@ EFI_STATUS
 /// This service abstracts the ability to set/get Platform Configuration Database (PCD).
 ///
 typedef struct {
-  PCD_PROTOCOL_SET_SKU                SetSku;
+  PCD_PROTOCOL_SET_SKU              SetSku;
 
-  PCD_PROTOCOL_GET8                   Get8;
-  PCD_PROTOCOL_GET16                  Get16;
-  PCD_PROTOCOL_GET32                  Get32;
-  PCD_PROTOCOL_GET64                  Get64;
-  PCD_PROTOCOL_GET_POINTER            GetPtr;
-  PCD_PROTOCOL_GET_BOOLEAN            GetBool;
-  PCD_PROTOCOL_GET_SIZE               GetSize;
+  PCD_PROTOCOL_GET8                 Get8;
+  PCD_PROTOCOL_GET16                Get16;
+  PCD_PROTOCOL_GET32                Get32;
+  PCD_PROTOCOL_GET64                Get64;
+  PCD_PROTOCOL_GET_POINTER          GetPtr;
+  PCD_PROTOCOL_GET_BOOLEAN          GetBool;
+  PCD_PROTOCOL_GET_SIZE             GetSize;
 
-  PCD_PROTOCOL_GET_EX_8               Get8Ex;
-  PCD_PROTOCOL_GET_EX_16              Get16Ex;
-  PCD_PROTOCOL_GET_EX_32              Get32Ex;
-  PCD_PROTOCOL_GET_EX_64              Get64Ex;
-  PCD_PROTOCOL_GET_EX_POINTER         GetPtrEx;
-  PCD_PROTOCOL_GET_EX_BOOLEAN         GetBoolEx;
-  PCD_PROTOCOL_GET_EX_SIZE            GetSizeEx;
+  PCD_PROTOCOL_GET_EX_8             Get8Ex;
+  PCD_PROTOCOL_GET_EX_16            Get16Ex;
+  PCD_PROTOCOL_GET_EX_32            Get32Ex;
+  PCD_PROTOCOL_GET_EX_64            Get64Ex;
+  PCD_PROTOCOL_GET_EX_POINTER       GetPtrEx;
+  PCD_PROTOCOL_GET_EX_BOOLEAN       GetBoolEx;
+  PCD_PROTOCOL_GET_EX_SIZE          GetSizeEx;
 
-  PCD_PROTOCOL_SET8                   Set8;
-  PCD_PROTOCOL_SET16                  Set16;
-  PCD_PROTOCOL_SET32                  Set32;
-  PCD_PROTOCOL_SET64                  Set64;
-  PCD_PROTOCOL_SET_POINTER            SetPtr;
-  PCD_PROTOCOL_SET_BOOLEAN            SetBool;
+  PCD_PROTOCOL_SET8                 Set8;
+  PCD_PROTOCOL_SET16                Set16;
+  PCD_PROTOCOL_SET32                Set32;
+  PCD_PROTOCOL_SET64                Set64;
+  PCD_PROTOCOL_SET_POINTER          SetPtr;
+  PCD_PROTOCOL_SET_BOOLEAN          SetBool;
 
-  PCD_PROTOCOL_SET_EX_8               Set8Ex;
-  PCD_PROTOCOL_SET_EX_16              Set16Ex;
-  PCD_PROTOCOL_SET_EX_32              Set32Ex;
-  PCD_PROTOCOL_SET_EX_64              Set64Ex;
-  PCD_PROTOCOL_SET_EX_POINTER         SetPtrEx;
-  PCD_PROTOCOL_SET_EX_BOOLEAN         SetBoolEx;
+  PCD_PROTOCOL_SET_EX_8             Set8Ex;
+  PCD_PROTOCOL_SET_EX_16            Set16Ex;
+  PCD_PROTOCOL_SET_EX_32            Set32Ex;
+  PCD_PROTOCOL_SET_EX_64            Set64Ex;
+  PCD_PROTOCOL_SET_EX_POINTER       SetPtrEx;
+  PCD_PROTOCOL_SET_EX_BOOLEAN       SetBoolEx;
 
-  PCD_PROTOCOL_CALLBACK_ONSET         CallbackOnSet;
-  PCD_PROTOCOL_CANCEL_CALLBACK        CancelCallback;
-  PCD_PROTOCOL_GET_NEXT_TOKEN         GetNextToken;
-  PCD_PROTOCOL_GET_NEXT_TOKENSPACE    GetNextTokenSpace;
+  PCD_PROTOCOL_CALLBACK_ONSET       CallbackOnSet;
+  PCD_PROTOCOL_CANCEL_CALLBACK      CancelCallback;
+  PCD_PROTOCOL_GET_NEXT_TOKEN       GetNextToken;
+  PCD_PROTOCOL_GET_NEXT_TOKENSPACE  GetNextTokenSpace;
 } PCD_PROTOCOL;
 
 #endif

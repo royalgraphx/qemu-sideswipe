@@ -15,6 +15,7 @@
 #include "hw/arm/fsl-imx6ul.h"
 #include "hw/boards.h"
 #include "hw/qdev-properties.h"
+#include "sysemu/sysemu.h"
 #include "qemu/error-report.h"
 #include "sysemu/qtest.h"
 
@@ -34,7 +35,7 @@ static void mcimx6ul_evk_init(MachineState *machine)
         .loader_start = FSL_IMX6UL_MMDC_ADDR,
         .board_id = -1,
         .ram_size = machine->ram_size,
-        .psci_conduit = QEMU_PSCI_CONDUIT_SMC,
+        .nb_cpus = machine->smp.cpus,
     };
 
     s = FSL_IMX6UL(object_new(TYPE_FSL_IMX6UL));
@@ -52,7 +53,7 @@ static void mcimx6ul_evk_init(MachineState *machine)
         DriveInfo *di;
         BlockBackend *blk;
 
-        di = drive_get(IF_SD, 0, i);
+        di = drive_get_next(IF_SD);
         blk = di ? blk_by_legacy_dinfo(di) : NULL;
         bus = qdev_get_child_bus(DEVICE(&s->usdhc[i]), "sd-bus");
         carddev = qdev_new(TYPE_SD_CARD);
@@ -67,7 +68,7 @@ static void mcimx6ul_evk_init(MachineState *machine)
 
 static void mcimx6ul_evk_machine_init(MachineClass *mc)
 {
-    mc->desc = "Freescale i.MX6UL Evaluation Kit (Cortex-A7)";
+    mc->desc = "Freescale i.MX6UL Evaluation Kit (Cortex A7)";
     mc->init = mcimx6ul_evk_init;
     mc->max_cpus = FSL_IMX6UL_NUM_CPUS;
     mc->default_ram_id = "mcimx6ul-evk.ram";

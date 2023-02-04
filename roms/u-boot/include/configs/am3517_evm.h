@@ -14,28 +14,43 @@
 
 #include <configs/ti_omap3_common.h>
 
+#undef CONFIG_DM_I2C_COMPAT
 #define CONFIG_REVISION_TAG
 
 /* Hardware drivers */
+
+/* allow to overwrite serial and ethaddr */
+#define CONFIG_ENV_OVERWRITE
 
 /*
  * USB configuration
  * Enable CONFIG_USB_MUSB_HOST for Host functionalities MSC, keyboard
  * Enable CONFIG_USB_MUSB_GADGET for Device functionalities.
  */
-#ifdef CONFIG_SPL_BUILD
-#undef CONFIG_USB_EHCI_OMAP
-#else
-#define CONFIG_OMAP_EHCI_PHY1_RESET_GPIO	57
-#endif
+
+#ifdef CONFIG_USB_MUSB_AM35X
+
+#ifdef CONFIG_USB_MUSB_HOST
+
+#ifdef CONFIG_USB_KEYBOARD
+#define CONFIG_PREBOOT "usb start"
+#endif /* CONFIG_USB_KEYBOARD */
+
+#endif /* CONFIG_USB_MUSB_HOST */
+
+#endif /* CONFIG_USB_MUSB_AM35X */
 
 /* I2C */
 
 /* Ethernet */
+#define CONFIG_DRIVER_TI_EMAC_USE_RMII
+#define CONFIG_BOOTP_DEFAULT
+#define CONFIG_BOOTP_DNS2
+#define CONFIG_BOOTP_SEND_HOSTNAME
 #define CONFIG_NET_RETRY_COUNT		10
 
 /* Board NAND Info. */
-#ifdef CONFIG_MTD_RAW_NAND
+#ifdef CONFIG_NAND
 #define CONFIG_SYS_NAND_5_ADDR_CYCLE
 #define CONFIG_SYS_NAND_PAGE_COUNT	64
 #define CONFIG_SYS_NAND_PAGE_SIZE	2048
@@ -56,7 +71,6 @@
 #define CONFIG_SYS_NAND_MAX_ECCPOS	56
 #define CONFIG_SYS_NAND_U_BOOT_START	CONFIG_SYS_TEXT_BASE
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x80000
-#define CONFIG_SYS_NAND_SPL_KERNEL_OFFS 0x2a0000
 /* NAND block size is 128 KiB.  Synchronize these values with
  * corresponding Device Tree entries in Linux:
  *  MLO(SPL)             4 * NAND_BLOCK_SIZE = 512 KiB  @ 0x000000
@@ -66,7 +80,7 @@
  *  DTB                  4 * NAND_BLOCK_SIZE = 512 KiB  @ 0xAA0000
  *  RootFS              Remaining Flash Space           @ 0xB20000
  */
-#endif /* CONFIG_MTD_RAW_NAND */
+#endif /* CONFIG_NAND */
 
 /* Environment information */
 
@@ -146,6 +160,9 @@
 #define CONFIG_SYS_BARGSIZE		CONFIG_SYS_CBSIZE
 
 /* memtest works on */
+#define CONFIG_SYS_MEMTEST_START	(OMAP34XX_SDRC_CS0)
+#define CONFIG_SYS_MEMTEST_END		(OMAP34XX_SDRC_CS0 + \
+					0x01F00000) /* 31MB */
 
 /* Physical Memory Map */
 #define CONFIG_SYS_CS0_SIZE		(256 * 1024 * 1024)
@@ -158,7 +175,7 @@
 #define CONFIG_SYS_MAX_FLASH_BANKS	2	/* max number of flash banks */
 #define CONFIG_SYS_MONITOR_LEN		(256 << 10)	/* Reserve 2 sectors */
 
-#if defined(CONFIG_MTD_RAW_NAND)
+#if defined(CONFIG_NAND)
 #define CONFIG_SYS_FLASH_BASE		NAND_BASE
 #endif
 
@@ -166,9 +183,19 @@
 #define CONFIG_SYS_MONITOR_BASE		CONFIG_SYS_FLASH_BASE
 
 #define CONFIG_SYS_ENV_SECT_SIZE	(128 << 10)	/* 128 KiB */
+#define CONFIG_ENV_SIZE			CONFIG_SYS_ENV_SECT_SIZE
+#define CONFIG_ENV_OFFSET		0x260000
+#define CONFIG_ENV_ADDR			0x260000
 
 /* Defines for SPL */
+#undef CONFIG_SPL_TEXT_BASE
+#define CONFIG_SPL_TEXT_BASE		0x40200000
 
+#define CONFIG_SYS_MMCSD_FS_BOOT_PARTITION	1
 #define CONFIG_SPL_FS_LOAD_PAYLOAD_NAME		"u-boot.img"
+
+#define CONFIG_SPL_NAND_BASE
+#define CONFIG_SPL_NAND_DRIVERS
+#define CONFIG_SPL_NAND_ECC
 
 #endif /* __CONFIG_H */

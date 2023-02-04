@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2019 The OpenSSL Project Authors. All Rights Reserved.
+ * Copyright 2002-2018 The OpenSSL Project Authors. All Rights Reserved.
  *
  * Licensed under the OpenSSL license (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
@@ -11,8 +11,8 @@
 #include <openssl/err.h>
 #include <openssl/obj_mac.h>
 #include <openssl/rand.h>
-#include "crypto/bn.h"
-#include "ec_local.h"
+#include "internal/bn_int.h"
+#include "ec_lcl.h"
 
 int ossl_ecdsa_sign(int type, const unsigned char *dgst, int dlen,
                     unsigned char *sig, unsigned int *siglen,
@@ -41,14 +41,9 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
     const EC_GROUP *group;
     int ret = 0;
     int order_bits;
-    const BIGNUM *priv_key;
 
     if (eckey == NULL || (group = EC_KEY_get0_group(eckey)) == NULL) {
         ECerr(EC_F_ECDSA_SIGN_SETUP, ERR_R_PASSED_NULL_PARAMETER);
-        return 0;
-    }
-    if ((priv_key = EC_KEY_get0_private_key(eckey)) == NULL) {
-        ECerr(EC_F_ECDSA_SIGN_SETUP, EC_R_MISSING_PRIVATE_KEY);
         return 0;
     }
 
@@ -88,7 +83,8 @@ static int ecdsa_sign_setup(EC_KEY *eckey, BN_CTX *ctx_in,
         /* get random k */
         do {
             if (dgst != NULL) {
-                if (!BN_generate_dsa_nonce(k, order, priv_key,
+                if (!BN_generate_dsa_nonce(k, order,
+                                           EC_KEY_get0_private_key(eckey),
                                            dgst, dlen, ctx)) {
                     ECerr(EC_F_ECDSA_SIGN_SETUP,
                           EC_R_RANDOM_NUMBER_GENERATION_FAILED);
@@ -166,12 +162,8 @@ ECDSA_SIG *ossl_ecdsa_sign_sig(const unsigned char *dgst, int dgst_len,
     group = EC_KEY_get0_group(eckey);
     priv_key = EC_KEY_get0_private_key(eckey);
 
-    if (group == NULL) {
+    if (group == NULL || priv_key == NULL) {
         ECerr(EC_F_OSSL_ECDSA_SIGN_SIG, ERR_R_PASSED_NULL_PARAMETER);
-        return NULL;
-    }
-    if (priv_key == NULL) {
-        ECerr(EC_F_OSSL_ECDSA_SIGN_SIG, EC_R_MISSING_PRIVATE_KEY);
         return NULL;
     }
 
@@ -309,7 +301,7 @@ int ossl_ecdsa_verify(int type, const unsigned char *dgst, int dgst_len,
         goto err;
     ret = ECDSA_do_verify(dgst, dgst_len, s, eckey);
  err:
-    OPENSSL_free(der);
+    OPENSSL_clear_free(der, derlen);
     ECDSA_SIG_free(s);
     return ret;
 }

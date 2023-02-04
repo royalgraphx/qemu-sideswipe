@@ -6,7 +6,9 @@
 
 **/
 
+
 #include "BaseLibInternals.h"
+
 
 /**
   Reads the current Interrupt Descriptor Table Register(GDTR) descriptor.
@@ -20,7 +22,7 @@
 VOID
 EFIAPI
 InternalX86ReadIdtr (
-  OUT     IA32_DESCRIPTOR  *Idtr
+  OUT     IA32_DESCRIPTOR           *Idtr
   )
 {
   _asm {

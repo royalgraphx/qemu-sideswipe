@@ -22,11 +22,11 @@ void xs_node_destroy(struct xs_handle *xsh,  xs_transaction_t tid,
 void xs_node_vprintf(struct xs_handle *xsh,  xs_transaction_t tid,
                      const char *node, const char *key, Error **errp,
                      const char *fmt, va_list ap)
-    G_GNUC_PRINTF(6, 0);
+    GCC_FMT_ATTR(6, 0);
 void xs_node_printf(struct xs_handle *xsh,  xs_transaction_t tid,
                     const char *node, const char *key, Error **errp,
                     const char *fmt, ...)
-    G_GNUC_PRINTF(6, 7);
+    GCC_FMT_ATTR(6, 7);
 
 /* Read from node/key unless node is empty, in which case read from key */
 int xs_node_vscanf(struct xs_handle *xsh,  xs_transaction_t tid,

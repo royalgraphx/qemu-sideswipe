@@ -9,10 +9,7 @@
 #include "qemu/cutils.h"
 #include "hw/display/edid.h"
 
-static qemu_edid_info info = {
-    .prefx = 1280,
-    .prefy = 800,
-};
+static qemu_edid_info info;
 
 static void usage(FILE *out)
 {
@@ -41,9 +38,7 @@ static void usage(FILE *out)
 int main(int argc, char *argv[])
 {
     FILE *outfile = NULL;
-    uint8_t blob[512];
-    size_t size;
-    uint32_t dpi = 100;
+    uint8_t blob[256];
     int rc;
 
     for (;;) {
@@ -88,12 +83,8 @@ int main(int argc, char *argv[])
             }
             break;
         case 'd':
-            if (qemu_strtoui(optarg, NULL, 10, &dpi) < 0) {
+            if (qemu_strtoui(optarg, NULL, 10, &info.dpi) < 0) {
                 fprintf(stderr, "not a number: %s\n", optarg);
-                exit(1);
-            }
-            if (dpi == 0) {
-                fprintf(stderr, "cannot be zero: %s\n", optarg);
                 exit(1);
             }
             break;
@@ -119,13 +110,9 @@ int main(int argc, char *argv[])
         outfile = stdout;
     }
 
-    info.width_mm = qemu_edid_dpi_to_mm(dpi, info.prefx);
-    info.height_mm = qemu_edid_dpi_to_mm(dpi, info.prefy);
-
     memset(blob, 0, sizeof(blob));
     qemu_edid_generate(blob, sizeof(blob), &info);
-    size = qemu_edid_size(blob);
-    fwrite(blob, size, 1, outfile);
+    fwrite(blob, sizeof(blob), 1, outfile);
     fflush(outfile);
 
     exit(0);

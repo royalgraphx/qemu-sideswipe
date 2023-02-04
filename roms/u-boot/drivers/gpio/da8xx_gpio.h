@@ -28,10 +28,10 @@ struct davinci_gpio_bank {
 #define MAX_NUM_GPIOS		144
 #define GPIO_BIT(gp)		((gp) & 0x1F)
 
-#if CONFIG_IS_ENABLED(DM_GPIO)
+#ifdef CONFIG_DM_GPIO
 
 /* Information about a GPIO bank */
-struct davinci_gpio_plat {
+struct davinci_gpio_platdata {
 	int bank_index;
 	ulong base;	/* address of registers in physical memory */
 	const char *port_name;

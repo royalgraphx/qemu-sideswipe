@@ -5,43 +5,36 @@
  *
  */
 #include <common.h>
-#include <backlight.h>
-#include <command.h>
-#include <display.h>
-#include <dm.h>
-#include <log.h>
-#include <dm/read.h>
-#include <dm/uclass-internal.h>
 #include <errno.h>
 #include <spi.h>
-#include <asm/gpio.h>
-#include <linux/delay.h>
 
 #define PWR_ON_DELAY_MSECS  120
 
-static int lb043wv_spi_write_u16(struct spi_slave *slave, u16 val)
+static int lb043wv_spi_write_u16(struct spi_slave *spi, u16 val)
 {
+	unsigned long flags = SPI_XFER_BEGIN;
 	unsigned short buf16 = htons(val);
 	int ret = 0;
 
-	ret = spi_xfer(slave, 16, &buf16, NULL,
-		       SPI_XFER_BEGIN | SPI_XFER_END);
+	flags |= SPI_XFER_END;
+
+	ret = spi_xfer(spi, 16, &buf16, NULL, flags);
 	if (ret)
 		debug("%s: Failed to send: %d\n", __func__, ret);
 
 	return ret;
 }
 
-static void lb043wv_spi_write_u16_array(struct spi_slave *slave, u16 *buff,
+static void lb043wv_spi_write_u16_array(struct spi_slave *spi, u16 *buff,
 					int size)
 {
 	int i;
 
 	for (i = 0; i < size; i++)
-		lb043wv_spi_write_u16(slave, buff[i]);
+		lb043wv_spi_write_u16(spi, buff[i]);
 }
 
-static void lb043wv_display_mode_settings(struct spi_slave *slave)
+static void lb043wv_display_mode_settings(struct spi_slave *spi)
 {
 	static u16 display_mode_settings[] = {
 	  0x703A,
@@ -79,11 +72,11 @@ static void lb043wv_display_mode_settings(struct spi_slave *slave)
 	};
 
 	debug("transfer display mode settings\n");
-	lb043wv_spi_write_u16_array(slave, display_mode_settings,
+	lb043wv_spi_write_u16_array(spi, display_mode_settings,
 				    ARRAY_SIZE(display_mode_settings));
 }
 
-static void lb043wv_power_settings(struct spi_slave *slave)
+static void lb043wv_power_settings(struct spi_slave *spi)
 {
 	static u16 power_settings[] = {
 	  0x70C0,
@@ -110,11 +103,11 @@ static void lb043wv_power_settings(struct spi_slave *slave)
 	};
 
 	debug("transfer power settings\n");
-	lb043wv_spi_write_u16_array(slave, power_settings,
+	lb043wv_spi_write_u16_array(spi, power_settings,
 				    ARRAY_SIZE(power_settings));
 }
 
-static void lb043wv_gamma_settings(struct spi_slave *slave)
+static void lb043wv_gamma_settings(struct spi_slave *spi)
 {
 	static u16 gamma_settings[] = {
 	  0x70D0,
@@ -180,57 +173,54 @@ static void lb043wv_gamma_settings(struct spi_slave *slave)
 	};
 
 	debug("transfer gamma settings\n");
-	lb043wv_spi_write_u16_array(slave, gamma_settings,
+	lb043wv_spi_write_u16_array(spi, gamma_settings,
 				    ARRAY_SIZE(gamma_settings));
 }
 
-static void lb043wv_display_on(struct spi_slave *slave)
+static void lb043wv_display_on(struct spi_slave *spi)
 {
 	static u16 sleep_out = 0x7011;
 	static u16 display_on = 0x7029;
 
-	lb043wv_spi_write_u16(slave, sleep_out);
+	lb043wv_spi_write_u16(spi, sleep_out);
 	mdelay(PWR_ON_DELAY_MSECS);
-	lb043wv_spi_write_u16(slave, display_on);
+	lb043wv_spi_write_u16(spi, display_on);
 }
 
-static int lg4573_spi_startup(struct spi_slave *slave)
+int lg4573_spi_startup(unsigned int bus, unsigned int cs,
+	unsigned int max_hz, unsigned int spi_mode)
 {
+	struct spi_slave *spi;
 	int ret;
 
-	ret = spi_claim_bus(slave);
-	if (ret)
-		return ret;
+	spi = spi_setup_slave(bus, cs, max_hz, spi_mode);
+	if (!spi) {
+		debug("%s: Failed to set up slave\n", __func__);
+		return -1;
+	}
 
-	lb043wv_display_mode_settings(slave);
-	lb043wv_power_settings(slave);
-	lb043wv_gamma_settings(slave);
-	lb043wv_display_on(slave);
-
-	spi_release_bus(slave);
-	return 0;
-}
-
-static int do_lgset(struct cmd_tbl *cmdtp, int flag, int argc,
-		    char *const argv[])
-{
-	struct spi_slave *slave;
-	struct udevice *dev;
-	int ret;
-
-	ret = uclass_get_device_by_driver(UCLASS_DISPLAY,
-					  DM_DRIVER_GET(lg4573_lcd), &dev);
+	ret = spi_claim_bus(spi);
 	if (ret) {
-		printf("%s: Could not get lg4573 device\n", __func__);
-		return ret;
+		debug("%s: Failed to claim SPI bus: %d\n", __func__, ret);
+		goto err_claim_bus;
 	}
-	slave = dev_get_parent_priv(dev);
-	if (!slave) {
-		printf("%s: No slave data\n", __func__);
-		return -ENODEV;
-	}
-	lg4573_spi_startup(slave);
 
+	lb043wv_display_mode_settings(spi);
+	lb043wv_power_settings(spi);
+	lb043wv_gamma_settings(spi);
+
+	lb043wv_display_on(spi);
+	return 0;
+err_claim_bus:
+	spi_free_slave(spi);
+	return -1;
+}
+
+static int do_lgset(cmd_tbl_t *cmdtp, int flag, int argc,
+		       char * const argv[])
+{
+	lg4573_spi_startup(CONFIG_LG4573_BUS, CONFIG_LG4573_CS, 10000000,
+			   SPI_MODE_0);
 	return 0;
 }
 
@@ -239,93 +229,3 @@ U_BOOT_CMD(
 	"set lgdisplay",
 	""
 );
-
-static int lg4573_bind(struct udevice *dev)
-{
-	return 0;
-}
-
-static int lg4573_probe(struct udevice *dev)
-{
-	return 0;
-}
-
-static const struct udevice_id lg4573_ids[] = {
-	{ .compatible = "lg,lg4573" },
-	{ }
-};
-
-struct lg4573_lcd_priv {
-	struct display_timing timing;
-	struct udevice *backlight;
-	struct gpio_desc enable;
-	int panel_bpp;
-	u32 power_on_delay;
-};
-
-static int lg4573_lcd_read_timing(struct udevice *dev,
-				  struct display_timing *timing)
-{
-	struct lg4573_lcd_priv *priv = dev_get_priv(dev);
-
-	memcpy(timing, &priv->timing, sizeof(struct display_timing));
-
-	return 0;
-}
-
-static int lg4573_lcd_enable(struct udevice *dev, int bpp,
-			     const struct display_timing *edid)
-{
-	struct spi_slave *slave = dev_get_parent_priv(dev);
-	struct lg4573_lcd_priv *priv = dev_get_priv(dev);
-	int ret = 0;
-
-	dm_gpio_set_value(&priv->enable, 1);
-	ret = backlight_enable(priv->backlight);
-
-	mdelay(priv->power_on_delay);
-	lg4573_spi_startup(slave);
-
-	return ret;
-};
-
-static const struct dm_display_ops lg4573_lcd_ops = {
-	.read_timing = lg4573_lcd_read_timing,
-	.enable = lg4573_lcd_enable,
-};
-
-static int lg4573_of_to_plat(struct udevice *dev)
-{
-	struct lg4573_lcd_priv *priv = dev_get_priv(dev);
-	int ret;
-
-	ret = uclass_get_device_by_phandle(UCLASS_PANEL_BACKLIGHT, dev,
-					   "backlight", &priv->backlight);
-	if (ret) {
-		debug("%s: Cannot get backlight: ret=%d\n", __func__, ret);
-		return log_ret(ret);
-	}
-	ret = gpio_request_by_name(dev, "enable-gpios", 0, &priv->enable,
-				   GPIOD_IS_OUT);
-	if (ret) {
-		debug("%s: Warning: cannot get enable GPIO: ret=%d\n",
-		      __func__, ret);
-		if (ret != -ENOENT)
-			return log_ret(ret);
-	}
-
-	priv->power_on_delay = dev_read_u32_default(dev, "power-on-delay", 10);
-
-	return 0;
-}
-
-U_BOOT_DRIVER(lg4573_lcd) = {
-	.name   = "lg4573",
-	.id     = UCLASS_DISPLAY,
-	.ops    = &lg4573_lcd_ops,
-	.of_to_plat	= lg4573_of_to_plat,
-	.of_match = lg4573_ids,
-	.bind   = lg4573_bind,
-	.probe  = lg4573_probe,
-	.priv_auto	= sizeof(struct lg4573_lcd_priv),
-};

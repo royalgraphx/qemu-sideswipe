@@ -11,8 +11,8 @@ int main(void)
     asm volatile (
         "    mvo 0(4,%[dest]),0(3,%[src])\n"
         :
-        : [dest] "a" (dest + 1),
-          [src] "a" (src + 1)
+        : [dest] "d" (dest + 1),
+          [src] "d" (src + 1)
         : "memory");
 
     for (i = 0; i < sizeof(expected); i++) {

@@ -1,7 +1,7 @@
 /** @file
   X.509 Certificate Handler Wrapper Implementation over OpenSSL.
 
-Copyright (c) 2010 - 2020, Intel Corporation. All rights reserved.<BR>
+Copyright (c) 2010 - 2018, Intel Corporation. All rights reserved.<BR>
 SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
@@ -38,7 +38,7 @@ X509ConstructCertificate (
   //
   // Check input parameters.
   //
-  if ((Cert == NULL) || (SingleX509Cert == NULL) || (CertSize > INT_MAX)) {
+  if (Cert == NULL || SingleX509Cert == NULL || CertSize > INT_MAX) {
     return FALSE;
   }
 
@@ -46,114 +46,14 @@ X509ConstructCertificate (
   // Read DER-encoded X509 Certificate and Construct X509 object.
   //
   Temp     = Cert;
-  X509Cert = d2i_X509 (NULL, &Temp, (long)CertSize);
+  X509Cert = d2i_X509 (NULL, &Temp, (long) CertSize);
   if (X509Cert == NULL) {
     return FALSE;
   }
 
-  *SingleX509Cert = (UINT8 *)X509Cert;
+  *SingleX509Cert = (UINT8 *) X509Cert;
 
   return TRUE;
-}
-
-/**
-  Construct a X509 stack object from a list of DER-encoded certificate data.
-
-  If X509Stack is NULL, then return FALSE.
-  If this interface is not supported, then return FALSE.
-
-  @param[in, out]  X509Stack  On input, pointer to an existing or NULL X509 stack object.
-                              On output, pointer to the X509 stack object with new
-                              inserted X509 certificate.
-  @param[in]       Args       VA_LIST marker for the variable argument list.
-                              A list of DER-encoded single certificate data followed
-                              by certificate size. A NULL terminates the list. The
-                              pairs are the arguments to X509ConstructCertificate().
-
-  @retval     TRUE            The X509 stack construction succeeded.
-  @retval     FALSE           The construction operation failed.
-  @retval     FALSE           This interface is not supported.
-
-**/
-BOOLEAN
-EFIAPI
-X509ConstructCertificateStackV (
-  IN OUT  UINT8    **X509Stack,
-  IN      VA_LIST  Args
-  )
-{
-  UINT8  *Cert;
-  UINTN  CertSize;
-  X509   *X509Cert;
-
-  STACK_OF (X509)  *CertStack;
-  BOOLEAN  Status;
-  UINTN    Index;
-
-  //
-  // Check input parameters.
-  //
-  if (X509Stack == NULL) {
-    return FALSE;
-  }
-
-  Status = FALSE;
-
-  //
-  // Initialize X509 stack object.
-  //
-  CertStack = (STACK_OF (X509) *)(*X509Stack);
-  if (CertStack == NULL) {
-    CertStack = sk_X509_new_null ();
-    if (CertStack == NULL) {
-      return Status;
-    }
-  }
-
-  for (Index = 0; ; Index++) {
-    //
-    // If Cert is NULL, then it is the end of the list.
-    //
-    Cert = VA_ARG (Args, UINT8 *);
-    if (Cert == NULL) {
-      break;
-    }
-
-    CertSize = VA_ARG (Args, UINTN);
-    if (CertSize == 0) {
-      break;
-    }
-
-    //
-    // Construct X509 Object from the given DER-encoded certificate data.
-    //
-    X509Cert = NULL;
-    Status   = X509ConstructCertificate (
-                 (CONST UINT8 *)Cert,
-                 CertSize,
-                 (UINT8 **)&X509Cert
-                 );
-    if (!Status) {
-      if (X509Cert != NULL) {
-        X509_free (X509Cert);
-      }
-
-      break;
-    }
-
-    //
-    // Insert the new X509 object into X509 stack object.
-    //
-    sk_X509_push (CertStack, X509Cert);
-  }
-
-  if (!Status) {
-    sk_X509_pop_free (CertStack, X509_free);
-  } else {
-    *X509Stack = (UINT8 *)CertStack;
-  }
-
-  return Status;
 }
 
 /**
@@ -179,13 +79,81 @@ X509ConstructCertificateStack (
   ...
   )
 {
-  VA_LIST  Args;
-  BOOLEAN  Result;
+  UINT8           *Cert;
+  UINTN           CertSize;
+  X509            *X509Cert;
+  STACK_OF(X509)  *CertStack;
+  BOOLEAN         Status;
+  VA_LIST         Args;
+  UINTN           Index;
+
+  //
+  // Check input parameters.
+  //
+  if (X509Stack == NULL) {
+    return FALSE;
+  }
+
+  Status = FALSE;
+
+  //
+  // Initialize X509 stack object.
+  //
+  CertStack = (STACK_OF(X509) *) (*X509Stack);
+  if (CertStack == NULL) {
+    CertStack = sk_X509_new_null ();
+    if (CertStack == NULL) {
+      return Status;
+    }
+  }
 
   VA_START (Args, X509Stack);
-  Result = X509ConstructCertificateStackV (X509Stack, Args);
+
+  for (Index = 0; ; Index++) {
+    //
+    // If Cert is NULL, then it is the end of the list.
+    //
+    Cert = VA_ARG (Args, UINT8 *);
+    if (Cert == NULL) {
+      break;
+    }
+
+    CertSize = VA_ARG (Args, UINTN);
+    if (CertSize == 0) {
+      break;
+    }
+
+    //
+    // Construct X509 Object from the given DER-encoded certificate data.
+    //
+    X509Cert = NULL;
+    Status = X509ConstructCertificate (
+               (CONST UINT8 *) Cert,
+               CertSize,
+               (UINT8 **) &X509Cert
+               );
+    if (!Status) {
+      if (X509Cert != NULL) {
+        X509_free (X509Cert);
+      }
+      break;
+    }
+
+    //
+    // Insert the new X509 object into X509 stack object.
+    //
+    sk_X509_push (CertStack, X509Cert);
+  }
+
   VA_END (Args);
-  return Result;
+
+  if (!Status) {
+    sk_X509_pop_free (CertStack, X509_free);
+  } else {
+    *X509Stack = (UINT8 *) CertStack;
+  }
+
+  return Status;
 }
 
 /**
@@ -212,7 +180,7 @@ X509Free (
   //
   // Free OpenSSL X509 object.
   //
-  X509_free ((X509 *)X509Cert);
+  X509_free ((X509 *) X509Cert);
 }
 
 /**
@@ -239,7 +207,7 @@ X509StackFree (
   //
   // Free OpenSSL X509 stack object.
   //
-  sk_X509_pop_free ((STACK_OF (X509) *) X509Stack, X509_free);
+  sk_X509_pop_free ((STACK_OF(X509) *) X509Stack, X509_free);
 }
 
 /**
@@ -276,7 +244,7 @@ X509GetSubjectName (
   //
   // Check input parameters.
   //
-  if ((Cert == NULL) || (SubjectSize == NULL)) {
+  if (Cert == NULL || SubjectSize == NULL) {
     return FALSE;
   }
 
@@ -285,7 +253,7 @@ X509GetSubjectName (
   //
   // Read DER-encoded X509 Certificate and Construct X509 object.
   //
-  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **)&X509Cert);
+  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **) &X509Cert);
   if ((X509Cert == NULL) || (!Status)) {
     Status = FALSE;
     goto _Exit;
@@ -301,15 +269,14 @@ X509GetSubjectName (
     goto _Exit;
   }
 
-  X509NameSize = i2d_X509_NAME (X509Name, NULL);
+  X509NameSize = i2d_X509_NAME(X509Name, NULL);
   if (*SubjectSize < X509NameSize) {
     *SubjectSize = X509NameSize;
     goto _Exit;
   }
-
   *SubjectSize = X509NameSize;
   if (CertSubject != NULL) {
-    i2d_X509_NAME (X509Name, &CertSubject);
+    i2d_X509_NAME(X509Name, &CertSubject);
     Status = TRUE;
   }
 
@@ -354,11 +321,11 @@ _Exit:
 STATIC
 RETURN_STATUS
 InternalX509GetNIDName (
-  IN      CONST UINT8  *Cert,
-  IN      UINTN        CertSize,
-  IN      INT32        Request_NID,
-  OUT     CHAR8        *CommonName   OPTIONAL,
-  IN OUT  UINTN        *CommonNameSize
+  IN      CONST UINT8   *Cert,
+  IN      UINTN         CertSize,
+  IN      INT32         Request_NID,
+  OUT     CHAR8         *CommonName,  OPTIONAL
+  IN OUT  UINTN         *CommonNameSize
   )
 {
   RETURN_STATUS    ReturnStatus;
@@ -380,7 +347,6 @@ InternalX509GetNIDName (
   if ((Cert == NULL) || (CertSize > INT_MAX) || (CommonNameSize == NULL)) {
     return ReturnStatus;
   }
-
   if ((CommonName != NULL) && (*CommonNameSize == 0)) {
     return ReturnStatus;
   }
@@ -389,7 +355,7 @@ InternalX509GetNIDName (
   //
   // Read DER-encoded X509 Certificate and Construct X509 object.
   //
-  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **)&X509Cert);
+  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **) &X509Cert);
   if ((X509Cert == NULL) || (!Status)) {
     //
     // Invalid X.509 Certificate
@@ -447,12 +413,12 @@ InternalX509GetNIDName (
 
   if (CommonName == NULL) {
     *CommonNameSize = Length + 1;
-    ReturnStatus    = RETURN_BUFFER_TOO_SMALL;
+    ReturnStatus = RETURN_BUFFER_TOO_SMALL;
   } else {
     *CommonNameSize = MIN ((UINTN)Length, *CommonNameSize - 1) + 1;
     CopyMem (CommonName, UTF8Name, *CommonNameSize - 1);
     CommonName[*CommonNameSize - 1] = '\0';
-    ReturnStatus                    = RETURN_SUCCESS;
+    ReturnStatus = RETURN_SUCCESS;
   }
 
 _Exit:
@@ -462,7 +428,6 @@ _Exit:
   if (X509Cert != NULL) {
     X509_free (X509Cert);
   }
-
   if (UTF8Name != NULL) {
     OPENSSL_free (UTF8Name);
   }
@@ -501,7 +466,7 @@ EFIAPI
 X509GetCommonName (
   IN      CONST UINT8  *Cert,
   IN      UINTN        CertSize,
-  OUT     CHAR8        *CommonName   OPTIONAL,
+  OUT     CHAR8        *CommonName,  OPTIONAL
   IN OUT  UINTN        *CommonNameSize
   )
 {
@@ -537,10 +502,10 @@ X509GetCommonName (
 RETURN_STATUS
 EFIAPI
 X509GetOrganizationName (
-  IN      CONST UINT8  *Cert,
-  IN      UINTN        CertSize,
-  OUT     CHAR8        *NameBuffer   OPTIONAL,
-  IN OUT  UINTN        *NameBufferSize
+  IN      CONST UINT8   *Cert,
+  IN      UINTN         CertSize,
+  OUT     CHAR8         *NameBuffer,  OPTIONAL
+  IN OUT  UINTN         *NameBufferSize
   )
 {
   return InternalX509GetNIDName (Cert, CertSize, NID_organizationName, NameBuffer, NameBufferSize);
@@ -577,7 +542,7 @@ RsaGetPublicKeyFromX509 (
   //
   // Check input parameters.
   //
-  if ((Cert == NULL) || (RsaContext == NULL)) {
+  if (Cert == NULL || RsaContext == NULL) {
     return FALSE;
   }
 
@@ -587,7 +552,7 @@ RsaGetPublicKeyFromX509 (
   //
   // Read DER-encoded X509 Certificate and Construct X509 object.
   //
-  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **)&X509Cert);
+  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **) &X509Cert);
   if ((X509Cert == NULL) || (!Status)) {
     Status = FALSE;
     goto _Exit;
@@ -659,7 +624,7 @@ X509VerifyCert (
   //
   // Check input parameters.
   //
-  if ((Cert == NULL) || (CACert == NULL)) {
+  if (Cert == NULL || CACert == NULL) {
     return FALSE;
   }
 
@@ -675,11 +640,9 @@ X509VerifyCert (
   if (EVP_add_digest (EVP_md5 ()) == 0) {
     goto _Exit;
   }
-
   if (EVP_add_digest (EVP_sha1 ()) == 0) {
     goto _Exit;
   }
-
   if (EVP_add_digest (EVP_sha256 ()) == 0) {
     goto _Exit;
   }
@@ -687,7 +650,7 @@ X509VerifyCert (
   //
   // Read DER-encoded certificate to be verified and Construct X509 object.
   //
-  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **)&X509Cert);
+  Status = X509ConstructCertificate (Cert, CertSize, (UINT8 **) &X509Cert);
   if ((X509Cert == NULL) || (!Status)) {
     Status = FALSE;
     goto _Exit;
@@ -696,7 +659,7 @@ X509VerifyCert (
   //
   // Read DER-encoded root certificate and Construct X509 object.
   //
-  Status = X509ConstructCertificate (CACert, CACertSize, (UINT8 **)&X509CACert);
+  Status = X509ConstructCertificate (CACert, CACertSize, (UINT8 **) &X509CACert);
   if ((X509CACert == NULL) || (!Status)) {
     Status = FALSE;
     goto _Exit;
@@ -711,7 +674,6 @@ X509VerifyCert (
   if (CertStore == NULL) {
     goto _Exit;
   }
-
   if (!(X509_STORE_add_cert (CertStore, X509CACert))) {
     goto _Exit;
   }
@@ -720,10 +682,8 @@ X509VerifyCert (
   // Allow partial certificate chains, terminated by a non-self-signed but
   // still trusted intermediate certificate. Also disable time checks.
   //
-  X509_STORE_set_flags (
-    CertStore,
-    X509_V_FLAG_PARTIAL_CHAIN | X509_V_FLAG_NO_CHECK_TIME
-    );
+  X509_STORE_set_flags (CertStore,
+                        X509_V_FLAG_PARTIAL_CHAIN | X509_V_FLAG_NO_CHECK_TIME);
 
   //
   // Set up X509_STORE_CTX for the subsequent verification operation.
@@ -732,7 +692,6 @@ X509VerifyCert (
   if (CertCtx == NULL) {
     goto _Exit;
   }
-
   if (!X509_STORE_CTX_init (CertCtx, CertStore, X509Cert, NULL)) {
     goto _Exit;
   }
@@ -740,7 +699,7 @@ X509VerifyCert (
   //
   // X509 Certificate Verification.
   //
-  Status = (BOOLEAN)X509_verify_cert (CertCtx);
+  Status = (BOOLEAN) X509_verify_cert (CertCtx);
   X509_STORE_CTX_cleanup (CertCtx);
 
 _Exit:
@@ -798,8 +757,7 @@ X509GetTBSCert (
   // Check input parameters.
   //
   if ((Cert == NULL) || (TBSCert == NULL) ||
-      (TBSCertSize == NULL) || (CertSize > INT_MAX))
-  {
+      (TBSCertSize == NULL) || (CertSize > INT_MAX)) {
     return FALSE;
   }
 

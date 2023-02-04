@@ -23,11 +23,8 @@ int usb_gadget_initialize(int index)
 		return 0;
 	ret = uclass_get_device_by_seq(UCLASS_USB_GADGET_GENERIC, index, &dev);
 	if (!dev || ret) {
-		ret = uclass_get_device(UCLASS_USB_GADGET_GENERIC, index, &dev);
-		if (!dev || ret) {
-			pr_err("No USB device found\n");
-			return -ENODEV;
-		}
+		pr_err("No USB device found\n");
+		return -ENODEV;
 	}
 	dev_array[index] = dev;
 	return 0;
@@ -45,7 +42,7 @@ int usb_gadget_release(int index)
 		dev_array[index] = NULL;
 	return ret;
 #else
-	return -ENOSYS;
+	return -ENOTSUPP;
 #endif
 }
 

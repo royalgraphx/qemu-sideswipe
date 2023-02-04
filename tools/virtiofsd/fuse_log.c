@@ -11,6 +11,8 @@
 #include "qemu/osdep.h"
 #include "fuse_log.h"
 
+#include <stdarg.h>
+#include <stdio.h>
 
 static void default_log_func(__attribute__((unused)) enum fuse_log_level level,
                              const char *fmt, va_list ap)

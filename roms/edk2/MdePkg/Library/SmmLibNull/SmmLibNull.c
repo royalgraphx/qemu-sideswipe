@@ -24,6 +24,7 @@ TriggerBootServiceSoftwareSmi (
   return;
 }
 
+
 /**
   Triggers an SMI at run time.
 
@@ -38,6 +39,8 @@ TriggerRuntimeSoftwareSmi (
 {
   return;
 }
+
+
 
 /**
   Test if a boot time software SMI happened.
@@ -58,6 +61,7 @@ IsBootServiceSoftwareSmi (
 {
   return FALSE;
 }
+
 
 /**
   Test if a run time software SMI happened.

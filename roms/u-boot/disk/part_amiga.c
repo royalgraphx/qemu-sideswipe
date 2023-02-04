@@ -6,10 +6,8 @@
  */
 #include <common.h>
 #include <command.h>
-#include <env.h>
 #include <ide.h>
 #include "part_amiga.h"
-#include <part.h>
 
 #ifdef CONFIG_HAVE_BLOCK_DEVICE
 
@@ -292,7 +290,7 @@ static struct partition_block *find_partition(struct blk_desc *dev_desc,
  * Get info about a partition
  */
 static int part_get_info_amiga(struct blk_desc *dev_desc, int part,
-				    struct disk_partition *info)
+				    disk_partition_t *info)
 {
     struct partition_block *p = find_partition(dev_desc, part-1);
     struct amiga_part_geometry *g;

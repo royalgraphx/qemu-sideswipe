@@ -5,16 +5,10 @@
  */
 
 #include <common.h>
-#include <bootstage.h>
-#include <env.h>
-#include <log.h>
-#include <malloc.h>
 #include <stdio_dev.h>
-#include <time.h>
 #include <watchdog.h>
 #include <div64.h>
 #include <post.h>
-#include <asm/global_data.h>
 
 #ifdef CONFIG_SYS_POST_HOTKEYS_GPIO
 #include <asm/gpio.h>
@@ -129,7 +123,7 @@ static void post_log_mark_succ(unsigned long testid)
 }
 
 /* ... and the messages are output once we are relocated */
-int post_output_backlog(void)
+void post_output_backlog(void)
 {
 	int j;
 
@@ -144,8 +138,6 @@ int post_output_backlog(void)
 			}
 		}
 	}
-
-	return 0;
 }
 
 static void post_bootmode_test_on(unsigned int last_test)
@@ -192,7 +184,7 @@ static void post_get_env_flags(int *test_flags)
 		last = 0;
 		name = list;
 		while (!last) {
-			while (*name == ' ')
+			while (*name && *name == ' ')
 				name++;
 			if (*name == 0)
 				break;

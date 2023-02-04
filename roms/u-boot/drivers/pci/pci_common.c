@@ -11,7 +11,6 @@
 
 #include <common.h>
 #include <dm.h>
-#include <env.h>
 #include <errno.h>
 #include <pci.h>
 #include <asm/io.h>

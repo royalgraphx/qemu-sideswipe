@@ -22,8 +22,6 @@
 #include "qemu/cutils.h"
 #include "hw/qdev-core.h"
 #include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
-#include "hw/virtio/virtio-blk-common.h"
 #include "hw/virtio/vhost.h"
 #include "hw/virtio/vhost-user-blk.h"
 #include "hw/virtio/virtio.h"
@@ -31,8 +29,6 @@
 #include "hw/virtio/virtio-access.h"
 #include "sysemu/sysemu.h"
 #include "sysemu/runstate.h"
-
-#define REALIZE_CONNECTION_RETRIES 3
 
 static const int user_feature_bits[] = {
     VIRTIO_BLK_F_SIZE_MAX,
@@ -50,22 +46,14 @@ static const int user_feature_bits[] = {
     VIRTIO_RING_F_INDIRECT_DESC,
     VIRTIO_RING_F_EVENT_IDX,
     VIRTIO_F_NOTIFY_ON_EMPTY,
-    VIRTIO_F_RING_PACKED,
-    VIRTIO_F_IOMMU_PLATFORM,
-    VIRTIO_F_RING_RESET,
     VHOST_INVALID_FEATURE_BIT
 };
-
-static void vhost_user_blk_event(void *opaque, QEMUChrEvent event);
 
 static void vhost_user_blk_update_config(VirtIODevice *vdev, uint8_t *config)
 {
     VHostUserBlk *s = VHOST_USER_BLK(vdev);
 
-    /* Our num_queues overrides the device backend */
-    virtio_stw_p(vdev, &s->blkcfg.num_queues, s->num_queues);
-
-    memcpy(config, &s->blkcfg, vdev->config_len);
+    memcpy(config, &s->blkcfg, sizeof(struct virtio_blk_config));
 }
 
 static void vhost_user_blk_set_config(VirtIODevice *vdev, const uint8_t *config)
@@ -94,25 +82,19 @@ static int vhost_user_blk_handle_config_change(struct vhost_dev *dev)
 {
     int ret;
     struct virtio_blk_config blkcfg;
-    VirtIODevice *vdev = dev->vdev;
     VHostUserBlk *s = VHOST_USER_BLK(dev->vdev);
-    Error *local_err = NULL;
-
-    if (!dev->started) {
-        return 0;
-    }
 
     ret = vhost_dev_get_config(dev, (uint8_t *)&blkcfg,
-                               vdev->config_len, &local_err);
+                               sizeof(struct virtio_blk_config));
     if (ret < 0) {
-        error_report_err(local_err);
-        return ret;
+        error_report("get config space failed");
+        return -1;
     }
 
     /* valid for resize only */
     if (blkcfg.capacity != s->blkcfg.capacity) {
         s->blkcfg.capacity = blkcfg.capacity;
-        memcpy(dev->vdev->config, &s->blkcfg, vdev->config_len);
+        memcpy(dev->vdev->config, &s->blkcfg, sizeof(struct virtio_blk_config));
         virtio_notify_config(dev->vdev);
     }
 
@@ -123,7 +105,7 @@ const VhostDevConfigOps blk_ops = {
     .vhost_dev_config_notifier = vhost_user_blk_handle_config_change,
 };
 
-static int vhost_user_blk_start(VirtIODevice *vdev, Error **errp)
+static int vhost_user_blk_start(VirtIODevice *vdev)
 {
     VHostUserBlk *s = VHOST_USER_BLK(vdev);
     BusState *qbus = BUS(qdev_get_parent_bus(DEVICE(vdev)));
@@ -131,41 +113,41 @@ static int vhost_user_blk_start(VirtIODevice *vdev, Error **errp)
     int i, ret;
 
     if (!k->set_guest_notifiers) {
-        error_setg(errp, "binding does not support guest notifiers");
+        error_report("binding does not support guest notifiers");
         return -ENOSYS;
     }
 
     ret = vhost_dev_enable_notifiers(&s->dev, vdev);
     if (ret < 0) {
-        error_setg_errno(errp, -ret, "Error enabling host notifiers");
+        error_report("Error enabling host notifiers: %d", -ret);
         return ret;
     }
 
     ret = k->set_guest_notifiers(qbus->parent, s->dev.nvqs, true);
     if (ret < 0) {
-        error_setg_errno(errp, -ret, "Error binding guest notifier");
+        error_report("Error binding guest notifier: %d", -ret);
         goto err_host_notifiers;
     }
 
     s->dev.acked_features = vdev->guest_features;
 
-    ret = vhost_dev_prepare_inflight(&s->dev, vdev);
-    if (ret < 0) {
-        error_setg_errno(errp, -ret, "Error setting inflight format");
-        goto err_guest_notifiers;
-    }
-
     if (!s->inflight->addr) {
         ret = vhost_dev_get_inflight(&s->dev, s->queue_size, s->inflight);
         if (ret < 0) {
-            error_setg_errno(errp, -ret, "Error getting inflight");
+            error_report("Error get inflight: %d", -ret);
             goto err_guest_notifiers;
         }
     }
 
     ret = vhost_dev_set_inflight(&s->dev, s->inflight);
     if (ret < 0) {
-        error_setg_errno(errp, -ret, "Error setting inflight");
+        error_report("Error set inflight: %d", -ret);
+        goto err_guest_notifiers;
+    }
+
+    ret = vhost_dev_start(&s->dev, vdev);
+    if (ret < 0) {
+        error_report("Error starting vhost: %d", -ret);
         goto err_guest_notifiers;
     }
 
@@ -177,20 +159,9 @@ static int vhost_user_blk_start(VirtIODevice *vdev, Error **errp)
         vhost_virtqueue_mask(&s->dev, vdev, i, false);
     }
 
-    s->dev.vq_index_end = s->dev.nvqs;
-    ret = vhost_dev_start(&s->dev, vdev, true);
-    if (ret < 0) {
-        error_setg_errno(errp, -ret, "Error starting vhost");
-        goto err_guest_notifiers;
-    }
-    s->started_vu = true;
-
     return ret;
 
 err_guest_notifiers:
-    for (i = 0; i < s->dev.nvqs; i++) {
-        vhost_virtqueue_mask(&s->dev, vdev, i, true);
-    }
     k->set_guest_notifiers(qbus->parent, s->dev.nvqs, false);
 err_host_notifiers:
     vhost_dev_disable_notifiers(&s->dev, vdev);
@@ -204,16 +175,11 @@ static void vhost_user_blk_stop(VirtIODevice *vdev)
     VirtioBusClass *k = VIRTIO_BUS_GET_CLASS(qbus);
     int ret;
 
-    if (!s->started_vu) {
-        return;
-    }
-    s->started_vu = false;
-
     if (!k->set_guest_notifiers) {
         return;
     }
 
-    vhost_dev_stop(&s->dev, vdev, true);
+    vhost_dev_stop(&s->dev, vdev);
 
     ret = k->set_guest_notifiers(qbus->parent, s->dev.nvqs, false);
     if (ret < 0) {
@@ -227,22 +193,26 @@ static void vhost_user_blk_stop(VirtIODevice *vdev)
 static void vhost_user_blk_set_status(VirtIODevice *vdev, uint8_t status)
 {
     VHostUserBlk *s = VHOST_USER_BLK(vdev);
-    bool should_start = virtio_device_should_start(vdev, status);
-    Error *local_err = NULL;
+    bool should_start = virtio_device_started(vdev, status);
     int ret;
+
+    if (!vdev->vm_running) {
+        should_start = false;
+    }
 
     if (!s->connected) {
         return;
     }
 
-    if (vhost_dev_is_started(&s->dev) == should_start) {
+    if (s->dev.started == should_start) {
         return;
     }
 
     if (should_start) {
-        ret = vhost_user_blk_start(vdev, &local_err);
+        ret = vhost_user_blk_start(vdev);
         if (ret < 0) {
-            error_reportf_err(local_err, "vhost-user-blk: vhost start failed: ");
+            error_report("vhost-user-blk: vhost start failed: %s",
+                         strerror(-ret));
             qemu_chr_fe_disconnect(&s->chardev);
         }
     } else {
@@ -258,14 +228,18 @@ static uint64_t vhost_user_blk_get_features(VirtIODevice *vdev,
     VHostUserBlk *s = VHOST_USER_BLK(vdev);
 
     /* Turn on pre-defined features */
-    virtio_add_feature(&features, VIRTIO_BLK_F_SIZE_MAX);
     virtio_add_feature(&features, VIRTIO_BLK_F_SEG_MAX);
     virtio_add_feature(&features, VIRTIO_BLK_F_GEOMETRY);
     virtio_add_feature(&features, VIRTIO_BLK_F_TOPOLOGY);
     virtio_add_feature(&features, VIRTIO_BLK_F_BLK_SIZE);
     virtio_add_feature(&features, VIRTIO_BLK_F_FLUSH);
     virtio_add_feature(&features, VIRTIO_BLK_F_RO);
+    virtio_add_feature(&features, VIRTIO_BLK_F_DISCARD);
+    virtio_add_feature(&features, VIRTIO_BLK_F_WRITE_ZEROES);
 
+    if (s->config_wce) {
+        virtio_add_feature(&features, VIRTIO_BLK_F_CONFIG_WCE);
+    }
     if (s->num_queues > 1) {
         virtio_add_feature(&features, VIRTIO_BLK_F_MQ);
     }
@@ -276,7 +250,6 @@ static uint64_t vhost_user_blk_get_features(VirtIODevice *vdev,
 static void vhost_user_blk_handle_output(VirtIODevice *vdev, VirtQueue *vq)
 {
     VHostUserBlk *s = VHOST_USER_BLK(vdev);
-    Error *local_err = NULL;
     int i, ret;
 
     if (!vdev->start_on_kick) {
@@ -287,16 +260,17 @@ static void vhost_user_blk_handle_output(VirtIODevice *vdev, VirtQueue *vq)
         return;
     }
 
-    if (vhost_dev_is_started(&s->dev)) {
+    if (s->dev.started) {
         return;
     }
 
     /* Some guests kick before setting VIRTIO_CONFIG_S_DRIVER_OK so start
      * vhost here instead of waiting for .set_status().
      */
-    ret = vhost_user_blk_start(vdev, &local_err);
+    ret = vhost_user_blk_start(vdev);
     if (ret < 0) {
-        error_reportf_err(local_err, "vhost-user-blk: vhost start failed: ");
+        error_report("vhost-user-blk: vhost start failed: %s",
+                     strerror(-ret));
         qemu_chr_fe_disconnect(&s->chardev);
         return;
     }
@@ -319,7 +293,7 @@ static void vhost_user_blk_reset(VirtIODevice *vdev)
     vhost_dev_free_inflight(s->inflight);
 }
 
-static int vhost_user_blk_connect(DeviceState *dev, Error **errp)
+static int vhost_user_blk_connect(DeviceState *dev)
 {
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
     VHostUserBlk *s = VHOST_USER_BLK(vdev);
@@ -330,7 +304,6 @@ static int vhost_user_blk_connect(DeviceState *dev, Error **errp)
     }
     s->connected = true;
 
-    s->dev.num_queues = s->num_queues;
     s->dev.nvqs = s->num_queues;
     s->dev.vqs = s->vhost_vqs;
     s->dev.vq_index = 0;
@@ -338,17 +311,19 @@ static int vhost_user_blk_connect(DeviceState *dev, Error **errp)
 
     vhost_dev_set_config_notifier(&s->dev, &blk_ops);
 
-    s->vhost_user.supports_config = true;
-    ret = vhost_dev_init(&s->dev, &s->vhost_user, VHOST_BACKEND_TYPE_USER, 0,
-                         errp);
+    ret = vhost_dev_init(&s->dev, &s->vhost_user, VHOST_BACKEND_TYPE_USER, 0);
     if (ret < 0) {
+        error_report("vhost-user-blk: vhost initialization failed: %s",
+                     strerror(-ret));
         return ret;
     }
 
     /* restore vhost state */
     if (virtio_device_started(vdev, vdev->status)) {
-        ret = vhost_user_blk_start(vdev, errp);
+        ret = vhost_user_blk_start(vdev);
         if (ret < 0) {
+            error_report("vhost-user-blk: vhost start failed: %s",
+                         strerror(-ret));
             return ret;
         }
     }
@@ -366,13 +341,24 @@ static void vhost_user_blk_disconnect(DeviceState *dev)
     }
     s->connected = false;
 
-    vhost_user_blk_stop(vdev);
+    if (s->dev.started) {
+        vhost_user_blk_stop(vdev);
+    }
 
     vhost_dev_cleanup(&s->dev);
+}
 
-    /* Re-instate the event handler for new connections */
+static void vhost_user_blk_event(void *opaque, QEMUChrEvent event);
+
+static void vhost_user_blk_chr_closed_bh(void *opaque)
+{
+    DeviceState *dev = opaque;
+    VirtIODevice *vdev = VIRTIO_DEVICE(dev);
+    VHostUserBlk *s = VHOST_USER_BLK(vdev);
+
+    vhost_user_blk_disconnect(dev);
     qemu_chr_fe_set_handlers(&s->chardev, NULL, NULL, vhost_user_blk_event,
-                             NULL, dev, NULL, true);
+            NULL, opaque, NULL, true);
 }
 
 static void vhost_user_blk_event(void *opaque, QEMUChrEvent event)
@@ -380,20 +366,39 @@ static void vhost_user_blk_event(void *opaque, QEMUChrEvent event)
     DeviceState *dev = opaque;
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
     VHostUserBlk *s = VHOST_USER_BLK(vdev);
-    Error *local_err = NULL;
 
     switch (event) {
     case CHR_EVENT_OPENED:
-        if (vhost_user_blk_connect(dev, &local_err) < 0) {
-            error_report_err(local_err);
+        if (vhost_user_blk_connect(dev) < 0) {
             qemu_chr_fe_disconnect(&s->chardev);
             return;
         }
         break;
     case CHR_EVENT_CLOSED:
-        /* defer close until later to avoid circular close */
-        vhost_user_async_close(dev, &s->chardev, &s->dev,
-                               vhost_user_blk_disconnect);
+        /*
+         * A close event may happen during a read/write, but vhost
+         * code assumes the vhost_dev remains setup, so delay the
+         * stop & clear. There are two possible paths to hit this
+         * disconnect event:
+         * 1. When VM is in the RUN_STATE_PRELAUNCH state. The
+         * vhost_user_blk_device_realize() is a caller.
+         * 2. In tha main loop phase after VM start.
+         *
+         * For p2 the disconnect event will be delayed. We can't
+         * do the same for p1, because we are not running the loop
+         * at this moment. So just skip this step and perform
+         * disconnect in the caller function.
+         *
+         * TODO: maybe it is a good idea to make the same fix
+         * for other vhost-user devices.
+         */
+        if (runstate_is_running()) {
+            AioContext *ctx = qemu_get_current_aio_context();
+
+            qemu_chr_fe_set_handlers(&s->chardev, NULL, NULL, NULL, NULL,
+                    NULL, NULL, false);
+            aio_bh_schedule_oneshot(ctx, vhost_user_blk_chr_closed_bh, opaque);
+        }
         break;
     case CHR_EVENT_BREAK:
     case CHR_EVENT_MUX_IN:
@@ -403,65 +408,25 @@ static void vhost_user_blk_event(void *opaque, QEMUChrEvent event)
     }
 }
 
-static int vhost_user_blk_realize_connect(VHostUserBlk *s, Error **errp)
-{
-    DeviceState *dev = &s->parent_obj.parent_obj;
-    int ret;
-
-    s->connected = false;
-
-    ret = qemu_chr_fe_wait_connected(&s->chardev, errp);
-    if (ret < 0) {
-        return ret;
-    }
-
-    ret = vhost_user_blk_connect(dev, errp);
-    if (ret < 0) {
-        qemu_chr_fe_disconnect(&s->chardev);
-        return ret;
-    }
-    assert(s->connected);
-
-    ret = vhost_dev_get_config(&s->dev, (uint8_t *)&s->blkcfg,
-                               s->parent_obj.config_len, errp);
-    if (ret < 0) {
-        qemu_chr_fe_disconnect(&s->chardev);
-        vhost_dev_cleanup(&s->dev);
-        return ret;
-    }
-
-    return 0;
-}
-
 static void vhost_user_blk_device_realize(DeviceState *dev, Error **errp)
 {
-    ERRP_GUARD();
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
     VHostUserBlk *s = VHOST_USER_BLK(vdev);
-    size_t config_size;
-    int retries;
+    Error *err = NULL;
     int i, ret;
 
     if (!s->chardev.chr) {
-        error_setg(errp, "chardev is mandatory");
+        error_setg(errp, "vhost-user-blk: chardev is mandatory");
         return;
     }
 
-    if (s->num_queues == VHOST_USER_BLK_AUTO_NUM_QUEUES) {
-        s->num_queues = 1;
-    }
     if (!s->num_queues || s->num_queues > VIRTIO_QUEUE_MAX) {
-        error_setg(errp, "invalid number of IO queues");
+        error_setg(errp, "vhost-user-blk: invalid number of IO queues");
         return;
     }
 
     if (!s->queue_size) {
-        error_setg(errp, "queue size must be non-zero");
-        return;
-    }
-    if (s->queue_size > VIRTQUEUE_MAX_SIZE) {
-        error_setg(errp, "queue size must not exceed %d",
-                   VIRTQUEUE_MAX_SIZE);
+        error_setg(errp, "vhost-user-blk: queue size must be non-zero");
         return;
     }
 
@@ -469,9 +434,8 @@ static void vhost_user_blk_device_realize(DeviceState *dev, Error **errp)
         return;
     }
 
-    config_size = virtio_get_config_size(&virtio_blk_cfg_size_params,
-                                         vdev->host_features);
-    virtio_init(vdev, VIRTIO_ID_BLOCK, config_size);
+    virtio_init(vdev, "virtio-blk", VIRTIO_ID_BLOCK,
+                sizeof(struct virtio_blk_config));
 
     s->virtqs = g_new(VirtQueue *, s->num_queues);
     for (i = 0; i < s->num_queues; i++) {
@@ -481,26 +445,33 @@ static void vhost_user_blk_device_realize(DeviceState *dev, Error **errp)
 
     s->inflight = g_new0(struct vhost_inflight, 1);
     s->vhost_vqs = g_new0(struct vhost_virtqueue, s->num_queues);
+    s->connected = false;
 
-    retries = REALIZE_CONNECTION_RETRIES;
-    assert(!*errp);
-    do {
-        if (*errp) {
-            error_prepend(errp, "Reconnecting after error: ");
-            error_report_err(*errp);
-            *errp = NULL;
-        }
-        ret = vhost_user_blk_realize_connect(s, errp);
-    } while (ret < 0 && retries--);
+    qemu_chr_fe_set_handlers(&s->chardev,  NULL, NULL, vhost_user_blk_event,
+                             NULL, (void *)dev, NULL, true);
 
-    if (ret < 0) {
+reconnect:
+    if (qemu_chr_fe_wait_connected(&s->chardev, &err) < 0) {
+        error_report_err(err);
         goto virtio_err;
     }
 
-    /* we're fully initialized, now we can operate, so add the handler */
-    qemu_chr_fe_set_handlers(&s->chardev,  NULL, NULL,
-                             vhost_user_blk_event, NULL, (void *)dev,
-                             NULL, true);
+    /* check whether vhost_user_blk_connect() failed or not */
+    if (!s->connected) {
+        goto reconnect;
+    }
+
+    ret = vhost_dev_get_config(&s->dev, (uint8_t *)&s->blkcfg,
+                               sizeof(struct virtio_blk_config));
+    if (ret < 0) {
+        error_report("vhost-user-blk: get block config failed");
+        goto reconnect;
+    }
+
+    if (s->blkcfg.num_queues != s->num_queues) {
+        s->blkcfg.num_queues = s->num_queues;
+    }
+
     return;
 
 virtio_err:
@@ -548,12 +519,6 @@ static void vhost_user_blk_instance_init(Object *obj)
                                   "/disk@0,0", DEVICE(obj));
 }
 
-static struct vhost_dev *vhost_user_blk_get_vhost(VirtIODevice *vdev)
-{
-    VHostUserBlk *s = VHOST_USER_BLK(vdev);
-    return &s->dev;
-}
-
 static const VMStateDescription vmstate_vhost_user_blk = {
     .name = "vhost-user-blk",
     .minimum_version_id = 1,
@@ -566,15 +531,9 @@ static const VMStateDescription vmstate_vhost_user_blk = {
 
 static Property vhost_user_blk_properties[] = {
     DEFINE_PROP_CHR("chardev", VHostUserBlk, chardev),
-    DEFINE_PROP_UINT16("num-queues", VHostUserBlk, num_queues,
-                       VHOST_USER_BLK_AUTO_NUM_QUEUES),
+    DEFINE_PROP_UINT16("num-queues", VHostUserBlk, num_queues, 1),
     DEFINE_PROP_UINT32("queue-size", VHostUserBlk, queue_size, 128),
-    DEFINE_PROP_BIT64("config-wce", VHostUserBlk, parent_obj.host_features,
-                      VIRTIO_BLK_F_CONFIG_WCE, true),
-    DEFINE_PROP_BIT64("discard", VHostUserBlk, parent_obj.host_features,
-                      VIRTIO_BLK_F_DISCARD, true),
-    DEFINE_PROP_BIT64("write-zeroes", VHostUserBlk, parent_obj.host_features,
-                      VIRTIO_BLK_F_WRITE_ZEROES, true),
+    DEFINE_PROP_BIT("config-wce", VHostUserBlk, config_wce, 0, true),
     DEFINE_PROP_END_OF_LIST(),
 };
 
@@ -593,7 +552,6 @@ static void vhost_user_blk_class_init(ObjectClass *klass, void *data)
     vdc->get_features = vhost_user_blk_get_features;
     vdc->set_status = vhost_user_blk_set_status;
     vdc->reset = vhost_user_blk_reset;
-    vdc->get_vhost = vhost_user_blk_get_vhost;
 }
 
 static const TypeInfo vhost_user_blk_info = {

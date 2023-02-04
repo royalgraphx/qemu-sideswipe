@@ -55,7 +55,7 @@ static bool check_events(bool has_vcpu, bool ignore_unavailable, bool is_pattern
         /* error for unavailable events */
         TraceEventIter iter;
         TraceEvent *ev;
-        trace_event_iter_init_pattern(&iter, name);
+        trace_event_iter_init(&iter, name);
         while ((ev = trace_event_iter_next(&iter)) != NULL) {
             if (!ignore_unavailable && !trace_event_get_state_static(ev)) {
                 error_setg(errp, "event \"%s\" is disabled", trace_event_get_name(ev));
@@ -90,39 +90,41 @@ TraceEventInfoList *qmp_trace_event_get_state(const char *name,
     }
 
     /* Get states (all errors checked above) */
-    trace_event_iter_init_pattern(&iter, name);
+    trace_event_iter_init(&iter, name);
     while ((ev = trace_event_iter_next(&iter)) != NULL) {
-        TraceEventInfo *value;
+        TraceEventInfoList *elem;
         bool is_vcpu = trace_event_is_vcpu(ev);
         if (has_vcpu && !is_vcpu) {
             continue;
         }
 
-        value = g_new(TraceEventInfo, 1);
-        value->vcpu = is_vcpu;
-        value->name = g_strdup(trace_event_get_name(ev));
+        elem = g_new(TraceEventInfoList, 1);
+        elem->value = g_new(TraceEventInfo, 1);
+        elem->value->vcpu = is_vcpu;
+        elem->value->name = g_strdup(trace_event_get_name(ev));
 
         if (!trace_event_get_state_static(ev)) {
-            value->state = TRACE_EVENT_STATE_UNAVAILABLE;
+            elem->value->state = TRACE_EVENT_STATE_UNAVAILABLE;
         } else {
             if (has_vcpu) {
                 if (is_vcpu) {
                     if (trace_event_get_vcpu_state_dynamic(cpu, ev)) {
-                        value->state = TRACE_EVENT_STATE_ENABLED;
+                        elem->value->state = TRACE_EVENT_STATE_ENABLED;
                     } else {
-                        value->state = TRACE_EVENT_STATE_DISABLED;
+                        elem->value->state = TRACE_EVENT_STATE_DISABLED;
                     }
                 }
                 /* else: already skipped above */
             } else {
                 if (trace_event_get_state_dynamic(ev)) {
-                    value->state = TRACE_EVENT_STATE_ENABLED;
+                    elem->value->state = TRACE_EVENT_STATE_ENABLED;
                 } else {
-                    value->state = TRACE_EVENT_STATE_DISABLED;
+                    elem->value->state = TRACE_EVENT_STATE_DISABLED;
                 }
             }
         }
-        QAPI_LIST_PREPEND(events, value);
+        elem->next = events;
+        events = elem;
     }
 
     return events;
@@ -153,7 +155,7 @@ void qmp_trace_event_set_state(const char *name, bool enable,
     }
 
     /* Apply changes (all errors checked above) */
-    trace_event_iter_init_pattern(&iter, name);
+    trace_event_iter_init(&iter, name);
     while ((ev = trace_event_iter_next(&iter)) != NULL) {
         if (!trace_event_get_state_static(ev) ||
             (has_vcpu && !trace_event_is_vcpu(ev))) {

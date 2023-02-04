@@ -10,13 +10,14 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef _PEI_BOT_PEIM_H_
 #define _PEI_BOT_PEIM_H_
 
+
 #include <PiPei.h>
 
 #include <Ppi/UsbIo.h>
 #include <Ppi/UsbHostController.h>
 #include <Ppi/BlockIo.h>
 
-// #include <Library/DebugLib.h>
+//#include <Library/DebugLib.h>
 #include <Library/PeimEntryPoint.h>
 #include <Library/PeiServicesLib.h>
 #include <Library/BaseMemoryLib.h>
@@ -28,20 +29,20 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 // Bulk Only device protocol
 //
 typedef struct {
-  UINT32    Signature;
-  UINT32    Tag;
-  UINT32    DataTransferLength;
-  UINT8     Flags;
-  UINT8     Lun;
-  UINT8     CmdLen;
-  UINT8     CmdBlock[16];
+  UINT32  Signature;
+  UINT32  Tag;
+  UINT32  DataTransferLength;
+  UINT8   Flags;
+  UINT8   Lun;
+  UINT8   CmdLen;
+  UINT8   CmdBlock[16];
 } CBW;
 
 typedef struct {
-  UINT32    Signature;
-  UINT32    Tag;
-  UINT32    DataResidue;
-  UINT8     Status;
+  UINT32  Signature;
+  UINT32  Tag;
+  UINT32  DataResidue;
+  UINT8   Status;
 } CSW;
 
 #pragma pack()
@@ -177,8 +178,8 @@ PeiUsbRead10 (
 **/
 BOOLEAN
 IsNoMedia (
-  IN  ATAPI_REQUEST_SENSE_DATA  *SenseData,
-  IN  UINTN                     SenseCounts
+  IN  ATAPI_REQUEST_SENSE_DATA    *SenseData,
+  IN  UINTN                 SenseCounts
   );
 
 /**
@@ -193,8 +194,8 @@ IsNoMedia (
 **/
 BOOLEAN
 IsMediaError (
-  IN  ATAPI_REQUEST_SENSE_DATA  *SenseData,
-  IN  UINTN                     SenseCounts
+  IN  ATAPI_REQUEST_SENSE_DATA    *SenseData,
+  IN  UINTN                 SenseCounts
   );
 
 /**
@@ -209,8 +210,8 @@ IsMediaError (
 **/
 BOOLEAN
 IsMediaChange (
-  IN  ATAPI_REQUEST_SENSE_DATA  *SenseData,
-  IN  UINTN                     SenseCounts
+  IN  ATAPI_REQUEST_SENSE_DATA    *SenseData,
+  IN  UINTN                 SenseCounts
   );
 
 #endif

@@ -5,7 +5,7 @@
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
- * as published by the Free Software Foundation; either version 2.1 of
+ * as published by the Free Software Foundation; either version 2 of
  * the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful, but
@@ -22,15 +22,18 @@
 
 #include "hw/cpu/core.h"
 #include "target/ppc/cpu.h"
-#include "qom/object.h"
 
 #define TYPE_PNV_CORE "powernv-cpu-core"
-OBJECT_DECLARE_TYPE(PnvCore, PnvCoreClass,
-                    PNV_CORE)
+#define PNV_CORE(obj) \
+    OBJECT_CHECK(PnvCore, (obj), TYPE_PNV_CORE)
+#define PNV_CORE_CLASS(klass) \
+     OBJECT_CLASS_CHECK(PnvCoreClass, (klass), TYPE_PNV_CORE)
+#define PNV_CORE_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(PnvCoreClass, (obj), TYPE_PNV_CORE)
 
 typedef struct PnvChip PnvChip;
 
-struct PnvCore {
+typedef struct PnvCore {
     /*< private >*/
     CPUCore parent_obj;
 
@@ -41,13 +44,13 @@ struct PnvCore {
     PnvChip *chip;
 
     MemoryRegion xscom_regs;
-};
+} PnvCore;
 
-struct PnvCoreClass {
+typedef struct PnvCoreClass {
     DeviceClass parent_class;
 
     const MemoryRegionOps *xscom_ops;
-};
+} PnvCoreClass;
 
 #define PNV_CORE_TYPE_SUFFIX "-" TYPE_PNV_CORE
 #define PNV_CORE_TYPE_NAME(cpu_model) cpu_model PNV_CORE_TYPE_SUFFIX
@@ -62,12 +65,13 @@ static inline PnvCPUState *pnv_cpu_state(PowerPCCPU *cpu)
 }
 
 #define TYPE_PNV_QUAD "powernv-cpu-quad"
-OBJECT_DECLARE_SIMPLE_TYPE(PnvQuad, PNV_QUAD)
+#define PNV_QUAD(obj) \
+    OBJECT_CHECK(PnvQuad, (obj), TYPE_PNV_QUAD)
 
-struct PnvQuad {
+typedef struct PnvQuad {
     DeviceState parent_obj;
 
-    uint32_t quad_id;
+    uint32_t id;
     MemoryRegion xscom_regs;
-};
+} PnvQuad;
 #endif /* PPC_PNV_CORE_H */

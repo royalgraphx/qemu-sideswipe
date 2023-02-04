@@ -13,7 +13,6 @@
 #include "hw/pci/pci.h"
 #include "hw/i2c/bitbang_i2c.h"
 #include "vga_int.h"
-#include "qom/object.h"
 
 /*#define DEBUG_ATI*/
 
@@ -30,7 +29,7 @@
 #define PCI_DEVICE_ID_ATI_RADEON_QY 0x5159
 
 #define TYPE_ATI_VGA "ati-vga"
-OBJECT_DECLARE_SIMPLE_TYPE(ATIVGAState, ATI_VGA)
+#define ATI_VGA(obj) OBJECT_CHECK(ATIVGAState, (obj), TYPE_ATI_VGA)
 
 typedef struct ATIVGARegs {
     uint32_t mm_index;
@@ -83,7 +82,7 @@ typedef struct ATIVGARegs {
     uint32_t default_sc_bottom_right;
 } ATIVGARegs;
 
-struct ATIVGAState {
+typedef struct ATIVGAState {
     PCIDevice dev;
     VGACommonState vga;
     char *model;
@@ -98,7 +97,7 @@ struct ATIVGAState {
     MemoryRegion io;
     MemoryRegion mm;
     ATIVGARegs regs;
-};
+} ATIVGAState;
 
 const char *ati_reg_name(int num);
 

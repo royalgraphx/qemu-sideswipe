@@ -21,7 +21,7 @@
 #ifdef OHCI_DEBUG
 #define dprintf(_x ...) do { printf(_x); } while(0)
 #else
-#define dprintf(_x ...) do {} while (0)
+#define dprintf(_x ...)
 #endif
 
 #undef OHCI_DEBUG_PACKET
@@ -29,7 +29,7 @@
 #ifdef OHCI_DEBUG_PACKET
 #define dpprintf(_x ...) do { printf(_x); } while(0)
 #else
-#define dpprintf(_x ...) do {} while (0)
+#define dpprintf(_x ...)
 #endif
 
 
@@ -199,7 +199,10 @@ static void ohci_hub_check_ports(struct ohci_hcd *ohcd)
 		}
 		if (port_status & RH_PS_PESC) {
 			port_clear |= RH_PS_PESC;
-			dprintf((port_status & RH_PS_PES) ? "enabled\n" : "disabled\n");
+			if (port_status & RH_PS_PES)
+				dprintf("enabled\n");
+			else
+				dprintf("disabled\n");
 		}
 		if (port_status & RH_PS_PSSC) {
 			port_clear |= RH_PS_PESC;
@@ -924,10 +927,9 @@ static struct usb_pipe *ohci_get_pipe(struct usb_dev *dev, struct usb_ep_descr *
 	new->epno = ep->bEndpointAddress & 0xF;
 	new->dir = ep->bEndpointAddress & 0x80;
 	if (new->type == USB_EP_TYPE_INTR)
-		if (!ohci_get_pipe_intr(new, ohcd, buf, buflen)) {
+		if (!ohci_get_pipe_intr(new, ohcd, buf, buflen))
 			dprintf("usb-ohci: %s alloc_intr failed  %p\n",
 				__func__, new);
-		}
 	if (new->type == USB_EP_TYPE_BULK)
 		ohci_init_bulk_ed(dev, new);
 

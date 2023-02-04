@@ -1,12 +1,24 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
+/* Copyright 2013-2014 IBM Corp.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /*
  * Console IO routine for use by libc
  *
  * fd is the classic posix 0,1,2 (stdin, stdout, stderr)
- *
- * Copyright 2013-2018 IBM Corp.
  */
-
 #include <skiboot.h>
 #include <unistd.h>
 #include <console.h>
@@ -30,11 +42,11 @@ static struct lock con_lock = LOCK_UNLOCKED;
 
 /* This is mapped via TCEs so we keep it alone in a page */
 struct memcons memcons __section(".data.memcons") = {
-	.magic		= CPU_TO_BE64(MEMCONS_MAGIC),
-	.obuf_phys	= CPU_TO_BE64(INMEM_CON_START),
-	.ibuf_phys	= CPU_TO_BE64(INMEM_CON_START + INMEM_CON_OUT_LEN),
-	.obuf_size	= CPU_TO_BE32(INMEM_CON_OUT_LEN),
-	.ibuf_size	= CPU_TO_BE32(INMEM_CON_IN_LEN),
+	.magic		= MEMCONS_MAGIC,
+	.obuf_phys	= INMEM_CON_START,
+	.ibuf_phys	= INMEM_CON_START + INMEM_CON_OUT_LEN,
+	.obuf_size	= INMEM_CON_OUT_LEN,
+	.ibuf_size	= INMEM_CON_IN_LEN,
 };
 
 static bool dummy_console_enabled(void)
@@ -197,7 +209,7 @@ static void inmem_write(char c)
 	if (con_wrapped)
 		opos |= MEMCONS_OUT_POS_WRAP;
 	lwsync();
-	memcons.out_pos = cpu_to_be32(opos);
+	memcons.out_pos = opos;
 
 	/* If head reaches tail, push tail around & drop chars */
 	if (con_in == con_out)
@@ -207,12 +219,12 @@ static void inmem_write(char c)
 static size_t inmem_read(char *buf, size_t req)
 {
 	size_t read = 0;
-	char *ibuf = (char *)be64_to_cpu(memcons.ibuf_phys);
+	char *ibuf = (char *)memcons.ibuf_phys;
 
-	while (req && be32_to_cpu(memcons.in_prod) != be32_to_cpu(memcons.in_cons)) {
-		*(buf++) = ibuf[be32_to_cpu(memcons.in_cons)];
+	while (req && memcons.in_prod != memcons.in_cons) {
+		*(buf++) = ibuf[memcons.in_cons];
 		lwsync();
-		memcons.in_cons = cpu_to_be32((be32_to_cpu(memcons.in_cons) + 1) % INMEM_CON_IN_LEN);
+		memcons.in_cons = (memcons.in_cons + 1) % INMEM_CON_IN_LEN;
 		req--;
 		read++;
 	}
@@ -351,25 +363,22 @@ void memcons_add_properties(void)
  * complicated since they can come from the in-memory console (BML) or from the
  * internal skiboot console driver.
  */
-static int64_t dummy_console_write(int64_t term_number, __be64 *length,
+static int64_t dummy_console_write(int64_t term_number, int64_t *length,
 				   const uint8_t *buffer)
 {
-	uint64_t l;
-
 	if (term_number != 0)
 		return OPAL_PARAMETER;
 
 	if (!opal_addr_valid(length) || !opal_addr_valid(buffer))
 		return OPAL_PARAMETER;
 
-	l = be64_to_cpu(*length);
-	write(0, buffer, l);
+	write(0, buffer, *length);
 
 	return OPAL_SUCCESS;
 }
 
 static int64_t dummy_console_write_buffer_space(int64_t term_number,
-						__be64 *length)
+						int64_t *length)
 {
 	if (term_number != 0)
 		return OPAL_PARAMETER;
@@ -378,25 +387,21 @@ static int64_t dummy_console_write_buffer_space(int64_t term_number,
 		return OPAL_PARAMETER;
 
 	if (length)
-		*length = cpu_to_be64(INMEM_CON_OUT_LEN);
+		*length = INMEM_CON_OUT_LEN;
 
 	return OPAL_SUCCESS;
 }
 
-static int64_t dummy_console_read(int64_t term_number, __be64 *length,
+static int64_t dummy_console_read(int64_t term_number, int64_t *length,
 				  uint8_t *buffer)
 {
-	uint64_t l;
-
 	if (term_number != 0)
 		return OPAL_PARAMETER;
 
 	if (!opal_addr_valid(length) || !opal_addr_valid(buffer))
 		return OPAL_PARAMETER;
 
-	l = be64_to_cpu(*length);
-	l = read(0, buffer, l);
-	*length = cpu_to_be64(l);
+	*length = read(0, buffer, *length);
 	opal_update_pending_evt(OPAL_EVENT_CONSOLE_INPUT, 0);
 
 	return OPAL_SUCCESS;
@@ -428,7 +433,7 @@ void dummy_console_add_nodes(void)
 {
 	struct dt_property *p;
 
-	add_opal_console_node(0, "raw", be32_to_cpu(memcons.obuf_size));
+	add_opal_console_node(0, "raw", memcons.obuf_size);
 
 	/* Mambo might have left a crap one, clear it */
 	p = __dt_find_property(dt_chosen, "linux,stdout-path");

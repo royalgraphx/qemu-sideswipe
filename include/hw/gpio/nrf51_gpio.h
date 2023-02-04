@@ -27,9 +27,8 @@
 #define NRF51_GPIO_H
 
 #include "hw/sysbus.h"
-#include "qom/object.h"
 #define TYPE_NRF51_GPIO "nrf51_soc.gpio"
-OBJECT_DECLARE_SIMPLE_TYPE(NRF51GPIOState, NRF51_GPIO)
+#define NRF51_GPIO(obj) OBJECT_CHECK(NRF51GPIOState, (obj), TYPE_NRF51_GPIO)
 
 #define NRF51_GPIO_PINS 32
 
@@ -48,7 +47,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(NRF51GPIOState, NRF51_GPIO)
 #define NRF51_GPIO_PULLDOWN 1
 #define NRF51_GPIO_PULLUP 3
 
-struct NRF51GPIOState {
+typedef struct NRF51GPIOState {
     SysBusDevice parent_obj;
 
     MemoryRegion mmio;
@@ -64,7 +63,7 @@ struct NRF51GPIOState {
     uint32_t old_out_connected;
 
     qemu_irq output[NRF51_GPIO_PINS];
-};
+} NRF51GPIOState;
 
 
 #endif

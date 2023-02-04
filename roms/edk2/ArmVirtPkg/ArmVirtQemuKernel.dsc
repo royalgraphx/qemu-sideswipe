@@ -1,7 +1,7 @@
 #
 #  Copyright (c) 2011-2015, ARM Limited. All rights reserved.
 #  Copyright (c) 2014, Linaro Limited. All rights reserved.
-#  Copyright (c) 2015 - 2020, Intel Corporation. All rights reserved.
+#  Copyright (c) 2015 - 2016, Intel Corporation. All rights reserved.
 #
 #  SPDX-License-Identifier: BSD-2-Clause-Patent
 #
@@ -38,17 +38,18 @@
   DEFINE NETWORK_SNP_ENABLE              = FALSE
   DEFINE NETWORK_TLS_ENABLE              = FALSE
   DEFINE NETWORK_ALLOW_HTTP_CONNECTIONS  = TRUE
-  DEFINE NETWORK_ISCSI_ENABLE            = TRUE
 
 !if $(NETWORK_SNP_ENABLE) == TRUE
   !error "NETWORK_SNP_ENABLE is IA32/X64/EBC only"
 !endif
 
+!if $(NETWORK_TLS_ENABLE) == TRUE
+  !error "NETWORK_TLS_ENABLE is tracked at <https://bugzilla.tianocore.org/show_bug.cgi?id=1009>"
+!endif
+
 !include NetworkPkg/NetworkDefines.dsc.inc
 
 !include ArmVirtPkg/ArmVirt.dsc.inc
-
-!include MdePkg/MdeLibs.dsc.inc
 
 [LibraryClasses.common]
   ArmLib|ArmPkg/Library/ArmLib/ArmBaseLib.inf
@@ -57,10 +58,8 @@
   # Virtio Support
   VirtioLib|OvmfPkg/Library/VirtioLib/VirtioLib.inf
   VirtioMmioDeviceLib|OvmfPkg/Library/VirtioMmioDeviceLib/VirtioMmioDeviceLib.inf
-  QemuFwCfgLib|OvmfPkg/Library/QemuFwCfgLib/QemuFwCfgLibMmio.inf
+  QemuFwCfgLib|ArmVirtPkg/Library/QemuFwCfgLib/QemuFwCfgLib.inf
   QemuFwCfgS3Lib|OvmfPkg/Library/QemuFwCfgS3Lib/BaseQemuFwCfgS3LibNull.inf
-  QemuFwCfgSimpleParserLib|OvmfPkg/Library/QemuFwCfgSimpleParserLib/QemuFwCfgSimpleParserLib.inf
-  QemuLoadImageLib|OvmfPkg/Library/GenericQemuLoadImageLib/GenericQemuLoadImageLib.inf
 
   ArmVirtMemInfoLib|ArmVirtPkg/Library/QemuVirtMemInfoLib/QemuVirtMemInfoLib.inf
 
@@ -75,12 +74,9 @@
   FrameBufferBltLib|MdeModulePkg/Library/FrameBufferBltLib/FrameBufferBltLib.inf
   QemuBootOrderLib|OvmfPkg/Library/QemuBootOrderLib/QemuBootOrderLib.inf
   FileExplorerLib|MdeModulePkg/Library/FileExplorerLib/FileExplorerLib.inf
-  PciPcdProducerLib|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
+  PciPcdProducerLib|ArmVirtPkg/Library/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
   PciSegmentLib|MdePkg/Library/BasePciSegmentLibPci/BasePciSegmentLibPci.inf
-  PciHostBridgeLib|OvmfPkg/Fdt/FdtPciHostBridgeLib/FdtPciHostBridgeLib.inf
-  PciHostBridgeUtilityLib|OvmfPkg/Library/PciHostBridgeUtilityLib/PciHostBridgeUtilityLib.inf
-  TpmMeasurementLib|MdeModulePkg/Library/TpmMeasurementLibNull/TpmMeasurementLibNull.inf
-  TpmPlatformHierarchyLib|SecurityPkg/Library/PeiDxeTpmPlatformHierarchyLibNull/PeiDxeTpmPlatformHierarchyLib.inf
+  PciHostBridgeLib|ArmVirtPkg/Library/FdtPciHostBridgeLib/FdtPciHostBridgeLib.inf
 
 [LibraryClasses.common.DXE_DRIVER]
   ReportStatusCodeLib|MdeModulePkg/Library/DxeReportStatusCodeLib/DxeReportStatusCodeLib.inf
@@ -88,14 +84,14 @@
 [LibraryClasses.common.UEFI_DRIVER]
   UefiScsiLib|MdePkg/Library/UefiScsiLib/UefiScsiLib.inf
 
-[BuildOptions]
-!include NetworkPkg/NetworkBuildOptions.dsc.inc
-
+[BuildOptions.common.EDKII.SEC, BuildOptions.common.EDKII.BASE]
   #
-  # We need to avoid jump tables in SEC modules, so that the PE/COFF
-  # self-relocation code itself is guaranteed to be position independent.
+  # CLANG38 with LTO support enabled uses the GNU GOLD linker, which insists
+  # on emitting GOT based symbol references when running in shared mode, unless
+  # we override visibility to 'hidden' in all modules that make up the PrePi
+  # build.
   #
-  GCC:*_*_*_CC_FLAGS = -fno-jump-tables
+  GCC:*_CLANG38_*_CC_FLAGS = -include $(WORKSPACE)/ArmVirtPkg/Include/Platform/Hidden.h
 
 ################################################################################
 #
@@ -122,14 +118,6 @@
   gArmPlatformTokenSpaceGuid.PcdCPUCorePrimaryStackSize|0x4000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVariableSize|0x2000
   gEfiMdeModulePkgTokenSpaceGuid.PcdMaxAuthVariableSize|0x2800
-!if $(NETWORK_TLS_ENABLE) == TRUE
-  #
-  # The cumulative and individual VOLATILE variable size limits should be set
-  # high enough for accommodating several and/or large CA certificates.
-  #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVariableStoreSize|0x80000
-  gEfiMdeModulePkgTokenSpaceGuid.PcdMaxVolatileVariableSize|0x40000
-!endif
 
   # Size of the region used by UEFI in permanent memory (Reserved 64MB)
   gArmPlatformTokenSpaceGuid.PcdSystemMemoryUefiRegionSize|0x04000000
@@ -178,15 +166,8 @@
 !endif
 
   gEfiMdePkgTokenSpaceGuid.PcdReportStatusCodePropertyMask|3
-  gEfiShellPkgTokenSpaceGuid.PcdShellFileOperationSize|0x20000
 
 [PcdsPatchableInModule.common]
-  # we need to provide a resolution for this PCD that supports PcdSet64()
-  # being called from ArmVirtPkg/Library/PlatformPeiLib/PlatformPeiLib.c,
-  # even though that call will be compiled out on this platform as it does
-  # not (and cannot) support the TPM2 driver stack
-  gEfiSecurityPkgTokenSpaceGuid.PcdTpmBaseAddress|0x0
-
   #
   # This will be overridden in the code
   #
@@ -228,14 +209,14 @@
   # PCD and PcdPciDisableBusEnumeration above have not been assigned yet
   gEfiMdePkgTokenSpaceGuid.PcdPciExpressBaseAddress|0xFFFFFFFFFFFFFFFF
 
-  gEfiMdePkgTokenSpaceGuid.PcdPciIoTranslation|0x0
+  gArmTokenSpaceGuid.PcdPciIoTranslation|0x0
 
   #
   # Set video resolution for boot options and for text setup.
   # PlatformDxe can set the former at runtime.
   #
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|1280
-  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|800
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoHorizontalResolution|800
+  gEfiMdeModulePkgTokenSpaceGuid.PcdVideoVerticalResolution|600
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetupVideoHorizontalResolution|640
   gEfiMdeModulePkgTokenSpaceGuid.PcdSetupVideoVerticalResolution|480
 
@@ -245,12 +226,6 @@
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosVersion|0x0300
   gEfiMdeModulePkgTokenSpaceGuid.PcdSmbiosDocRev|0x0
   gUefiOvmfPkgTokenSpaceGuid.PcdQemuSmbiosValidated|FALSE
-
-  #
-  # IPv4 and IPv6 PXE Boot support.
-  #
-  gEfiNetworkPkgTokenSpaceGuid.PcdIPv4PXESupport|0x01
-  gEfiNetworkPkgTokenSpaceGuid.PcdIPv6PXESupport|0x01
 
 ################################################################################
 #
@@ -340,23 +315,22 @@
   #
   # Platform Driver
   #
-  OvmfPkg/Fdt/VirtioFdtDxe/VirtioFdtDxe.inf
-  EmbeddedPkg/Drivers/FdtClientDxe/FdtClientDxe.inf
-  OvmfPkg/Fdt/HighMemDxe/HighMemDxe.inf
+  ArmVirtPkg/VirtioFdtDxe/VirtioFdtDxe.inf
+  ArmVirtPkg/FdtClientDxe/FdtClientDxe.inf
+  ArmVirtPkg/HighMemDxe/HighMemDxe.inf
   OvmfPkg/VirtioBlkDxe/VirtioBlk.inf
   OvmfPkg/VirtioScsiDxe/VirtioScsi.inf
   OvmfPkg/VirtioNetDxe/VirtioNet.inf
   OvmfPkg/VirtioRngDxe/VirtioRng.inf
 
   #
-  # FAT filesystem + GPT/MBR partitioning + UDF filesystem + virtio-fs
+  # FAT filesystem + GPT/MBR partitioning + UDF filesystem
   #
   MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
   MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
   FatPkg/EnhancedFatDxe/Fat.inf
   MdeModulePkg/Universal/Disk/UdfDxe/UdfDxe.inf
-  OvmfPkg/VirtioFsDxe/VirtioFsDxe.inf
 
   #
   # Bds
@@ -377,38 +351,17 @@
       NULL|MdeModulePkg/Library/BootManagerUiLib/BootManagerUiLib.inf
       NULL|MdeModulePkg/Library/BootMaintenanceManagerUiLib/BootMaintenanceManagerUiLib.inf
   }
-  OvmfPkg/QemuKernelLoaderFsDxe/QemuKernelLoaderFsDxe.inf {
-    <LibraryClasses>
-      NULL|OvmfPkg/Library/BlobVerifierLibNull/BlobVerifierLibNull.inf
-  }
 
   #
   # Networking stack
   #
 !include NetworkPkg/NetworkComponents.dsc.inc
 
-  NetworkPkg/UefiPxeBcDxe/UefiPxeBcDxe.inf {
-    <LibraryClasses>
-      NULL|OvmfPkg/Library/PxeBcPcdProducerLib/PxeBcPcdProducerLib.inf
-  }
-
-!if $(NETWORK_TLS_ENABLE) == TRUE
-  NetworkPkg/TlsAuthConfigDxe/TlsAuthConfigDxe.inf {
-    <LibraryClasses>
-      NULL|OvmfPkg/Library/TlsAuthConfigLib/TlsAuthConfigLib.inf
-  }
-!endif
-
   #
   # SCSI Bus and Disk Driver
   #
   MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
   MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
-
-  #
-  # NVME Driver
-  #
-  MdeModulePkg/Bus/Pci/NvmExpressDxe/NvmExpressDxe.inf
 
   #
   # SMBIOS Support
@@ -424,14 +377,13 @@
   #
   ArmPkg/Drivers/ArmPciCpuIo2Dxe/ArmPciCpuIo2Dxe.inf {
     <LibraryClasses>
-      NULL|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
+      NULL|ArmVirtPkg/Library/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
   }
   MdeModulePkg/Bus/Pci/PciHostBridgeDxe/PciHostBridgeDxe.inf
   MdeModulePkg/Bus/Pci/PciBusDxe/PciBusDxe.inf {
     <LibraryClasses>
-      NULL|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
+      NULL|ArmVirtPkg/Library/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
   }
-  OvmfPkg/PciHotPlugInitDxe/PciHotPlugInit.inf
   OvmfPkg/VirtioPciDeviceDxe/VirtioPciDeviceDxe.inf
   OvmfPkg/Virtio10Dxe/Virtio10.inf
 
@@ -458,7 +410,7 @@
   ArmVirtPkg/PlatformHasAcpiDtDxe/PlatformHasAcpiDtDxe.inf
 [Components.AARCH64]
   MdeModulePkg/Universal/Acpi/BootGraphicsResourceTableDxe/BootGraphicsResourceTableDxe.inf
-  OvmfPkg/AcpiPlatformDxe/AcpiPlatformDxe.inf {
+  OvmfPkg/AcpiPlatformDxe/QemuFwCfgAcpiPlatformDxe.inf {
     <LibraryClasses>
-      NULL|OvmfPkg/Fdt/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
+      NULL|ArmVirtPkg/Library/FdtPciPcdProducerLib/FdtPciPcdProducerLib.inf
   }

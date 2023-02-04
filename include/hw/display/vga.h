@@ -9,11 +9,7 @@
 #ifndef QEMU_HW_DISPLAY_VGA_H
 #define QEMU_HW_DISPLAY_VGA_H
 
-/*
- * modules can reference this symbol to avoid being loaded
- * into system emulators without vga support
- */
-extern bool have_vga;
+#include "exec/hwaddr.h"
 
 enum vga_retrace_method {
     VGA_RETRACE_DUMB,
@@ -22,6 +18,8 @@ enum vga_retrace_method {
 
 extern enum vga_retrace_method vga_retrace_method;
 
-#define TYPE_VGA_MMIO "vga-mmio"
+int isa_vga_mm_init(hwaddr vram_base,
+                    hwaddr ctrl_base, int it_shift,
+                    MemoryRegion *address_space);
 
 #endif

@@ -1,9 +1,19 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * OPAL Sensor APIs
+/* Copyright 2013-2018 IBM Corp.
  *
- * Copyright 2013-2018 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 
 #include <sensor.h>
 #include <skiboot.h>
@@ -20,12 +30,12 @@ static LIST_HEAD(async_read_list);
 
 struct sensor_async_read {
 	struct list_node link;
-	__be64 *val;
-	__be32 *opal_data;
+	u64 *sensor_data64;
+	u32 *sensor_data32;
 	int token;
 };
 
-static int add_to_async_read_list(int token, __be32 *opal_data, __be64 *val)
+static int add_to_async_read_list(int token, u32 *data32, u64 *data64)
 {
 	struct sensor_async_read *req;
 
@@ -34,8 +44,8 @@ static int add_to_async_read_list(int token, __be32 *opal_data, __be64 *val)
 		return OPAL_NO_MEM;
 
 	req->token = token;
-	req->val = val;
-	req->opal_data = opal_data;
+	req->sensor_data64 = data64;
+	req->sensor_data32 = data32;
 
 	lock(&async_read_list_lock);
 	list_add_tail(&async_read_list, &req->link);
@@ -59,58 +69,50 @@ void check_sensor_read(int token)
 	if (!req)
 		goto out;
 
-	*req->opal_data = cpu_to_be32(be64_to_cpu(*req->val));
-	free(req->val);
+	*req->sensor_data32 = *req->sensor_data64;
+	free(req->sensor_data64);
 	list_del(&req->link);
 	free(req);
 out:
 	unlock(&async_read_list_lock);
 }
 
-static s64 opal_sensor_read_64(u32 sensor_hndl, int token, __be64 *data)
+static s64 opal_sensor_read_u64(u32 sensor_hndl, int token, u64 *sensor_data)
 {
-	s64 rc;
-
 	switch (sensor_get_family(sensor_hndl)) {
 	case SENSOR_DTS:
-		rc = dts_sensor_read(sensor_hndl, token, data);
-		return rc;
-
+		return dts_sensor_read(sensor_hndl, token, sensor_data);
 	case SENSOR_OCC:
-		rc = occ_sensor_read(sensor_hndl, data);
-		return rc;
-
+		return occ_sensor_read(sensor_hndl, sensor_data);
 	default:
 		break;
 	}
 
-	if (platform.sensor_read) {
-		rc = platform.sensor_read(sensor_hndl, token, data);
-		return rc;
-	}
+	if (platform.sensor_read)
+		return platform.sensor_read(sensor_hndl, token, sensor_data);
 
 	return OPAL_UNSUPPORTED;
 }
 
 static int64_t opal_sensor_read(uint32_t sensor_hndl, int token,
-				__be32 *data)
+				uint32_t *sensor_data)
 {
-	__be64 *val;
-	s64 rc;
+	u64 *val;
+	s64 ret;
 
 	val = zalloc(sizeof(*val));
 	if (!val)
 		return OPAL_NO_MEM;
 
-	rc = opal_sensor_read_64(sensor_hndl, token, val);
-	if (rc == OPAL_SUCCESS) {
-		*data = cpu_to_be32(be64_to_cpu(*val));
+	ret = opal_sensor_read_u64(sensor_hndl, token, val);
+	if (!ret) {
+		*sensor_data = *val;
 		free(val);
-	} else if (rc == OPAL_ASYNC_COMPLETION) {
-		rc = add_to_async_read_list(token, data, val);
+	} else if (ret == OPAL_ASYNC_COMPLETION) {
+		ret = add_to_async_read_list(token, sensor_data, val);
 	}
 
-	return rc;
+	return ret;
 }
 
 static int opal_sensor_group_clear(u32 group_hndl, int token)
@@ -147,6 +149,6 @@ void sensor_init(void)
 	/* Register OPAL interface */
 	opal_register(OPAL_SENSOR_READ, opal_sensor_read, 3);
 	opal_register(OPAL_SENSOR_GROUP_CLEAR, opal_sensor_group_clear, 2);
-	opal_register(OPAL_SENSOR_READ_U64, opal_sensor_read_64, 3);
+	opal_register(OPAL_SENSOR_READ_U64, opal_sensor_read_u64, 3);
 	opal_register(OPAL_SENSOR_GROUP_ENABLE, opal_sensor_group_enable, 3);
 }

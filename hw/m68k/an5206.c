@@ -13,6 +13,7 @@
 #include "hw/boards.h"
 #include "hw/loader.h"
 #include "elf.h"
+#include "exec/address-spaces.h"
 #include "qemu/error-report.h"
 #include "sysemu/qtest.h"
 
@@ -20,17 +21,7 @@
 #define AN5206_MBAR_ADDR 0x10000000
 #define AN5206_RAMBAR_ADDR 0x20000000
 
-static void mcf5206_init(MemoryRegion *sysmem, uint32_t base)
-{
-    DeviceState *dev;
-    SysBusDevice *s;
-
-    dev = qdev_new(TYPE_MCF5206_MBAR);
-    s = SYS_BUS_DEVICE(dev);
-    sysbus_realize_and_unref(s, &error_fatal);
-
-    memory_region_add_subregion(sysmem, base, sysbus_mmio_get_region(s, 0));
-}
+/* Board init.  */
 
 static void an5206_init(MachineState *machine)
 {
@@ -60,7 +51,7 @@ static void an5206_init(MachineState *machine)
     memory_region_init_ram(sram, NULL, "an5206.sram", 512, &error_fatal);
     memory_region_add_subregion(address_space_mem, AN5206_RAMBAR_ADDR, sram);
 
-    mcf5206_init(address_space_mem, AN5206_MBAR_ADDR);
+    mcf5206_init(address_space_mem, AN5206_MBAR_ADDR, cpu);
 
     /* Load kernel.  */
     if (!kernel_filename) {

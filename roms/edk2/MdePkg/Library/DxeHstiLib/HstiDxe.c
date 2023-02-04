@@ -25,10 +25,10 @@
 **/
 VOID *
 InternalHstiFindAip (
-  IN UINT32  Role,
-  IN CHAR16  *ImplementationID OPTIONAL,
-  OUT VOID   **HstiData OPTIONAL,
-  OUT UINTN  *HstiSize OPTIONAL
+  IN UINT32                   Role,
+  IN CHAR16                   *ImplementationID OPTIONAL,
+  OUT VOID                    **HstiData OPTIONAL,
+  OUT UINTN                   *HstiSize OPTIONAL
   )
 {
   EFI_STATUS                        Status;
@@ -55,9 +55,9 @@ InternalHstiFindAip (
     return NULL;
   }
 
-  Hsti                 = NULL;
-  Aip                  = NULL;
-  InformationBlock     = NULL;
+  Hsti = NULL;
+  Aip = NULL;
+  InformationBlock = NULL;
   InformationBlockSize = 0;
   for (Index = 0; Index < NoHandles; Index++) {
     Status = gBS->HandleProtocol (
@@ -77,7 +77,7 @@ InternalHstiFindAip (
                     &InfoTypesBuffer,
                     &InfoTypesBufferCount
                     );
-    if (EFI_ERROR (Status) || (InfoTypesBuffer == NULL) || (InfoTypesBufferCount == 0)) {
+    if (EFI_ERROR (Status)) {
       continue;
     }
 
@@ -88,7 +88,6 @@ InternalHstiFindAip (
         break;
       }
     }
-
     FreePool (InfoTypesBuffer);
 
     if (AipCandidate == NULL) {
@@ -98,7 +97,7 @@ InternalHstiFindAip (
     //
     // Check HSTI Role
     //
-    Aip    = AipCandidate;
+    Aip = AipCandidate;
     Status = Aip->GetInformation (
                     Aip,
                     &gAdapterInfoPlatformSecurityGuid,
@@ -111,8 +110,7 @@ InternalHstiFindAip (
 
     Hsti = InformationBlock;
     if ((Hsti->Role == Role) &&
-        ((ImplementationID == NULL) || (StrCmp (ImplementationID, Hsti->ImplementationID) == 0)))
-    {
+        ((ImplementationID == NULL) || (StrCmp (ImplementationID, Hsti->ImplementationID) == 0))) {
       break;
     } else {
       Hsti = NULL;
@@ -120,7 +118,6 @@ InternalHstiFindAip (
       continue;
     }
   }
-
   FreePool (Handles);
 
   if (Hsti == NULL) {
@@ -130,11 +127,9 @@ InternalHstiFindAip (
   if (HstiData != NULL) {
     *HstiData = InformationBlock;
   }
-
   if (HstiSize != NULL) {
     *HstiSize = InformationBlockSize;
   }
-
   return Aip;
 }
 
@@ -149,8 +144,8 @@ InternalHstiFindAip (
 **/
 BOOLEAN
 InternalHstiIsValidTable (
-  IN VOID   *HstiData,
-  IN UINTN  HstiSize
+  IN VOID                     *HstiData,
+  IN UINTN                    HstiSize
   )
 {
   ADAPTER_INFO_PLATFORM_SECURITY  *Hsti;
@@ -166,17 +161,15 @@ InternalHstiIsValidTable (
   // basic check for header
   //
   if (HstiData == NULL) {
-    DEBUG ((DEBUG_ERROR, "HstiData == NULL\n"));
+    DEBUG ((EFI_D_ERROR, "HstiData == NULL\n"));
     return FALSE;
   }
-
-  if (HstiSize < sizeof (ADAPTER_INFO_PLATFORM_SECURITY)) {
-    DEBUG ((DEBUG_ERROR, "HstiSize < sizeof(ADAPTER_INFO_PLATFORM_SECURITY)\n"));
+  if (HstiSize < sizeof(ADAPTER_INFO_PLATFORM_SECURITY)) {
+    DEBUG ((EFI_D_ERROR, "HstiSize < sizeof(ADAPTER_INFO_PLATFORM_SECURITY)\n"));
     return FALSE;
   }
-
-  if (((HstiSize - sizeof (ADAPTER_INFO_PLATFORM_SECURITY)) / 3) < Hsti->SecurityFeaturesSize) {
-    DEBUG ((DEBUG_ERROR, "((HstiSize - sizeof(ADAPTER_INFO_PLATFORM_SECURITY)) / 3) < SecurityFeaturesSize\n"));
+  if (((HstiSize - sizeof(ADAPTER_INFO_PLATFORM_SECURITY)) / 3) < Hsti->SecurityFeaturesSize) {
+    DEBUG ((EFI_D_ERROR, "((HstiSize - sizeof(ADAPTER_INFO_PLATFORM_SECURITY)) / 3) < SecurityFeaturesSize\n"));
     return FALSE;
   }
 
@@ -184,7 +177,7 @@ InternalHstiIsValidTable (
   // Check Version
   //
   if (Hsti->Version != PLATFORM_SECURITY_VERSION_VNEXTCS) {
-    DEBUG ((DEBUG_ERROR, "Version != PLATFORM_SECURITY_VERSION_VNEXTCS\n"));
+    DEBUG ((EFI_D_ERROR, "Version != PLATFORM_SECURITY_VERSION_VNEXTCS\n"));
     return FALSE;
   }
 
@@ -192,62 +185,58 @@ InternalHstiIsValidTable (
   // Check Role
   //
   if ((Hsti->Role < PLATFORM_SECURITY_ROLE_PLATFORM_REFERENCE) ||
-      (Hsti->Role > PLATFORM_SECURITY_ROLE_IMPLEMENTOR_ODM))
-  {
-    DEBUG ((DEBUG_ERROR, "Role < PLATFORM_SECURITY_ROLE_PLATFORM_REFERENCE ||\n"));
-    DEBUG ((DEBUG_ERROR, "Role > PLATFORM_SECURITY_ROLE_IMPLEMENTOR_ODM\n"));
+      (Hsti->Role > PLATFORM_SECURITY_ROLE_IMPLEMENTOR_ODM)) {
+    DEBUG ((EFI_D_ERROR, "Role < PLATFORM_SECURITY_ROLE_PLATFORM_REFERENCE ||\n"));
+    DEBUG ((EFI_D_ERROR, "Role > PLATFORM_SECURITY_ROLE_IMPLEMENTOR_ODM\n"));
     return FALSE;
   }
 
   //
   // Check ImplementationID
   //
-  for (Index = 0; Index < sizeof (Hsti->ImplementationID)/sizeof (Hsti->ImplementationID[0]); Index++) {
+  for (Index = 0; Index < sizeof(Hsti->ImplementationID)/sizeof(Hsti->ImplementationID[0]); Index++) {
     if (Hsti->ImplementationID[Index] == 0) {
       break;
     }
   }
-
-  if (Index == sizeof (Hsti->ImplementationID)/sizeof (Hsti->ImplementationID[0])) {
-    DEBUG ((DEBUG_ERROR, "ImplementationID has no NUL CHAR\n"));
+  if (Index == sizeof(Hsti->ImplementationID)/sizeof(Hsti->ImplementationID[0])) {
+    DEBUG ((EFI_D_ERROR, "ImplementationID has no NUL CHAR\n"));
     return FALSE;
   }
 
-  ErrorStringSize = HstiSize - sizeof (ADAPTER_INFO_PLATFORM_SECURITY) - Hsti->SecurityFeaturesSize * 3;
-  ErrorString     = (CHAR16 *)((UINTN)Hsti + sizeof (ADAPTER_INFO_PLATFORM_SECURITY) + Hsti->SecurityFeaturesSize * 3);
+  ErrorStringSize = HstiSize - sizeof(ADAPTER_INFO_PLATFORM_SECURITY) - Hsti->SecurityFeaturesSize * 3;
+  ErrorString = (CHAR16 *)((UINTN)Hsti + sizeof(ADAPTER_INFO_PLATFORM_SECURITY) + Hsti->SecurityFeaturesSize * 3);
 
   //
   // basic check for ErrorString
   //
   if (ErrorStringSize == 0) {
-    DEBUG ((DEBUG_ERROR, "ErrorStringSize == 0\n"));
+    DEBUG ((EFI_D_ERROR, "ErrorStringSize == 0\n"));
     return FALSE;
   }
-
   if ((ErrorStringSize & BIT0) != 0) {
-    DEBUG ((DEBUG_ERROR, "(ErrorStringSize & BIT0) != 0\n"));
+    DEBUG ((EFI_D_ERROR, "(ErrorStringSize & BIT0) != 0\n"));
     return FALSE;
   }
 
   //
   // ErrorString might not be CHAR16 aligned.
   //
-  CopyMem (&ErrorChar, ErrorString, sizeof (ErrorChar));
+  CopyMem (&ErrorChar, ErrorString, sizeof(ErrorChar));
   for (ErrorStringLength = 0; (ErrorChar != 0) && (ErrorStringLength < (ErrorStringSize/2)); ErrorStringLength++) {
     ErrorString++;
-    CopyMem (&ErrorChar, ErrorString, sizeof (ErrorChar));
+    CopyMem (&ErrorChar, ErrorString, sizeof(ErrorChar));
   }
 
   //
   // check the length of ErrorString
   //
   if (ErrorChar != 0) {
-    DEBUG ((DEBUG_ERROR, "ErrorString has no NUL CHAR\n"));
+    DEBUG ((EFI_D_ERROR, "ErrorString has no NUL CHAR\n"));
     return FALSE;
   }
-
   if (ErrorStringLength == (ErrorStringSize/2)) {
-    DEBUG ((DEBUG_ERROR, "ErrorString Length incorrect\n"));
+    DEBUG ((EFI_D_ERROR, "ErrorString Length incorrect\n"));
     return FALSE;
   }
 
@@ -273,50 +262,48 @@ InternalHstiIsValidTable (
 EFI_STATUS
 EFIAPI
 HstiLibSetTable (
-  IN VOID   *Hsti,
-  IN UINTN  HstiSize
+  IN VOID                     *Hsti,
+  IN UINTN                    HstiSize
   )
 {
-  EFI_STATUS                        Status;
-  EFI_HANDLE                        Handle;
-  HSTI_AIP_PRIVATE_DATA             *HstiAip;
-  EFI_ADAPTER_INFORMATION_PROTOCOL  *Aip;
-  UINT32                            Role;
-  CHAR16                            *ImplementationID;
-  UINT32                            SecurityFeaturesSize;
-  UINT8                             *SecurityFeaturesRequired;
+  EFI_STATUS                       Status;
+  EFI_HANDLE                       Handle;
+  HSTI_AIP_PRIVATE_DATA            *HstiAip;
+  EFI_ADAPTER_INFORMATION_PROTOCOL *Aip;
+  UINT32                           Role;
+  CHAR16                           *ImplementationID;
+  UINT32                           SecurityFeaturesSize;
+  UINT8                            *SecurityFeaturesRequired;
 
   if (!InternalHstiIsValidTable (Hsti, HstiSize)) {
     return EFI_VOLUME_CORRUPTED;
   }
 
-  Role             = ((ADAPTER_INFO_PLATFORM_SECURITY *)Hsti)->Role;
+  Role = ((ADAPTER_INFO_PLATFORM_SECURITY *)Hsti)->Role;
   ImplementationID = ((ADAPTER_INFO_PLATFORM_SECURITY *)Hsti)->ImplementationID;
-  Aip              = InternalHstiFindAip (Role, ImplementationID, NULL, NULL);
+  Aip = InternalHstiFindAip (Role, ImplementationID, NULL, NULL);
   if (Aip != NULL) {
     return EFI_ALREADY_STARTED;
   }
 
-  HstiAip = AllocateZeroPool (sizeof (HSTI_AIP_PRIVATE_DATA));
+  HstiAip = AllocateZeroPool (sizeof(HSTI_AIP_PRIVATE_DATA));
   if (HstiAip == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
-
   HstiAip->Hsti = AllocateCopyPool (HstiSize, Hsti);
   if (HstiAip->Hsti == NULL) {
     FreePool (HstiAip);
     return EFI_OUT_OF_RESOURCES;
   }
-
   if (Role != PLATFORM_SECURITY_ROLE_PLATFORM_REFERENCE) {
-    SecurityFeaturesRequired = (UINT8 *)HstiAip->Hsti + sizeof (ADAPTER_INFO_PLATFORM_SECURITY);
-    SecurityFeaturesSize     = ((ADAPTER_INFO_PLATFORM_SECURITY *)Hsti)->SecurityFeaturesSize;
+    SecurityFeaturesRequired = (UINT8 *)HstiAip->Hsti + sizeof(ADAPTER_INFO_PLATFORM_SECURITY);
+    SecurityFeaturesSize = ((ADAPTER_INFO_PLATFORM_SECURITY *)Hsti)->SecurityFeaturesSize;
     ZeroMem (SecurityFeaturesRequired, SecurityFeaturesSize);
   }
 
   HstiAip->Signature = HSTI_AIP_PRIVATE_SIGNATURE;
-  CopyMem (&HstiAip->Aip, &mAdapterInformationProtocol, sizeof (EFI_ADAPTER_INFORMATION_PROTOCOL));
-  HstiAip->HstiSize    = HstiSize;
+  CopyMem (&HstiAip->Aip, &mAdapterInformationProtocol, sizeof(EFI_ADAPTER_INFORMATION_PROTOCOL));
+  HstiAip->HstiSize = HstiSize;
   HstiAip->HstiMaxSize = HstiSize;
 
   Handle = NULL;
@@ -353,19 +340,18 @@ HstiLibSetTable (
 EFI_STATUS
 EFIAPI
 HstiLibGetTable (
-  IN UINT32  Role,
-  IN CHAR16  *ImplementationID OPTIONAL,
-  OUT VOID   **Hsti,
-  OUT UINTN  *HstiSize
+  IN UINT32                   Role,
+  IN CHAR16                   *ImplementationID OPTIONAL,
+  OUT VOID                    **Hsti,
+  OUT UINTN                   *HstiSize
   )
 {
-  EFI_ADAPTER_INFORMATION_PROTOCOL  *Aip;
+  EFI_ADAPTER_INFORMATION_PROTOCOL *Aip;
 
   Aip = InternalHstiFindAip (Role, ImplementationID, Hsti, HstiSize);
   if (Aip == NULL) {
     return EFI_NOT_FOUND;
   }
-
   return EFI_SUCCESS;
 }
 
@@ -388,18 +374,18 @@ HstiLibGetTable (
 **/
 EFI_STATUS
 InternalHstiRecordFeaturesVerified (
-  IN UINT32   Role,
-  IN CHAR16   *ImplementationID  OPTIONAL,
-  IN UINT32   ByteIndex,
-  IN UINT8    Bit,
-  IN BOOLEAN  Set
+  IN UINT32                   Role,
+  IN CHAR16                   *ImplementationID, OPTIONAL
+  IN UINT32                   ByteIndex,
+  IN UINT8                    Bit,
+  IN BOOLEAN                  Set
   )
 {
-  EFI_ADAPTER_INFORMATION_PROTOCOL  *Aip;
-  ADAPTER_INFO_PLATFORM_SECURITY    *Hsti;
-  UINTN                             HstiSize;
-  UINT8                             *SecurityFeaturesVerified;
-  EFI_STATUS                        Status;
+  EFI_ADAPTER_INFORMATION_PROTOCOL *Aip;
+  ADAPTER_INFO_PLATFORM_SECURITY   *Hsti;
+  UINTN                            HstiSize;
+  UINT8                            *SecurityFeaturesVerified;
+  EFI_STATUS                       Status;
 
   Aip = InternalHstiFindAip (Role, ImplementationID, (VOID **)&Hsti, &HstiSize);
   if (Aip == NULL) {
@@ -410,7 +396,7 @@ InternalHstiRecordFeaturesVerified (
     return EFI_UNSUPPORTED;
   }
 
-  SecurityFeaturesVerified = (UINT8 *)((UINTN)Hsti + sizeof (ADAPTER_INFO_PLATFORM_SECURITY) + Hsti->SecurityFeaturesSize * 2);
+  SecurityFeaturesVerified = (UINT8 *)((UINTN)Hsti + sizeof(ADAPTER_INFO_PLATFORM_SECURITY) + Hsti->SecurityFeaturesSize * 2);
 
   if (Set) {
     SecurityFeaturesVerified[ByteIndex] = (UINT8)(SecurityFeaturesVerified[ByteIndex] | (Bit));
@@ -446,10 +432,10 @@ InternalHstiRecordFeaturesVerified (
 EFI_STATUS
 EFIAPI
 HstiLibSetFeaturesVerified (
-  IN UINT32  Role,
-  IN CHAR16  *ImplementationID  OPTIONAL,
-  IN UINT32  ByteIndex,
-  IN UINT8   BitMask
+  IN UINT32                   Role,
+  IN CHAR16                   *ImplementationID, OPTIONAL
+  IN UINT32                   ByteIndex,
+  IN UINT8                    BitMask
   )
 {
   return InternalHstiRecordFeaturesVerified (
@@ -479,10 +465,10 @@ HstiLibSetFeaturesVerified (
 EFI_STATUS
 EFIAPI
 HstiLibClearFeaturesVerified (
-  IN UINT32  Role,
-  IN CHAR16  *ImplementationID  OPTIONAL,
-  IN UINT32  ByteIndex,
-  IN UINT8   BitMask
+  IN UINT32                   Role,
+  IN CHAR16                   *ImplementationID, OPTIONAL
+  IN UINT32                   ByteIndex,
+  IN UINT8                    BitMask
   )
 {
   return InternalHstiRecordFeaturesVerified (
@@ -512,20 +498,20 @@ HstiLibClearFeaturesVerified (
 **/
 EFI_STATUS
 InternalHstiRecordErrorString (
-  IN UINT32   Role,
-  IN CHAR16   *ImplementationID  OPTIONAL,
-  IN CHAR16   *ErrorString,
-  IN BOOLEAN  Append
+  IN UINT32                   Role,
+  IN CHAR16                   *ImplementationID, OPTIONAL
+  IN CHAR16                   *ErrorString,
+  IN BOOLEAN                  Append
   )
 {
-  EFI_ADAPTER_INFORMATION_PROTOCOL  *Aip;
-  ADAPTER_INFO_PLATFORM_SECURITY    *Hsti;
-  UINTN                             HstiSize;
-  UINTN                             StringSize;
-  VOID                              *NewHsti;
-  UINTN                             NewHstiSize;
-  UINTN                             Offset;
-  EFI_STATUS                        Status;
+  EFI_ADAPTER_INFORMATION_PROTOCOL *Aip;
+  ADAPTER_INFO_PLATFORM_SECURITY   *Hsti;
+  UINTN                            HstiSize;
+  UINTN                            StringSize;
+  VOID                             *NewHsti;
+  UINTN                            NewHstiSize;
+  UINTN                            Offset;
+  EFI_STATUS                       Status;
 
   Aip = InternalHstiFindAip (Role, ImplementationID, (VOID **)&Hsti, &HstiSize);
   if (Aip == NULL) {
@@ -533,15 +519,14 @@ InternalHstiRecordErrorString (
   }
 
   if (Append) {
-    Offset = HstiSize - sizeof (CHAR16);
+    Offset = HstiSize - sizeof(CHAR16);
   } else {
-    Offset = sizeof (ADAPTER_INFO_PLATFORM_SECURITY) + Hsti->SecurityFeaturesSize * 3;
+    Offset = sizeof(ADAPTER_INFO_PLATFORM_SECURITY) + Hsti->SecurityFeaturesSize * 3;
   }
-
   StringSize = StrSize (ErrorString);
 
   NewHstiSize = Offset + StringSize;
-  NewHsti     = AllocatePool (NewHstiSize);
+  NewHsti = AllocatePool (NewHstiSize);
   if (NewHsti == NULL) {
     return EFI_OUT_OF_RESOURCES;
   }
@@ -577,9 +562,9 @@ InternalHstiRecordErrorString (
 EFI_STATUS
 EFIAPI
 HstiLibAppendErrorString (
-  IN UINT32  Role,
-  IN CHAR16  *ImplementationID  OPTIONAL,
-  IN CHAR16  *ErrorString
+  IN UINT32                   Role,
+  IN CHAR16                   *ImplementationID, OPTIONAL
+  IN CHAR16                   *ErrorString
   )
 {
   return InternalHstiRecordErrorString (
@@ -607,9 +592,9 @@ HstiLibAppendErrorString (
 EFI_STATUS
 EFIAPI
 HstiLibSetErrorString (
-  IN UINT32  Role,
-  IN CHAR16  *ImplementationID  OPTIONAL,
-  IN CHAR16  *ErrorString
+  IN UINT32                   Role,
+  IN CHAR16                   *ImplementationID, OPTIONAL
+  IN CHAR16                   *ErrorString
   )
 {
   return InternalHstiRecordErrorString (

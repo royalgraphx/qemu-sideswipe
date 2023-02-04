@@ -9,6 +9,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 #ifndef _EFI_PCI_OPTION_ROM_SUPPORT_H_
 #define _EFI_PCI_OPTION_ROM_SUPPORT_H_
 
+
 /**
   Initialize a PCI LoadFile2 instance.
 
@@ -17,7 +18,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 **/
 VOID
 InitializePciLoadFile2 (
-  IN PCI_IO_DEVICE  *PciIoDevice
+  IN PCI_IO_DEVICE       *PciIoDevice
   );
 
 /**
@@ -46,11 +47,11 @@ InitializePciLoadFile2 (
 EFI_STATUS
 EFIAPI
 LoadFile2 (
-  IN EFI_LOAD_FILE2_PROTOCOL   *This,
-  IN EFI_DEVICE_PATH_PROTOCOL  *FilePath,
-  IN BOOLEAN                   BootPolicy,
-  IN OUT UINTN                 *BufferSize,
-  IN VOID                      *Buffer      OPTIONAL
+  IN EFI_LOAD_FILE2_PROTOCOL  *This,
+  IN EFI_DEVICE_PATH_PROTOCOL *FilePath,
+  IN BOOLEAN                  BootPolicy,
+  IN OUT UINTN                *BufferSize,
+  IN VOID                     *Buffer      OPTIONAL
   );
 
 /**
@@ -65,8 +66,8 @@ LoadFile2 (
 **/
 BOOLEAN
 ContainEfiImage (
-  IN VOID    *RomImage,
-  IN UINT64  RomSize
+  IN VOID            *RomImage,
+  IN UINT64          RomSize
   );
 
 /**
@@ -81,7 +82,7 @@ ContainEfiImage (
 **/
 EFI_STATUS
 GetOpRomInfo (
-  IN OUT PCI_IO_DEVICE  *PciIoDevice
+  IN OUT PCI_IO_DEVICE    *PciIoDevice
   );
 
 /**
@@ -96,8 +97,8 @@ GetOpRomInfo (
 **/
 EFI_STATUS
 LoadOpRomImage (
-  IN PCI_IO_DEVICE  *PciDevice,
-  IN UINT64         RomBase
+  IN PCI_IO_DEVICE   *PciDevice,
+  IN UINT64          RomBase
   );
 
 /**
@@ -112,10 +113,10 @@ LoadOpRomImage (
 **/
 VOID
 RomDecode (
-  IN PCI_IO_DEVICE  *PciDevice,
-  IN UINT8          RomBarIndex,
-  IN UINT32         RomBar,
-  IN BOOLEAN        Enable
+  IN PCI_IO_DEVICE   *PciDevice,
+  IN UINT8           RomBarIndex,
+  IN UINT32          RomBar,
+  IN BOOLEAN         Enable
   );
 
 /**
@@ -129,7 +130,7 @@ RomDecode (
 **/
 EFI_STATUS
 ProcessOpRomImage (
-  IN PCI_IO_DEVICE  *PciDevice
+  IN PCI_IO_DEVICE   *PciDevice
   );
 
 #endif

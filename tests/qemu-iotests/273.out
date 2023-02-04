@@ -32,7 +32,7 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                         "actual-size": SIZE,
                         "dirty-flag": false
                     },
-                    "backing-filename-format": "IMGFMT",
+                    "backing-filename-format": "file",
                     "virtual-size": 67108864,
                     "filename": "TEST_DIR/t.IMGFMT.mid",
                     "cluster-size": 65536,
@@ -69,7 +69,8 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "direct": false,
                 "writeback": true
             },
-            "file": "TEST_DIR/t.IMGFMT"
+            "file": "TEST_DIR/t.IMGFMT",
+            "encryption_key_missing": false
         },
         {
             "iops_rd": 0,
@@ -97,7 +98,8 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "direct": false,
                 "writeback": true
             },
-            "file": "TEST_DIR/t.IMGFMT"
+            "file": "TEST_DIR/t.IMGFMT",
+            "encryption_key_missing": false
         },
         {
             "iops_rd": 0,
@@ -110,7 +112,7 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                     "actual-size": SIZE,
                     "dirty-flag": false
                 },
-                "backing-filename-format": "IMGFMT",
+                "backing-filename-format": "file",
                 "virtual-size": 67108864,
                 "filename": "TEST_DIR/t.IMGFMT.mid",
                 "cluster-size": 65536,
@@ -137,7 +139,8 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "direct": false,
                 "writeback": true
             },
-            "file": "TEST_DIR/t.IMGFMT.mid"
+            "file": "TEST_DIR/t.IMGFMT.mid",
+            "encryption_key_missing": false
         },
         {
             "iops_rd": 0,
@@ -165,7 +168,8 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "direct": false,
                 "writeback": true
             },
-            "file": "TEST_DIR/t.IMGFMT.mid"
+            "file": "TEST_DIR/t.IMGFMT.mid",
+            "encryption_key_missing": false
         },
         {
             "iops_rd": 0,
@@ -193,7 +197,8 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "direct": false,
                 "writeback": true
             },
-            "file": "TEST_DIR/t.IMGFMT.base"
+            "file": "TEST_DIR/t.IMGFMT.base",
+            "encryption_key_missing": false
         }
     ]
 }
@@ -204,6 +209,7 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "name": "file",
                 "parent": 5,
                 "shared-perm": [
+                    "graph-mod",
                     "write-unchanged",
                     "consistent-read"
                 ],
@@ -218,6 +224,7 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "name": "backing",
                 "parent": 5,
                 "shared-perm": [
+                    "graph-mod",
                     "resize",
                     "write-unchanged",
                     "write",
@@ -231,6 +238,7 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "name": "file",
                 "parent": 3,
                 "shared-perm": [
+                    "graph-mod",
                     "write-unchanged",
                     "consistent-read"
                 ],
@@ -243,6 +251,7 @@ Testing: -blockdev file,node-name=base,filename=TEST_DIR/t.IMGFMT.base -blockdev
                 "name": "backing",
                 "parent": 3,
                 "shared-perm": [
+                    "graph-mod",
                     "resize",
                     "write-unchanged",
                     "write",

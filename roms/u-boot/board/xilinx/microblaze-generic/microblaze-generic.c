@@ -12,16 +12,23 @@
 
 #include <common.h>
 #include <config.h>
-#include <env.h>
-#include <init.h>
-#include <log.h>
-#include <asm/global_data.h>
+#include <dm.h>
 #include <dm/lists.h>
 #include <fdtdec.h>
-#include <linux/sizes.h>
-#include "../common/board.h"
+#include <asm/processor.h>
+#include <asm/microblaze_intc.h>
+#include <asm/asm.h>
+#include <asm/gpio.h>
+#include <dm/uclass.h>
+#include <wdt.h>
 
 DECLARE_GLOBAL_DATA_PTR;
+
+#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_WDT)
+static struct udevice *watchdog_dev;
+#endif /* !CONFIG_SPL_BUILD && CONFIG_WDT */
+
+ulong ram_base;
 
 int dram_init_banksize(void)
 {
@@ -36,11 +43,44 @@ int dram_init(void)
 	return 0;
 };
 
+#ifdef CONFIG_WDT
+/* Called by macro WATCHDOG_RESET */
+void watchdog_reset(void)
+{
+#if !defined(CONFIG_SPL_BUILD)
+	ulong now;
+	static ulong next_reset;
+
+	if (!watchdog_dev)
+		return;
+
+	now = timer_get_us();
+
+	/* Do not reset the watchdog too often */
+	if (now > next_reset) {
+		wdt_reset(watchdog_dev);
+		next_reset = now + 1000;
+	}
+#endif /* !CONFIG_SPL_BUILD */
+}
+#endif /* CONFIG_WDT */
+
 int board_late_init(void)
 {
-	ulong max_size;
-	u32 status = 0;
+#if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_WDT)
+	watchdog_dev = NULL;
 
+	if (uclass_get_device_by_seq(UCLASS_WDT, 0, &watchdog_dev)) {
+		debug("Watchdog: Not found by seq!\n");
+		if (uclass_get_device(UCLASS_WDT, 0, &watchdog_dev)) {
+			puts("Watchdog: Not found!\n");
+			return 0;
+		}
+	}
+
+	wdt_start(watchdog_dev, 0, 0);
+	puts("Watchdog: Started\n");
+#endif /* !CONFIG_SPL_BUILD && CONFIG_WDT */
 #if !defined(CONFIG_SPL_BUILD) && defined(CONFIG_SYSRESET_MICROBLAZE)
 	int ret;
 
@@ -49,31 +89,5 @@ int board_late_init(void)
 	if (ret)
 		printf("Warning: No reset driver: ret=%d\n", ret);
 #endif
-
-	if (!(gd->flags & GD_FLG_ENV_DEFAULT)) {
-		debug("Saved variables - Skipping\n");
-		return 0;
-	}
-
-	max_size = gd->start_addr_sp - CONFIG_STACK_SIZE;
-	max_size = round_down(max_size, SZ_16M);
-
-	status |= env_set_hex("scriptaddr", max_size + SZ_2M);
-
-	status |= env_set_hex("pxefile_addr_r", max_size + SZ_1M);
-
-	status |= env_set_hex("kernel_addr_r", gd->ram_base + SZ_32M);
-
-	status |= env_set_hex("fdt_addr_r", gd->ram_base + SZ_32M - SZ_1M);
-
-	status |= env_set_hex("ramdisk_addr_r",
-			       gd->ram_base + SZ_32M + SZ_4M + SZ_2M);
-	if (IS_ENABLED(CONFIG_MTD_NOR_FLASH))
-		status |= env_set_hex("script_offset_nor",
-				       gd->bd->bi_flashstart +
-				       CONFIG_BOOT_SCRIPT_OFFSET);
-	if (status)
-		printf("%s: Saving run time variables FAILED\n", __func__);
-
-	return board_late_init_xilinx();
+	return 0;
 }

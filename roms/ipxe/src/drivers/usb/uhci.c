@@ -1124,9 +1124,13 @@ static void uhci_hub_close ( struct usb_hub *hub __unused ) {
  * @v hub		USB hub
  * @ret rc		Return status code
  */
-static int uhci_root_open ( struct usb_hub *hub __unused) {
+static int uhci_root_open ( struct usb_hub *hub ) {
+	struct usb_bus *bus = hub->bus;
+	struct uhci_device *uhci = usb_bus_get_hostdata ( bus );
 
-	/* Nothing to do */
+	/* Record hub driver private data */
+	usb_hub_set_drvdata ( hub, uhci );
+
 	return 0;
 }
 
@@ -1135,9 +1139,10 @@ static int uhci_root_open ( struct usb_hub *hub __unused) {
  *
  * @v hub		USB hub
  */
-static void uhci_root_close ( struct usb_hub *hub __unused ) {
+static void uhci_root_close ( struct usb_hub *hub ) {
 
-	/* Nothing to do */
+	/* Clear hub driver private data */
+	usb_hub_set_drvdata ( hub, NULL );
 }
 
 /**

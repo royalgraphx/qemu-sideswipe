@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# group: rw auto
 #
 # Test case for shared BDS between backend trees
 #
@@ -20,7 +19,7 @@
 #
 
 # creator
-owner=hreitz@redhat.com
+owner=mreitz@redhat.com
 
 seq="$(basename $0)"
 echo "QA output created by $seq"
@@ -40,7 +39,7 @@ trap "_cleanup; exit \$status" 0 1 2 3 15
 . ./common.qemu
 
 _supported_fmt qcow2
-_supported_proto file fuse
+_supported_proto file
 
 _make_test_img 64k
 

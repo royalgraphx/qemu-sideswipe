@@ -18,11 +18,11 @@
 
 VOID
 InstallProtocolInterfaces (
-  IN EFI_FW_VOL_BLOCK_DEVICE  *FvbDevice
+  IN EFI_FW_VOL_BLOCK_DEVICE *FvbDevice
   )
 {
-  EFI_HANDLE  FvbHandle;
-  EFI_STATUS  Status;
+  EFI_HANDLE FvbHandle;
+  EFI_STATUS Status;
 
   ASSERT (FeaturePcdGet (PcdSmmSmramRequire));
 
@@ -34,7 +34,7 @@ InstallProtocolInterfaces (
   // Firmware Volume Block protocol structure.
   //
   FvbHandle = NULL;
-  DEBUG ((DEBUG_INFO, "Installing QEMU flash SMM FVB\n"));
+  DEBUG ((EFI_D_INFO, "Installing QEMU flash SMM FVB\n"));
   Status = gSmst->SmmInstallProtocolInterface (
                     &FvbHandle,
                     &gEfiSmmFirmwareVolumeBlockProtocolGuid,
@@ -64,8 +64,8 @@ InstallVirtualAddressChangeHandler (
 
 EFI_STATUS
 MarkIoMemoryRangeForRuntimeAccess (
-  IN EFI_PHYSICAL_ADDRESS  BaseAddress,
-  IN UINTN                 Length
+  IN EFI_PHYSICAL_ADDRESS                BaseAddress,
+  IN UINTN                               Length
   )
 {
   //
@@ -73,14 +73,4 @@ MarkIoMemoryRangeForRuntimeAccess (
   //
 
   return EFI_SUCCESS;
-}
-
-VOID
-SetPcdFlashNvStorageBaseAddresses (
-  VOID
-  )
-{
-  //
-  // Do nothing.
-  //
 }

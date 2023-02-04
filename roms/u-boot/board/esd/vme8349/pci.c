@@ -10,7 +10,6 @@
  * Based on MPC8349 PCI support but w/o PIB related code.
  */
 
-#include <init.h>
 #include <asm/mmu.h>
 #include <asm/io.h>
 #include <common.h>
@@ -18,7 +17,6 @@
 #include <pci.h>
 #include <i2c.h>
 #include <asm/fsl_i2c.h>
-#include <linux/delay.h>
 #include "vme8349pin.h"
 
 static struct pci_region pci1_regions[] = {

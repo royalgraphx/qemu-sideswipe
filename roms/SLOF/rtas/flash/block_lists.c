@@ -41,7 +41,6 @@ print_progress(void)
 		break;
 	case 0:
 		printf("\b\\");
-		/* fallthrough */
 	default:
 		i = 3;
 	}

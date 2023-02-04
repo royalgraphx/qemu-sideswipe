@@ -18,6 +18,7 @@
 #include "hw/net/lasi_82596.h"
 #include "hw/net/i82596.h"
 #include "trace.h"
+#include "sysemu/sysemu.h"
 #include "hw/qdev-properties.h"
 #include "migration/vmstate.h"
 

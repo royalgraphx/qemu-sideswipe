@@ -30,11 +30,15 @@
 #define QEMU_XTENSA_CPU_QOM_H
 
 #include "hw/core/cpu.h"
-#include "qom/object.h"
 
 #define TYPE_XTENSA_CPU "xtensa-cpu"
 
-OBJECT_DECLARE_CPU_TYPE(XtensaCPU, XtensaCPUClass, XTENSA_CPU)
+#define XTENSA_CPU_CLASS(class) \
+    OBJECT_CLASS_CHECK(XtensaCPUClass, (class), TYPE_XTENSA_CPU)
+#define XTENSA_CPU(obj) \
+    OBJECT_CHECK(XtensaCPU, (obj), TYPE_XTENSA_CPU)
+#define XTENSA_CPU_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(XtensaCPUClass, (obj), TYPE_XTENSA_CPU)
 
 typedef struct XtensaConfig XtensaConfig;
 
@@ -46,7 +50,7 @@ typedef struct XtensaConfig XtensaConfig;
  *
  * An Xtensa CPU model.
  */
-struct XtensaCPUClass {
+typedef struct XtensaCPUClass {
     /*< private >*/
     CPUClass parent_class;
     /*< public >*/
@@ -55,7 +59,8 @@ struct XtensaCPUClass {
     DeviceReset parent_reset;
 
     const XtensaConfig *config;
-};
+} XtensaCPUClass;
 
+typedef struct XtensaCPU XtensaCPU;
 
 #endif

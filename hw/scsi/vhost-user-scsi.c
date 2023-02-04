@@ -21,7 +21,6 @@
 #include "hw/fw-path-provider.h"
 #include "hw/qdev-core.h"
 #include "hw/qdev-properties.h"
-#include "hw/qdev-properties-system.h"
 #include "hw/virtio/vhost.h"
 #include "hw/virtio/vhost-backend.h"
 #include "hw/virtio/vhost-user-scsi.h"
@@ -36,7 +35,6 @@ static const int user_feature_bits[] = {
     VIRTIO_RING_F_INDIRECT_DESC,
     VIRTIO_RING_F_EVENT_IDX,
     VIRTIO_SCSI_F_HOTPLUG,
-    VIRTIO_F_RING_RESET,
     VHOST_INVALID_FEATURE_BIT
 };
 
@@ -50,7 +48,7 @@ static void vhost_user_scsi_set_status(VirtIODevice *vdev, uint8_t status)
     VHostSCSICommon *vsc = VHOST_SCSI_COMMON(s);
     bool start = (status & VIRTIO_CONFIG_S_DRIVER_OK) && vdev->vm_running;
 
-    if (vhost_dev_is_started(&vsc->dev) == start) {
+    if (vsc->dev.started == start) {
         return;
     }
 
@@ -116,15 +114,17 @@ static void vhost_user_scsi_realize(DeviceState *dev, Error **errp)
         goto free_virtio;
     }
 
-    vsc->dev.nvqs = VIRTIO_SCSI_VQ_NUM_FIXED + vs->conf.num_queues;
+    vsc->dev.nvqs = 2 + vs->conf.num_queues;
     vsc->dev.vqs = g_new0(struct vhost_virtqueue, vsc->dev.nvqs);
     vsc->dev.vq_index = 0;
     vsc->dev.backend_features = 0;
     vqs = vsc->dev.vqs;
 
     ret = vhost_dev_init(&vsc->dev, &s->vhost_user,
-                         VHOST_BACKEND_TYPE_USER, 0, errp);
+                         VHOST_BACKEND_TYPE_USER, 0);
     if (ret < 0) {
+        error_setg(errp, "vhost-user-scsi: vhost initialization failed: %s",
+                   strerror(-ret));
         goto free_vhost;
     }
 
@@ -162,8 +162,7 @@ static void vhost_user_scsi_unrealize(DeviceState *dev)
 static Property vhost_user_scsi_properties[] = {
     DEFINE_PROP_CHR("chardev", VirtIOSCSICommon, conf.chardev),
     DEFINE_PROP_UINT32("boot_tpgt", VirtIOSCSICommon, conf.boot_tpgt, 0),
-    DEFINE_PROP_UINT32("num_queues", VirtIOSCSICommon, conf.num_queues,
-                       VIRTIO_SCSI_AUTO_NUM_QUEUES),
+    DEFINE_PROP_UINT32("num_queues", VirtIOSCSICommon, conf.num_queues, 1),
     DEFINE_PROP_UINT32("virtqueue_size", VirtIOSCSICommon, conf.virtqueue_size,
                        128),
     DEFINE_PROP_UINT32("max_sectors", VirtIOSCSICommon, conf.max_sectors,

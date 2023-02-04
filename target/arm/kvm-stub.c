@@ -15,10 +15,10 @@
 
 bool write_kvmstate_to_list(ARMCPU *cpu)
 {
-    g_assert_not_reached();
+    abort();
 }
 
 bool write_list_to_kvmstate(ARMCPU *cpu, int level)
 {
-    g_assert_not_reached();
+    abort();
 }

@@ -10,7 +10,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * version 2 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -279,7 +279,8 @@ static void bcm2835_fb_mbox_push(BCM2835FBState *s, uint32_t value)
     newconf.xoffset = ldl_le_phys(&s->dma_as, value + 24);
     newconf.yoffset = ldl_le_phys(&s->dma_as, value + 28);
 
-    newconf.base = s->vcram_base + BCM2835_FB_OFFSET;
+    newconf.base = s->vcram_base | (value & 0xc0000000);
+    newconf.base += BCM2835_FB_OFFSET;
 
     /* Copy fields which we don't want to change from the existing config */
     newconf.pixo = s->config.pixo;
@@ -453,7 +454,7 @@ static void bcm2835_fb_class_init(ObjectClass *klass, void *data)
     dc->vmsd = &vmstate_bcm2835_fb;
 }
 
-static const TypeInfo bcm2835_fb_info = {
+static TypeInfo bcm2835_fb_info = {
     .name          = TYPE_BCM2835_FB,
     .parent        = TYPE_SYS_BUS_DEVICE,
     .instance_size = sizeof(BCM2835FBState),

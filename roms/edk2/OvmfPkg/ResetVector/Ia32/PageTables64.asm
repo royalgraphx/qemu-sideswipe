@@ -3,7 +3,6 @@
 ; Sets the CR3 register for 64-bit paging
 ;
 ; Copyright (c) 2008 - 2013, Intel Corporation. All rights reserved.<BR>
-; Copyright (c) 2017 - 2020, Advanced Micro Devices, Inc. All rights reserved.<BR>
 ; SPDX-License-Identifier: BSD-2-Clause-Patent
 ;
 ;------------------------------------------------------------------------------
@@ -22,11 +21,6 @@ BITS    32
 %define PAGE_2M_MBO            0x080
 %define PAGE_2M_PAT          0x01000
 
-%define PAGE_4K_PDE_ATTR (PAGE_ACCESSED + \
-                          PAGE_DIRTY + \
-                          PAGE_READ_WRITE + \
-                          PAGE_PRESENT)
-
 %define PAGE_2M_PDE_ATTR (PAGE_2M_MBO + \
                           PAGE_ACCESSED + \
                           PAGE_DIRTY + \
@@ -37,33 +31,66 @@ BITS    32
                        PAGE_READ_WRITE + \
                        PAGE_PRESENT)
 
-%define TDX_BSP         1
-%define TDX_AP          2
+; Check if Secure Encrypted Virtualization (SEV) feature is enabled
+;
+; If SEV is enabled then EAX will be at least 32
+; If SEV is disabled then EAX will be zero.
+;
+CheckSevFeature:
+    ; Check if we have a valid (0x8000_001F) CPUID leaf
+    mov       eax, 0x80000000
+    cpuid
+
+    ; This check should fail on Intel or Non SEV AMD CPUs. In future if
+    ; Intel CPUs supports this CPUID leaf then we are guranteed to have exact
+    ; same bit definition.
+    cmp       eax, 0x8000001f
+    jl        NoSev
+
+    ; Check for memory encryption feature:
+    ;  CPUID  Fn8000_001F[EAX] - Bit 1
+    ;
+    mov       eax,  0x8000001f
+    cpuid
+    bt        eax, 1
+    jnc       NoSev
+
+    ; Check if memory encryption is enabled
+    ;  MSR_0xC0010131 - Bit 0 (SEV enabled)
+    mov       ecx, 0xc0010131
+    rdmsr
+    bt        eax, 0
+    jnc       NoSev
+
+    ; Get pte bit position to enable memory encryption
+    ; CPUID Fn8000_001F[EBX] - Bits 5:0
+    ;
+    mov       eax, ebx
+    and       eax, 0x3f
+    jmp       SevExit
+
+NoSev:
+    xor       eax, eax
+
+SevExit:
+    OneTimeCallRet CheckSevFeature
 
 ;
 ; Modified:  EAX, EBX, ECX, EDX
 ;
 SetCr3ForPageTables64:
-    ; Check the TDX features.
-    ; If it is TDX APs, then jump to SetCr3 directly.
-    ; In TD guest the initialization is done by BSP, including building
-    ; the page tables. APs will spin on until byte[TDX_WORK_AREA_PGTBL_READY]
-    ; is set.
-    OneTimeCall   CheckTdxFeaturesBeforeBuildPagetables
-    cmp       eax, TDX_BSP
-    je        ClearOvmfPageTables
-    cmp       eax, TDX_AP
-    je        SetCr3
 
-    ; Check whether the SEV is active and populate the SevEsWorkArea
-    OneTimeCall   CheckSevFeatures
+    OneTimeCall   CheckSevFeature
+    xor     edx, edx
+    test    eax, eax
+    jz      SevNotActive
 
-    ; If SEV is enabled, the C-bit position is always above 31.
-    ; The mask will be saved in the EDX and applied during the
-    ; the page table build below.
-    OneTimeCall   GetSevCBitMaskAbove31
+    ; If SEV is enabled, C-bit is always above 31
+    sub     eax, 32
+    bts     edx, eax
 
-ClearOvmfPageTables:
+SevNotActive:
+
     ;
     ; For OVMF, build some initial page tables at
     ; PcdOvmfSecPageTablesBase - (PcdOvmfSecPageTablesBase + 0x6000).
@@ -112,14 +139,6 @@ pageTableEntriesLoop:
     mov     [(ecx * 8 + PT_ADDR (0x2000 - 8)) + 4], edx
     loop    pageTableEntriesLoop
 
-    ; Clear the C-bit from the GHCB page if the SEV-ES is enabled.
-    OneTimeCall   SevClearPageEncMaskForGhcbPage
-
-    ; TDX will do some PostBuildPages task, such as setting
-    ; byte[TDX_WORK_AREA_PGTBL_READY].
-    OneTimeCall   TdxPostBuildPageTables
-
-SetCr3:
     ;
     ; Set CR3 now that the paging structures are available
     ;

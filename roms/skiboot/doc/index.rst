@@ -34,6 +34,7 @@ Developer Guide and Internals
 .. toctree::
    :maxdepth: 2
 
+   CONTRIBUTING.md
    console-log
    error-logging
    bmc
@@ -46,8 +47,6 @@ Developer Guide and Internals
    xive
    imc
    power-management
-   mpipl
-   vas
 
 
 OPAL ABI

@@ -9,7 +9,6 @@
   SPDX-License-Identifier: BSD-2-Clause-Patent
 
 **/
-
 #ifndef __GNTTAB_H__
 #define __GNTTAB_H__
 
@@ -28,7 +27,7 @@ XenGrantTableInit (
   );
 
 /**
-  De-initialize the Grant Table.
+  Desinitilize the Grant Table.
 **/
 VOID
 XenGrantTableDeinit (
@@ -39,7 +38,7 @@ XenGrantTableDeinit (
   Grant access to the page Frame to the domain DomainId.
 
   @param This       A pointer to XENBUS_PROTOCOL instance.
-  @param DomainId   ID of the domain to grant access to.
+  @param DomainId   ID of the domain to grant acces to.
   @param Frame      Frame Number of the page to grant access to.
   @param ReadOnly   Provide read-only or read-write access.
   @param RefPtr     Reference number of the grant will be written to this pointer.
@@ -47,11 +46,11 @@ XenGrantTableDeinit (
 EFI_STATUS
 EFIAPI
 XenBusGrantAccess (
-  IN  XENBUS_PROTOCOL  *This,
-  IN  domid_t          DomainId,
-  IN  UINTN            Frame, // MFN
-  IN  BOOLEAN          ReadOnly,
-  OUT grant_ref_t      *RefPtr
+  IN  XENBUS_PROTOCOL *This,
+  IN  domid_t         DomainId,
+  IN  UINTN           Frame, // MFN
+  IN  BOOLEAN         ReadOnly,
+  OUT grant_ref_t     *RefPtr
   );
 
 /**

@@ -11,11 +11,7 @@
 #include <common.h>
 #include <dm.h>
 #include <errno.h>
-#include <log.h>
-#include <malloc.h>
 #include <reset-uclass.h>
-#include <dm/device_compat.h>
-#include <linux/err.h>
 #include <linux/soc/ti/ti_sci_protocol.h>
 
 /**
@@ -194,7 +190,7 @@ static const struct udevice_id ti_sci_reset_of_match[] = {
 static struct reset_ops ti_sci_reset_ops = {
 	.of_xlate = ti_sci_reset_of_xlate,
 	.request = ti_sci_reset_request,
-	.rfree = ti_sci_reset_free,
+	.free = ti_sci_reset_free,
 	.rst_assert = ti_sci_reset_assert,
 	.rst_deassert = ti_sci_reset_deassert,
 	.rst_status = ti_sci_reset_status,
@@ -205,6 +201,6 @@ U_BOOT_DRIVER(ti_sci_reset) = {
 	.id = UCLASS_RESET,
 	.of_match = ti_sci_reset_of_match,
 	.probe = ti_sci_reset_probe,
-	.priv_auto	= sizeof(struct ti_sci_reset_data),
+	.priv_auto_alloc_size = sizeof(struct ti_sci_reset_data),
 	.ops = &ti_sci_reset_ops,
 };

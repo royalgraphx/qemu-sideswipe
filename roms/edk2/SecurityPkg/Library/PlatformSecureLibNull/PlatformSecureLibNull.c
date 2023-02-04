@@ -11,7 +11,7 @@ SPDX-License-Identifier: BSD-2-Clause-Patent
 
 #include <Uefi/UefiBaseType.h>
 
-BOOLEAN  mUserPhysicalPresence = FALSE;
+BOOLEAN       mUserPhysicalPresence      = FALSE;
 
 /**
 
@@ -39,6 +39,7 @@ UserPhysicalPresent (
   return mUserPhysicalPresence;
 }
 
+
 /**
   Save user physical presence state from a PCD to mUserPhysicalPresence.
 
@@ -51,7 +52,8 @@ PlatformSecureLibNullConstructor (
   VOID
   )
 {
-  mUserPhysicalPresence = PcdGetBool (PcdUserPhysicalPresence);
+
+  mUserPhysicalPresence = PcdGetBool(PcdUserPhysicalPresence);
 
   return RETURN_SUCCESS;
 }

@@ -4,9 +4,9 @@
 #ifndef CONFIG_USER_ONLY
 
 hwaddr get_pteg_offset32(PowerPCCPU *cpu, hwaddr hash);
-bool ppc_hash32_xlate(PowerPCCPU *cpu, vaddr eaddr, MMUAccessType access_type,
-                      hwaddr *raddrp, int *psizep, int *protp, int mmu_idx,
-                      bool guest_visible);
+hwaddr ppc_hash32_get_phys_page_debug(PowerPCCPU *cpu, target_ulong addr);
+int ppc_hash32_handle_mmu_fault(PowerPCCPU *cpu, vaddr address, int rw,
+                                int mmu_idx);
 
 /*
  * Segment register definitions
@@ -22,8 +22,6 @@ bool ppc_hash32_xlate(PowerPCCPU *cpu, vaddr eaddr, MMUAccessType access_type,
  * Block Address Translation (BAT) definitions
  */
 
-#define BATU32_BEPIU            0xf0000000
-#define BATU32_BEPIL            0x0ffe0000
 #define BATU32_BEPI             0xfffe0000
 #define BATU32_BL               0x00001ffc
 #define BATU32_VS               0x00000002
@@ -33,6 +31,15 @@ bool ppc_hash32_xlate(PowerPCCPU *cpu, vaddr eaddr, MMUAccessType access_type,
 #define BATL32_BRPN             0xfffe0000
 #define BATL32_WIMG             0x00000078
 #define BATL32_PP               0x00000003
+
+/* PowerPC 601 has slightly different BAT registers */
+
+#define BATU32_601_KS           0x00000008
+#define BATU32_601_KP           0x00000004
+#define BATU32_601_PP           0x00000003
+
+#define BATL32_601_V            0x00000040
+#define BATL32_601_BL           0x0000003f
 
 /*
  * Hash page table definitions

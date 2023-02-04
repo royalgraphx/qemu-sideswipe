@@ -1,8 +1,17 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * skiboot C entry point
+/* Copyright 2013-2016 IBM Corp.
  *
- * Copyright 2013-2019 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <skiboot.h>
@@ -15,7 +24,6 @@
 #include <opal.h>
 #include <opal-msg.h>
 #include <elf.h>
-#include <elf-abi.h>
 #include <io.h>
 #include <cec.h>
 #include <device.h>
@@ -29,7 +37,6 @@
 #include <console.h>
 #include <fsi-master.h>
 #include <centaur.h>
-#include <ocmb.h>
 #include <libfdt/libfdt.h>
 #include <timer.h>
 #include <ipmi.h>
@@ -46,14 +53,10 @@
 #include <sbe-p9.h>
 #include <debug_descriptor.h>
 #include <occ.h>
-#include <opal-dump.h>
-#include <xscom-p10-regs.h>
 
 enum proc_gen proc_gen;
 unsigned int pcie_max_link_speed;
-bool pci_tracing;
 bool verbose_eeh;
-extern const char version[];
 
 static uint64_t kernel_entry;
 static size_t kernel_size;
@@ -62,21 +65,15 @@ static bool kernel_32bit;
 /* We backup the previous vectors here before copying our own */
 static uint8_t old_vectors[EXCEPTION_VECTORS_END];
 
-#ifdef DEBUG
-#define DEBUG_STR "-debug"
-#else
-#define DEBUG_STR ""
-#endif
-
 #ifdef SKIBOOT_GCOV
 void skiboot_gcov_done(void);
 #endif
 
 struct debug_descriptor debug_descriptor = {
 	.eye_catcher	= "OPALdbug",
-	.version	= CPU_TO_BE32(DEBUG_DESC_VERSION),
+	.version	= DEBUG_DESC_VERSION,
 	.state_flags	= 0,
-	.memcons_phys	= 0, /* cpu_to_be64(&memcons) can't init constant */
+	.memcons_phys	= (uint64_t)&memcons,
 	.trace_mask	= 0, /* All traces disabled by default */
 	/* console log level:
 	 *   high 4 bits in memory, low 4 bits driver (e.g. uart). */
@@ -87,13 +84,11 @@ struct debug_descriptor debug_descriptor = {
 #endif
 };
 
-static void checksum_romem(void);
-
 static bool try_load_elf64_le(struct elf_hdr *header)
 {
-	struct elf64le_hdr *kh = (struct elf64le_hdr *)header;
+	struct elf64_hdr *kh = (struct elf64_hdr *)header;
 	uint64_t load_base = (uint64_t)kh;
-	struct elf64le_phdr *ph;
+	struct elf64_phdr *ph;
 	unsigned int i;
 
 	printf("INIT: 64-bit LE kernel discovered\n");
@@ -105,7 +100,7 @@ static bool try_load_elf64_le(struct elf_hdr *header)
 	 * to work for the Linux Kernel because it's a fairly dumb ELF
 	 * but it will not work for any ELF binary.
 	 */
-	ph = (struct elf64le_phdr *)(load_base + le64_to_cpu(kh->e_phoff));
+	ph = (struct elf64_phdr *)(load_base + le64_to_cpu(kh->e_phoff));
 	for (i = 0; i < le16_to_cpu(kh->e_phnum); i++, ph++) {
 		if (le32_to_cpu(ph->p_type) != ELF_PTYPE_LOAD)
 			continue;
@@ -139,24 +134,23 @@ static bool try_load_elf64_le(struct elf_hdr *header)
 
 static bool try_load_elf64(struct elf_hdr *header)
 {
-	struct elf64be_hdr *kh = (struct elf64be_hdr *)header;
-	struct elf64le_hdr *khle = (struct elf64le_hdr *)header;
+	struct elf64_hdr *kh = (struct elf64_hdr *)header;
 	uint64_t load_base = (uint64_t)kh;
-	struct elf64be_phdr *ph;
-	struct elf64be_shdr *sh;
+	struct elf64_phdr *ph;
+	struct elf64_shdr *sh;
 	unsigned int i;
 
 	/* Check it's a ppc64 LE ELF */
-	if (khle->ei_ident == ELF_IDENT		&&
-	    khle->ei_data == ELF_DATA_LSB	&&
-	    le16_to_cpu(khle->e_machine) == ELF_MACH_PPC64) {
+	if (kh->ei_ident == ELF_IDENT		&&
+	    kh->ei_data == ELF_DATA_LSB		&&
+	    kh->e_machine == le16_to_cpu(ELF_MACH_PPC64)) {
 		return try_load_elf64_le(header);
 	}
 
 	/* Check it's a ppc64 ELF */
 	if (kh->ei_ident != ELF_IDENT		||
 	    kh->ei_data != ELF_DATA_MSB		||
-	    be16_to_cpu(kh->e_machine) != ELF_MACH_PPC64) {
+	    kh->e_machine != ELF_MACH_PPC64) {
 		prerror("INIT: Kernel doesn't look like an ppc64 ELF\n");
 		return false;
 	}
@@ -168,18 +162,16 @@ static bool try_load_elf64(struct elf_hdr *header)
 	 * to work for the Linux Kernel because it's a fairly dumb ELF
 	 * but it will not work for any ELF binary.
 	 */
-	ph = (struct elf64be_phdr *)(load_base + be64_to_cpu(kh->e_phoff));
-	for (i = 0; i < be16_to_cpu(kh->e_phnum); i++, ph++) {
-		if (be32_to_cpu(ph->p_type) != ELF_PTYPE_LOAD)
+	ph = (struct elf64_phdr *)(load_base + kh->e_phoff);
+	for (i = 0; i < kh->e_phnum; i++, ph++) {
+		if (ph->p_type != ELF_PTYPE_LOAD)
 			continue;
-		if (be64_to_cpu(ph->p_vaddr) > be64_to_cpu(kh->e_entry) ||
-		    (be64_to_cpu(ph->p_vaddr) + be64_to_cpu(ph->p_memsz)) <
-		    be64_to_cpu(kh->e_entry))
+		if (ph->p_vaddr > kh->e_entry ||
+		    (ph->p_vaddr + ph->p_memsz) < kh->e_entry)
 			continue;
 
 		/* Get our entry */
-		kernel_entry = be64_to_cpu(kh->e_entry) -
-			be64_to_cpu(ph->p_vaddr) + be64_to_cpu(ph->p_offset);
+		kernel_entry = kh->e_entry - ph->p_vaddr + ph->p_offset;
 		break;
 	}
 
@@ -194,27 +186,23 @@ static bool try_load_elf64(struct elf_hdr *header)
 	 * into an executable section or not to figure this out. Default
 	 * to assuming it obeys the ABI.
 	 */
-	sh = (struct elf64be_shdr *)(load_base + be64_to_cpu(kh->e_shoff));
-	for (i = 0; i < be16_to_cpu(kh->e_shnum); i++, sh++) {
-		if (be64_to_cpu(sh->sh_addr) <= be64_to_cpu(kh->e_entry) &&
-		    (be64_to_cpu(sh->sh_addr) + be64_to_cpu(sh->sh_size)) >
-		    be64_to_cpu(kh->e_entry))
+	sh = (struct elf64_shdr *)(load_base + kh->e_shoff);
+	for (i = 0; i < kh->e_shnum; i++, sh++) {
+		if (sh->sh_addr <= kh->e_entry &&
+		      (sh->sh_addr + sh->sh_size) > kh->e_entry)
 			break;
 	}
 
-	if (i == be16_to_cpu(kh->e_shnum) ||
-			!(be64_to_cpu(sh->sh_flags) & ELF_SFLAGS_X)) {
+	if (i == kh->e_shnum || !(sh->sh_flags & ELF_SFLAGS_X)) {
 		kernel_entry = *(uint64_t *)(kernel_entry + load_base);
-		kernel_entry = kernel_entry -
-			be64_to_cpu(ph->p_vaddr) + be64_to_cpu(ph->p_offset);
+		kernel_entry = kernel_entry - ph->p_vaddr + ph->p_offset;
 	}
 
 	kernel_entry += load_base;
 	kernel_32bit = false;
 
-	kernel_size = be64_to_cpu(kh->e_shoff) +
-		((uint32_t)be16_to_cpu(kh->e_shentsize) *
-		 (uint32_t)be16_to_cpu(kh->e_shnum));
+	kernel_size = kh->e_shoff +
+		((uint32_t)kh->e_shentsize * (uint32_t)kh->e_shnum);
 
 	printf("INIT: 64-bit kernel entry at 0x%llx, size 0x%lx\n",
 	       kernel_entry, kernel_size);
@@ -224,9 +212,9 @@ static bool try_load_elf64(struct elf_hdr *header)
 
 static bool try_load_elf32_le(struct elf_hdr *header)
 {
-	struct elf32le_hdr *kh = (struct elf32le_hdr *)header;
+	struct elf32_hdr *kh = (struct elf32_hdr *)header;
 	uint64_t load_base = (uint64_t)kh;
-	struct elf32le_phdr *ph;
+	struct elf32_phdr *ph;
 	unsigned int i;
 
 	printf("INIT: 32-bit LE kernel discovered\n");
@@ -238,7 +226,7 @@ static bool try_load_elf32_le(struct elf_hdr *header)
 	 * to work for the Linux Kernel because it's a fairly dumb ELF
 	 * but it will not work for any ELF binary.
 	 */
-	ph = (struct elf32le_phdr *)(load_base + le32_to_cpu(kh->e_phoff));
+	ph = (struct elf32_phdr *)(load_base + le32_to_cpu(kh->e_phoff));
 	for (i = 0; i < le16_to_cpu(kh->e_phnum); i++, ph++) {
 		if (le32_to_cpu(ph->p_type) != ELF_PTYPE_LOAD)
 			continue;
@@ -268,23 +256,22 @@ static bool try_load_elf32_le(struct elf_hdr *header)
 
 static bool try_load_elf32(struct elf_hdr *header)
 {
-	struct elf32be_hdr *kh = (struct elf32be_hdr *)header;
-	struct elf32le_hdr *khle = (struct elf32le_hdr *)header;
+	struct elf32_hdr *kh = (struct elf32_hdr *)header;
 	uint64_t load_base = (uint64_t)kh;
-	struct elf32be_phdr *ph;
+	struct elf32_phdr *ph;
 	unsigned int i;
 
 	/* Check it's a ppc32 LE ELF */
-	if (khle->ei_ident == ELF_IDENT		&&
-	    khle->ei_data == ELF_DATA_LSB	&&
-	    le16_to_cpu(khle->e_machine) == ELF_MACH_PPC32) {
+	if (header->ei_ident == ELF_IDENT		&&
+	    header->ei_data == ELF_DATA_LSB		&&
+	    header->e_machine == le16_to_cpu(ELF_MACH_PPC32)) {
 		return try_load_elf32_le(header);
 	}
 
 	/* Check it's a ppc32 ELF */
-	if (kh->ei_ident != ELF_IDENT		||
-	    kh->ei_data != ELF_DATA_MSB		||
-	    be16_to_cpu(kh->e_machine) != ELF_MACH_PPC32) {
+	if (header->ei_ident != ELF_IDENT		||
+	    header->ei_data != ELF_DATA_MSB		||
+	    header->e_machine != ELF_MACH_PPC32) {
 		prerror("INIT: Kernel doesn't look like an ppc32 ELF\n");
 		return false;
 	}
@@ -296,18 +283,16 @@ static bool try_load_elf32(struct elf_hdr *header)
 	 * to work for the Linux Kernel because it's a fairly dumb ELF
 	 * but it will not work for any ELF binary.
 	 */
-	ph = (struct elf32be_phdr *)(load_base + be32_to_cpu(kh->e_phoff));
-	for (i = 0; i < be16_to_cpu(kh->e_phnum); i++, ph++) {
-		if (be32_to_cpu(ph->p_type) != ELF_PTYPE_LOAD)
+	ph = (struct elf32_phdr *)(load_base + kh->e_phoff);
+	for (i = 0; i < kh->e_phnum; i++, ph++) {
+		if (ph->p_type != ELF_PTYPE_LOAD)
 			continue;
-		if (be32_to_cpu(ph->p_vaddr) > be32_to_cpu(kh->e_entry) ||
-		    (be32_to_cpu(ph->p_vaddr) + be32_to_cpu(ph->p_memsz)) <
-		    be32_to_cpu(kh->e_entry))
+		if (ph->p_vaddr > kh->e_entry ||
+		    (ph->p_vaddr + ph->p_memsz) < kh->e_entry)
 			continue;
 
 		/* Get our entry */
-		kernel_entry = be32_to_cpu(kh->e_entry) -
-			be32_to_cpu(ph->p_vaddr) + be32_to_cpu(ph->p_offset);
+		kernel_entry = kh->e_entry - ph->p_vaddr + ph->p_offset;
 		break;
 	}
 
@@ -533,7 +518,7 @@ static int64_t cpu_disable_ME_RI_all(void)
 	return OPAL_SUCCESS;
 }
 
-static void *fdt;
+void *fdt;
 
 void __noreturn load_and_boot_kernel(bool is_reboot)
 {
@@ -633,15 +618,6 @@ void __noreturn load_and_boot_kernel(bool is_reboot)
 	/* Disable machine checks on all */
 	cpu_disable_ME_RI_all();
 
-	patch_traps(false);
-	cpu_set_hile_mode(false); /* Clear HILE on all CPUs */
-
-	/* init MPIPL */
-	if (!is_reboot)
-		opal_mpipl_init();
-
-	checksum_romem();
-
 	debug_descriptor.state_flags |= OPAL_BOOT_COMPLETE;
 
 	cpu_give_self_os();
@@ -649,31 +625,6 @@ void __noreturn load_and_boot_kernel(bool is_reboot)
 	if (kernel_32bit)
 		start_kernel32(kernel_entry, fdt, mem_top);
 	start_kernel(kernel_entry, fdt, mem_top);
-}
-
-static void storage_keys_fixup(void)
-{
-	struct dt_node *cpus, *n;
-
-	cpus = dt_find_by_path(dt_root, "/cpus");
-	assert(cpus);
-
-	if (proc_gen == proc_gen_unknown)
-		return;
-
-	dt_for_each_child(cpus, n) {
-		/* There may be cache nodes in /cpus. */
-		if (!dt_has_node_property(n, "device_type", "cpu") ||
-		    dt_has_node_property(n, "ibm,processor-storage-keys", NULL))
-			continue;
-
-		/*
-		 * skiboot supports p8 & p9, both of which support the IAMR, and
-		 * both of which support 32 keys. So advertise 32 keys for data
-		 * accesses and 32 for instruction accesses.
-		 */
-		dt_add_property_cells(n, "ibm,processor-storage-keys", 32, 32);
-	}
 }
 
 static void dt_fixups(void)
@@ -703,8 +654,6 @@ static void dt_fixups(void)
 		if (!dt_has_node_property(n, "scom-controller", NULL))
 			dt_add_property(n, "scom-controller", NULL, 0);
 	}
-
-	storage_keys_fixup();
 }
 
 static void add_arch_vector(void)
@@ -806,24 +755,12 @@ static void __nomcount do_ctors(void)
 		(*call)();
 }
 
-#ifdef ELF_ABI_v2
-static void setup_branch_null_catcher(void)
-{
-	asm volatile(							\
-		".section .rodata"				"\n\t"	\
-		"3:	.string	\"branch to NULL\""		"\n\t"	\
-		".previous"					"\n\t"	\
-		".section .trap_table,\"aw\""			"\n\t"	\
-		".llong	0"					"\n\t"	\
-		".llong	3b"					"\n\t"	\
-		".previous"					"\n\t"	\
-		);
-}
-#else
+#ifndef PPC64_ELF_ABI_v2
 static void branch_null(void)
 {
-	assert(0);
+	assert_fail("Branch to NULL !");
 }
+
 
 static void setup_branch_null_catcher(void)
 {
@@ -834,7 +771,11 @@ static void setup_branch_null_catcher(void)
         * ABI v1 (ie. big endian).  This will be broken if we ever
         * move to ABI v2 (ie little endian)
         */
-       memcpy_null((void *)0, bn, 16);
+       memcpy_null(0, bn, 16);
+}
+#else
+static void setup_branch_null_catcher(void)
+{
 }
 #endif
 
@@ -864,34 +805,19 @@ void copy_sreset_vector_fast_reboot(void)
 
 void copy_exception_vectors(void)
 {
+	/* Backup previous vectors as this could contain a kernel
+	 * image.
+	 */
+	memcpy_null(old_vectors, NULL, EXCEPTION_VECTORS_END);
+
 	/* Copy from 0x100 to EXCEPTION_VECTORS_END, avoid below 0x100 as
 	 * this is the boot flag used by CPUs still potentially entering
 	 * skiboot.
 	 */
+	BUILD_ASSERT((&reset_patch_end - &reset_patch_start) <
+			EXCEPTION_VECTORS_END - 0x100);
 	memcpy((void *)0x100, (void *)(SKIBOOT_BASE + 0x100),
 			EXCEPTION_VECTORS_END - 0x100);
-	sync_icache();
-}
-
-/*
- * When skiboot owns the exception vectors, patch in 'trap' for assert fails.
- * Otherwise use assert_fail()
- */
-void patch_traps(bool enable)
-{
-	struct trap_table_entry *tte;
-
-	for (tte = __trap_table_start; tte < __trap_table_end; tte++) {
-		uint32_t *insn;
-
-		insn = (uint32_t *)tte->address;
-		if (enable) {
-			*insn = PPC_INST_TRAP;
-		} else {
-			*insn = PPC_INST_NOP;
-		}
-	}
-
 	sync_icache();
 }
 
@@ -919,7 +845,7 @@ static void per_thread_sanity_checks(void)
 	assert(cpu->state != cpu_state_no_cpu);
 }
 
-void pci_nvram_init(void)
+static void pci_nvram_init(void)
 {
 	const char *nvram_speed;
 
@@ -935,8 +861,6 @@ void pci_nvram_init(void)
 		prlog(PR_NOTICE, "PHB: NVRAM set max link speed to GEN%i\n",
 		      pcie_max_link_speed);
 	}
-
-	pci_tracing = nvram_query_eq_safe("pci-tracing", "true");
 }
 
 static uint32_t mem_csum(void *_p, void *_e)
@@ -968,12 +892,8 @@ static void checksum_romem(void)
 	if (chip_quirk(QUIRK_SLOW_SIM))
 		return;
 
-	csum = mem_csum(_start, _head_end);
+	csum = mem_csum(_start, _romem_end);
 	romem_csum ^= csum;
-
-	csum = mem_csum(_stext, _romem_end);
-	romem_csum ^= csum;
-
 	csum = mem_csum(__builtin_kernel_start, __builtin_kernel_end);
 	romem_csum ^= csum;
 }
@@ -990,40 +910,8 @@ bool verify_romem(void)
 	return true;
 }
 
-static void mask_pc_system_xstop(void)
-{
-        struct cpu_thread *cpu;
-        uint32_t chip_id, core_id;
-        int rc;
-
-	if (proc_gen != proc_gen_p10)
-                return;
-
-	if (chip_quirk(QUIRK_MAMBO_CALLOUTS) || chip_quirk(QUIRK_AWAN))
-		return;
-
-        /*
-         * On P10 Mask PC system checkstop (bit 28). This is needed
-         * for HW570622. We keep processor recovery disabled via
-         * HID[5] and mask the checkstop that it can cause. CME does
-         * the recovery handling for us.
-         */
-        for_each_cpu(cpu) {
-                chip_id = cpu->chip_id;
-                core_id = pir_to_core_id(cpu->pir);
-
-                rc = xscom_write(chip_id,
-                                 XSCOM_ADDR_P10_EC(core_id, P10_CORE_FIRMASK_OR),
-                                 PPC_BIT(28));
-                if (rc)
-                        prerror("Error setting FIR MASK rc:%d on PIR:%x\n",
-                                rc, cpu->pir);
-        }
-}
-
-
 /* Called from head.S, thus no prototype. */
-void __noreturn __nomcount  main_cpu_entry(const void *fdt);
+void main_cpu_entry(const void *fdt);
 
 void __noreturn __nomcount main_cpu_entry(const void *fdt)
 {
@@ -1043,20 +931,10 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 	pre_init_boot_cpu();
 
 	/*
-	 * Point to our mem console
-	 */
-	debug_descriptor.memcons_phys = cpu_to_be64((uint64_t)&memcons);
-
-	/*
 	 * Before first printk, ensure console buffer is clear or
 	 * reading tools might think it has wrapped
 	 */
 	clear_console();
-
-	/* Backup previous vectors as this could contain a kernel
-	 * image.
-	 */
-	memcpy_null(old_vectors, NULL, EXCEPTION_VECTORS_END);
 
 	/*
 	 * Some boot firmwares enter OPAL with MSR[ME]=1, as they presumably
@@ -1069,9 +947,6 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 
 	/* Copy all vectors down to 0 */
 	copy_exception_vectors();
-
-	/* Enable trap based asserts */
-	patch_traps(true);
 
 	/*
 	 * Enable MSR[ME] bit so we can take MCEs. We don't currently
@@ -1086,8 +961,13 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 	/* Call library constructors */
 	do_ctors();
 
-	prlog(PR_NOTICE, "OPAL %s%s starting...\n", version, DEBUG_STR);
-
+	prlog(PR_NOTICE, "OPAL %s%s starting...\n", version,
+#ifdef DEBUG
+	"-debug"
+#else
+	""
+#endif
+	);
 	prlog(PR_DEBUG, "initial console log level: memory %d, driver %d\n",
 	       (debug_descriptor.console_log_levels >> 4),
 	       (debug_descriptor.console_log_levels & 0x0f));
@@ -1109,7 +989,7 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 	opal_table_init();
 
 	/* Init the physical map table so we can start mapping things */
-	phys_map_init(mfspr(SPR_PVR));
+	phys_map_init();
 
 	/*
 	 * If we are coming in with a flat device-tree, we expand it
@@ -1188,23 +1068,13 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 	 */
 	mem_region_init();
 
-	/*
-	 * Reserve memory required to capture OPAL dump. This should be done
-	 * immediately after mem_region_init to avoid any clash with local
-	 * memory allocation.
-	 */
-	opal_mpipl_reserve_mem();
-
 	/* Reserve HOMER and OCC area */
 	homer_init();
 
 	/* Initialize the rest of the cpu thread structs */
 	init_all_cpus();
-	if (proc_gen == proc_gen_p9 || proc_gen == proc_gen_p10)
+	if (proc_gen == proc_gen_p9)
 		cpu_set_ipi_enable(true);
-
-        /* Once all CPU are up apply this workaround */
-        mask_pc_system_xstop();
 
 	/* Add the /opal node to the device-tree */
 	add_opal_node();
@@ -1225,17 +1095,11 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 	if (proc_gen == proc_gen_p8)
 		cpu_set_ipi_enable(true);
 
-	/* On P9 and P10, initialize XIVE */
-	if (proc_gen == proc_gen_p9)
-		init_xive();
-	else if (proc_gen == proc_gen_p10)
-		xive2_init();
+	/* On P9, initialize XIVE */
+	init_xive();
 
 	/* Grab centaurs from device-tree if present (only on FSP-less) */
 	centaur_init();
-
-	/* initialize ocmb scom-controller */
-	ocmb_init();
 
 	/* Initialize PSI (depends on probe_platform being called) */
 	psi_init();
@@ -1306,10 +1170,6 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 	secureboot_init();
 	trustedboot_init();
 
-	/* Secure variables init, handled by platform */
-	if (platform.secvar_init && is_fw_secureboot())
-		platform.secvar_init();
-
 	/*
 	 * BMC platforms load version information from flash after
 	 * secure/trustedboot init.
@@ -1361,18 +1221,18 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 	/* NX init */
 	nx_init();
 
+	/* Init In-Memory Collection related stuff (load the IMC dtb into memory) */
+	imc_init();
+
 	/* Probe PHB3 on P8 */
 	probe_phb3();
 
-	/* Probe PHB4 on P9 and PHB5 on P10 */
+	/* Probe PHB4 on P9 */
 	probe_phb4();
 
 	/* Probe NPUs */
 	probe_npu();
 	probe_npu2();
-
-	/* Probe PAUs */
-	probe_pau();
 
 	/* Initialize PCI */
 	pci_init_slots();
@@ -1404,15 +1264,6 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 	/* Add the list of interrupts going to OPAL */
 	add_opal_interrupts();
 
-	/* Init In-Memory Collection related stuff (load the IMC dtb into memory) */
-	imc_init();
-
-	/* Disable protected execution facility in BML */
-	cpu_disable_pef();
-
-	/* export the trace buffers */
-	trace_add_dt_props();
-
 	/* Now release parts of memory nodes we haven't used ourselves... */
 	mem_region_release_unused();
 
@@ -1428,6 +1279,8 @@ void __noreturn __nomcount main_cpu_entry(const void *fdt)
 
 	prd_register_reserved_memory();
 
+	checksum_romem();
+
 	load_and_boot_kernel(false);
 }
 
@@ -1442,10 +1295,7 @@ void __noreturn __secondary_cpu_entry(void)
 	mtmsrd(MSR_RI, 1);
 
 	/* Some XIVE setup */
-	if (proc_gen == proc_gen_p9)
-		xive_cpu_callin(cpu);
-	else if (proc_gen == proc_gen_p10)
-		xive2_cpu_callin(cpu);
+	xive_cpu_callin(cpu);
 
 	/* Wait for work to do */
 	while(true) {
@@ -1457,7 +1307,7 @@ void __noreturn __secondary_cpu_entry(void)
 }
 
 /* Called from head.S, thus no prototype. */
-void __noreturn __nomcount secondary_cpu_entry(void);
+void secondary_cpu_entry(void);
 
 void __noreturn __nomcount secondary_cpu_entry(void)
 {

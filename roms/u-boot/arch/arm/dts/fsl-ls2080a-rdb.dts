@@ -25,7 +25,7 @@
 	dflash0: n25q512a {
 		#address-cells = <1>;
 		#size-cells = <1>;
-		compatible = "jedec,spi-nor";
+		compatible = "spi-flash";
 		spi-max-frequency = <3000000>;
 		spi-cpol;
 		spi-cpha;

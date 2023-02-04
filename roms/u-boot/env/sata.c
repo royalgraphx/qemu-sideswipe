@@ -8,15 +8,14 @@
 #include <common.h>
 
 #include <command.h>
-#include <env.h>
-#include <env_internal.h>
+#include <environment.h>
 #include <linux/stddef.h>
 #include <errno.h>
 #include <memalign.h>
 #include <sata.h>
 #include <search.h>
 
-#if defined(CONFIG_ENV_OFFSET_REDUND)
+#if defined(CONFIG_ENV_SIZE_REDUND) || defined(CONFIG_ENV_OFFSET_REDUND)
 #error ENV REDUND not supported
 #endif
 
@@ -107,11 +106,11 @@ static void env_sata_load(void)
 	}
 
 	if (read_env(sata, CONFIG_ENV_SIZE, CONFIG_ENV_OFFSET, buf)) {
-		env_set_default(NULL, 0);
+		set_default_env(NULL, 0);
 		return -EIO;
 	}
 
-	return env_import(buf, 1, H_EXTERNAL);
+	return env_import(buf, 1);
 }
 
 U_BOOT_ENV_LOCATION(sata) = {

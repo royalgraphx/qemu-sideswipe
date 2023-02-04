@@ -15,8 +15,6 @@
  * as seen by the guest depend significantly on the FPGA image.
  * We model the following FPGA images:
  *  "mps2-an385" -- Cortex-M3 as documented in ARM Application Note AN385
- *  "mps2-an386" -- Cortex-M4 as documented in ARM Application Note AN386
- *  "mps2-an500" -- Cortex-M7 as documented in ARM Application Note AN500
  *  "mps2-an511" -- Cortex-M3 'DesignStart' as documented in AN511
  *
  * Links to the TRM for the board itself and to the various Application
@@ -46,26 +44,19 @@
 #include "hw/net/lan9118.h"
 #include "net/net.h"
 #include "hw/watchdog/cmsdk-apb-watchdog.h"
-#include "hw/qdev-clock.h"
-#include "qom/object.h"
 
 typedef enum MPS2FPGAType {
     FPGA_AN385,
-    FPGA_AN386,
-    FPGA_AN500,
     FPGA_AN511,
 } MPS2FPGAType;
 
-struct MPS2MachineClass {
+typedef struct {
     MachineClass parent;
     MPS2FPGAType fpga_type;
     uint32_t scc_id;
-    bool has_block_ram;
-    hwaddr ethernet_base;
-    hwaddr psram_base;
-};
+} MPS2MachineClass;
 
-struct MPS2MachineState {
+typedef struct {
     MachineState parent;
 
     ARMv7MState armv7m;
@@ -84,30 +75,21 @@ struct MPS2MachineState {
     /* CMSDK APB subsystem */
     CMSDKAPBDualTimer dualtimer;
     CMSDKAPBWatchdog watchdog;
-    CMSDKAPBTimer timer[2];
-    Clock *sysclk;
-    Clock *refclk;
-};
+} MPS2MachineState;
 
 #define TYPE_MPS2_MACHINE "mps2"
 #define TYPE_MPS2_AN385_MACHINE MACHINE_TYPE_NAME("mps2-an385")
-#define TYPE_MPS2_AN386_MACHINE MACHINE_TYPE_NAME("mps2-an386")
-#define TYPE_MPS2_AN500_MACHINE MACHINE_TYPE_NAME("mps2-an500")
 #define TYPE_MPS2_AN511_MACHINE MACHINE_TYPE_NAME("mps2-an511")
 
-OBJECT_DECLARE_TYPE(MPS2MachineState, MPS2MachineClass, MPS2_MACHINE)
+#define MPS2_MACHINE(obj)                                       \
+    OBJECT_CHECK(MPS2MachineState, obj, TYPE_MPS2_MACHINE)
+#define MPS2_MACHINE_GET_CLASS(obj) \
+    OBJECT_GET_CLASS(MPS2MachineClass, obj, TYPE_MPS2_MACHINE)
+#define MPS2_MACHINE_CLASS(klass) \
+    OBJECT_CLASS_CHECK(MPS2MachineClass, klass, TYPE_MPS2_MACHINE)
 
 /* Main SYSCLK frequency in Hz */
 #define SYSCLK_FRQ 25000000
-
-/*
- * The Application Notes don't say anything about how the
- * systick reference clock is configured. (Quite possibly
- * they don't have one at all.) This 1MHz clock matches the
- * pre-existing behaviour that used to be hardcoded in the
- * armv7m_systick implementation.
- */
-#define REFCLK_FRQ (1 * 1000 * 1000)
 
 /* Initialize the auxiliary RAM region @mr and map it into
  * the memory map at @base.
@@ -152,27 +134,19 @@ static void mps2_common_init(MachineState *machine)
         exit(EXIT_FAILURE);
     }
 
-    /* This clock doesn't need migration because it is fixed-frequency */
-    mms->sysclk = clock_new(OBJECT(machine), "SYSCLK");
-    clock_set_hz(mms->sysclk, SYSCLK_FRQ);
-
-    mms->refclk = clock_new(OBJECT(machine), "REFCLK");
-    clock_set_hz(mms->refclk, REFCLK_FRQ);
-
     /* The FPGA images have an odd combination of different RAMs,
      * because in hardware they are different implementations and
      * connected to different buses, giving varying performance/size
      * tradeoffs. For QEMU they're all just RAM, though. We arbitrarily
      * call the 16MB our "system memory", as it's the largest lump.
      *
-     * AN385/AN386/AN511:
-     *  0x21000000 .. 0x21ffffff : PSRAM (16MB)
-     * AN385/AN386/AN500:
+     * Common to both boards:
+     *  0x21000000..0x21ffffff : PSRAM (16MB)
+     * AN385 only:
      *  0x00000000 .. 0x003fffff : ZBT SSRAM1
      *  0x00400000 .. 0x007fffff : mirror of ZBT SSRAM1
      *  0x20000000 .. 0x203fffff : ZBT SSRAM 2&3
      *  0x20400000 .. 0x207fffff : mirror of ZBT SSRAM 2&3
-     * AN385/AN386 only:
      *  0x01000000 .. 0x01003fff : block RAM (16K)
      *  0x01004000 .. 0x01007fff : mirror of above
      *  0x01008000 .. 0x0100bfff : mirror of above
@@ -182,17 +156,21 @@ static void mps2_common_init(MachineState *machine)
      *  0x00400000 .. 0x007fffff : ZBT SSRAM1
      *  0x20000000 .. 0x2001ffff : SRAM
      *  0x20400000 .. 0x207fffff : ZBT SSRAM 2&3
-     * AN500 only:
-     *  0x60000000 .. 0x60ffffff : PSRAM (16MB)
      *
-     * The AN385/AN386 has a feature where the lowest 16K can be mapped
+     * The AN385 has a feature where the lowest 16K can be mapped
      * either to the bottom of the ZBT SSRAM1 or to the block RAM.
      * This is of no use for QEMU so we don't implement it (as if
      * zbt_boot_ctrl is always zero).
      */
-    memory_region_add_subregion(system_memory, mmc->psram_base, machine->ram);
+    memory_region_add_subregion(system_memory, 0x21000000, machine->ram);
 
-    if (mmc->has_block_ram) {
+    switch (mmc->fpga_type) {
+    case FPGA_AN385:
+        make_ram(&mms->ssram1, "mps.ssram1", 0x0, 0x400000);
+        make_ram_alias(&mms->ssram1_m, "mps.ssram1_m", &mms->ssram1, 0x400000);
+        make_ram(&mms->ssram23, "mps.ssram23", 0x20000000, 0x400000);
+        make_ram_alias(&mms->ssram23_m, "mps.ssram23_m",
+                       &mms->ssram23, 0x20400000);
         make_ram(&mms->blockram, "mps.blockram", 0x01000000, 0x4000);
         make_ram_alias(&mms->blockram_m1, "mps.blockram_m1",
                        &mms->blockram, 0x01004000);
@@ -200,17 +178,6 @@ static void mps2_common_init(MachineState *machine)
                        &mms->blockram, 0x01008000);
         make_ram_alias(&mms->blockram_m3, "mps.blockram_m3",
                        &mms->blockram, 0x0100c000);
-    }
-
-    switch (mmc->fpga_type) {
-    case FPGA_AN385:
-    case FPGA_AN386:
-    case FPGA_AN500:
-        make_ram(&mms->ssram1, "mps.ssram1", 0x0, 0x400000);
-        make_ram_alias(&mms->ssram1_m, "mps.ssram1_m", &mms->ssram1, 0x400000);
-        make_ram(&mms->ssram23, "mps.ssram23", 0x20000000, 0x400000);
-        make_ram_alias(&mms->ssram23_m, "mps.ssram23_m",
-                       &mms->ssram23, 0x20400000);
         break;
     case FPGA_AN511:
         make_ram(&mms->blockram, "mps.blockram", 0x0, 0x40000);
@@ -226,8 +193,6 @@ static void mps2_common_init(MachineState *machine)
     armv7m = DEVICE(&mms->armv7m);
     switch (mmc->fpga_type) {
     case FPGA_AN385:
-    case FPGA_AN386:
-    case FPGA_AN500:
         qdev_prop_set_uint32(armv7m, "num-irq", 32);
         break;
     case FPGA_AN511:
@@ -236,8 +201,6 @@ static void mps2_common_init(MachineState *machine)
     default:
         g_assert_not_reached();
     }
-    qdev_connect_clock_in(armv7m, "cpuclk", mms->sysclk);
-    qdev_connect_clock_in(armv7m, "refclk", mms->refclk);
     qdev_prop_set_string(armv7m, "cpu-type", machine->cpu_type);
     qdev_prop_set_bit(armv7m, "enable-bitband", true);
     object_property_set_link(OBJECT(&mms->armv7m), "memory",
@@ -266,8 +229,6 @@ static void mps2_common_init(MachineState *machine)
 
     switch (mmc->fpga_type) {
     case FPGA_AN385:
-    case FPGA_AN386:
-    case FPGA_AN500:
     {
         /* The overflow IRQs for UARTs 0, 1 and 2 are ORed together.
          * Overflow for UARTs 4 and 5 doesn't trigger any interrupt.
@@ -352,31 +313,18 @@ static void mps2_common_init(MachineState *machine)
     }
 
     /* CMSDK APB subsystem */
-    for (i = 0; i < ARRAY_SIZE(mms->timer); i++) {
-        g_autofree char *name = g_strdup_printf("timer%d", i);
-        hwaddr base = 0x40000000 + i * 0x1000;
-        int irqno = 8 + i;
-        SysBusDevice *sbd;
-
-        object_initialize_child(OBJECT(mms), name, &mms->timer[i],
-                                TYPE_CMSDK_APB_TIMER);
-        sbd = SYS_BUS_DEVICE(&mms->timer[i]);
-        qdev_connect_clock_in(DEVICE(&mms->timer[i]), "pclk", mms->sysclk);
-        sysbus_realize_and_unref(sbd, &error_fatal);
-        sysbus_mmio_map(sbd, 0, base);
-        sysbus_connect_irq(sbd, 0, qdev_get_gpio_in(armv7m, irqno));
-    }
-
+    cmsdk_apb_timer_create(0x40000000, qdev_get_gpio_in(armv7m, 8), SYSCLK_FRQ);
+    cmsdk_apb_timer_create(0x40001000, qdev_get_gpio_in(armv7m, 9), SYSCLK_FRQ);
     object_initialize_child(OBJECT(mms), "dualtimer", &mms->dualtimer,
                             TYPE_CMSDK_APB_DUALTIMER);
-    qdev_connect_clock_in(DEVICE(&mms->dualtimer), "TIMCLK", mms->sysclk);
+    qdev_prop_set_uint32(DEVICE(&mms->dualtimer), "pclk-frq", SYSCLK_FRQ);
     sysbus_realize(SYS_BUS_DEVICE(&mms->dualtimer), &error_fatal);
     sysbus_connect_irq(SYS_BUS_DEVICE(&mms->dualtimer), 0,
                        qdev_get_gpio_in(armv7m, 10));
     sysbus_mmio_map(SYS_BUS_DEVICE(&mms->dualtimer), 0, 0x40002000);
     object_initialize_child(OBJECT(mms), "watchdog", &mms->watchdog,
                             TYPE_CMSDK_APB_WATCHDOG);
-    qdev_connect_clock_in(DEVICE(&mms->watchdog), "WDOGCLK", mms->sysclk);
+    qdev_prop_set_uint32(DEVICE(&mms->watchdog), "wdogclk-frq", SYSCLK_FRQ);
     sysbus_realize(SYS_BUS_DEVICE(&mms->watchdog), &error_fatal);
     sysbus_connect_irq(SYS_BUS_DEVICE(&mms->watchdog), 0,
                        qdev_get_gpio_in_named(armv7m, "NMI", 0));
@@ -388,11 +336,6 @@ static void mps2_common_init(MachineState *machine)
     qdev_prop_set_uint32(sccdev, "scc-cfg4", 0x2);
     qdev_prop_set_uint32(sccdev, "scc-aid", 0x00200008);
     qdev_prop_set_uint32(sccdev, "scc-id", mmc->scc_id);
-    /* All these FPGA images have the same OSCCLK configuration */
-    qdev_prop_set_uint32(sccdev, "len-oscclk", 3);
-    qdev_prop_set_uint32(sccdev, "oscclk[0]", 50000000);
-    qdev_prop_set_uint32(sccdev, "oscclk[1]", 24576000);
-    qdev_prop_set_uint32(sccdev, "oscclk[2]", 25000000);
     sysbus_realize(SYS_BUS_DEVICE(&mms->scc), &error_fatal);
     sysbus_mmio_map(SYS_BUS_DEVICE(sccdev), 0, 0x4002f000);
     object_initialize_child(OBJECT(mms), "fpgaio",
@@ -428,29 +371,21 @@ static void mps2_common_init(MachineState *machine)
                                          0x40023000,    /* Audio */
                                          0x40029000,    /* Shield0 */
                                          0x4002a000};   /* Shield1 */
-        DeviceState *dev;
-
-        dev = sysbus_create_simple(TYPE_ARM_SBCON_I2C, i2cbase[i], NULL);
-        if (i < 2) {
-            /*
-             * internal-only bus: mark it full to avoid user-created
-             * i2c devices being plugged into it.
-             */
-            BusState *qbus = qdev_get_child_bus(dev, "i2c");
-            qbus_mark_full(qbus);
-        }
+        sysbus_create_simple(TYPE_ARM_SBCON_I2C, i2cbase[i], NULL);
     }
     create_unimplemented_device("i2s", 0x40024000, 0x400);
 
     /* In hardware this is a LAN9220; the LAN9118 is software compatible
      * except that it doesn't support the checksum-offload feature.
      */
-    lan9118_init(&nd_table[0], mmc->ethernet_base,
+    lan9118_init(&nd_table[0], 0x40200000,
                  qdev_get_gpio_in(armv7m,
-                                  mmc->fpga_type == FPGA_AN511 ? 47 : 13));
+                                  mmc->fpga_type == FPGA_AN385 ? 13 : 47));
+
+    system_clock_scale = NANOSECONDS_PER_SECOND / SYSCLK_FRQ;
 
     armv7m_load_kernel(ARM_CPU(first_cpu), machine->kernel_filename,
-                       0, 0x400000);
+                       0x400000);
 }
 
 static void mps2_class_init(ObjectClass *oc, void *data)
@@ -472,37 +407,6 @@ static void mps2_an385_class_init(ObjectClass *oc, void *data)
     mmc->fpga_type = FPGA_AN385;
     mc->default_cpu_type = ARM_CPU_TYPE_NAME("cortex-m3");
     mmc->scc_id = 0x41043850;
-    mmc->psram_base = 0x21000000;
-    mmc->ethernet_base = 0x40200000;
-    mmc->has_block_ram = true;
-}
-
-static void mps2_an386_class_init(ObjectClass *oc, void *data)
-{
-    MachineClass *mc = MACHINE_CLASS(oc);
-    MPS2MachineClass *mmc = MPS2_MACHINE_CLASS(oc);
-
-    mc->desc = "ARM MPS2 with AN386 FPGA image for Cortex-M4";
-    mmc->fpga_type = FPGA_AN386;
-    mc->default_cpu_type = ARM_CPU_TYPE_NAME("cortex-m4");
-    mmc->scc_id = 0x41043860;
-    mmc->psram_base = 0x21000000;
-    mmc->ethernet_base = 0x40200000;
-    mmc->has_block_ram = true;
-}
-
-static void mps2_an500_class_init(ObjectClass *oc, void *data)
-{
-    MachineClass *mc = MACHINE_CLASS(oc);
-    MPS2MachineClass *mmc = MPS2_MACHINE_CLASS(oc);
-
-    mc->desc = "ARM MPS2 with AN500 FPGA image for Cortex-M7";
-    mmc->fpga_type = FPGA_AN500;
-    mc->default_cpu_type = ARM_CPU_TYPE_NAME("cortex-m7");
-    mmc->scc_id = 0x41045000;
-    mmc->psram_base = 0x60000000;
-    mmc->ethernet_base = 0xa0000000;
-    mmc->has_block_ram = false;
 }
 
 static void mps2_an511_class_init(ObjectClass *oc, void *data)
@@ -514,9 +418,6 @@ static void mps2_an511_class_init(ObjectClass *oc, void *data)
     mmc->fpga_type = FPGA_AN511;
     mc->default_cpu_type = ARM_CPU_TYPE_NAME("cortex-m3");
     mmc->scc_id = 0x41045110;
-    mmc->psram_base = 0x21000000;
-    mmc->ethernet_base = 0x40200000;
-    mmc->has_block_ram = false;
 }
 
 static const TypeInfo mps2_info = {
@@ -534,18 +435,6 @@ static const TypeInfo mps2_an385_info = {
     .class_init = mps2_an385_class_init,
 };
 
-static const TypeInfo mps2_an386_info = {
-    .name = TYPE_MPS2_AN386_MACHINE,
-    .parent = TYPE_MPS2_MACHINE,
-    .class_init = mps2_an386_class_init,
-};
-
-static const TypeInfo mps2_an500_info = {
-    .name = TYPE_MPS2_AN500_MACHINE,
-    .parent = TYPE_MPS2_MACHINE,
-    .class_init = mps2_an500_class_init,
-};
-
 static const TypeInfo mps2_an511_info = {
     .name = TYPE_MPS2_AN511_MACHINE,
     .parent = TYPE_MPS2_MACHINE,
@@ -556,8 +445,6 @@ static void mps2_machine_init(void)
 {
     type_register_static(&mps2_info);
     type_register_static(&mps2_an385_info);
-    type_register_static(&mps2_an386_info);
-    type_register_static(&mps2_an500_info);
     type_register_static(&mps2_an511_info);
 }
 

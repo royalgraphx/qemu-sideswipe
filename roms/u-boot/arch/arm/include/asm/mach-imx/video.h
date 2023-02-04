@@ -26,5 +26,4 @@ extern size_t display_count;
 #endif
 
 int ipu_set_ldb_clock(int rate);
-int ipu_displays_init(void);
 #endif

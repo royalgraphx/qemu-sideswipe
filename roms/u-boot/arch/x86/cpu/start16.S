@@ -9,9 +9,12 @@
  * Daniel Engström, Omicron Ceti AB, <daniel@omicron.se>
  */
 
+#include <asm/global_data.h>
 #include <asm/processor-flags.h>
 
 #define BOOT_SEG	0xffff0000	/* linear segment of boot code */
+#define a32		.byte 0x67;
+#define o32		.byte 0x66;
 
 .section .start16, "ax"
 .code16
@@ -19,6 +22,9 @@
 start16:
 	/* Save BIST */
 	movl	%eax, %ecx
+
+	/* Set the Cold Boot / Hard Reset flag */
+	movl	$GD_FLG_COLD_BOOT, %ebx
 
 	xorl	%eax, %eax
 	movl	%eax, %cr3	/* Invalidate TLB */
@@ -30,8 +36,8 @@ start16:
 	wbinvd
 
 	/* load the temporary Global Descriptor Table */
-data32 cs	lidt	idt_ptr
-data32 cs	lgdt	gdt_ptr
+o32 cs	lidt	idt_ptr
+o32 cs	lgdt	gdt_ptr
 
 	/* Now, we enter protected mode */
 	movl	%cr0, %eax
@@ -43,8 +49,10 @@ data32 cs	lgdt	gdt_ptr
 ff:
 
 	/* Finally restore BIST and jump to the 32-bit initialization code */
+	movw	$code32start, %ax
+	movw	%ax, %bp
 	movl	%ecx, %eax
-data32 cs	ljmp	*code32start
+o32 cs	ljmp	*(%bp)
 
 	/* 48-bit far pointer */
 code32start:

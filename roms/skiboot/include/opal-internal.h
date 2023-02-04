@@ -1,13 +1,23 @@
-// SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
-/*
- * Internal header for OPAL API related things in skiboot
+/* Copyright 2013-2014 IBM Corp.
  *
- * Copyright 2013-2019 IBM Corp.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ * implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #ifndef __OPAL_INTERNAL_H
 #define __OPAL_INTERNAL_H
 
+/****** Internal header for OPAL API related things in skiboot **********/
 
 #include <skiboot.h>
 
@@ -49,8 +59,8 @@ extern struct dt_node *opal_node;
 
 extern void opal_table_init(void);
 extern void opal_update_pending_evt(uint64_t evt_mask, uint64_t evt_values);
-uint64_t opal_dynamic_event_alloc(void);
-void opal_dynamic_event_free(uint64_t event);
+__be64 opal_dynamic_event_alloc(void);
+void opal_dynamic_event_free(__be64 event);
 extern void add_opal_node(void);
 
 #define opal_register(token, func, nargs)				\

@@ -27,10 +27,11 @@ struct TestCase {
 
 static const TestCase test_cases[] = {
     { "i386", "pc", -1 },
+    { "mips", "mips", 0x14000000, .bswap = true },
     { "mips", "malta", 0x10000000, .bswap = true },
-    { "mipsel", "malta", 0x10000000 },
     { "mips64", "magnum", 0x90000000, .bswap = true },
     { "mips64", "pica61", 0x90000000, .bswap = true },
+    { "mips64", "mips", 0x14000000, .bswap = true },
     { "mips64", "malta", 0x10000000, .bswap = true },
     { "mips64el", "fuloong2e", 0x1fd00000 },
     { "ppc", "g3beige", 0xfe000000, .bswap = true, .superio = "i82378" },
@@ -282,10 +283,7 @@ int main(int argc, char **argv)
 
     for (i = 0; test_cases[i].arch; i++) {
         gchar *path;
-
-        if (!g_str_equal(test_cases[i].arch, arch) ||
-            !qtest_has_machine(test_cases[i].machine) ||
-            (test_cases[i].superio && !qtest_has_device(test_cases[i].superio))) {
+        if (strcmp(test_cases[i].arch, arch) != 0) {
             continue;
         }
         path = g_strdup_printf("endianness/%s",

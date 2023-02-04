@@ -7,7 +7,9 @@
 
 **/
 
+
 #include <Uefi.h>
+
 
 #include <Library/MemoryAllocationLib.h>
 #include <Library/UefiBootServicesTableLib.h>
@@ -44,8 +46,7 @@ InternalAllocatePages (
   if (EFI_ERROR (Status)) {
     return NULL;
   }
-
-  return (VOID *)(UINTN)Memory;
+  return (VOID *) (UINTN) Memory;
 }
 
 /**
@@ -141,7 +142,7 @@ FreePages (
   EFI_STATUS  Status;
 
   ASSERT (Pages != 0);
-  Status = gBS->FreePages ((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer, Pages);
+  Status = gBS->FreePages ((EFI_PHYSICAL_ADDRESS) (UINTN) Buffer, Pages);
   ASSERT_EFI_ERROR (Status);
 }
 
@@ -185,25 +186,23 @@ InternalAllocateAlignedPages (
   if (Pages == 0) {
     return NULL;
   }
-
   if (Alignment > EFI_PAGE_SIZE) {
     //
     // Calculate the total number of pages since alignment is larger than page size.
     //
-    AlignmentMask = Alignment - 1;
-    RealPages     = Pages + EFI_SIZE_TO_PAGES (Alignment);
+    AlignmentMask  = Alignment - 1;
+    RealPages      = Pages + EFI_SIZE_TO_PAGES (Alignment);
     //
     // Make sure that Pages plus EFI_SIZE_TO_PAGES (Alignment) does not overflow.
     //
     ASSERT (RealPages > Pages);
 
-    Status = gBS->AllocatePages (AllocateAnyPages, MemoryType, RealPages, &Memory);
+    Status         = gBS->AllocatePages (AllocateAnyPages, MemoryType, RealPages, &Memory);
     if (EFI_ERROR (Status)) {
       return NULL;
     }
-
-    AlignedMemory  = ((UINTN)Memory + AlignmentMask) & ~AlignmentMask;
-    UnalignedPages = EFI_SIZE_TO_PAGES (AlignedMemory - (UINTN)Memory);
+    AlignedMemory  = ((UINTN) Memory + AlignmentMask) & ~AlignmentMask;
+    UnalignedPages = EFI_SIZE_TO_PAGES (AlignedMemory - (UINTN) Memory);
     if (UnalignedPages > 0) {
       //
       // Free first unaligned page(s).
@@ -211,7 +210,6 @@ InternalAllocateAlignedPages (
       Status = gBS->FreePages (Memory, UnalignedPages);
       ASSERT_EFI_ERROR (Status);
     }
-
     Memory         = AlignedMemory + EFI_PAGES_TO_SIZE (Pages);
     UnalignedPages = RealPages - Pages - UnalignedPages;
     if (UnalignedPages > 0) {
@@ -229,11 +227,9 @@ InternalAllocateAlignedPages (
     if (EFI_ERROR (Status)) {
       return NULL;
     }
-
-    AlignedMemory = (UINTN)Memory;
+    AlignedMemory  = (UINTN) Memory;
   }
-
-  return (VOID *)AlignedMemory;
+  return (VOID *) AlignedMemory;
 }
 
 /**
@@ -347,7 +343,7 @@ FreeAlignedPages (
   EFI_STATUS  Status;
 
   ASSERT (Pages != 0);
-  Status = gBS->FreePages ((EFI_PHYSICAL_ADDRESS)(UINTN)Buffer, Pages);
+  Status = gBS->FreePages ((EFI_PHYSICAL_ADDRESS) (UINTN) Buffer, Pages);
   ASSERT_EFI_ERROR (Status);
 }
 
@@ -377,7 +373,6 @@ InternalAllocatePool (
   if (EFI_ERROR (Status)) {
     Memory = NULL;
   }
-
   return Memory;
 }
 
@@ -470,7 +465,6 @@ InternalAllocateZeroPool (
   if (Memory != NULL) {
     Memory = ZeroMem (Memory, AllocationSize);
   }
-
   return Memory;
 }
 
@@ -567,13 +561,12 @@ InternalAllocateCopyPool (
   VOID  *Memory;
 
   ASSERT (Buffer != NULL);
-  ASSERT (AllocationSize <= (MAX_ADDRESS - (UINTN)Buffer + 1));
+  ASSERT (AllocationSize <= (MAX_ADDRESS - (UINTN) Buffer + 1));
 
   Memory = InternalAllocatePool (PoolType, AllocationSize);
   if (Memory != NULL) {
-    Memory = CopyMem (Memory, Buffer, AllocationSize);
+     Memory = CopyMem (Memory, Buffer, AllocationSize);
   }
-
   return Memory;
 }
 
@@ -691,11 +684,10 @@ InternalReallocatePool (
   VOID  *NewBuffer;
 
   NewBuffer = InternalAllocateZeroPool (PoolType, NewSize);
-  if ((NewBuffer != NULL) && (OldBuffer != NULL)) {
+  if (NewBuffer != NULL && OldBuffer != NULL) {
     CopyMem (NewBuffer, OldBuffer, MIN (OldSize, NewSize));
     FreePool (OldBuffer);
   }
-
   return NewBuffer;
 }
 
@@ -812,11 +804,12 @@ ReallocateReservedPool (
 VOID
 EFIAPI
 FreePool (
-  IN VOID  *Buffer
+  IN VOID   *Buffer
   )
 {
-  EFI_STATUS  Status;
+  EFI_STATUS    Status;
 
   Status = gBS->FreePool (Buffer);
   ASSERT_EFI_ERROR (Status);
 }
+

@@ -12,18 +12,17 @@
 
 #include "hw/misc/aspeed_scu.h"
 #include "hw/sysbus.h"
-#include "qom/object.h"
 
 #define TYPE_ASPEED_WDT "aspeed.wdt"
-OBJECT_DECLARE_TYPE(AspeedWDTState, AspeedWDTClass, ASPEED_WDT)
+#define ASPEED_WDT(obj) \
+    OBJECT_CHECK(AspeedWDTState, (obj), TYPE_ASPEED_WDT)
 #define TYPE_ASPEED_2400_WDT TYPE_ASPEED_WDT "-ast2400"
 #define TYPE_ASPEED_2500_WDT TYPE_ASPEED_WDT "-ast2500"
 #define TYPE_ASPEED_2600_WDT TYPE_ASPEED_WDT "-ast2600"
-#define TYPE_ASPEED_1030_WDT TYPE_ASPEED_WDT "-ast1030"
 
 #define ASPEED_WDT_REGS_MAX        (0x20 / 4)
 
-struct AspeedWDTState {
+typedef struct AspeedWDTState {
     /*< private >*/
     SysBusDevice parent_obj;
     QEMUTimer *timer;
@@ -34,10 +33,14 @@ struct AspeedWDTState {
 
     AspeedSCUState *scu;
     uint32_t pclk_freq;
-};
+} AspeedWDTState;
 
+#define ASPEED_WDT_CLASS(klass) \
+     OBJECT_CLASS_CHECK(AspeedWDTClass, (klass), TYPE_ASPEED_WDT)
+#define ASPEED_WDT_GET_CLASS(obj) \
+     OBJECT_GET_CLASS(AspeedWDTClass, (obj), TYPE_ASPEED_WDT)
 
-struct AspeedWDTClass {
+typedef struct AspeedWDTClass {
     SysBusDeviceClass parent_class;
 
     uint32_t offset;
@@ -45,9 +48,6 @@ struct AspeedWDTClass {
     uint32_t reset_ctrl_reg;
     void (*reset_pulse)(AspeedWDTState *s, uint32_t property);
     void (*wdt_reload)(AspeedWDTState *s);
-    uint64_t (*sanitize_ctrl)(uint64_t data);
-    uint32_t default_status;
-    uint32_t default_reload_value;
-};
+}  AspeedWDTClass;
 
 #endif /* WDT_ASPEED_H */

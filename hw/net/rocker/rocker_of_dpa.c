@@ -2296,6 +2296,7 @@ static void of_dpa_flow_fill(void *cookie, void *value, void *user_data)
     struct of_dpa_flow_key *key = &flow->key;
     struct of_dpa_flow_key *mask = &flow->mask;
     struct of_dpa_flow_fill_context *flow_context = user_data;
+    RockerOfDpaFlowList *new;
     RockerOfDpaFlow *nflow;
     RockerOfDpaFlowKey *nkey;
     RockerOfDpaFlowMask *nmask;
@@ -2306,7 +2307,8 @@ static void of_dpa_flow_fill(void *cookie, void *value, void *user_data)
         return;
     }
 
-    nflow = g_malloc0(sizeof(*nflow));
+    new = g_malloc0(sizeof(*new));
+    nflow = new->value = g_malloc0(sizeof(*nflow));
     nkey = nflow->key = g_malloc0(sizeof(*nkey));
     nmask = nflow->mask = g_malloc0(sizeof(*nmask));
     naction = nflow->action = g_malloc0(sizeof(*naction));
@@ -2422,7 +2424,8 @@ static void of_dpa_flow_fill(void *cookie, void *value, void *user_data)
         naction->new_vlan_id = flow->action.apply.new_vlan_id;
     }
 
-    QAPI_LIST_PREPEND(flow_context->list, nflow);
+    new->next = flow_context->list;
+    flow_context->list = new;
 }
 
 RockerOfDpaFlowList *qmp_query_rocker_of_dpa_flows(const char *name,
@@ -2466,7 +2469,9 @@ static void of_dpa_group_fill(void *key, void *value, void *user_data)
 {
     struct of_dpa_group *group = value;
     struct of_dpa_group_fill_context *flow_context = user_data;
+    RockerOfDpaGroupList *new;
     RockerOfDpaGroup *ngroup;
+    struct uint32List *id;
     int i;
 
     if (flow_context->type != 9 &&
@@ -2474,7 +2479,8 @@ static void of_dpa_group_fill(void *key, void *value, void *user_data)
         return;
     }
 
-    ngroup = g_malloc0(sizeof(*ngroup));
+    new = g_malloc0(sizeof(*new));
+    ngroup = new->value = g_malloc0(sizeof(*ngroup));
 
     ngroup->id = group->id;
 
@@ -2519,7 +2525,10 @@ static void of_dpa_group_fill(void *key, void *value, void *user_data)
         ngroup->index = ROCKER_GROUP_INDEX_GET(group->id);
         for (i = 0; i < group->l2_flood.group_count; i++) {
             ngroup->has_group_ids = true;
-            QAPI_LIST_PREPEND(ngroup->group_ids, group->l2_flood.group_ids[i]);
+            id = g_malloc0(sizeof(*id));
+            id->value = group->l2_flood.group_ids[i];
+            id->next = ngroup->group_ids;
+            ngroup->group_ids = id;
         }
         break;
     case ROCKER_OF_DPA_GROUP_TYPE_L3_UCAST:
@@ -2548,7 +2557,8 @@ static void of_dpa_group_fill(void *key, void *value, void *user_data)
         break;
     }
 
-    QAPI_LIST_PREPEND(flow_context->list, ngroup);
+    new->next = flow_context->list;
+    flow_context->list = new;
 }
 
 RockerOfDpaGroupList *qmp_query_rocker_of_dpa_groups(const char *name,

@@ -4,13 +4,11 @@
  */
 
 #include <common.h>
-#include <log.h>
 #include <asm/fsl_serdes.h>
 #include <asm/immap_85xx.h>
 #include <asm/io.h>
 #include <asm/processor.h>
 #include <asm/fsl_law.h>
-#include <linux/delay.h>
 #include <linux/errno.h>
 #include <fsl_errata.h>
 #include "fsl_corenet2_serdes.h"

@@ -13,7 +13,6 @@
  */
 
 #include "qemu/osdep.h"
-#include <glib/gstdio.h>
 
 #include "hw/acpi/tpm.h"
 #include "libqtest.h"
@@ -99,9 +98,9 @@ void tpm_util_tis_transfer(QTestState *s,
 void tpm_util_startup(QTestState *s, tx_func *tx)
 {
     unsigned char buffer[1024];
-    static const unsigned char tpm_startup[] =
+    unsigned char tpm_startup[] =
         "\x80\x01\x00\x00\x00\x0c\x00\x00\x01\x44\x00\x00";
-    static const unsigned char tpm_startup_resp[] =
+    unsigned char tpm_startup_resp[] =
         "\x80\x01\x00\x00\x00\x0a\x00\x00\x00\x00";
 
     tx(s, tpm_startup, sizeof(tpm_startup), buffer, sizeof(buffer));
@@ -113,14 +112,14 @@ void tpm_util_startup(QTestState *s, tx_func *tx)
 void tpm_util_pcrextend(QTestState *s, tx_func *tx)
 {
     unsigned char buffer[1024];
-    static const unsigned char tpm_pcrextend[] =
+    unsigned char tpm_pcrextend[] =
         "\x80\x02\x00\x00\x00\x41\x00\x00\x01\x82\x00\x00\x00\x0a\x00\x00"
         "\x00\x09\x40\x00\x00\x09\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00"
         "\x0b\x74\x65\x73\x74\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         "\x00";
 
-    static const unsigned char tpm_pcrextend_resp[] =
+    unsigned char tpm_pcrextend_resp[] =
         "\x80\x02\x00\x00\x00\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
         "\x01\x00\x00";
 
@@ -134,7 +133,7 @@ void tpm_util_pcrread(QTestState *s, tx_func *tx,
                       const unsigned char *exp_resp, size_t exp_resp_size)
 {
     unsigned char buffer[1024];
-    static const unsigned char tpm_pcrread[] =
+    unsigned char tpm_pcrread[] =
         "\x80\x01\x00\x00\x00\x14\x00\x00\x01\x7e\x00\x00\x00\x01\x00\x0b"
         "\x03\x00\x04\x00";
 
@@ -238,20 +237,16 @@ void tpm_util_migrate(QTestState *who, const char *uri)
 void tpm_util_wait_for_migration_complete(QTestState *who)
 {
     while (true) {
-        QDict *rsp;
         QDict *rsp_return;
         bool completed;
         const char *status;
 
-        rsp = qtest_qmp(who, "{ 'execute': 'query-migrate' }");
-        g_assert(qdict_haskey(rsp, "return"));
-        rsp_return = qdict_get_qdict(rsp, "return");
-
-        g_assert(!qdict_haskey(rsp_return, "error"));
+        qtest_qmp_send(who, "{ 'execute': 'query-migrate' }");
+        rsp_return = qtest_qmp_receive_success(who, NULL, NULL);
         status = qdict_get_str(rsp_return, "status");
         completed = strcmp(status, "completed") == 0;
         g_assert_cmpstr(status, !=,  "failed");
-        qobject_unref(rsp);
+        qobject_unref(rsp_return);
         if (completed) {
             return;
         }
@@ -290,24 +285,6 @@ void tpm_util_migration_start_qemu(QTestState **src_qemu,
 
     *dst_qemu = qtest_init(dst_qemu_args);
 
-    g_free(src_qemu_args);
-    g_free(dst_qemu_args);
-}
-
-/* Remove directory with remainders of swtpm */
-void tpm_util_rmdir(const char *path)
-{
-    char *filename;
-    int ret;
-
-    filename = g_strdup_printf("%s/tpm2-00.permall", path);
-    g_unlink(filename);
-    g_free(filename);
-
-    filename = g_strdup_printf("%s/.lock", path);
-    g_unlink(filename);
-    g_free(filename);
-
-    ret = g_rmdir(path);
-    g_assert(!ret);
+    free(src_qemu_args);
+    free(dst_qemu_args);
 }

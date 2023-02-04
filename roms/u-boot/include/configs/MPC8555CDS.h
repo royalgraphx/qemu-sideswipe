@@ -17,6 +17,9 @@
 
 #define CONFIG_PCI_INDIRECT_BRIDGE
 #define CONFIG_SYS_PCI_64BIT	1	/* enable 64-bit PCI resources */
+#define CONFIG_ENV_OVERWRITE
+
+#define CONFIG_FSL_VIA
 
 #ifndef __ASSEMBLY__
 extern unsigned long get_clock_freq(void);
@@ -29,12 +32,16 @@ extern unsigned long get_clock_freq(void);
 #define CONFIG_L2_CACHE			    /* toggle L2 cache	*/
 #define CONFIG_BTB			    /* toggle branch predition */
 
+#define CONFIG_SYS_MEMTEST_START	0x00200000	/* memtest works on */
+#define CONFIG_SYS_MEMTEST_END		0x00400000
+
 #define CONFIG_SYS_CCSRBAR		0xe0000000
 #define CONFIG_SYS_CCSRBAR_PHYS_LOW	CONFIG_SYS_CCSRBAR
 
 /* DDR Setup */
 #define CONFIG_SPD_EEPROM		/* Use SPD EEPROM for DDR setup*/
 #define CONFIG_DDR_SPD
+#undef CONFIG_FSL_DDR_INTERACTIVE
 
 #define CONFIG_MEM_INIT_VALUE		0xDeadBeef
 
@@ -51,6 +58,8 @@ extern unsigned long get_clock_freq(void);
 #ifndef CONFIG_SPD_EEPROM
 #error ("CONFIG_SPD_EEPROM is required by MPC85555CDS")
 #endif
+
+#undef CONFIG_CLOCKS_IN_MHZ
 
 /*
  * Local Bus Definitions
@@ -275,6 +284,8 @@ extern unsigned long get_clock_freq(void);
 
 #define CONFIG_MPC85XX_PCI2
 
+#undef CONFIG_EEPRO100
+#undef CONFIG_TULIP
 
 #define CONFIG_PCI_SCAN_SHOW		/* show pci devices on startup */
 #define CONFIG_SYS_PCI_SUBSYS_VENDORID 0x1057  /* Motorola */
@@ -302,6 +313,9 @@ extern unsigned long get_clock_freq(void);
 /*
  * Environment
  */
+#define CONFIG_ENV_ADDR		(CONFIG_SYS_MONITOR_BASE + 0x40000)
+#define CONFIG_ENV_SECT_SIZE	0x40000	/* 256K(one sector) for env */
+#define CONFIG_ENV_SIZE		0x2000
 
 #define CONFIG_LOADS_ECHO	1	/* echo on for serial download */
 #define CONFIG_SYS_LOADS_BAUD_CHANGE	1	/* allow baudrate change */

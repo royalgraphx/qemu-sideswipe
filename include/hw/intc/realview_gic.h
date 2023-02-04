@@ -12,17 +12,17 @@
 
 #include "hw/sysbus.h"
 #include "hw/intc/arm_gic.h"
-#include "qom/object.h"
 
 #define TYPE_REALVIEW_GIC "realview_gic"
-OBJECT_DECLARE_SIMPLE_TYPE(RealViewGICState, REALVIEW_GIC)
+#define REALVIEW_GIC(obj) \
+    OBJECT_CHECK(RealViewGICState, (obj), TYPE_REALVIEW_GIC)
 
-struct RealViewGICState {
+typedef struct RealViewGICState {
     SysBusDevice parent_obj;
 
     MemoryRegion container;
 
     GICState gic;
-};
+} RealViewGICState;
 
 #endif
